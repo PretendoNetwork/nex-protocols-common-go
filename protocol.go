@@ -17,7 +17,7 @@ func GetPlayerUrls(handler func(pid uint32) []string) {
 	GetPlayerUrlsHandler = handler
 }
 
-// GetPlayerUrls sets the GetPlayerUrls handler function
+// UpdatePlayerSessionUrl sets the UpdatePlayerSessionUrl handler function
 func UpdatePlayerSessionUrl(handler func(pid uint32, oldurl string, newurl string)) {
 	UpdatePlayerSessionUrlHandler = handler
 }
@@ -27,7 +27,7 @@ func GetPlayerSessionAddress(handler func(pid uint32) string) {
 	GetPlayerSessionAddressHandler = handler
 }
 
-// NewNatTraversalProtocol returns a new NatTraversalProtocol
+// InitNatTraversalProtocol returns a new NatTraversalProtocol
 func InitNatTraversalProtocol(server *nex.Server) *nexproto.NatTraversalProtocol {
 	natTraversalProtocolServer := nexproto.NewNatTraversalProtocol(server)
 
