@@ -10,8 +10,8 @@ import (
 
 func requestProbeInitiationExt(err error, client *nex.Client, callID uint32, targetList []string, stationToProbe string) {
 	missingHandler := false
-	if (GetPlayerSessionAddressHandler == nil){
-		fmt.Println("NatTraversal::RequestProbeInitiationExt missing GetPlayerSessionAddressHandler!")
+	if (GetConnectionGlobalAddressHandler == nil){
+		fmt.Println("NatTraversal::RequestProbeInitiationExt missing GetConnectionGlobalAddressHandler!")
 		missingHandler = true
 	}
 	if (missingHandler){
@@ -54,16 +54,18 @@ func requestProbeInitiationExt(err error, client *nex.Client, callID uint32, tar
 
 	for _, target := range targetList {
 		targetUrl := nex.NewStationURL(target)
-		targetPid, _ := strconv.Atoi(targetUrl.PID())
-		targetClient := server.GetClient(GetPlayerSessionAddressHandler(uint32(targetPid)))
+		fmt.Println("target: "+target)
+		fmt.Println("toProbe: "+stationToProbe)
+		targetRvcID, _ := strconv.Atoi(targetUrl.RVCID())
+		targetClient := server.FindClientFromConnectionID(uint32(targetRvcID))
 		if targetClient != nil {
 			var messagePacket nex.PacketInterface
 		
 			if(server.PrudpVersion() == 0){
-				messagePacket, _ = nex.NewPacketV0(client, nil)
+				messagePacket, _ = nex.NewPacketV0(targetClient, nil)
 				messagePacket.SetVersion(0)
 			}else{
-				messagePacket, _ = nex.NewPacketV1(client, nil)
+				messagePacket, _ = nex.NewPacketV1(targetClient, nil)
 				messagePacket.SetVersion(1)
 			}
 

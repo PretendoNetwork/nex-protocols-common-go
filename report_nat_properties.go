@@ -11,18 +11,18 @@ import (
 
 func reportNatProperties(err error, client *nex.Client, callID uint32, natm uint32, natf uint32, rtt uint32) {
 	missingHandler := false
-	if (GetPlayerUrlsHandler == nil){
-		fmt.Println("NatTraversal::ReportNatProperties missing GetPlayerUrlsHandler!")
+	if (GetConnectionUrlsHandler == nil){
+		fmt.Println("NatTraversal::ReportNatProperties missing GetConnectionUrlsHandler!")
 		missingHandler = true
 	}
-	if (UpdatePlayerSessionUrlHandler == nil){
-		fmt.Println("NatTraversal::ReportNatProperties missing UpdatePlayerSessionUrlHandler!")
+	if (ReplaceConnectionUrlHandler == nil){
+		fmt.Println("NatTraversal::ReportNatProperties missing ReplaceConnectionUrlHandler!")
 		missingHandler = true
 	}
 	if (missingHandler){
 		return
 	}
-	stationUrlsStrings := GetPlayerUrlsHandler(client.PID())
+	stationUrlsStrings := GetConnectionUrlsHandler(client.ConnectionId())
 	stationUrls := make([]nex.StationURL, len(stationUrlsStrings))
 	pid := strconv.FormatUint(uint64(client.PID()), 10)
 	rvcid := strconv.FormatUint(uint64(client.ConnectionId()), 10)
@@ -37,7 +37,7 @@ func reportNatProperties(err error, client *nex.Client, callID uint32, natm uint
 		}
 		stationUrls[i].SetPid(&pid)
 		stationUrls[i].SetRVCID(&rvcid)
-		UpdatePlayerSessionUrlHandler(client.PID(), stationUrlsStrings[i], stationUrls[i].EncodeToString())
+		ReplaceConnectionUrlHandler(client.ConnectionId(), stationUrlsStrings[i], stationUrls[i].EncodeToString())
 	}
 
 	rmcResponse := nex.NewRMCResponse(nexproto.NatTraversalProtocolID, callID)

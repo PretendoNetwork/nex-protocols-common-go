@@ -7,29 +7,30 @@ import (
 
 var (
 	server                                *nex.Server
-	GetPlayerUrlsHandler                  func(pid uint32) []string
-	UpdatePlayerSessionUrlHandler         func(pid uint32, oldurl string, newurl string)
-	GetPlayerSessionAddressHandler        func(pid uint32) string
+	GetConnectionUrlsHandler              func(rvcid uint32) []string
+	ReplaceConnectionUrlHandler           func(rvcid uint32, oldurl string, newurl string)
+	GetConnectionGlobalAddressHandler     func(rvcid uint32) string
 )
 
-// GetPlayerUrls sets the GetPlayerUrls handler function
-func GetPlayerUrls(handler func(pid uint32) []string) {
-	GetPlayerUrlsHandler = handler
+// GetConnectionUrls sets the GetConnectionUrls handler function
+func GetConnectionUrls(handler func(rvcid uint32) []string) {
+	GetConnectionUrlsHandler = handler
 }
 
-// UpdatePlayerSessionUrl sets the UpdatePlayerSessionUrl handler function
-func UpdatePlayerSessionUrl(handler func(pid uint32, oldurl string, newurl string)) {
-	UpdatePlayerSessionUrlHandler = handler
+// ReplaceConnectionUrl sets the ReplaceConnectionUrl handler function
+func ReplaceConnectionUrl(handler func(rvcid uint32, oldurl string, newurl string)) {
+	ReplaceConnectionUrlHandler = handler
 }
 
-// GetPlayerSessionAddress sets the GetPlayerSessionAddress handler function
-func GetPlayerSessionAddress(handler func(pid uint32) string) {
-	GetPlayerSessionAddressHandler = handler
+// GetGlobalConnectionAddress sets the GetGlobalConnectionAddress handler function
+func GetConnectionGlobalAddress(handler func(rvcid uint32) string) {
+	GetConnectionGlobalAddressHandler = handler
 }
 
 // InitNatTraversalProtocol returns a new NatTraversalProtocol
-func InitNatTraversalProtocol(server *nex.Server) *nexproto.NatTraversalProtocol {
-	natTraversalProtocolServer := nexproto.NewNatTraversalProtocol(server)
+func InitNatTraversalProtocol(nexServer *nex.Server) *nexproto.NatTraversalProtocol {
+	server = nexServer
+	natTraversalProtocolServer := nexproto.NewNatTraversalProtocol(nexServer)
 
 	natTraversalProtocolServer.RequestProbeInitiationExt(requestProbeInitiationExt)
 	natTraversalProtocolServer.ReportNATProperties(reportNatProperties)
