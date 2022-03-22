@@ -9,14 +9,6 @@ import (
 )
 
 func requestProbeInitiationExt(err error, client *nex.Client, callID uint32, targetList []string, stationToProbe string) {
-	missingHandler := false
-	if (GetConnectionGlobalAddressHandler == nil){
-		fmt.Println("NatTraversal::RequestProbeInitiationExt missing GetConnectionGlobalAddressHandler!")
-		missingHandler = true
-	}
-	if (missingHandler){
-		return
-	}
 	rmcResponse := nex.NewRMCResponse(nexproto.NatTraversalProtocolID, callID)
 	rmcResponse.SetSuccess(nexproto.NatTraversalMethodRequestProbeInitiationExt, nil)
 

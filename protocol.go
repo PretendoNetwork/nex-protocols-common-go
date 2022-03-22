@@ -9,7 +9,6 @@ var (
 	server                                *nex.Server
 	GetConnectionUrlsHandler              func(rvcid uint32) []string
 	ReplaceConnectionUrlHandler           func(rvcid uint32, oldurl string, newurl string)
-	GetConnectionGlobalAddressHandler     func(rvcid uint32) string
 )
 
 // GetConnectionUrls sets the GetConnectionUrls handler function
@@ -20,11 +19,6 @@ func GetConnectionUrls(handler func(rvcid uint32) []string) {
 // ReplaceConnectionUrl sets the ReplaceConnectionUrl handler function
 func ReplaceConnectionUrl(handler func(rvcid uint32, oldurl string, newurl string)) {
 	ReplaceConnectionUrlHandler = handler
-}
-
-// GetGlobalConnectionAddress sets the GetGlobalConnectionAddress handler function
-func GetConnectionGlobalAddress(handler func(rvcid uint32) string) {
-	GetConnectionGlobalAddressHandler = handler
 }
 
 // InitNatTraversalProtocol returns a new NatTraversalProtocol
