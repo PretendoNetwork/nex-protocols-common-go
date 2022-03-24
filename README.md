@@ -1,2 +1,2 @@
-# nex-protocol-nat-traversal
-Implementation of the NEX NAT traversal protocol for Pretendo game servers
+# nex-protocols-common-go
+Implementations of NEX protocols that are able to be used across all game servers.
