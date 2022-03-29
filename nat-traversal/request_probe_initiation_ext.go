@@ -1,25 +1,25 @@
 package nattraversal
 
 import (
-	"strconv"
 	"fmt"
+	"strconv"
 
 	nex "github.com/PretendoNetwork/nex-go"
 	nexproto "github.com/PretendoNetwork/nex-protocols-go"
 )
 
 func requestProbeInitiationExt(err error, client *nex.Client, callID uint32, targetList []string, stationToProbe string) {
-	rmcResponse := nex.NewRMCResponse(nexproto.NatTraversalProtocolID, callID)
-	rmcResponse.SetSuccess(nexproto.NatTraversalMethodRequestProbeInitiationExt, nil)
+	rmcResponse := nex.NewRMCResponse(nexproto.NATTraversalProtocolID, callID)
+	rmcResponse.SetSuccess(nexproto.NATTraversalMethodRequestProbeInitiationExt, nil)
 
 	rmcResponseBytes := rmcResponse.Bytes()
 
 	var responsePacket nex.PacketInterface
 
-	if(server.PrudpVersion() == 0){
+	if server.PrudpVersion() == 0 {
 		responsePacket, _ = nex.NewPacketV0(client, nil)
 		responsePacket.SetVersion(0)
-	}else{
+	} else {
 		responsePacket, _ = nex.NewPacketV1(client, nil)
 		responsePacket.SetVersion(1)
 	}
@@ -35,9 +35,9 @@ func requestProbeInitiationExt(err error, client *nex.Client, callID uint32, tar
 	server.Send(responsePacket)
 
 	rmcMessage := nex.RMCRequest{}
-	rmcMessage.SetProtocolID(nexproto.NatTraversalProtocolID)
+	rmcMessage.SetProtocolID(nexproto.NATTraversalProtocolID)
 	rmcMessage.SetCallID(0xffff0000 + callID)
-	rmcMessage.SetMethodID(nexproto.NatTraversalMethodInitiateProbe)
+	rmcMessage.SetMethodID(nexproto.NATTraversalMethodInitiateProbe)
 	rmcRequestStream := nex.NewStreamOut(server)
 	rmcRequestStream.WriteString(stationToProbe)
 	rmcRequestBody := rmcRequestStream.Bytes()
@@ -46,17 +46,17 @@ func requestProbeInitiationExt(err error, client *nex.Client, callID uint32, tar
 
 	for _, target := range targetList {
 		targetUrl := nex.NewStationURL(target)
-		fmt.Println("target: "+target)
-		fmt.Println("toProbe: "+stationToProbe)
+		fmt.Println("target: " + target)
+		fmt.Println("toProbe: " + stationToProbe)
 		targetRvcID, _ := strconv.Atoi(targetUrl.RVCID())
 		targetClient := server.FindClientFromConnectionID(uint32(targetRvcID))
 		if targetClient != nil {
 			var messagePacket nex.PacketInterface
-		
-			if(server.PrudpVersion() == 0){
+
+			if server.PrudpVersion() == 0 {
 				messagePacket, _ = nex.NewPacketV0(targetClient, nil)
 				messagePacket.SetVersion(0)
-			}else{
+			} else {
 				messagePacket, _ = nex.NewPacketV1(targetClient, nil)
 				messagePacket.SetVersion(1)
 			}
@@ -70,7 +70,7 @@ func requestProbeInitiationExt(err error, client *nex.Client, callID uint32, tar
 			messagePacket.AddFlag(nex.FlagReliable)
 
 			server.Send(messagePacket)
-		}else{
+		} else {
 			fmt.Println("not found")
 		}
 	}

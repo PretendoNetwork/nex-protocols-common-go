@@ -6,9 +6,9 @@ import (
 )
 
 var (
-	server                                *nex.Server
-	GetConnectionUrlsHandler              func(rvcid uint32) []string
-	ReplaceConnectionUrlHandler           func(rvcid uint32, oldurl string, newurl string)
+	server                      *nex.Server
+	GetConnectionUrlsHandler    func(rvcid uint32) []string
+	ReplaceConnectionUrlHandler func(rvcid uint32, oldurl string, newurl string)
 )
 
 // GetConnectionUrls sets the GetConnectionUrls handler function
@@ -22,12 +22,12 @@ func ReplaceConnectionUrl(handler func(rvcid uint32, oldurl string, newurl strin
 }
 
 // InitNatTraversalProtocol returns a new NatTraversalProtocol
-func InitNatTraversalProtocol(nexServer *nex.Server) *nexproto.NatTraversalProtocol {
+func InitNatTraversalProtocol(nexServer *nex.Server) *nexproto.NATTraversalProtocol {
 	server = nexServer
-	natTraversalProtocolServer := nexproto.NewNatTraversalProtocol(nexServer)
+	natTraversalProtocolServer := nexproto.NewNATTraversalProtocol(nexServer)
 
 	natTraversalProtocolServer.RequestProbeInitiationExt(requestProbeInitiationExt)
 	natTraversalProtocolServer.ReportNATProperties(reportNatProperties)
-	natTraversalProtocolServer.ReportNATTraversalResult(reportNATTraversalResult)
+	//natTraversalProtocolServer.ReportNATTraversalResult(reportNATTraversalResult) // not implemented in nex-protocols-go yet
 	return natTraversalProtocolServer
 }

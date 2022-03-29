@@ -1,8 +1,8 @@
 package secureconnection
 
 import (
-	"strconv"
 	"fmt"
+	"strconv"
 
 	nex "github.com/PretendoNetwork/nex-go"
 	nexproto "github.com/PretendoNetwork/nex-protocols-go"
@@ -10,25 +10,25 @@ import (
 
 func register(err error, client *nex.Client, callID uint32, stationUrls []*nex.StationURL) {
 	missingHandler := false
-	if (AddConnectionHandler == nil){
+	if AddConnectionHandler == nil {
 		fmt.Println("Secure::Register missing AddConnectionHandler!")
 		missingHandler = true
 	}
-	if (UpdateConnectionHandler == nil){
+	if UpdateConnectionHandler == nil {
 		fmt.Println("Secure::Register missing UpdateConnectionHandler!")
 		missingHandler = true
 	}
-	if (DoesConnectionExistHandler == nil){
+	if DoesConnectionExistHandler == nil {
 		fmt.Println("Secure::Register missing DoesConnectionExistHandler!")
 		missingHandler = true
 	}
-	if (missingHandler){
+	if missingHandler {
 		return
 	}
 	localStation := stationUrls[0]
 	localStationURL := localStation.EncodeToString()
-	connectionId := uint32(server.ConnectionIDCounter().Increment())
-	client.SetConnectionId(connectionId)
+	connectionID := uint32(server.ConnectionIDCounter().Increment())
+	client.SetConnectionID(connectionID)
 	client.SetLocalStationUrl(localStationURL)
 
 	address := client.Address().IP.String()
@@ -45,17 +45,17 @@ func register(err error, client *nex.Client, callID uint32, stationUrls []*nex.S
 
 	globalStationURL := localStation.EncodeToString()
 
-	if !DoesConnectionExistHandler(connectionId) {
+	if !DoesConnectionExistHandler(connectionID) {
 		fmt.Println(localStationURL)
-		AddConnectionHandler(connectionId, []string{localStationURL, globalStationURL}, address, port)
+		AddConnectionHandler(connectionID, []string{localStationURL, globalStationURL}, address, port)
 	} else {
-		UpdateConnectionHandler(connectionId, []string{localStationURL, globalStationURL}, address, port)
+		UpdateConnectionHandler(connectionID, []string{localStationURL, globalStationURL}, address, port)
 	}
 
 	rmcResponseStream := nex.NewStreamOut(server)
 
 	rmcResponseStream.WriteUInt32LE(0x10001) // Success
-	rmcResponseStream.WriteUInt32LE(connectionId)
+	rmcResponseStream.WriteUInt32LE(connectionID)
 	rmcResponseStream.WriteString(globalStationURL)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
@@ -68,10 +68,10 @@ func register(err error, client *nex.Client, callID uint32, stationUrls []*nex.S
 
 	var responsePacket nex.PacketInterface
 
-	if(server.PrudpVersion() == 0){
+	if server.PrudpVersion() == 0 {
 		responsePacket, _ = nex.NewPacketV0(client, nil)
 		responsePacket.SetVersion(0)
-	}else{
+	} else {
 		responsePacket, _ = nex.NewPacketV1(client, nil)
 		responsePacket.SetVersion(1)
 	}

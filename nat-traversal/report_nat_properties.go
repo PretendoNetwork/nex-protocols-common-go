@@ -11,21 +11,21 @@ import (
 
 func reportNatProperties(err error, client *nex.Client, callID uint32, natm uint32, natf uint32, rtt uint32) {
 	missingHandler := false
-	if (GetConnectionUrlsHandler == nil){
+	if GetConnectionUrlsHandler == nil {
 		fmt.Println("NatTraversal::ReportNatProperties missing GetConnectionUrlsHandler!")
 		missingHandler = true
 	}
-	if (ReplaceConnectionUrlHandler == nil){
+	if ReplaceConnectionUrlHandler == nil {
 		fmt.Println("NatTraversal::ReportNatProperties missing ReplaceConnectionUrlHandler!")
 		missingHandler = true
 	}
-	if (missingHandler){
+	if missingHandler {
 		return
 	}
-	stationUrlsStrings := GetConnectionUrlsHandler(client.ConnectionId())
+	stationUrlsStrings := GetConnectionUrlsHandler(client.ConnectionID())
 	stationUrls := make([]nex.StationURL, len(stationUrlsStrings))
 	pid := strconv.FormatUint(uint64(client.PID()), 10)
-	rvcid := strconv.FormatUint(uint64(client.ConnectionId()), 10)
+	rvcid := strconv.FormatUint(uint64(client.ConnectionID()), 10)
 
 	for i := 0; i < len(stationUrlsStrings); i++ {
 		stationUrls[i] = *nex.NewStationURL(stationUrlsStrings[i])
@@ -37,24 +37,24 @@ func reportNatProperties(err error, client *nex.Client, callID uint32, natm uint
 		}
 		stationUrls[i].SetPid(&pid)
 		stationUrls[i].SetRVCID(&rvcid)
-		ReplaceConnectionUrlHandler(client.ConnectionId(), stationUrlsStrings[i], stationUrls[i].EncodeToString())
+		ReplaceConnectionUrlHandler(client.ConnectionID(), stationUrlsStrings[i], stationUrls[i].EncodeToString())
 	}
 
-	rmcResponse := nex.NewRMCResponse(nexproto.NatTraversalProtocolID, callID)
+	rmcResponse := nex.NewRMCResponse(nexproto.NATTraversalProtocolID, callID)
 	rmcResponse.SetSuccess(0x5, nil)
 
 	rmcResponseBytes := rmcResponse.Bytes()
 
 	var responsePacket nex.PacketInterface
 
-	if(server.PrudpVersion() == 0){
+	if server.PrudpVersion() == 0 {
 		responsePacket, _ = nex.NewPacketV0(client, nil)
 		responsePacket.SetVersion(0)
-	}else{
+	} else {
 		responsePacket, _ = nex.NewPacketV1(client, nil)
 		responsePacket.SetVersion(1)
 	}
-	
+
 	responsePacket.SetVersion(1)
 	responsePacket.SetSource(0xA1)
 	responsePacket.SetDestination(0xAF)
