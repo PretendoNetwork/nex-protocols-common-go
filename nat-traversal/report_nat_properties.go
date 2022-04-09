@@ -32,11 +32,11 @@ func reportNatProperties(err error, client *nex.Client, callID uint32, natm uint
 		if stationUrls[i].Type() == "3" {
 			natm_s := strconv.FormatUint(uint64(natm), 10)
 			natf_s := strconv.FormatUint(uint64(natf), 10)
-			stationUrls[i].SetNatm(&natm_s)
-			stationUrls[i].SetNatf(&natf_s)
+			stationUrls[i].SetNatm(natm_s)
+			stationUrls[i].SetNatf(natf_s)
 		}
-		stationUrls[i].SetPid(&pid)
-		stationUrls[i].SetRVCID(&rvcid)
+		stationUrls[i].SetPID(pid)
+		stationUrls[i].SetRVCID(rvcid)
 		ReplaceConnectionUrlHandler(client.ConnectionID(), stationUrlsStrings[i], stationUrls[i].EncodeToString())
 	}
 

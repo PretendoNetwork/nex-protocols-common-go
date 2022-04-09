@@ -37,11 +37,11 @@ func register(err error, client *nex.Client, callID uint32, stationUrls []*nex.S
 	natm := "0"
 	type_ := "3"
 
-	localStation.SetAddress(&address)
-	localStation.SetPort(&port)
-	localStation.SetNatf(&natf)
-	localStation.SetNatm(&natm)
-	localStation.SetType(&type_)
+	localStation.SetAddress(address)
+	localStation.SetPort(port)
+	localStation.SetNatf(natf)
+	localStation.SetNatm(natm)
+	localStation.SetType(type_)
 
 	globalStationURL := localStation.EncodeToString()
 
