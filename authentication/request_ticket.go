@@ -1,8 +1,6 @@
 package authentication
 
 import (
-	"fmt"
-
 	nex "github.com/PretendoNetwork/nex-go"
 	nexproto "github.com/PretendoNetwork/nex-protocols-go"
 )
@@ -36,8 +34,6 @@ func requestTicket(err error, client *nex.Client, callID uint32, userPID uint32,
 		responsePacket, _ = nex.NewPacketV1(client, nil)
 		responsePacket.SetVersion(1)
 	}
-
-	fmt.Println("Sending final ticket")
 
 	responsePacket.SetSource(0xA1)
 	responsePacket.SetDestination(0xAF)
