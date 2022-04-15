@@ -3,6 +3,7 @@ package nattraversal
 import (
 	nex "github.com/PretendoNetwork/nex-go"
 	nexproto "github.com/PretendoNetwork/nex-protocols-go"
+	"github.com/PretendoNetwork/plogger"
 )
 
 var (
@@ -10,6 +11,8 @@ var (
 	GetConnectionUrlsHandler    func(rvcid uint32) []string
 	ReplaceConnectionUrlHandler func(rvcid uint32, oldurl string, newurl string)
 )
+
+var logger = plogger.NewLogger()
 
 // GetConnectionUrls sets the GetConnectionUrls handler function
 func GetConnectionUrls(handler func(rvcid uint32) []string) {

@@ -11,15 +11,15 @@ import (
 func register(err error, client *nex.Client, callID uint32, stationUrls []*nex.StationURL) {
 	missingHandler := false
 	if AddConnectionHandler == nil {
-		fmt.Println("Secure::Register missing AddConnectionHandler!")
+		logger.Warning("Missing AddConnectionHandler!")
 		missingHandler = true
 	}
 	if UpdateConnectionHandler == nil {
-		fmt.Println("Secure::Register missing UpdateConnectionHandler!")
+		logger.Warning("Missing UpdateConnectionHandler!")
 		missingHandler = true
 	}
 	if DoesConnectionExistHandler == nil {
-		fmt.Println("Secure::Register missing DoesConnectionExistHandler!")
+		logger.Warning("Missing DoesConnectionExistHandler!")
 		missingHandler = true
 	}
 	if missingHandler {

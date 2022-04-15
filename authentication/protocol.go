@@ -3,9 +3,11 @@ package authentication
 import (
 	"github.com/PretendoNetwork/nex-go"
 	nexproto "github.com/PretendoNetwork/nex-protocols-go"
+	"github.com/PretendoNetwork/plogger"
 )
 
 var commonAuthenticationProtocol *CommonAuthenticationProtocol
+var logger = plogger.NewLogger()
 
 type CommonAuthenticationProtocol struct {
 	*nexproto.AuthenticationProtocol

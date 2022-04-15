@@ -1,21 +1,16 @@
 package secureconnection
 
 import (
-	"fmt"
-
 	nex "github.com/PretendoNetwork/nex-go"
 	nexproto "github.com/PretendoNetwork/nex-protocols-go"
 )
 
 func replaceURL(err error, client *nex.Client, callID uint32, oldStation *nex.StationURL, newStation *nex.StationURL) {
-	missingHandler := false
 	if ReplaceConnectionUrlHandler == nil {
-		fmt.Println("Secure::ReplaceURL missing ReplaceConnectionUrlHandler!")
-		missingHandler = true
-	}
-	if missingHandler {
+		logger.Warning("Missing ReplaceConnectionUrlHandler!")
 		return
 	}
+
 	ReplaceConnectionUrlHandler(client.ConnectionID(), oldStation.EncodeToString(), newStation.EncodeToString())
 
 	rmcResponse := nex.NewRMCResponse(nexproto.SecureProtocolID, callID)

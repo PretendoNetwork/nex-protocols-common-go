@@ -5,18 +5,16 @@ import (
 
 	nex "github.com/PretendoNetwork/nex-go"
 	nexproto "github.com/PretendoNetwork/nex-protocols-go"
-
-	"fmt"
 )
 
 func reportNatProperties(err error, client *nex.Client, callID uint32, natm uint32, natf uint32, rtt uint32) {
 	missingHandler := false
 	if GetConnectionUrlsHandler == nil {
-		fmt.Println("NatTraversal::ReportNatProperties missing GetConnectionUrlsHandler!")
+		logger.Warning("Missing GetConnectionUrlsHandler!")
 		missingHandler = true
 	}
 	if ReplaceConnectionUrlHandler == nil {
-		fmt.Println("NatTraversal::ReportNatProperties missing ReplaceConnectionUrlHandler!")
+		logger.Warning("Missing ReplaceConnectionUrlHandler!")
 		missingHandler = true
 	}
 	if missingHandler {

@@ -3,16 +3,19 @@ package secureconnection
 import (
 	nex "github.com/PretendoNetwork/nex-go"
 	nexproto "github.com/PretendoNetwork/nex-protocols-go"
+	"github.com/PretendoNetwork/plogger"
 )
 
 var (
-	server                                *nex.Server
-	secureProtocolServer                  *nexproto.SecureProtocol
-	AddConnectionHandler                  func(rvcid uint32, urls []string, ip string, port string)
-	UpdateConnectionHandler               func(rvcid uint32, urls []string, ip string, port string)
-	DoesConnectionExistHandler            func(rvcid uint32) bool
-	ReplaceConnectionUrlHandler           func(rvcid uint32, oldurl string, newurl string)
+	server                      *nex.Server
+	secureProtocolServer        *nexproto.SecureProtocol
+	AddConnectionHandler        func(rvcid uint32, urls []string, ip string, port string)
+	UpdateConnectionHandler     func(rvcid uint32, urls []string, ip string, port string)
+	DoesConnectionExistHandler  func(rvcid uint32) bool
+	ReplaceConnectionUrlHandler func(rvcid uint32, oldurl string, newurl string)
 )
+
+var logger = plogger.NewLogger()
 
 // AddConnection sets the AddConnection handler function
 func AddConnection(handler func(rvcid uint32, urls []string, ip string, port string)) {

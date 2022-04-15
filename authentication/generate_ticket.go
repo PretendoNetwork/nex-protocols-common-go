@@ -2,14 +2,13 @@ package authentication
 
 import (
 	"crypto/rand"
-	"fmt"
 
 	"github.com/PretendoNetwork/nex-go"
 )
 
 func generateTicket(userPID uint32, serverPID uint32) ([]byte, uint32) {
 	if commonAuthenticationProtocol.passwordFromPIDHandler == nil {
-		fmt.Println("[COMMON PROTOCOLS] Authentication::GenerateTicker missing passwordFromPIDHandler!")
+		logger.Warning("Missing passwordFromPIDHandler!")
 		return []byte{}, nex.Errors.Core.Unknown
 	}
 
