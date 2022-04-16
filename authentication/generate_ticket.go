@@ -6,24 +6,42 @@ import (
 	"github.com/PretendoNetwork/nex-go"
 )
 
-func generateTicket(userPID uint32, serverPID uint32) ([]byte, uint32) {
+func generateTicket(userPID uint32, targetPID uint32) ([]byte, uint32) {
 	if commonAuthenticationProtocol.passwordFromPIDHandler == nil {
 		logger.Warning("Missing passwordFromPIDHandler!")
 		return []byte{}, nex.Errors.Core.Unknown
 	}
 
-	userPassword, errorCode := commonAuthenticationProtocol.passwordFromPIDHandler(userPID)
+	var userPassword string
+	var serverPassword string
+	var errorCode uint32
+
+	if userPID == 2 { // "Quazal Rendez-Vous", AKA server account
+		userPassword = "password"
+	} else if userPID == 100 { // "guest" account
+		userPassword = "MMQea3n!fsik"
+	} else {
+		userPassword, errorCode = commonAuthenticationProtocol.passwordFromPIDHandler(userPID)
+	}
+
 	if errorCode != 0 {
 		return []byte{}, errorCode
 	}
 
-	serverPassword, errorCode := commonAuthenticationProtocol.passwordFromPIDHandler(serverPID)
+	if targetPID == 2 { // "Quazal Rendez-Vous", AKA server account
+		userPassword = "password"
+	} else if targetPID == 100 { // "guest" account
+		userPassword = "MMQea3n!fsik"
+	} else {
+		userPassword, errorCode = commonAuthenticationProtocol.passwordFromPIDHandler(targetPID)
+	}
+
 	if errorCode != 0 {
 		return []byte{}, errorCode
 	}
 
-	userKey := deriveKey(userPID, []byte(userPassword))
-	serverKey := deriveKey(serverPID, []byte(serverPassword))
+	userKey := nex.DeriveKerberosKey(userPID, []byte(userPassword))
+	serverKey := nex.DeriveKerberosKey(targetPID, []byte(serverPassword))
 	sessionKey := make([]byte, commonAuthenticationProtocol.server.KerberosKeySize())
 	rand.Read(sessionKey)
 
@@ -35,16 +53,8 @@ func generateTicket(userPID uint32, serverPID uint32) ([]byte, uint32) {
 
 	ticket := nex.NewKerberosTicket()
 	ticket.SetSessionKey(sessionKey)
-	ticket.SetTargetPID(serverPID)
+	ticket.SetTargetPID(targetPID)
 	ticket.SetInternalData(encryptedTicketInternalData)
 
 	return ticket.Encrypt(userKey, nex.NewStreamOut(commonAuthenticationProtocol.server)), 0
-}
-
-func deriveKey(pid uint32, password []byte) []byte {
-	for i := 0; i < 65000+int(pid)%1024; i++ {
-		password = nex.MD5Hash(password)
-	}
-
-	return password
 }

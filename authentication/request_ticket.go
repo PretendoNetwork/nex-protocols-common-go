@@ -5,8 +5,8 @@ import (
 	nexproto "github.com/PretendoNetwork/nex-protocols-go"
 )
 
-func requestTicket(err error, client *nex.Client, callID uint32, userPID uint32, serverPID uint32) {
-	encryptedTicket, errorCode := generateTicket(userPID, serverPID)
+func requestTicket(err error, client *nex.Client, callID uint32, userPID uint32, targetPID uint32) {
+	encryptedTicket, errorCode := generateTicket(userPID, targetPID)
 
 	rmcResponse := nex.NewRMCResponse(nexproto.AuthenticationProtocolID, callID)
 
