@@ -29,11 +29,11 @@ func generateTicket(userPID uint32, targetPID uint32) ([]byte, uint32) {
 	}
 
 	if targetPID == 2 { // "Quazal Rendez-Vous", AKA server account
-		userPassword = commonAuthenticationProtocol.server.KerberosPassword()
+		targetPassword = commonAuthenticationProtocol.server.KerberosPassword()
 	} else if targetPID == 100 { // "guest" account
-		userPassword = "MMQea3n!fsik"
+		targetPassword = "MMQea3n!fsik"
 	} else {
-		userPassword, errorCode = commonAuthenticationProtocol.passwordFromPIDHandler(targetPID)
+		targetPassword, errorCode = commonAuthenticationProtocol.passwordFromPIDHandler(targetPID)
 	}
 
 	if errorCode != 0 {
