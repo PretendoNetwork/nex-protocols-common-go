@@ -22,7 +22,7 @@ func login(err error, client *nex.Client, callID uint32, username string) {
 		userPID = uint32(converted)
 	}
 
-	var targetPID uint32 = 2 // Quazal Rendez-Vous (server) account PID
+	var targetPID uint32 = 2 // "Quazal Rendez-Vous" (the server user) account PID
 
 	encryptedTicket, errorCode := generateTicket(userPID, targetPID)
 

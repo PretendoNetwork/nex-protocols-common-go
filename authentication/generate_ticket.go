@@ -16,11 +16,12 @@ func generateTicket(userPID uint32, targetPID uint32) ([]byte, uint32) {
 	var targetPassword string
 	var errorCode uint32
 
-	if userPID == 2 { // "Quazal Rendez-Vous", AKA server account
+	switch userPID {
+	case 2: // "Quazal Rendez-Vous" (the server user) account
 		userPassword = commonAuthenticationProtocol.server.KerberosPassword()
-	} else if userPID == 100 { // "guest" account
+	case 100: // guest user account
 		userPassword = "MMQea3n!fsik"
-	} else {
+	default:
 		userPassword, errorCode = commonAuthenticationProtocol.passwordFromPIDHandler(userPID)
 	}
 
@@ -28,12 +29,13 @@ func generateTicket(userPID uint32, targetPID uint32) ([]byte, uint32) {
 		return []byte{}, errorCode
 	}
 
-	if targetPID == 2 { // "Quazal Rendez-Vous", AKA server account
+	switch targetPID {
+	case 2: // "Quazal Rendez-Vous" (the server user) account
 		targetPassword = commonAuthenticationProtocol.server.KerberosPassword()
-	} else if targetPID == 100 { // "guest" account
+	case 100: // guest user account
 		targetPassword = "MMQea3n!fsik"
-	} else {
-		targetPassword, errorCode = commonAuthenticationProtocol.passwordFromPIDHandler(targetPID)
+	default:
+		targetPassword, errorCode = commonAuthenticationProtocol.passwordFromPIDHandler(userPID)
 	}
 
 	if errorCode != 0 {
