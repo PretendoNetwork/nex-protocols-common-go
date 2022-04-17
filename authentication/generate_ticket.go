@@ -13,7 +13,7 @@ func generateTicket(userPID uint32, targetPID uint32) ([]byte, uint32) {
 	}
 
 	var userPassword string
-	var serverPassword string
+	var targetPassword string
 	var errorCode uint32
 
 	if userPID == 2 { // "Quazal Rendez-Vous", AKA server account
@@ -41,7 +41,7 @@ func generateTicket(userPID uint32, targetPID uint32) ([]byte, uint32) {
 	}
 
 	userKey := nex.DeriveKerberosKey(userPID, []byte(userPassword))
-	serverKey := nex.DeriveKerberosKey(targetPID, []byte(serverPassword))
+	targetKey := nex.DeriveKerberosKey(targetPID, []byte(targetPassword))
 	sessionKey := make([]byte, commonAuthenticationProtocol.server.KerberosKeySize())
 	rand.Read(sessionKey)
 
@@ -49,7 +49,7 @@ func generateTicket(userPID uint32, targetPID uint32) ([]byte, uint32) {
 	ticketInternalData.SetTimestamp(nex.NewDateTime(0)) // CHANGE THIS
 	ticketInternalData.SetUserPID(userPID)
 	ticketInternalData.SetSessionKey(sessionKey)
-	encryptedTicketInternalData := ticketInternalData.Encrypt(serverKey, nex.NewStreamOut(commonAuthenticationProtocol.server))
+	encryptedTicketInternalData := ticketInternalData.Encrypt(targetKey, nex.NewStreamOut(commonAuthenticationProtocol.server))
 
 	ticket := nex.NewKerberosTicket()
 	ticket.SetSessionKey(sessionKey)
