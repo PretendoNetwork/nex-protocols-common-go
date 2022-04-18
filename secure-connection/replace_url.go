@@ -6,12 +6,13 @@ import (
 )
 
 func replaceURL(err error, client *nex.Client, callID uint32, oldStation *nex.StationURL, newStation *nex.StationURL) {
-	if ReplaceConnectionUrlHandler == nil {
+	server := commonSecureConnectionProtocol.server
+	if commonSecureConnectionProtocol.replaceConnectionUrlHandler == nil {
 		logger.Warning("Missing ReplaceConnectionUrlHandler!")
 		return
 	}
 
-	ReplaceConnectionUrlHandler(client.ConnectionID(), oldStation.EncodeToString(), newStation.EncodeToString())
+	commonSecureConnectionProtocol.replaceConnectionUrlHandler(client.ConnectionID(), oldStation.EncodeToString(), newStation.EncodeToString())
 
 	rmcResponse := nex.NewRMCResponse(nexproto.SecureProtocolID, callID)
 	rmcResponse.SetSuccess(nexproto.SecureMethodReplaceURL, nil)

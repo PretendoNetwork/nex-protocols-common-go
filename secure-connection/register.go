@@ -9,16 +9,17 @@ import (
 )
 
 func register(err error, client *nex.Client, callID uint32, stationUrls []*nex.StationURL) {
+	server := commonSecureConnectionProtocol.server
 	missingHandler := false
-	if AddConnectionHandler == nil {
+	if commonSecureConnectionProtocol.addConnectionHandler == nil {
 		logger.Warning("Missing AddConnectionHandler!")
 		missingHandler = true
 	}
-	if UpdateConnectionHandler == nil {
+	if commonSecureConnectionProtocol.updateConnectionHandler == nil {
 		logger.Warning("Missing UpdateConnectionHandler!")
 		missingHandler = true
 	}
-	if DoesConnectionExistHandler == nil {
+	if commonSecureConnectionProtocol.doesConnectionExistHandler == nil {
 		logger.Warning("Missing DoesConnectionExistHandler!")
 		missingHandler = true
 	}
@@ -45,11 +46,11 @@ func register(err error, client *nex.Client, callID uint32, stationUrls []*nex.S
 
 	globalStationURL := localStation.EncodeToString()
 
-	if !DoesConnectionExistHandler(connectionID) {
+	if !commonSecureConnectionProtocol.doesConnectionExistHandler(connectionID) {
 		fmt.Println(localStationURL)
-		AddConnectionHandler(connectionID, []string{localStationURL, globalStationURL}, address, port)
+		commonSecureConnectionProtocol.addConnectionHandler(connectionID, []string{localStationURL, globalStationURL}, address, port)
 	} else {
-		UpdateConnectionHandler(connectionID, []string{localStationURL, globalStationURL}, address, port)
+		commonSecureConnectionProtocol.updateConnectionHandler(connectionID, []string{localStationURL, globalStationURL}, address, port)
 	}
 
 	rmcResponseStream := nex.NewStreamOut(server)

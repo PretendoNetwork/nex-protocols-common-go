@@ -20,7 +20,7 @@ func sendReport(err error, client *nex.Client, callID uint32, reportID uint32, r
 
 	var responsePacket nex.PacketInterface
 
-	if server.PrudpVersion() == 0 {
+	if commonSecureConnectionProtocol.server.PrudpVersion() == 0 {
 		responsePacket, _ = nex.NewPacketV0(client, nil)
 		responsePacket.SetVersion(0)
 	} else {
@@ -36,5 +36,5 @@ func sendReport(err error, client *nex.Client, callID uint32, reportID uint32, r
 	responsePacket.AddFlag(nex.FlagNeedsAck)
 	responsePacket.AddFlag(nex.FlagReliable)
 
-	server.Send(responsePacket)
+	commonSecureConnectionProtocol.server.Send(responsePacket)
 }

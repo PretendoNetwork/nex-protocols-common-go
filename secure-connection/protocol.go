@@ -1,49 +1,52 @@
 package secureconnection
 
 import (
-	nex "github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go"
 	nexproto "github.com/PretendoNetwork/nex-protocols-go"
 	"github.com/PretendoNetwork/plogger"
 )
 
-var (
-	server                      *nex.Server
-	secureProtocolServer        *nexproto.SecureProtocol
-	AddConnectionHandler        func(rvcid uint32, urls []string, ip string, port string)
-	UpdateConnectionHandler     func(rvcid uint32, urls []string, ip string, port string)
-	DoesConnectionExistHandler  func(rvcid uint32) bool
-	ReplaceConnectionUrlHandler func(rvcid uint32, oldurl string, newurl string)
-)
-
+var commonSecureConnectionProtocol *CommonSecureConnectionProtocol
 var logger = plogger.NewLogger()
 
+type CommonSecureConnectionProtocol struct {
+	*nexproto.SecureProtocol
+	server *nex.Server
+
+	addConnectionHandler        func(rvcid uint32, urls []string, ip string, port string)
+	updateConnectionHandler     func(rvcid uint32, urls []string, ip string, port string)
+	doesConnectionExistHandler  func(rvcid uint32) bool
+	replaceConnectionUrlHandler func(rvcid uint32, oldurl string, newurl string)
+}
+
 // AddConnection sets the AddConnection handler function
-func AddConnection(handler func(rvcid uint32, urls []string, ip string, port string)) {
-	AddConnectionHandler = handler
+func (commonSecureConnectionProtocol *CommonSecureConnectionProtocol) AddConnection(handler func(rvcid uint32, urls []string, ip string, port string)) {
+	commonSecureConnectionProtocol.addConnectionHandler = handler
 }
 
 // UpdateConnection sets the UpdateConnection handler function
-func UpdateConnection(handler func(rvcid uint32, urls []string, ip string, port string)) {
-	UpdateConnectionHandler = handler
+func (commonSecureConnectionProtocol *CommonSecureConnectionProtocol) UpdateConnection(handler func(rvcid uint32, urls []string, ip string, port string)) {
+	commonSecureConnectionProtocol.updateConnectionHandler = handler
 }
 
 // ReplaceConnectionUrl sets the ReplaceConnectionUrl handler function
-func ReplaceConnectionUrl(handler func(rvcid uint32, oldurl string, newurl string)) {
-	ReplaceConnectionUrlHandler = handler
+func (commonSecureConnectionProtocol *CommonSecureConnectionProtocol) ReplaceConnectionUrl(handler func(rvcid uint32, oldurl string, newurl string)) {
+	commonSecureConnectionProtocol.replaceConnectionUrlHandler = handler
 }
 
 // DoesConnectionExist sets the DoesConnectionExist handler function
-func DoesConnectionExist(handler func(rvcid uint32) bool) {
-	DoesConnectionExistHandler = handler
+func (commonSecureConnectionProtocol *CommonSecureConnectionProtocol) DoesConnectionExist(handler func(rvcid uint32) bool) {
+	commonSecureConnectionProtocol.doesConnectionExistHandler = handler
 }
 
-// InitSecureConnectionProtocol returns a new InitSecureConnectionProtocol
-func InitSecureConnectionProtocol(nexServer *nex.Server) *nexproto.SecureProtocol {
-	server = nexServer
-	secureProtocolServer := nexproto.NewSecureProtocol(nexServer)
+// NewCommonSecureConnectionProtocol returns a new CommonSecureConnectionProtocol
+func NewCommonSecureConnectionProtocol(server *nex.Server) *CommonSecureConnectionProtocol {
+	secureProtocol := nexproto.NewSecureProtocol(server)
+	commonSecureConnectionProtocol = &CommonSecureConnectionProtocol{SecureProtocol: secureProtocol, server: server}
 
-	secureProtocolServer.Register(register)
-	secureProtocolServer.ReplaceURL(replaceURL)
-	secureProtocolServer.SendReport(sendReport)
-	return secureProtocolServer
+	commonSecureConnectionProtocol.Register(register)
+	commonSecureConnectionProtocol.ReplaceURL(replaceURL)
+	commonSecureConnectionProtocol.SendReport(sendReport)
+
+	return commonSecureConnectionProtocol
 }
