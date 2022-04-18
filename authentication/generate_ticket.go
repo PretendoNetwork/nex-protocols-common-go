@@ -16,6 +16,7 @@ func generateTicket(userPID uint32, targetPID uint32) ([]byte, uint32) {
 	var targetPassword string
 	var errorCode uint32
 
+	// TODO: Maybe we should error out if the user PID is the server account?
 	switch userPID {
 	case 2: // "Quazal Rendez-Vous" (the server user) account
 		userPassword = commonAuthenticationProtocol.server.KerberosPassword()
