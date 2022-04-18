@@ -10,12 +10,14 @@ func requestTicket(err error, client *nex.Client, callID uint32, userPID uint32,
 
 	rmcResponse := nex.NewRMCResponse(nexproto.AuthenticationProtocolID, callID)
 
+	// TODO:
+	// If the source or target pid is invalid, the %retval% field is set to Core::AccessDenied and the ticket is empty.
 	if errorCode != 0 {
 		rmcResponse.SetError(errorCode)
 	} else {
 		rmcResponseStream := nex.NewStreamOut(commonAuthenticationProtocol.server)
 
-		rmcResponseStream.WriteUInt32LE(0x10001)
+		rmcResponseStream.WriteResult(nex.NewResultSuccess(nex.Errors.Core.Unknown))
 		rmcResponseStream.WriteBuffer(encryptedTicket)
 
 		rmcResponseBody := rmcResponseStream.Bytes()

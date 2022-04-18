@@ -28,21 +28,43 @@ func login(err error, client *nex.Client, callID uint32, username string) {
 
 	rmcResponse := nex.NewRMCResponse(nexproto.AuthenticationProtocolID, callID)
 
-	if errorCode != 0 {
+	if errorCode != 0 && errorCode != nex.Errors.RendezVous.InvalidUsername {
+		// Some other error happened
 		rmcResponse.SetError(errorCode)
 	} else {
-		rvConnectionData := nex.NewRVConnectionData()
-		rvConnectionData.SetStationURL(commonAuthenticationProtocol.secureStationURL.EncodeToString())
-		rvConnectionData.SetSpecialProtocols([]byte{})
-		rvConnectionData.SetStationURLSpecialProtocols("")
+		var retval *nex.Result
+		var pidPrincipal uint32
+		var pbufResponse []byte
+		var pConnectionData *nex.RVConnectionData
+		var strReturnMsg string
+
+		pConnectionData = nex.NewRVConnectionData()
+		pConnectionData.SetStationURL(commonAuthenticationProtocol.secureStationURL.EncodeToString())
+		pConnectionData.SetSpecialProtocols([]byte{})
+		pConnectionData.SetStationURLSpecialProtocols("")
+
+		/*
+			From the wiki:
+
+			"If the username does not exist, the %retval% field is set to
+			RendezVous::InvalidUsername and the other fields are left blank."
+		*/
+		if errorCode == nex.Errors.RendezVous.InvalidUsername {
+			retval = nex.NewResultError(errorCode)
+		} else {
+			retval = nex.NewResultSuccess(nex.Errors.Core.Unknown)
+			pidPrincipal = userPID
+			pbufResponse = encryptedTicket
+			strReturnMsg = commonAuthenticationProtocol.buildName
+		}
 
 		rmcResponseStream := nex.NewStreamOut(commonAuthenticationProtocol.server)
 
-		rmcResponseStream.WriteUInt32LE(0x10001)
-		rmcResponseStream.WriteUInt32LE(uint32(userPID))
-		rmcResponseStream.WriteBuffer(encryptedTicket)
-		rmcResponseStream.WriteStructure(rvConnectionData)
-		rmcResponseStream.WriteString(commonAuthenticationProtocol.buildName)
+		rmcResponseStream.WriteResult(retval)
+		rmcResponseStream.WriteUInt32LE(pidPrincipal)
+		rmcResponseStream.WriteBuffer(pbufResponse)
+		rmcResponseStream.WriteStructure(pConnectionData)
+		rmcResponseStream.WriteString(strReturnMsg)
 
 		rmcResponseBody := rmcResponseStream.Bytes()
 
