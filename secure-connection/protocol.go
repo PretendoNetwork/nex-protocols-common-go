@@ -44,6 +44,7 @@ func NewCommonSecureConnectionProtocol(server *nex.Server) *CommonSecureConnecti
 	secureProtocol := nexproto.NewSecureProtocol(server)
 	commonSecureConnectionProtocol = &CommonSecureConnectionProtocol{SecureProtocol: secureProtocol, server: server}
 
+	server.On("Connect", connect)
 	commonSecureConnectionProtocol.Register(register)
 	commonSecureConnectionProtocol.ReplaceURL(replaceURL)
 	commonSecureConnectionProtocol.SendReport(sendReport)
