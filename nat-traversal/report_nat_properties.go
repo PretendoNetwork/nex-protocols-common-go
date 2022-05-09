@@ -39,7 +39,7 @@ func reportNatProperties(err error, client *nex.Client, callID uint32, natm uint
 	}
 
 	rmcResponse := nex.NewRMCResponse(nexproto.NATTraversalProtocolID, callID)
-	rmcResponse.SetSuccess(0x5, nil)
+	rmcResponse.SetSuccess(nexproto.NATTraversalMethodReportNATProperties, nil)
 
 	rmcResponseBytes := rmcResponse.Bytes()
 
