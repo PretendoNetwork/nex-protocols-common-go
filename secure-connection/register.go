@@ -28,8 +28,8 @@ func register(err error, client *nex.Client, callID uint32, stationUrls []*nex.S
 	}
 	localStation := stationUrls[0]
 	localStationURL := localStation.EncodeToString()
-	connectionID := uint32(server.ConnectionIDCounter().Increment())
-	client.SetConnectionID(connectionID)
+	pidConnectionID := uint32(server.ConnectionIDCounter().Increment())
+	client.SetConnectionID(pidConnectionID)
 	client.SetLocalStationUrl(localStationURL)
 
 	address := client.Address().IP.String()
@@ -44,20 +44,22 @@ func register(err error, client *nex.Client, callID uint32, stationUrls []*nex.S
 	localStation.SetNatm(natm)
 	localStation.SetType(type_)
 
-	globalStationURL := localStation.EncodeToString()
+	urlPublic := localStation.EncodeToString()
 
-	if !commonSecureConnectionProtocol.doesConnectionExistHandler(connectionID) {
+	if !commonSecureConnectionProtocol.doesConnectionExistHandler(pidConnectionID) {
 		fmt.Println(localStationURL)
-		commonSecureConnectionProtocol.addConnectionHandler(connectionID, []string{localStationURL, globalStationURL}, address, port)
+		commonSecureConnectionProtocol.addConnectionHandler(pidConnectionID, []string{localStationURL, urlPublic}, address, port)
 	} else {
-		commonSecureConnectionProtocol.updateConnectionHandler(connectionID, []string{localStationURL, globalStationURL}, address, port)
+		commonSecureConnectionProtocol.updateConnectionHandler(pidConnectionID, []string{localStationURL, urlPublic}, address, port)
 	}
+
+	retval := nex.NewResultSuccess(nex.Errors.Core.Unknown)
 
 	rmcResponseStream := nex.NewStreamOut(server)
 
-	rmcResponseStream.WriteUInt32LE(0x10001) // Success
-	rmcResponseStream.WriteUInt32LE(connectionID)
-	rmcResponseStream.WriteString(globalStationURL)
+	rmcResponseStream.WriteResult(retval) // Success
+	rmcResponseStream.WriteUInt32LE(pidConnectionID)
+	rmcResponseStream.WriteString(urlPublic)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
