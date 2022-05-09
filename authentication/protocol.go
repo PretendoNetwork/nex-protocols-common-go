@@ -25,7 +25,7 @@ func (commonAuthenticationProtocol *CommonAuthenticationProtocol) SetBuildName(b
 	commonAuthenticationProtocol.buildName = buildName
 }
 
-func (commonAuthenticationProtocol *CommonAuthenticationProtocol) PasswordFromPID(handler func(pid uint32) (string, uint32)) {
+func (commonAuthenticationProtocol *CommonAuthenticationProtocol) SetPasswordFromPIDFunction(handler func(pid uint32) (string, uint32)) {
 	commonAuthenticationProtocol.passwordFromPIDHandler = handler
 }
 
