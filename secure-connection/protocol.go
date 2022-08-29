@@ -3,7 +3,7 @@ package secureconnection
 import (
 	"github.com/PretendoNetwork/nex-go"
 	nexproto "github.com/PretendoNetwork/nex-protocols-go"
-	"github.com/PretendoNetwork/plogger"
+	"github.com/PretendoNetwork/plogger-go"
 )
 
 var commonSecureConnectionProtocol *CommonSecureConnectionProtocol
