@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/PretendoNetwork/nex-go v1.0.8
-	github.com/PretendoNetwork/nex-protocols-go v1.0.5
+	github.com/PretendoNetwork/nex-protocols-go v1.0.6
 	github.com/PretendoNetwork/plogger-go v1.0.2
 )
 
