@@ -35,6 +35,7 @@ func NewCommonAuthenticationProtocol(server *nex.Server) *CommonAuthenticationPr
 	commonAuthenticationProtocol = &CommonAuthenticationProtocol{AuthenticationProtocol: authenticationProtocol, server: server}
 
 	commonAuthenticationProtocol.Login(login)
+	commonAuthenticationProtocol.LoginEx(loginEx)
 	commonAuthenticationProtocol.RequestTicket(requestTicket)
 
 	return commonAuthenticationProtocol
