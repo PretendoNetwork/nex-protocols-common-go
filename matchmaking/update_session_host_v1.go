@@ -3,7 +3,6 @@ package matchmaking
 import (
 	nex "github.com/PretendoNetwork/nex-go"
 	nexproto "github.com/PretendoNetwork/nex-protocols-go"
-	"fmt"
 )
 
 func updateSessionHostV1(err error, client *nex.Client, callID uint32, gid uint32) {

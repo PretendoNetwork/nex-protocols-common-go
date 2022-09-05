@@ -56,7 +56,6 @@ func updateSessionHost(err error, client *nex.Client, callID uint32, gid uint32)
 	gidString = gidString[6:8] + gidString[4:6] + gidString[2:4] + gidString[0:2]
 
 	data, _ := hex.DecodeString("0017000000"+hostpidString+"A00F0000"+gidString+clientPidString+"01000001000000")
-	fmt.Println(hex.EncodeToString(data))
 	rmcMessage.SetParameters(data)
 	rmcMessageBytes := rmcMessage.Bytes()
 
@@ -88,7 +87,7 @@ func updateSessionHost(err error, client *nex.Client, callID uint32, gid uint32)
 
 			server.Send(messagePacket)
 		}else{
-			fmt.Println("not found")
+			logger.Warning("Client not found")
 		}
 	}
 

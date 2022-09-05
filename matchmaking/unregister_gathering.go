@@ -3,7 +3,6 @@ package matchmaking
 import (
 	nex "github.com/PretendoNetwork/nex-go"
 	nexproto "github.com/PretendoNetwork/nex-protocols-go"
-	"fmt"
 )
 
 func unregisterGathering(err error, client *nex.Client, callID uint32, gatheringId uint32) {
