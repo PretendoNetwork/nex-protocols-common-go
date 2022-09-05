@@ -1,7 +1,6 @@
 package secureconnection
 
 import (
-	"fmt"
 	"strconv"
 
 	nex "github.com/PretendoNetwork/nex-go"
@@ -47,7 +46,6 @@ func register(err error, client *nex.Client, callID uint32, stationUrls []*nex.S
 	urlPublic := localStation.EncodeToString()
 
 	if !commonSecureConnectionProtocol.doesConnectionExistHandler(pidConnectionID) {
-		fmt.Println(localStationURL)
 		commonSecureConnectionProtocol.addConnectionHandler(pidConnectionID, []string{localStationURL, urlPublic}, address, port)
 	} else {
 		commonSecureConnectionProtocol.updateConnectionHandler(pidConnectionID, []string{localStationURL, urlPublic}, address, port)
