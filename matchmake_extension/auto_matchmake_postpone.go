@@ -11,20 +11,20 @@ import (
 )
 
 func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, matchmakeSession *nexproto.MatchmakeSession, message string) {	
-	gid := FindRoomViaMatchmakeSessionHandler(matchmakeSession)
+	gid := commonMatchmakeExtensionProtocol.FindRoomViaMatchmakeSessionHandler(matchmakeSession)
 	if gid == math.MaxUint32 {
-		gid = NewRoomHandler(client.PID(), matchmakeSession)
+		gid = commonMatchmakeExtensionProtocol.NewRoomHandler(client.PID(), matchmakeSession)
 	}
 
 	fmt.Println("GATHERING ID: " + strconv.Itoa((int)(gid)))
 
-	AddPlayerToRoomHandler(gid, client.PID(), uint32(1))
+	commonMatchmakeExtensionProtocol.AddPlayerToRoomHandler(gid, client.PID(), uint32(1))
 
-	hostpid, matchmakeSession := GetRoomHandler(gid)
+	hostpid, matchmakeSession := commonMatchmakeExtensionProtocol.GetRoomHandler(gid)
 
-	rmcResponseStream := nex.NewStreamOut(server)
+	rmcResponseStream := nex.NewStreamOut(commonMatchmakeExtensionProtocol.server)
 	rmcResponseStream.WriteString("MatchmakeSession")
-	lengthStream := nex.NewStreamOut(server)
+	lengthStream := nex.NewStreamOut(commonMatchmakeExtensionProtocol.server)
 	lengthStream.WriteStructure(matchmakeSession.Gathering)
 	lengthStream.WriteStructure(matchmakeSession)
 	matchmakeSessionLength := uint32(len(lengthStream.Bytes()))
@@ -42,7 +42,7 @@ func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, matchm
 	
 	var responsePacket nex.PacketInterface
 
-	if server.PrudpVersion() == 0 {
+	if commonMatchmakeExtensionProtocol.server.PrudpVersion() == 0 {
 		responsePacket, _ = nex.NewPacketV0(client, nil)
 		responsePacket.SetVersion(0)
 	} else {
@@ -57,7 +57,7 @@ func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, matchm
 	responsePacket.AddFlag(nex.FlagNeedsAck)
 	responsePacket.AddFlag(nex.FlagReliable)
 
-	server.Send(responsePacket)
+	commonMatchmakeExtensionProtocol.server.Send(responsePacket)
 	
 	rmcMessage := nex.RMCRequest{}
 	rmcMessage.SetProtocolID(0xe)
@@ -67,15 +67,15 @@ func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, matchm
 	clientPidString = clientPidString[6:8] + clientPidString[4:6] + clientPidString[2:4] + clientPidString[0:2]
 	gidString := fmt.Sprintf("%.8x",(gid))
 	gidString = gidString[6:8] + gidString[4:6] + gidString[2:4] + gidString[0:2]
-	data, _ = hex.DecodeString("0017000000"+hostpidString+"B90B0000"+gidString+clientPidString+"01000001000000")
+	data, _ := hex.DecodeString("0017000000"+clientPidString+"B90B0000"+gidString+clientPidString+"01000001000000")
 	rmcMessage.SetParameters(data)
 	rmcMessageBytes := rmcMessage.Bytes()
 	
-	targetClient := server.FindClientFromPID(uint32(hostpid))
+	targetClient := commonMatchmakeExtensionProtocol.server.FindClientFromPID(uint32(hostpid))
 	
 	var messagePacket nex.PacketInterface
 
-	if server.PrudpVersion() == 0 {
+	if commonMatchmakeExtensionProtocol.server.PrudpVersion() == 0 {
 		messagePacket, _ = nex.NewPacketV0(client, nil)
 		messagePacket.SetVersion(0)
 	} else {
@@ -90,9 +90,9 @@ func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, matchm
 	messagePacket.AddFlag(nex.FlagNeedsAck)
 	messagePacket.AddFlag(nex.FlagReliable)
 
-	server.Send(messagePacket)
+	commonMatchmakeExtensionProtocol.server.Send(messagePacket)
 	
-	if server.PrudpVersion() == 0 {
+	if commonMatchmakeExtensionProtocol.server.PrudpVersion() == 0 {
 		messagePacket, _ = nex.NewPacketV0(targetClient, nil)
 		messagePacket.SetVersion(0)
 	} else {
@@ -107,5 +107,5 @@ func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, matchm
 	messagePacket.AddFlag(nex.FlagNeedsAck)
 	messagePacket.AddFlag(nex.FlagReliable)
 
-	server.Send(messagePacket)
+	commonMatchmakeExtensionProtocol.server.Send(messagePacket)
 }

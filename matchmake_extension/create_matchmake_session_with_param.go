@@ -11,32 +11,32 @@ import (
 
 func createMatchmakeSessionWithParam(err error, client *nex.Client, callID uint32, matchmakeSession *nexproto.MatchmakeSession) {
 	missingHandler := false
-	if (FindRoomViaMatchmakeSessionHandler == nil){
+	if (commonMatchmakeExtensionProtocol.FindRoomViaMatchmakeSessionHandler == nil){
 		logger.Warning("MatchmakeExtension::AutoMatchmakeWithParam_Postpone missing FindRoomViaMatchmakeSessionHandler!")
 		missingHandler = true
 	}
-	if (AddPlayerToRoomHandler == nil){
+	if (commonMatchmakeExtensionProtocol.AddPlayerToRoomHandler == nil){
 		logger.Warning("MatchmakeExtension::AutoMatchmakeWithParam_Postpone missing AddPlayerToRoomHandler!")
 		missingHandler = true
 	}
-	if (NewRoomHandler == nil){
+	if (commonMatchmakeExtensionProtocol.NewRoomHandler == nil){
 		logger.Warning("MatchmakeExtension::AutoMatchmakeWithParam_Postpone missing NewRoomHandler!")
 		missingHandler = true
 	}
 	if (missingHandler){
 		return
 	}
-	gid := NewRoomHandler(client.PID(), matchmakeSession)
+	gid := commonMatchmakeExtensionProtocol.NewRoomHandler(client.PID(), matchmakeSession)
 
-	AddPlayerToRoomHandler(gid, client.PID(), uint32(1))
+	commonMatchmakeExtensionProtocol.AddPlayerToRoomHandler(gid, client.PID(), uint32(1))
 
 	matchmakeSession = nexproto.NewMatchmakeSession()
 
-	_, matchmakeSession = GetRoomHandler(gid)
+	_, matchmakeSession = commonMatchmakeExtensionProtocol.GetRoomHandler(gid)
 
 	//sessionKey := "00000000000000000000000000000000"
 
-	rmcResponseStream := nex.NewStreamOut(server)
+	rmcResponseStream := nex.NewStreamOut(commonMatchmakeExtensionProtocol.server)
 	rmcResponseStream.WriteStructure(matchmakeSession.Gathering)
 	rmcResponseStream.WriteStructure(matchmakeSession)
 
@@ -50,7 +50,7 @@ func createMatchmakeSessionWithParam(err error, client *nex.Client, callID uint3
 
 	var responsePacket nex.PacketInterface
 
-	if(server.PrudpVersion() == 0){
+	if(commonMatchmakeExtensionProtocol.server.PrudpVersion() == 0){
 		responsePacket, _ = nex.NewPacketV0(client, nil)
 		responsePacket.SetVersion(0)
 	}else{
@@ -65,7 +65,7 @@ func createMatchmakeSessionWithParam(err error, client *nex.Client, callID uint3
 	responsePacket.AddFlag(nex.FlagNeedsAck)
 	responsePacket.AddFlag(nex.FlagReliable)
 
-	server.Send(responsePacket)
+	commonMatchmakeExtensionProtocol.server.Send(responsePacket)
 	
 	rmcMessage := nex.RMCRequest{}
 	rmcMessage.SetProtocolID(0xe)
@@ -82,7 +82,7 @@ func createMatchmakeSessionWithParam(err error, client *nex.Client, callID uint3
 	
 	var messagePacket nex.PacketInterface
 
-	if server.PrudpVersion() == 0 {
+	if commonMatchmakeExtensionProtocol.server.PrudpVersion() == 0 {
 		messagePacket, _ = nex.NewPacketV0(client, nil)
 		messagePacket.SetVersion(0)
 	} else {
@@ -97,5 +97,5 @@ func createMatchmakeSessionWithParam(err error, client *nex.Client, callID uint3
 	messagePacket.AddFlag(nex.FlagNeedsAck)
 	messagePacket.AddFlag(nex.FlagReliable)
 
-	server.Send(messagePacket)
+	commonMatchmakeExtensionProtocol.server.Send(messagePacket)
 }

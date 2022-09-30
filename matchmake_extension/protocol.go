@@ -6,51 +6,56 @@ import (
 	"github.com/PretendoNetwork/plogger-go"
 )
 
-var (
-	server                                *nex.Server
+var commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol
+
+type CommonMatchmakeExtensionProtocol struct {
+	*nexproto.MatchmakeExtensionProtocol
+	server *nex.Server
+
 	DestroyRoomHandler                    func(gid uint32)
 	GetRoomHandler                        func(gid uint32) (uint32, *nexproto.MatchmakeSession)
 	NewRoomHandler                        func(gid uint32, matchmakeSession *nexproto.MatchmakeSession) (uint32)
 	FindRoomViaMatchmakeSessionHandler    func(matchmakeSession *nexproto.MatchmakeSession) (uint32)
 	AddPlayerToRoomHandler                func(gid uint32, pid uint32, addplayercount uint32)
-)
+}
 
 var logger = plogger.NewLogger()
 
 // DestroyRoom sets the DestroyRoom handler function
-func DestroyRoom(handler func(gid uint32)) {
-	DestroyRoomHandler = handler
+func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) DestroyRoom(handler func(gid uint32)) {
+	commonMatchmakeExtensionProtocol.DestroyRoomHandler = handler
 }
 
 // GetRoom sets the GetRoom handler function
-func GetRoom(handler func(gid uint32) (uint32, *nexproto.MatchmakeSession)) {
-	GetRoomHandler = handler
+func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) GetRoom(handler func(gid uint32) (uint32, *nexproto.MatchmakeSession)) {
+	commonMatchmakeExtensionProtocol.GetRoomHandler = handler
 }
 
 // NewRoom sets the NewRoom handler function
-func NewRoom(handler func(gid uint32, matchmakeSession *nexproto.MatchmakeSession) (uint32)) {
-	NewRoomHandler = handler
+func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) NewRoom(handler func(gid uint32, matchmakeSession *nexproto.MatchmakeSession) (uint32)) {
+	commonMatchmakeExtensionProtocol.NewRoomHandler = handler
 }
 
 // GetRoomInfo sets the GetRoomInfo handler function
-func FindRoomViaMatchmakeSession(handler func(matchmakeSession *nexproto.MatchmakeSession) (uint32)) {
-	FindRoomViaMatchmakeSessionHandler = handler
+func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) FindRoomViaMatchmakeSession(handler func(matchmakeSession *nexproto.MatchmakeSession) (uint32)) {
+	commonMatchmakeExtensionProtocol.FindRoomViaMatchmakeSessionHandler = handler
 }
 
 // AddPlayerToRoom sets the AddPlayerToRoomHandler handler function
-func AddPlayerToRoom(handler func(gid uint32, pid uint32, addplayercount uint32)) {
-	AddPlayerToRoomHandler = handler
+func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) AddPlayerToRoom(handler func(gid uint32, pid uint32, addplayercount uint32)) {
+	commonMatchmakeExtensionProtocol.AddPlayerToRoomHandler = handler
 }
 
-// InitMatchmakeExtensionProtocol returns a new MatchmakeExtensionProtocol
-func InitMatchmakeExtensionProtocol(nexServer *nex.Server) *nexproto.MatchmakeExtensionProtocol {
-	server = nexServer
-	matchMakingProtocolServer := nexproto.NewMatchmakeExtensionProtocol(nexServer)
-	matchMakingProtocolServer.AutoMatchmake_Postpone(autoMatchmake_Postpone)
-	matchMakingProtocolServer.AutoMatchmakeWithParam_Postpone(autoMatchmakeWithParam_Postpone)
-	matchMakingProtocolServer.CreateMatchmakeSessionWithParam(createMatchmakeSessionWithParam)
-	matchMakingProtocolServer.CreateMatchmakeSession(createMatchmakeSession)
-	matchMakingProtocolServer.JoinMatchmakeSessionWithParam(joinMatchmakeSessionWithParam)
+// NewCommonSecureConnectionProtocol returns a new CommonSecureConnectionProtocol
+func NewCommonMatchmakeExtensionProtocol(server *nex.Server) *CommonMatchmakeExtensionProtocol {
+	matchmakeExtensionProtocol := nexproto.NewMatchmakeExtensionProtocol(server)
+	commonMatchmakeExtensionProtocol = &CommonMatchmakeExtensionProtocol{MatchmakeExtensionProtocol: matchmakeExtensionProtocol, server: server}
+	
+	commonMatchmakeExtensionProtocol.AutoMatchmake_Postpone(autoMatchmake_Postpone)
+	commonMatchmakeExtensionProtocol.AutoMatchmakeWithParam_Postpone(autoMatchmakeWithParam_Postpone)
+	commonMatchmakeExtensionProtocol.CreateMatchmakeSessionWithParam(createMatchmakeSessionWithParam)
+	commonMatchmakeExtensionProtocol.CreateMatchmakeSession(createMatchmakeSession)
+	commonMatchmakeExtensionProtocol.JoinMatchmakeSessionWithParam(joinMatchmakeSessionWithParam)
 
-	return matchMakingProtocolServer
+	return commonMatchmakeExtensionProtocol
 }
