@@ -39,10 +39,26 @@ func requestProbeInitiationExt(err error, client *nex.Client, callID uint32, tar
 	rmcMessage.SetCallID(0xffff0000 + callID)
 	rmcMessage.SetMethodID(nexproto.NATTraversalMethodInitiateProbe)
 	rmcRequestStream := nex.NewStreamOut(server)
+	//stationToProbeUrl := nex.NewStationURL(stationToProbe)
+	//stationToProbeUrl.SetCID("1337825000")
+	//stationToProbe = stationToProbeUrl.EncodeToString() + ";R=1;Rsa=159.203.102.56;Rsp=9999;Ra=159.203.102.56;Rp=9999"
 	rmcRequestStream.WriteString(stationToProbe)
 	rmcRequestBody := rmcRequestStream.Bytes()
 	rmcMessage.SetParameters(rmcRequestBody)
 	rmcMessageBytes := rmcMessage.Bytes()
+
+	stationUrlsStrings := GetConnectionUrlsHandler(client.ConnectionID())
+	stationUrls := make([]nex.StationURL, len(stationUrlsStrings))
+
+	for i := 0; i < len(stationUrlsStrings); i++ {
+		stationUrls[i] = *nex.NewStationURL(stationUrlsStrings[i])
+		stationToProbeUrl := *nex.NewStationURL(stationToProbe)
+		if stationUrls[i].Type() == "3" && stationToProbeUrl.Type() == "3" {
+			ReplaceConnectionUrlHandler(client.ConnectionID(), stationUrlsStrings[i], stationToProbe)
+		}else if stationUrls[i].Type() != "3" && stationToProbeUrl.Type() != "3" {
+			ReplaceConnectionUrlHandler(client.ConnectionID(), stationUrlsStrings[i], stationToProbe)
+		}
+	}
 
 	for _, target := range targetList {
 		targetUrl := nex.NewStationURL(target)

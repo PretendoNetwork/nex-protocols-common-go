@@ -2,6 +2,7 @@ package secureconnection
 
 import (
 	"strconv"
+	"fmt"
 
 	nex "github.com/PretendoNetwork/nex-go"
 	nexproto "github.com/PretendoNetwork/nex-protocols-go"
@@ -26,9 +27,14 @@ func register(err error, client *nex.Client, callID uint32, stationUrls []*nex.S
 		return
 	}
 	localStation := stationUrls[0]
-	localStationURL := localStation.EncodeToString()
 	pidConnectionID := uint32(server.ConnectionIDCounter().Increment())
 	client.SetConnectionID(pidConnectionID)
+	//localStation.SetPID(strconv.Itoa(int(client.PID())))
+	//localStation.SetRVCID(strconv.Itoa(int(pidConnectionID)))
+	//localStation.SetPl("2")
+	//localStation.SetNatf("2")
+	//localStation.SetNatm("1")
+	localStationURL := localStation.EncodeToString()
 	client.SetLocalStationUrl(localStationURL)
 
 	address := client.Address().IP.String()
@@ -44,6 +50,7 @@ func register(err error, client *nex.Client, callID uint32, stationUrls []*nex.S
 	localStation.SetType(type_)
 
 	urlPublic := localStation.EncodeToString()
+	fmt.Println(urlPublic)
 
 	if !commonSecureConnectionProtocol.doesConnectionExistHandler(pidConnectionID) {
 		commonSecureConnectionProtocol.addConnectionHandler(pidConnectionID, []string{localStationURL, urlPublic}, address, port)

@@ -2,6 +2,7 @@ package nattraversal
 
 import (
 	"strconv"
+	"fmt"
 
 	nex "github.com/PretendoNetwork/nex-go"
 	nexproto "github.com/PretendoNetwork/nex-protocols-go"
@@ -30,6 +31,8 @@ func reportNatProperties(err error, client *nex.Client, callID uint32, natm uint
 		if stationUrls[i].Type() == "3" {
 			natm_s := strconv.FormatUint(uint64(natm), 10)
 			natf_s := strconv.FormatUint(uint64(natf), 10)
+			fmt.Println(natf_s)
+			fmt.Println(natm_s)
 			stationUrls[i].SetNatm(natm_s)
 			stationUrls[i].SetNatf(natf_s)
 		}

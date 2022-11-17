@@ -9,10 +9,10 @@ import (
 var (
 	server                                *nex.Server
 	GetConnectionUrlsHandler              func(rvcid uint32) []string
-	UpdateRoomHostHandler                 func(gid uint32, newownerpid uint32)
+	UpdateRoomHostHandler                 func(gid uint32, newownerpid uint32, newownerrvcid uint32)
 	DestroyRoomHandler                    func(gid uint32)
-	GetRoomInfoHandler                    func(gid uint32) (uint32, uint32, uint32, uint32, uint32)
-	GetRoomPlayersHandler                 func(gid uint32) ([]uint32)
+	GetRoomHandler                        func(gid uint32) (uint32, uint32, *nexproto.MatchmakeSession)
+	GetRoomPlayersHandler                 func(gid uint32) ([][]uint32)
 )
 
 var logger = plogger.NewLogger()
@@ -23,7 +23,7 @@ func GetConnectionUrls(handler func(rvcid uint32) []string) {
 }
 
 // UpdateRoomHost sets the UpdateRoomHost handler function
-func UpdateRoomHost(handler func(gid uint32, newownerpid uint32)) {
+func UpdateRoomHost(handler func(gid uint32, newownerpid uint32, newownerrvcid uint32)) {
 	UpdateRoomHostHandler = handler
 }
 
@@ -33,12 +33,12 @@ func DestroyRoom(handler func(gid uint32)) {
 }
 
 // GetRoomInfo sets the GetRoomInfo handler function
-func GetRoomInfo(handler func(gid uint32) (uint32, uint32, uint32, uint32, uint32)) {
-	GetRoomInfoHandler = handler
+func GetRoom(handler func(gid uint32) (uint32, uint32, *nexproto.MatchmakeSession)) {
+	GetRoomHandler = handler
 }
 
 // GetRoomPlayers sets the GetRoomPlayers handler function
-func GetRoomPlayers(handler func(gid uint32) ([]uint32)) {
+func GetRoomPlayers(handler func(gid uint32) ([][]uint32)) {
 	GetRoomPlayersHandler = handler
 }
 

@@ -13,10 +13,11 @@ type CommonMatchmakeExtensionProtocol struct {
 	server *nex.Server
 
 	DestroyRoomHandler                    func(gid uint32)
-	GetRoomHandler                        func(gid uint32) (uint32, *nexproto.MatchmakeSession)
-	NewRoomHandler                        func(gid uint32, matchmakeSession *nexproto.MatchmakeSession) (uint32)
+	GetRoomHandler                        func(gid uint32) (uint32, uint32, *nexproto.MatchmakeSession)
+	NewRoomHandler                        func(pid uint32, rvcid uint32, matchmakeSession *nexproto.MatchmakeSession) (uint32)
 	FindRoomViaMatchmakeSessionHandler    func(matchmakeSession *nexproto.MatchmakeSession) (uint32)
-	AddPlayerToRoomHandler                func(gid uint32, pid uint32, addplayercount uint32)
+	AddPlayerToRoomHandler                func(gid uint32, pid uint32, rvcid uint32, addplayercount uint32)
+	GetRoomPlayersHandler                 func(gid uint32) ([][]uint32)
 }
 
 var logger = plogger.NewLogger()
@@ -27,12 +28,12 @@ func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) Destro
 }
 
 // GetRoom sets the GetRoom handler function
-func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) GetRoom(handler func(gid uint32) (uint32, *nexproto.MatchmakeSession)) {
+func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) GetRoom(handler func(gid uint32) (uint32, uint32, *nexproto.MatchmakeSession)) {
 	commonMatchmakeExtensionProtocol.GetRoomHandler = handler
 }
 
 // NewRoom sets the NewRoom handler function
-func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) NewRoom(handler func(gid uint32, matchmakeSession *nexproto.MatchmakeSession) (uint32)) {
+func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) NewRoom(handler func(pid uint32, rvcid uint32, matchmakeSession *nexproto.MatchmakeSession) (uint32)) {
 	commonMatchmakeExtensionProtocol.NewRoomHandler = handler
 }
 
@@ -42,8 +43,13 @@ func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) FindRo
 }
 
 // AddPlayerToRoom sets the AddPlayerToRoomHandler handler function
-func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) AddPlayerToRoom(handler func(gid uint32, pid uint32, addplayercount uint32)) {
+func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) AddPlayerToRoom(handler func(gid uint32, pid uint32, rvcid uint32, addplayercount uint32)) {
 	commonMatchmakeExtensionProtocol.AddPlayerToRoomHandler = handler
+}
+
+// GetRoomPlayers sets the GetRoomPlayers handler function
+func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) GetRoomPlayers(handler func(gid uint32) ([][]uint32)) {
+	commonMatchmakeExtensionProtocol.GetRoomPlayersHandler = handler
 }
 
 // NewCommonSecureConnectionProtocol returns a new CommonSecureConnectionProtocol

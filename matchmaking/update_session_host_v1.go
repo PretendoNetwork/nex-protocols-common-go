@@ -14,7 +14,7 @@ func updateSessionHostV1(err error, client *nex.Client, callID uint32, gid uint3
 	if (missingHandler){
 		return
 	}
-	UpdateRoomHostHandler(gid, client.PID())
+	UpdateRoomHostHandler(gid, client.ConnectionID(), client.PID())
 
 	rmcResponse := nex.NewRMCResponse(nexproto.MatchMakingProtocolID, callID)
 	rmcResponse.SetSuccess(nexproto.MatchMakingMethodUpdateSessionHostV1, nil)

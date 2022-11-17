@@ -13,14 +13,14 @@ import (
 func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, matchmakeSession *nexproto.MatchmakeSession, message string) {	
 	gid := commonMatchmakeExtensionProtocol.FindRoomViaMatchmakeSessionHandler(matchmakeSession)
 	if gid == math.MaxUint32 {
-		gid = commonMatchmakeExtensionProtocol.NewRoomHandler(client.PID(), matchmakeSession)
+		gid = commonMatchmakeExtensionProtocol.NewRoomHandler(client.PID(), client.ConnectionID(), matchmakeSession)
 	}
 
 	fmt.Println("GATHERING ID: " + strconv.Itoa((int)(gid)))
 
-	commonMatchmakeExtensionProtocol.AddPlayerToRoomHandler(gid, client.PID(), uint32(1))
+	commonMatchmakeExtensionProtocol.AddPlayerToRoomHandler(gid, client.PID(), client.ConnectionID(), uint32(1))
 
-	hostpid, matchmakeSession := commonMatchmakeExtensionProtocol.GetRoomHandler(gid)
+	_, hostRVCID, matchmakeSession := commonMatchmakeExtensionProtocol.GetRoomHandler(gid)
 
 	rmcResponseStream := nex.NewStreamOut(commonMatchmakeExtensionProtocol.server)
 	rmcResponseStream.WriteString("MatchmakeSession")
@@ -71,7 +71,7 @@ func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, matchm
 	rmcMessage.SetParameters(data)
 	rmcMessageBytes := rmcMessage.Bytes()
 	
-	targetClient := commonMatchmakeExtensionProtocol.server.FindClientFromPID(uint32(hostpid))
+	targetClient := commonMatchmakeExtensionProtocol.server.FindClientFromConnectionID(hostRVCID)
 	
 	var messagePacket nex.PacketInterface
 

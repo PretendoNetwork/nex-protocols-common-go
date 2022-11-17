@@ -29,10 +29,10 @@ func joinMatchmakeSessionWithParam(err error, client *nex.Client, callID uint32,
 	fmt.Println("===== MATCHMAKE SESSION JOIN =====")
 	fmt.Println("GATHERING ID: " + strconv.Itoa((int)(gid)))
 
-	commonMatchmakeExtensionProtocol.AddPlayerToRoomHandler(gid, client.PID(), uint32(1))
+	commonMatchmakeExtensionProtocol.AddPlayerToRoomHandler(gid, client.PID(), client.ConnectionID(), uint32(1))
 
-	hostpid, matchmakeSession := commonMatchmakeExtensionProtocol.GetRoomHandler(gid)
-	if(hostpid == 0xffffffff){
+	hostPID, hostRVCID, matchmakeSession := commonMatchmakeExtensionProtocol.GetRoomHandler(gid)
+	if(hostPID == 0xffffffff){
 		rmcResponse := nex.NewRMCResponse(nexproto.MatchmakeExtensionProtocolID, callID)
 		rmcResponse.SetError(0x8003006D)
 
@@ -91,7 +91,7 @@ func joinMatchmakeSessionWithParam(err error, client *nex.Client, callID uint32,
 	rmcMessage.SetMethodID(0x1)
 	clientPidString := fmt.Sprintf("%.8x",(client.PID()))
 	clientPidString = clientPidString[6:8] + clientPidString[4:6] + clientPidString[2:4] + clientPidString[0:2]
-	hostPidString := fmt.Sprintf("%.8x",(hostpid))
+	hostPidString := fmt.Sprintf("%.8x",(hostPID))
 	hostPidString = hostPidString[6:8] + hostPidString[4:6] + hostPidString[2:4] + hostPidString[0:2]
 	gidString := fmt.Sprintf("%.8x",(gid))
 	gidString = gidString[6:8] + gidString[4:6] + gidString[2:4] + gidString[0:2]
@@ -100,7 +100,7 @@ func joinMatchmakeSessionWithParam(err error, client *nex.Client, callID uint32,
 	rmcMessage.SetParameters(data)
 	rmcMessageBytes := rmcMessage.Bytes()
 	
-	targetClient := commonMatchmakeExtensionProtocol.server.FindClientFromPID(uint32(hostpid))
+	targetClient := commonMatchmakeExtensionProtocol.server.FindClientFromConnectionID(uint32(hostRVCID))
 	
 	var messagePacket nex.PacketInterface
 

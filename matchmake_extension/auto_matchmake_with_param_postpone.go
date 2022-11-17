@@ -26,27 +26,50 @@ func autoMatchmakeWithParam_Postpone(err error, client *nex.Client, callID uint3
 		logger.Warning("MatchmakeExtension::AutoMatchmakeWithParam_Postpone missing NewRoomHandler!")
 		missingHandler = true
 	}
+	if (commonMatchmakeExtensionProtocol.DestroyRoomHandler == nil){
+		logger.Warning("MatchmakeExtension::AutoMatchmakeWithParam_Postpone missing DestroyRoomHandler!")
+		missingHandler = true
+	}
 	if (missingHandler){
 		return
 	}
 	var gid uint32
 
 	//Splatfest code, there's gotta be a better way to handle this.
-	/*fmt.Println(sourceGid)
+	fmt.Println("SOURCE GATHERING ID: "+strconv.Itoa((int)(sourceGid)))
 	
-	if((int)(matchmakeSession.GameMode) == 12){
-		var team uint32
+	/*if((int)(matchmakeSession.GameMode) == 12){
 		if(matchmakeSession.Attributes[3] == 0){
-			team = 1
+			matchmakeSession.Attributes[3] = 1
 		}else{
-			team = 0
+			matchmakeSession.Attributes[3] = 0
 		}
-		gid = findRoom(matchmakeSession.GameMode, true, team, matchmakeSession.Attributes[2], uint32(1), matchmakeSession.Attributes[5]&0xF)
-	}else{
-		gid = findRoom(matchmakeSession.GameMode, true, matchmakeSession.Attributes[3], matchmakeSession.Attributes[2], uint32(1), matchmakeSession.Attributes[5]&0xF)
+	}*/
+
+	//fmt.Println("GATHERING ID: " + strconv.Itoa((int)(gid)))
+
+	if((int)(matchmakeSession.GameMode) == 12){
+		if(matchmakeSession.Attributes[3] == 0){
+			matchmakeSession.Attributes[3] = 1
+		}else{
+			matchmakeSession.Attributes[3] = 0
+		}
+		matchmakeSession.Attributes[0] = 0
+		matchmakeSession.Attributes[1] = 0
+		matchmakeSession.Attributes[2] = 0
+		matchmakeSession.Attributes[4] = 0
+		matchmakeSession.Attributes[5] = 0
 	}
+	gid = commonMatchmakeExtensionProtocol.FindRoomViaMatchmakeSessionHandler(matchmakeSession)
 	if gid == math.MaxUint32 {
-		gid = newRoom(client.PID(), matchmakeSession.GameMode, true, matchmakeSession.Attributes[3], matchmakeSession.Attributes[2], uint32(1), matchmakeSession.Attributes[5]&0xF)
+		if((int)(matchmakeSession.GameMode) == 12){
+			if(matchmakeSession.Attributes[3] == 0){
+				matchmakeSession.Attributes[3] = 1
+			}else{
+				matchmakeSession.Attributes[3] = 0
+			}
+		}
+		gid = commonMatchmakeExtensionProtocol.NewRoomHandler(client.PID(), client.ConnectionID() ,matchmakeSession)
 	}
 
 	if((int)(matchmakeSession.GameMode) == 12){
@@ -60,18 +83,19 @@ func autoMatchmakeWithParam_Postpone(err error, client *nex.Client, callID uint3
 		gidString := fmt.Sprintf("%.8x",(gid))
 		gidString = gidString[6:8] + gidString[4:6] + gidString[2:4] + gidString[0:2]
 	
-		for _, pid := range getRoomPlayers(sourceGid) {
-			if(pid == 0){
+		for _, player := range commonMatchmakeExtensionProtocol.GetRoomPlayersHandler(sourceGid) {
+			if(player[0] == 0 || player[1] == 0){
 				continue
 			}
-			targetClient := nexServer.FindClientFromPID(uint32(pid))
+			targetClient := commonMatchmakeExtensionProtocol.server.FindClientFromConnectionID(uint32(player[1]))
 			if targetClient != nil {
-				clientPidString := fmt.Sprintf("%.8x",(pid))
+				clientPidString := fmt.Sprintf("%.8x",(player[0]))
 				clientPidString = clientPidString[6:8] + clientPidString[4:6] + clientPidString[2:4] + clientPidString[0:2]
 	
 				data, _ := hex.DecodeString("0017000000"+hostpidString+"90DC0100"+gidString+clientPidString+"01000001000000")
 				rmcMessage.SetParameters(data)
 				rmcMessageBytes := rmcMessage.Bytes()
+				fmt.Println("RMCMessage: "+hex.EncodeToString(data))
 				messagePacket, _ := nex.NewPacketV1(targetClient, nil)
 				messagePacket.SetVersion(1)
 				messagePacket.SetSource(0xA1)
@@ -82,25 +106,19 @@ func autoMatchmakeWithParam_Postpone(err error, client *nex.Client, callID uint3
 				messagePacket.AddFlag(nex.FlagNeedsAck)
 				messagePacket.AddFlag(nex.FlagReliable)
 	
-				nexServer.Send(messagePacket)
+				commonMatchmakeExtensionProtocol.server.Send(messagePacket)
 			}else{
 				fmt.Println("not found")
 			}
 		}
-	}*/
-
-	//fmt.Println("GATHERING ID: " + strconv.Itoa((int)(gid)))
-
-	gid = commonMatchmakeExtensionProtocol.FindRoomViaMatchmakeSessionHandler(matchmakeSession)
-	if gid == math.MaxUint32 {
-		gid = commonMatchmakeExtensionProtocol.NewRoomHandler(client.PID(), matchmakeSession)
+		commonMatchmakeExtensionProtocol.DestroyRoomHandler(sourceGid)
 	}
 
 	fmt.Println("GATHERING ID: " + strconv.Itoa((int)(gid)))
 
-	commonMatchmakeExtensionProtocol.AddPlayerToRoomHandler(gid, client.PID(), uint32(1))
+	commonMatchmakeExtensionProtocol.AddPlayerToRoomHandler(gid, client.PID(), client.ConnectionID(), uint32(1))
 
-	hostpid, matchmakeSession := commonMatchmakeExtensionProtocol.GetRoomHandler(gid)
+	hostPID, hostRVCID, matchmakeSession := commonMatchmakeExtensionProtocol.GetRoomHandler(gid)
 
 	rmcResponseStream := nex.NewStreamOut(commonMatchmakeExtensionProtocol.server)
 	rmcResponseStream.WriteStructure(matchmakeSession.Gathering)
@@ -108,7 +126,7 @@ func autoMatchmakeWithParam_Postpone(err error, client *nex.Client, callID uint3
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 	fmt.Println(hex.EncodeToString(rmcResponseBody))
-	hostpidString := fmt.Sprintf("%.8x",(hostpid))
+	hostpidString := fmt.Sprintf("%.8x",(hostPID))
 	hostpidString = hostpidString[6:8] + hostpidString[4:6] + hostpidString[2:4] + hostpidString[0:2]
 	clientPidString := fmt.Sprintf("%.8x",(client.PID()))
 	clientPidString = clientPidString[6:8] + clientPidString[4:6] + clientPidString[2:4] + clientPidString[0:2]
@@ -148,16 +166,16 @@ func autoMatchmakeWithParam_Postpone(err error, client *nex.Client, callID uint3
 	if(matchmakeSession.GameMode == 12){
 		//gidString := fmt.Sprintf("%.8x",(testGid))
 		//gidString = gidString[6:8] + gidString[4:6] + gidString[2:4] + gidString[0:2]
-		data, _ = hex.DecodeString("0017000000"+hostpidString+"B90B0000"+gidString+clientPidString+"01000004000000")
+		data, _ = hex.DecodeString("0017000000"+clientPidString+"B90B0000"+gidString+clientPidString+"01000004000000")
 	}else{
-		data, _ = hex.DecodeString("0017000000"+hostpidString+"B90B0000"+gidString+clientPidString+"01000001000000")
+		data, _ = hex.DecodeString("0017000000"+clientPidString+"B90B0000"+gidString+clientPidString+"01000001000000")
 		matchmakeSession.GameMode = 2 
 	}
 	fmt.Println(hex.EncodeToString(data))
 	rmcMessage.SetParameters(data)
 	rmcMessageBytes := rmcMessage.Bytes()
 	
-	targetClient := commonMatchmakeExtensionProtocol.server.FindClientFromPID(uint32(hostpid))
+	targetClient := commonMatchmakeExtensionProtocol.server.FindClientFromConnectionID(uint32(hostRVCID))
 	
 	var messagePacket nex.PacketInterface
 
@@ -178,11 +196,30 @@ func autoMatchmakeWithParam_Postpone(err error, client *nex.Client, callID uint3
 
 	commonMatchmakeExtensionProtocol.server.Send(messagePacket)
 	
+	if targetClient != nil {
+		if commonMatchmakeExtensionProtocol.server.PrudpVersion() == 0 {
+			messagePacket, _ = nex.NewPacketV0(targetClient, nil)
+			messagePacket.SetVersion(0)
+		} else {
+			messagePacket, _ = nex.NewPacketV1(targetClient, nil)
+			messagePacket.SetVersion(1)
+		}
+		messagePacket.SetSource(0xA1)
+		messagePacket.SetDestination(0xAF)
+		messagePacket.SetType(nex.DataPacket)
+		messagePacket.SetPayload(rmcMessageBytes)
+
+		messagePacket.AddFlag(nex.FlagNeedsAck)
+		messagePacket.AddFlag(nex.FlagReliable)
+
+		commonMatchmakeExtensionProtocol.server.Send(messagePacket)
+	}
+	
 	if commonMatchmakeExtensionProtocol.server.PrudpVersion() == 0 {
-		messagePacket, _ = nex.NewPacketV0(targetClient, nil)
+		messagePacket, _ = nex.NewPacketV0(client, nil)
 		messagePacket.SetVersion(0)
 	} else {
-		messagePacket, _ = nex.NewPacketV1(targetClient, nil)
+		messagePacket, _ = nex.NewPacketV1(client, nil)
 		messagePacket.SetVersion(1)
 	}
 	messagePacket.SetSource(0xA1)

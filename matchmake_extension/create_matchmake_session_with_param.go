@@ -26,13 +26,13 @@ func createMatchmakeSessionWithParam(err error, client *nex.Client, callID uint3
 	if (missingHandler){
 		return
 	}
-	gid := commonMatchmakeExtensionProtocol.NewRoomHandler(client.PID(), matchmakeSession)
+	gid := commonMatchmakeExtensionProtocol.NewRoomHandler(client.PID(), client.ConnectionID(), matchmakeSession)
 
-	commonMatchmakeExtensionProtocol.AddPlayerToRoomHandler(gid, client.PID(), uint32(1))
+	commonMatchmakeExtensionProtocol.AddPlayerToRoomHandler(gid, client.PID(), client.ConnectionID(), uint32(1))
 
 	matchmakeSession = nexproto.NewMatchmakeSession()
 
-	_, matchmakeSession = commonMatchmakeExtensionProtocol.GetRoomHandler(gid)
+	_, _, matchmakeSession = commonMatchmakeExtensionProtocol.GetRoomHandler(gid)
 
 	//sessionKey := "00000000000000000000000000000000"
 

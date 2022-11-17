@@ -31,6 +31,6 @@ func InitNatTraversalProtocol(nexServer *nex.Server) *nexproto.NATTraversalProto
 
 	natTraversalProtocolServer.RequestProbeInitiationExt(requestProbeInitiationExt)
 	natTraversalProtocolServer.ReportNATProperties(reportNatProperties)
-	//natTraversalProtocolServer.ReportNATTraversalResult(reportNATTraversalResult) // not implemented in nex-protocols-go yet
+	//natTraversalProtocolServer.ReportNATTraversalResult(reportNATTraversalResult)
 	return natTraversalProtocolServer
 }
