@@ -2,21 +2,20 @@ package matchmaking
 
 import (
 	nex "github.com/PretendoNetwork/nex-go"
-	nexproto "github.com/PretendoNetwork/nex-protocols-go"
-	//"os"
+	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
 )
 
 func getSessionURLs(err error, client *nex.Client, callID uint32, gatheringId uint32) {
 	missingHandler := false
-	if (GetConnectionUrlsHandler == nil){
+	if GetConnectionUrlsHandler == nil {
 		logger.Warning("MatchMaking::GetSessionURLs missing GetConnectionUrlsHandler!")
 		missingHandler = true
 	}
-	if (GetRoomInfoHandler == nil){
+	if GetRoomInfoHandler == nil {
 		logger.Warning("MatchMaking::GetSessionURLs missing GetRoomInfoHandler!")
 		missingHandler = true
 	}
-	if (missingHandler){
+	if missingHandler {
 		return
 	}
 	var stationUrlStrings []string
@@ -31,21 +30,21 @@ func getSessionURLs(err error, client *nex.Client, callID uint32, gatheringId ui
 	rmcResponseBody := rmcResponseStream.Bytes()
 
 	// Build response packet
-	rmcResponse := nex.NewRMCResponse(nexproto.MatchMakingProtocolID, callID)
-	rmcResponse.SetSuccess(nexproto.MatchMakingMethodGetSessionURLs, rmcResponseBody)
+	rmcResponse := nex.NewRMCResponse(match_making.ProtocolID, callID)
+	rmcResponse.SetSuccess(match_making.MethodGetSessionURLs, rmcResponseBody)
 
 	rmcResponseBytes := rmcResponse.Bytes()
 
 	var responsePacket nex.PacketInterface
 
-	if(server.PrudpVersion() == 0){
+	if server.PRUDPVersion() == 0 {
 		responsePacket, _ = nex.NewPacketV0(client, nil)
 		responsePacket.SetVersion(0)
-	}else{
+	} else {
 		responsePacket, _ = nex.NewPacketV1(client, nil)
 		responsePacket.SetVersion(1)
 	}
-	
+
 	responsePacket.SetSource(0xA1)
 	responsePacket.SetDestination(0xAF)
 	responsePacket.SetType(nex.DataPacket)

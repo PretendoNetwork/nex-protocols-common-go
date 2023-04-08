@@ -4,7 +4,7 @@ import (
 	"strconv"
 
 	nex "github.com/PretendoNetwork/nex-go"
-	nexproto "github.com/PretendoNetwork/nex-protocols-go"
+	nat_traversal "github.com/PretendoNetwork/nex-protocols-go/nat-traversal"
 )
 
 func reportNatProperties(err error, client *nex.Client, callID uint32, natm uint32, natf uint32, rtt uint32) {
@@ -38,14 +38,14 @@ func reportNatProperties(err error, client *nex.Client, callID uint32, natm uint
 		ReplaceConnectionUrlHandler(client.ConnectionID(), stationUrlsStrings[i], stationUrls[i].EncodeToString())
 	}
 
-	rmcResponse := nex.NewRMCResponse(nexproto.NATTraversalProtocolID, callID)
-	rmcResponse.SetSuccess(nexproto.NATTraversalMethodReportNATProperties, nil)
+	rmcResponse := nex.NewRMCResponse(nat_traversal.ProtocolID, callID)
+	rmcResponse.SetSuccess(nat_traversal.MethodReportNATProperties, nil)
 
 	rmcResponseBytes := rmcResponse.Bytes()
 
 	var responsePacket nex.PacketInterface
 
-	if server.PrudpVersion() == 0 {
+	if server.PRUDPVersion() == 0 {
 		responsePacket, _ = nex.NewPacketV0(client, nil)
 		responsePacket.SetVersion(0)
 	} else {

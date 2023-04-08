@@ -2,31 +2,31 @@ package matchmaking
 
 import (
 	nex "github.com/PretendoNetwork/nex-go"
-	nexproto "github.com/PretendoNetwork/nex-protocols-go"
+	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
 )
 
 func updateSessionHostV1(err error, client *nex.Client, callID uint32, gid uint32) {
 	missingHandler := false
-	if (UpdateRoomHostHandler == nil){
+	if UpdateRoomHostHandler == nil {
 		logger.Warning("MatchMaking::UpdateSessionHostV1 missing UpdateRoomHostHandler!")
 		missingHandler = true
 	}
-	if (missingHandler){
+	if missingHandler {
 		return
 	}
 	UpdateRoomHostHandler(gid, client.PID())
 
-	rmcResponse := nex.NewRMCResponse(nexproto.MatchMakingProtocolID, callID)
-	rmcResponse.SetSuccess(nexproto.MatchMakingMethodUpdateSessionHostV1, nil)
+	rmcResponse := nex.NewRMCResponse(match_making.ProtocolID, callID)
+	rmcResponse.SetSuccess(match_making.MethodUpdateSessionHostV1, nil)
 
 	rmcResponseBytes := rmcResponse.Bytes()
 
 	var responsePacket nex.PacketInterface
 
-	if(server.PrudpVersion() == 0){
+	if server.PRUDPVersion() == 0 {
 		responsePacket, _ = nex.NewPacketV0(client, nil)
 		responsePacket.SetVersion(0)
-	}else{
+	} else {
 		responsePacket, _ = nex.NewPacketV1(client, nil)
 		responsePacket.SetVersion(1)
 	}

@@ -5,16 +5,16 @@ import (
 )
 
 func reportNATTraversalResult(err error, client *nex.Client, callID uint32, cid uint32, result bool, rtt uint32) {
-	// NATTraversalMethodReportNATTraversalResult does not exist yet in nex-protocols-go
+	// MethodReportNATTraversalResult does not exist yet in nex-protocols-go
 	/*
-		rmcResponse := nex.NewRMCResponse(nexproto.NATTraversalProtocolID, callID)
-		rmcResponse.SetSuccess(nexproto.NATTraversalMethodReportNATTraversalResult, nil)
+		rmcResponse := nex.NewRMCResponse(nexproto.ProtocolID, callID)
+		rmcResponse.SetSuccess(nexproto.MethodReportNATTraversalResult, nil)
 
 		rmcResponseBytes := rmcResponse.Bytes()
 
 		var responsePacket nex.PacketInterface
 
-		if server.PrudpVersion() == 0 {
+		if server.PRUDPVersion() == 0 {
 			responsePacket, _ = nex.NewPacketV0(client, nil)
 			responsePacket.SetVersion(0)
 		} else {

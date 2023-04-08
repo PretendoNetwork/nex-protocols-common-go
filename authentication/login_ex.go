@@ -5,10 +5,10 @@ import (
 	"strings"
 
 	nex "github.com/PretendoNetwork/nex-go"
-	nexproto "github.com/PretendoNetwork/nex-protocols-go"
+	"github.com/PretendoNetwork/nex-protocols-go/authentication"
 )
 
-func loginEx(err error, client *nex.Client, callID uint32, username string, authenticationInfo *nexproto.AuthenticationInfo) {
+func loginEx(err error, client *nex.Client, callID uint32, username string, authenticationInfo *authentication.AuthenticationInfo) {
 	var userPID uint32
 
 	if username == "guest" {
@@ -26,7 +26,7 @@ func loginEx(err error, client *nex.Client, callID uint32, username string, auth
 
 	encryptedTicket, errorCode := generateTicket(userPID, targetPID)
 
-	rmcResponse := nex.NewRMCResponse(nexproto.AuthenticationProtocolID, callID)
+	rmcResponse := nex.NewRMCResponse(authentication.ProtocolID, callID)
 
 	if errorCode != 0 && errorCode != nex.Errors.RendezVous.InvalidUsername {
 		// Some other error happened
@@ -70,14 +70,14 @@ func loginEx(err error, client *nex.Client, callID uint32, username string, auth
 
 		rmcResponseBody := rmcResponseStream.Bytes()
 
-		rmcResponse.SetSuccess(nexproto.AuthenticationMethodLoginEx, rmcResponseBody)
+		rmcResponse.SetSuccess(authentication.MethodLoginEx, rmcResponseBody)
 	}
 
 	rmcResponseBytes := rmcResponse.Bytes()
 
 	var responsePacket nex.PacketInterface
 
-	if commonAuthenticationProtocol.server.PrudpVersion() == 0 {
+	if commonAuthenticationProtocol.server.PRUDPVersion() == 0 {
 		responsePacket, _ = nex.NewPacketV0(client, nil)
 		responsePacket.SetVersion(0)
 	} else {

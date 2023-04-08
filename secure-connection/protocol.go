@@ -2,7 +2,7 @@ package secureconnection
 
 import (
 	"github.com/PretendoNetwork/nex-go"
-	nexproto "github.com/PretendoNetwork/nex-protocols-go"
+	secure_connection "github.com/PretendoNetwork/nex-protocols-go/secure-connection"
 	"github.com/PretendoNetwork/plogger-go"
 )
 
@@ -10,7 +10,7 @@ var commonSecureConnectionProtocol *CommonSecureConnectionProtocol
 var logger = plogger.NewLogger()
 
 type CommonSecureConnectionProtocol struct {
-	*nexproto.SecureProtocol
+	*secure_connection.SecureConnectionProtocol
 	server *nex.Server
 
 	addConnectionHandler        func(rvcid uint32, urls []string, ip string, port string)
@@ -41,8 +41,8 @@ func (commonSecureConnectionProtocol *CommonSecureConnectionProtocol) DoesConnec
 
 // NewCommonSecureConnectionProtocol returns a new CommonSecureConnectionProtocol
 func NewCommonSecureConnectionProtocol(server *nex.Server) *CommonSecureConnectionProtocol {
-	secureProtocol := nexproto.NewSecureProtocol(server)
-	commonSecureConnectionProtocol = &CommonSecureConnectionProtocol{SecureProtocol: secureProtocol, server: server}
+	secureConnectionProtocol := secure_connection.NewSecureConnectionProtocol(server)
+	commonSecureConnectionProtocol = &CommonSecureConnectionProtocol{SecureConnectionProtocol: secureConnectionProtocol, server: server}
 
 	server.On("Connect", connect)
 	commonSecureConnectionProtocol.Register(register)

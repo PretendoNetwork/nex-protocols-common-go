@@ -2,13 +2,13 @@ package authentication
 
 import (
 	nex "github.com/PretendoNetwork/nex-go"
-	nexproto "github.com/PretendoNetwork/nex-protocols-go"
+	"github.com/PretendoNetwork/nex-protocols-go/authentication"
 )
 
 func requestTicket(err error, client *nex.Client, callID uint32, userPID uint32, targetPID uint32) {
 	encryptedTicket, errorCode := generateTicket(userPID, targetPID)
 
-	rmcResponse := nex.NewRMCResponse(nexproto.AuthenticationProtocolID, callID)
+	rmcResponse := nex.NewRMCResponse(authentication.ProtocolID, callID)
 
 	// TODO:
 	// If the source or target pid is invalid, the %retval% field is set to Core::AccessDenied and the ticket is empty.
@@ -22,14 +22,14 @@ func requestTicket(err error, client *nex.Client, callID uint32, userPID uint32,
 
 		rmcResponseBody := rmcResponseStream.Bytes()
 
-		rmcResponse.SetSuccess(nexproto.AuthenticationMethodRequestTicket, rmcResponseBody)
+		rmcResponse.SetSuccess(authentication.MethodRequestTicket, rmcResponseBody)
 	}
 
 	rmcResponseBytes := rmcResponse.Bytes()
 
 	var responsePacket nex.PacketInterface
 
-	if commonAuthenticationProtocol.server.PrudpVersion() == 0 {
+	if commonAuthenticationProtocol.server.PRUDPVersion() == 0 {
 		responsePacket, _ = nex.NewPacketV0(client, nil)
 		responsePacket.SetVersion(0)
 	} else {

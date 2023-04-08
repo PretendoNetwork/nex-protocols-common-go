@@ -2,7 +2,7 @@ package nattraversal
 
 import (
 	nex "github.com/PretendoNetwork/nex-go"
-	nexproto "github.com/PretendoNetwork/nex-protocols-go"
+	nat_traversal "github.com/PretendoNetwork/nex-protocols-go/nat-traversal"
 	"github.com/PretendoNetwork/plogger-go"
 )
 
@@ -25,9 +25,9 @@ func ReplaceConnectionUrl(handler func(rvcid uint32, oldurl string, newurl strin
 }
 
 // InitNatTraversalProtocol returns a new NatTraversalProtocol
-func InitNatTraversalProtocol(nexServer *nex.Server) *nexproto.NATTraversalProtocol {
+func InitNatTraversalProtocol(nexServer *nex.Server) *nat_traversal.NATTraversalProtocol {
 	server = nexServer
-	natTraversalProtocolServer := nexproto.NewNATTraversalProtocol(nexServer)
+	natTraversalProtocolServer := nat_traversal.NewNATTraversalProtocol(nexServer)
 
 	natTraversalProtocolServer.RequestProbeInitiationExt(requestProbeInitiationExt)
 	natTraversalProtocolServer.ReportNATProperties(reportNatProperties)

@@ -4,7 +4,7 @@ import (
 	"strconv"
 
 	nex "github.com/PretendoNetwork/nex-go"
-	nexproto "github.com/PretendoNetwork/nex-protocols-go"
+	secure_connection "github.com/PretendoNetwork/nex-protocols-go/secure-connection"
 )
 
 func register(err error, client *nex.Client, callID uint32, stationUrls []*nex.StationURL) {
@@ -62,14 +62,14 @@ func register(err error, client *nex.Client, callID uint32, stationUrls []*nex.S
 	rmcResponseBody := rmcResponseStream.Bytes()
 
 	// Build response packet
-	rmcResponse := nex.NewRMCResponse(nexproto.SecureProtocolID, callID)
-	rmcResponse.SetSuccess(nexproto.SecureMethodRegister, rmcResponseBody)
+	rmcResponse := nex.NewRMCResponse(secure_connection.ProtocolID, callID)
+	rmcResponse.SetSuccess(secure_connection.MethodRegister, rmcResponseBody)
 
 	rmcResponseBytes := rmcResponse.Bytes()
 
 	var responsePacket nex.PacketInterface
 
-	if server.PrudpVersion() == 0 {
+	if server.PRUDPVersion() == 0 {
 		responsePacket, _ = nex.NewPacketV0(client, nil)
 		responsePacket.SetVersion(0)
 	} else {

@@ -5,18 +5,18 @@ import (
 	"strconv"
 
 	nex "github.com/PretendoNetwork/nex-go"
-	nexproto "github.com/PretendoNetwork/nex-protocols-go"
+	nat_traversal "github.com/PretendoNetwork/nex-protocols-go/nat-traversal"
 )
 
 func requestProbeInitiationExt(err error, client *nex.Client, callID uint32, targetList []string, stationToProbe string) {
-	rmcResponse := nex.NewRMCResponse(nexproto.NATTraversalProtocolID, callID)
-	rmcResponse.SetSuccess(nexproto.NATTraversalMethodRequestProbeInitiationExt, nil)
+	rmcResponse := nex.NewRMCResponse(nat_traversal.ProtocolID, callID)
+	rmcResponse.SetSuccess(nat_traversal.MethodRequestProbeInitiationExt, nil)
 
 	rmcResponseBytes := rmcResponse.Bytes()
 
 	var responsePacket nex.PacketInterface
 
-	if server.PrudpVersion() == 0 {
+	if server.PRUDPVersion() == 0 {
 		responsePacket, _ = nex.NewPacketV0(client, nil)
 		responsePacket.SetVersion(0)
 	} else {
@@ -35,9 +35,9 @@ func requestProbeInitiationExt(err error, client *nex.Client, callID uint32, tar
 	server.Send(responsePacket)
 
 	rmcMessage := nex.RMCRequest{}
-	rmcMessage.SetProtocolID(nexproto.NATTraversalProtocolID)
+	rmcMessage.SetProtocolID(nat_traversal.ProtocolID)
 	rmcMessage.SetCallID(0xffff0000 + callID)
-	rmcMessage.SetMethodID(nexproto.NATTraversalMethodInitiateProbe)
+	rmcMessage.SetMethodID(nat_traversal.MethodInitiateProbe)
 	rmcRequestStream := nex.NewStreamOut(server)
 	rmcRequestStream.WriteString(stationToProbe)
 	rmcRequestBody := rmcRequestStream.Bytes()
@@ -53,7 +53,7 @@ func requestProbeInitiationExt(err error, client *nex.Client, callID uint32, tar
 		if targetClient != nil {
 			var messagePacket nex.PacketInterface
 
-			if server.PrudpVersion() == 0 {
+			if server.PRUDPVersion() == 0 {
 				messagePacket, _ = nex.NewPacketV0(targetClient, nil)
 				messagePacket.SetVersion(0)
 			} else {
