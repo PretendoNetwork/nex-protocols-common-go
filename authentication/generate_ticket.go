@@ -7,7 +7,8 @@ import (
 )
 
 func generateTicket(userPID uint32, targetPID uint32) ([]byte, uint32) {
-	if commonAuthenticationProtocol.passwordFromPIDHandler == nil {
+	passwordFromPIDHandler := commonAuthenticationProtocol.server.PasswordFromPIDFunction()
+	if passwordFromPIDHandler == nil {
 		logger.Warning("Missing passwordFromPIDHandler!")
 		return []byte{}, nex.Errors.Core.Unknown
 	}
@@ -23,7 +24,7 @@ func generateTicket(userPID uint32, targetPID uint32) ([]byte, uint32) {
 	case 100: // guest user account
 		userPassword = "MMQea3n!fsik"
 	default:
-		userPassword, errorCode = commonAuthenticationProtocol.passwordFromPIDHandler(userPID)
+		userPassword, errorCode = passwordFromPIDHandler(userPID)
 	}
 
 	if errorCode != 0 {
@@ -36,7 +37,7 @@ func generateTicket(userPID uint32, targetPID uint32) ([]byte, uint32) {
 	case 100: // guest user account
 		targetPassword = "MMQea3n!fsik"
 	default:
-		targetPassword, errorCode = commonAuthenticationProtocol.passwordFromPIDHandler(userPID)
+		targetPassword, errorCode = passwordFromPIDHandler(userPID)
 	}
 
 	if errorCode != 0 {
