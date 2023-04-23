@@ -14,7 +14,6 @@ type CommonAuthenticationProtocol struct {
 	server                 *nex.Server
 	secureStationURL       *nex.StationURL
 	buildName              string
-	passwordFromPIDHandler func(pid uint32) (string, uint32)
 }
 
 func (commonAuthenticationProtocol *CommonAuthenticationProtocol) SetSecureStationURL(stationURL *nex.StationURL) {
@@ -23,10 +22,6 @@ func (commonAuthenticationProtocol *CommonAuthenticationProtocol) SetSecureStati
 
 func (commonAuthenticationProtocol *CommonAuthenticationProtocol) SetBuildName(buildName string) {
 	commonAuthenticationProtocol.buildName = buildName
-}
-
-func (commonAuthenticationProtocol *CommonAuthenticationProtocol) SetPasswordFromPIDFunction(handler func(pid uint32) (string, uint32)) {
-	commonAuthenticationProtocol.passwordFromPIDHandler = handler
 }
 
 // NewCommonAuthenticationProtocol returns a new CommonAuthenticationProtocol
