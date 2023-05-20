@@ -10,15 +10,16 @@ import (
 )
 
 func updateSessionHost(err error, client *nex.Client, callID uint32, gid uint32) {
+	server := commonMatchMakingProtocol.server
 	missingHandler := false
-	if UpdateRoomHostHandler == nil {
+	if commonMatchMakingProtocol.UpdateRoomHostHandler == nil {
 		logger.Warning("MatchMaking::UpdateSessionHostV1 missing UpdateRoomHostHandler!")
 		missingHandler = true
 	}
 	if missingHandler {
 		return
 	}
-	UpdateRoomHostHandler(gid, client.PID())
+	commonMatchMakingProtocol.UpdateRoomHostHandler(gid, client.PID())
 
 	rmcResponse := nex.NewRMCResponse(match_making.ProtocolID, callID)
 	rmcResponse.SetSuccess(match_making.MethodUpdateSessionHost, nil)
@@ -66,7 +67,7 @@ func updateSessionHost(err error, client *nex.Client, callID uint32, gid uint32)
 
 	rmcRequestBytes := rmcMessage.Bytes()
 
-	for _, pid := range GetRoomPlayersHandler(gid) {
+	for _, pid := range commonMatchMakingProtocol.GetRoomPlayersHandler(gid) {
 		if pid == 0 {
 			continue
 		}

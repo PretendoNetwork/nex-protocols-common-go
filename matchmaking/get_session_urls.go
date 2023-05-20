@@ -6,12 +6,13 @@ import (
 )
 
 func getSessionURLs(err error, client *nex.Client, callID uint32, gatheringId uint32) {
+	server := commonMatchMakingProtocol.server
 	missingHandler := false
-	if GetConnectionUrlsHandler == nil {
+	if commonMatchMakingProtocol.GetConnectionUrlsHandler == nil {
 		logger.Warning("MatchMaking::GetSessionURLs missing GetConnectionUrlsHandler!")
 		missingHandler = true
 	}
-	if GetRoomInfoHandler == nil {
+	if commonMatchMakingProtocol.GetRoomInfoHandler == nil {
 		logger.Warning("MatchMaking::GetSessionURLs missing GetRoomInfoHandler!")
 		missingHandler = true
 	}
@@ -20,9 +21,9 @@ func getSessionURLs(err error, client *nex.Client, callID uint32, gatheringId ui
 	}
 	var stationUrlStrings []string
 
-	hostpid, _, _, _, _ := GetRoomInfoHandler(gatheringId)
+	hostpid, _, _, _, _ := commonMatchMakingProtocol.GetRoomInfoHandler(gatheringId)
 
-	stationUrlStrings = GetConnectionUrlsHandler(server.FindClientFromPID(hostpid).ConnectionID())
+	stationUrlStrings = commonMatchMakingProtocol.GetConnectionUrlsHandler(server.FindClientFromPID(hostpid).ConnectionID())
 
 	rmcResponseStream := nex.NewStreamOut(server)
 	rmcResponseStream.WriteListString(stationUrlStrings)
