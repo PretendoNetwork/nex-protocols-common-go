@@ -6,15 +6,16 @@ import (
 )
 
 func unregisterGathering(err error, client *nex.Client, callID uint32, gatheringId uint32) {
+	server := commonMatchMakingProtocol.server
 	missingHandler := false
-	if DestroyRoomHandler == nil {
+	if commonMatchMakingProtocol.DestroyRoomHandler == nil {
 		logger.Warning("MatchMaking::UnregisterGathering missing DestroyRoomHandler!")
 		missingHandler = true
 	}
 	if missingHandler {
 		return
 	}
-	DestroyRoomHandler(gatheringId)
+	commonMatchMakingProtocol.DestroyRoomHandler(gatheringId)
 	rmcResponse := nex.NewRMCResponse(match_making.ProtocolID, callID)
 	rmcResponse.SetSuccess(match_making.MethodUnregisterGathering, nil)
 
