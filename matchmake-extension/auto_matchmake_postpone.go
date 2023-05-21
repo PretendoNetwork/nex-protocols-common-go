@@ -3,7 +3,6 @@ package matchmake_extension
 import (
 	"math"
 
-	"github.com/PretendoNetwork/mario-kart-7-secure/globals"
 	nex "github.com/PretendoNetwork/nex-go"
 	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension"
@@ -39,7 +38,7 @@ func AutoMatchmake_Postpone(err error, client *nex.Client, callID uint32, matchm
 
 	common_globals.Sessions[sessionIndex].ConnectionIDs = append(common_globals.Sessions[sessionIndex].ConnectionIDs, client.ConnectionID())
 
-	rmcResponseStream := nex.NewStreamOut(globals.NEXServer)
+	rmcResponseStream := nex.NewStreamOut(server)
 	matchmakeDataHolder := nex.NewDataHolder()
 	matchmakeDataHolder.SetTypeName("MatchmakeSession")
 	matchmakeDataHolder.SetObjectData(&common_globals.Sessions[sessionIndex].GameMatchmakeSession)
@@ -69,7 +68,7 @@ func AutoMatchmake_Postpone(err error, client *nex.Client, callID uint32, matchm
 	responsePacket.AddFlag(nex.FlagNeedsAck)
 	responsePacket.AddFlag(nex.FlagReliable)
 
-	globals.NEXServer.Send(responsePacket)
+	server.Send(responsePacket)
 
 	rmcMessage := nex.NewRMCRequest()
 	rmcMessage.SetProtocolID(notifications.ProtocolID)
@@ -83,12 +82,12 @@ func AutoMatchmake_Postpone(err error, client *nex.Client, callID uint32, matchm
 	oEvent.Param1 = uint32(sessionIndex)
 	oEvent.Param2 = client.PID()
 
-	stream := nex.NewStreamOut(globals.NEXServer)
+	stream := nex.NewStreamOut(server)
 	oEventBytes := oEvent.Bytes(stream)
 	rmcMessage.SetParameters(oEventBytes)
 	rmcMessageBytes := rmcMessage.Bytes()
 
-	targetClient := globals.NEXServer.FindClientFromPID(uint32(common_globals.Sessions[sessionIndex].GameMatchmakeSession.Gathering.HostPID))
+	targetClient := server.FindClientFromPID(uint32(common_globals.Sessions[sessionIndex].GameMatchmakeSession.Gathering.HostPID))
 
 	var messagePacket nex.PacketInterface
 
@@ -107,5 +106,5 @@ func AutoMatchmake_Postpone(err error, client *nex.Client, callID uint32, matchm
 	messagePacket.AddFlag(nex.FlagNeedsAck)
 	messagePacket.AddFlag(nex.FlagReliable)
 
-	globals.NEXServer.Send(messagePacket)
+	server.Send(messagePacket)
 }
