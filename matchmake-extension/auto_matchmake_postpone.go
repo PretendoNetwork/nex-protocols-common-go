@@ -19,6 +19,7 @@ func AutoMatchmake_Postpone(err error, client *nex.Client, callID uint32, matchm
 		return
 	}
 	//This is the best way I found to copy the full object. And I still hate it.
+	// TODO - for Jon: Copy in MatchmakeSession (and anything else that needs it)
 	tmp, _ := json.Marshal(matchmakeSession)
 	matchmakeSessionCopy := match_making.NewMatchmakeSession()
 	json.Unmarshal(tmp, &matchmakeSessionCopy)
@@ -36,7 +37,7 @@ func AutoMatchmake_Postpone(err error, client *nex.Client, callID uint32, matchm
 		common_globals.Sessions[sessionIndex].GameMatchmakeSession.Gathering.HostPID = client.PID()
 	}
 
-	common_globals.Sessions[sessionIndex].PlayersByConnectionId = append(common_globals.Sessions[sessionIndex].PlayersByConnectionId, client.ConnectionID())
+	common_globals.Sessions[sessionIndex].ConnectionIDs = append(common_globals.Sessions[sessionIndex].ConnectionIDs, client.ConnectionID())
 
 	rmcResponseStream := nex.NewStreamOut(globals.NEXServer)
 	matchmakeDataHolder := nex.NewDataHolder()
