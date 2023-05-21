@@ -39,13 +39,10 @@ func AutoMatchmake_Postpone(err error, client *nex.Client, callID uint32, matchm
 	common_globals.Sessions[sessionIndex].PlayersByConnectionId = append(common_globals.Sessions[sessionIndex].PlayersByConnectionId, client.ConnectionID())
 
 	rmcResponseStream := nex.NewStreamOut(globals.NEXServer)
-	rmcResponseStream.WriteString("MatchmakeSession")
-	lengthStream := nex.NewStreamOut(globals.NEXServer)
-	lengthStream.WriteStructure(&common_globals.Sessions[sessionIndex].GameMatchmakeSession)
-	matchmakeSessionLength := uint32(len(lengthStream.Bytes()))
-	rmcResponseStream.WriteUInt32LE(matchmakeSessionLength + 4)
-	rmcResponseStream.WriteUInt32LE(matchmakeSessionLength)
-	rmcResponseStream.WriteStructure(&common_globals.Sessions[sessionIndex].GameMatchmakeSession)
+	matchmakeDataHolder := nex.NewDataHolder()
+	matchmakeDataHolder.SetTypeName("MatchmakeSession")
+	matchmakeDataHolder.SetObjectData(&common_globals.Sessions[sessionIndex].GameMatchmakeSession)
+	rmcResponseStream.WriteDataHolder(matchmakeDataHolder)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
@@ -80,6 +77,7 @@ func AutoMatchmake_Postpone(err error, client *nex.Client, callID uint32, matchm
 
 	oEvent := notifications.NewNotificationEvent()
 	oEvent.PIDSource = common_globals.Sessions[sessionIndex].GameMatchmakeSession.Gathering.HostPID
+	// TODO - for Jon: notifications type to make this simpler
 	oEvent.Type = 3001 // New participant
 	oEvent.Param1 = uint32(sessionIndex)
 	oEvent.Param2 = client.PID()
