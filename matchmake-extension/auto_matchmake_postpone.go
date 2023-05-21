@@ -13,12 +13,9 @@ import (
 )
 
 func AutoMatchmake_Postpone(err error, client *nex.Client, callID uint32, matchmakeSession *match_making.MatchmakeSession, message string) {
-	missingHandler := false
+	server := commonMatchmakeExtensionProtocol.server
 	if commonMatchmakeExtensionProtocol.CleanupSearchMatchmakeSessionHandler == nil {
 		logger.Warning("MatchmakeExtension::AutoMatchmake_Postpone missing CleanupSearchMatchmakeSessionHandler!")
-		missingHandler = true
-	}
-	if missingHandler {
 		return
 	}
 	//This is the best way I found to copy the full object. And I still hate it.
@@ -57,9 +54,15 @@ func AutoMatchmake_Postpone(err error, client *nex.Client, callID uint32, matchm
 
 	rmcResponseBytes := rmcResponse.Bytes()
 
-	responsePacket, _ := nex.NewPacketV0(client, nil)
+	var responsePacket nex.PacketInterface
 
-	responsePacket.SetVersion(0)
+	if server.PRUDPVersion() == 0 {
+		responsePacket, _ = nex.NewPacketV0(client, nil)
+		responsePacket.SetVersion(0)
+	} else {
+		responsePacket, _ = nex.NewPacketV1(client, nil)
+		responsePacket.SetVersion(1)
+	}
 	responsePacket.SetSource(0xA1)
 	responsePacket.SetDestination(0xAF)
 	responsePacket.SetType(nex.DataPacket)
@@ -88,8 +91,15 @@ func AutoMatchmake_Postpone(err error, client *nex.Client, callID uint32, matchm
 
 	targetClient := globals.NEXServer.FindClientFromPID(uint32(common_globals.Sessions[sessionIndex].GameMatchmakeSession.Gathering.HostPID))
 
-	messagePacket, _ := nex.NewPacketV0(targetClient, nil)
-	messagePacket.SetVersion(1)
+	var messagePacket nex.PacketInterface
+
+	if server.PRUDPVersion() == 0 {
+		messagePacket, _ = nex.NewPacketV0(targetClient, nil)
+		messagePacket.SetVersion(0)
+	} else {
+		messagePacket, _ = nex.NewPacketV1(targetClient, nil)
+		messagePacket.SetVersion(1)
+	}
 	messagePacket.SetSource(0xA1)
 	messagePacket.SetDestination(0xAF)
 	messagePacket.SetType(nex.DataPacket)

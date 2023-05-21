@@ -4,10 +4,9 @@ import (
 	//nex "github.com/PretendoNetwork/nex-go"
 	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
 	//"github.com/PretendoNetwork/plogger-go"
-    "reflect"
+	"reflect"
 	"math"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
-	"fmt"
 )
 
 func FindSearchMatchmakeSession(searchMatchmakeSession match_making.MatchmakeSession) int {
@@ -21,9 +20,9 @@ func FindSearchMatchmakeSession(searchMatchmakeSession match_making.MatchmakeSes
 	}
 	for _, sessionIndex := range candidateSessionIndexes {
 		sessionToCheck := common_globals.Sessions[sessionIndex]
-		if(len(sessionToCheck.PlayersByConnectionId) >= int(sessionToCheck.GameMatchmakeSession.MaximumParticipants)){
+		if len(sessionToCheck.PlayersByConnectionId) >= int(sessionToCheck.GameMatchmakeSession.MaximumParticipants){
 			continue
-		}else{
+		} else {
 			returnSessionIndex = sessionIndex //found a match
 			break
 		}
