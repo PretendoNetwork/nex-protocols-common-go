@@ -3,6 +3,8 @@ package matchmaking
 import (
 	nex "github.com/PretendoNetwork/nex-go"
 	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
+	"fmt"
 )
 
 func getSessionURLs(err error, client *nex.Client, callID uint32, gatheringId uint32) {
@@ -21,9 +23,14 @@ func getSessionURLs(err error, client *nex.Client, callID uint32, gatheringId ui
 	}
 	var stationUrlStrings []string
 
-	hostpid, _, _, _, _ := commonMatchMakingProtocol.GetRoomInfoHandler(gatheringId)
+	hostpid := common_globals.Sessions[gatheringId].GameMatchmakeSession.Gathering.HostPID
 
-	stationUrlStrings = commonMatchMakingProtocol.GetConnectionUrlsHandler(server.FindClientFromPID(hostpid).ConnectionID())
+	hostclient := server.FindClientFromPID(hostpid)
+	if(hostclient == nil){
+		fmt.Println("nil hostclient?!") //this popped up once during testing. Leaving it noted here in case it becomes a problem.
+		return
+	}
+	stationUrlStrings = hostclient.StationURLs()
 
 	rmcResponseStream := nex.NewStreamOut(server)
 	rmcResponseStream.WriteListString(stationUrlStrings)
