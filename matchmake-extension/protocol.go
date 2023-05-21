@@ -17,6 +17,11 @@ type CommonMatchmakeExtensionProtocol struct {
 	CleanupSearchMatchmakeSessionHandler    func(matchmakeSession match_making.MatchmakeSession) match_making.MatchmakeSession
 }
 
+// CleanupSearchMatchmakeSession sets the CleanupSearchMatchmakeSession handler function
+func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) CleanupSearchMatchmakeSession(handler func(matchmakeSession match_making.MatchmakeSession) match_making.MatchmakeSession) {
+	commonMatchmakeExtensionProtocol.CleanupSearchMatchmakeSessionHandler = handler
+}
+
 // NewCommonMatchmakeExtensionProtocol returns a new CommonMatchmakeExtensionProtocol
 func NewCommonMatchmakeExtensionProtocol(server *nex.Server) *CommonMatchmakeExtensionProtocol {
 	MatchmakeExtensionProtocol := matchmake_extension.NewMatchmakeExtensionProtocol(server)
