@@ -29,7 +29,6 @@ func register(err error, client *nex.Client, callID uint32, stationUrls []*nex.S
 	localStationURL := localStation.EncodeToString()
 	pidConnectionID := uint32(server.ConnectionIDCounter().Increment())
 	client.SetConnectionID(pidConnectionID)
-	client.SetLocalStationURL(localStationURL)
 
 	address := client.Address().IP.String()
 	port := strconv.Itoa(client.Address().Port)
@@ -44,12 +43,7 @@ func register(err error, client *nex.Client, callID uint32, stationUrls []*nex.S
 	localStation.SetType(type_)
 
 	urlPublic := localStation.EncodeToString()
-
-	if !commonSecureConnectionProtocol.doesConnectionExistHandler(pidConnectionID) {
-		commonSecureConnectionProtocol.addConnectionHandler(pidConnectionID, []string{localStationURL, urlPublic}, address, port)
-	} else {
-		commonSecureConnectionProtocol.updateConnectionHandler(pidConnectionID, []string{localStationURL, urlPublic}, address, port)
-	}
+	client.SetStationURLs([]string{localStationURL, urlPublic})
 
 	retval := nex.NewResultSuccess(nex.Errors.Core.Unknown)
 
