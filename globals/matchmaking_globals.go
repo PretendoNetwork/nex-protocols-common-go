@@ -29,23 +29,21 @@ func RemoveConnectionIDFromRoom(clientConnectionID uint32, gathering uint32) {
 	}
 }
 
-func FindClientSessions(clientConnectionID uint32) []uint32 {
-	//TODO: is there any real instance where a client could be in multiple MatchmakeSessions at once? afaik there isn't, but I handle it regardless just in case (if we're sure there isn't, we could remove the handling and speed the code up)
-	gatheringsFoundIn := make([]uint32, 0, len(Sessions))
-	for gatheringIndex := range Sessions {
-		for _, connectionID := range Sessions[gatheringIndex].ConnectionIDs {
+func FindClientSession(clientConnectionID uint32) uint32 {
+	for gatheringID := range Sessions {
+		for _, connectionID := range Sessions[gatheringID].ConnectionIDs {
 			if connectionID == clientConnectionID {
-				gatheringsFoundIn = append(gatheringsFoundIn, uint32(gatheringIndex))
+				return gatheringID
 			}
 		}
 	}
-	return gatheringsFoundIn
+	return math.MaxUint32
 }
 
 func RemoveConnectionIDFromAllSessions(clientConnectionID uint32) {
-	foundSessions := FindClientSessions(clientConnectionID)
-	for i := 0; i < len(foundSessions); i++ {
-		RemoveConnectionIDFromRoom(clientConnectionID, uint32(i))
+	foundSession := FindClientSession(clientConnectionID)
+	if(foundSession != math.MaxUint32){
+		RemoveConnectionIDFromRoom(clientConnectionID, foundSession)
 	}
 }
 
