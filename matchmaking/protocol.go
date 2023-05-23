@@ -52,22 +52,17 @@ func NewCommonMatchMakingProtocol(server *nex.Server) *CommonMatchMakingProtocol
 	matchMakingProtocol := match_making.NewMatchMakingProtocol(server)
 	commonMatchMakingProtocol = &CommonMatchMakingProtocol{MatchMakingProtocol: matchMakingProtocol, server: server}
 
+    common_globals.Sessions = make(map[uint32]*common_globals.CommonMatchmakeSession)
+
 	commonMatchMakingProtocol.GetSessionURLs(getSessionURLs)
 	commonMatchMakingProtocol.UnregisterGathering(unregisterGathering)
 	commonMatchMakingProtocol.UpdateSessionHostV1(updateSessionHostV1)
 	commonMatchMakingProtocol.UpdateSessionHost(updateSessionHost)
 
-	if server.PRUDPVersion() == 0 {
-		server.On("Kick", func(packet *nex.PacketV0) {
-			fmt.Println("Leaving")
-			common_globals.RemoveConnectionIDFromAllSessions(packet.Sender().ConnectionID())
-		})
-	} else {
-		server.On("Kick", func(packet *nex.PacketV1) {
-			fmt.Println("Leaving")
-			common_globals.RemoveConnectionIDFromAllSessions(packet.Sender().ConnectionID())
-		})
-	}
+	server.On("Kick", func(packet nex.PacketInterface) {
+		fmt.Println("Leaving")
+		common_globals.RemoveConnectionIDFromAllSessions(packet.Sender().ConnectionID())
+	})
 
 	return commonMatchMakingProtocol
 }
