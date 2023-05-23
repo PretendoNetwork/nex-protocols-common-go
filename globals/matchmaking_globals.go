@@ -58,7 +58,7 @@ func FindSearchMatchmakeSession(searchMatchmakeSession match_making.MatchmakeSes
 	}
 	for _, sessionIndex := range candidateSessionIndexes {
 		sessionToCheck := Sessions[sessionIndex]
-		if len(sessionToCheck.ConnectionIDs) >= int(sessionToCheck.GameMatchmakeSession.MaximumParticipants){
+		if len(sessionToCheck.ConnectionIDs) >= int(sessionToCheck.GameMatchmakeSession.MaximumParticipants) {
 			continue
 		} else {
 			returnSessionIndex = int(sessionIndex) //found a match
