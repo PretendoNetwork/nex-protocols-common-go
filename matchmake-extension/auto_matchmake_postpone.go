@@ -23,17 +23,18 @@ func AutoMatchmake_Postpone(err error, client *nex.Client, callID uint32, matchm
 	matchmakeSessionCopy := match_making.NewMatchmakeSession()
 	json.Unmarshal(tmp, &matchmakeSessionCopy)
 	searchMatchmakeSession := commonMatchmakeExtensionProtocol.CleanupSearchMatchmakeSessionHandler(*matchmakeSessionCopy)
-	sessionIndex := FindSearchMatchmakeSession(searchMatchmakeSession)
+	sessionIndex := uint32(common_globals.FindSearchMatchmakeSession(searchMatchmakeSession))
 	if sessionIndex == math.MaxUint32 {
 		session := common_globals.CommonMatchmakeSession{
 			SearchMatchmakeSession: searchMatchmakeSession,
 			GameMatchmakeSession:   *matchmakeSession,
 		}
-		sessionIndex = len(common_globals.Sessions)
-		common_globals.Sessions = append(common_globals.Sessions, session)
+		sessionIndex = common_globals.CurrentGatheringID
+		common_globals.Sessions[sessionIndex] = &session
 		common_globals.Sessions[sessionIndex].GameMatchmakeSession.Gathering.ID = uint32(sessionIndex)
 		common_globals.Sessions[sessionIndex].GameMatchmakeSession.Gathering.OwnerPID = client.PID()
 		common_globals.Sessions[sessionIndex].GameMatchmakeSession.Gathering.HostPID = client.PID()
+		common_globals.CurrentGatheringID++
 	}
 
 	common_globals.Sessions[sessionIndex].ConnectionIDs = append(common_globals.Sessions[sessionIndex].ConnectionIDs, client.ConnectionID())
