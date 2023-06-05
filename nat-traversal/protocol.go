@@ -6,31 +6,21 @@ import (
 	"github.com/PretendoNetwork/plogger-go"
 )
 
-var (
-	server                      *nex.Server
-	GetConnectionUrlsHandler    func(rvcid uint32) []string
-	ReplaceConnectionUrlHandler func(rvcid uint32, oldurl string, newurl string)
-)
-
+var commonNATTraversalProtocol *CommonNATTraversalProtocol
 var logger = plogger.NewLogger()
 
-// GetConnectionUrls sets the GetConnectionUrls handler function
-func GetConnectionUrls(handler func(rvcid uint32) []string) {
-	GetConnectionUrlsHandler = handler
+type CommonNATTraversalProtocol struct {
+	*nat_traversal.NATTraversalProtocol
+	server                      *nex.Server
 }
 
-// ReplaceConnectionUrl sets the ReplaceConnectionUrl handler function
-func ReplaceConnectionUrl(handler func(rvcid uint32, oldurl string, newurl string)) {
-	ReplaceConnectionUrlHandler = handler
-}
+// NewCommonNATTraversalProtocol returns a new CommonNATTraversalProtocol
+func NewCommonNATTraversalProtocol(server *nex.Server) *CommonNATTraversalProtocol {
+	natTraversalProtocol := nat_traversal.NewNATTraversalProtocol(server)
+	commonNATTraversalProtocol = &CommonNATTraversalProtocol{NATTraversalProtocol: natTraversalProtocol, server: server}
 
-// InitNatTraversalProtocol returns a new NatTraversalProtocol
-func InitNatTraversalProtocol(nexServer *nex.Server) *nat_traversal.NATTraversalProtocol {
-	server = nexServer
-	natTraversalProtocolServer := nat_traversal.NewNATTraversalProtocol(nexServer)
-
-	natTraversalProtocolServer.RequestProbeInitiationExt(requestProbeInitiationExt)
-	natTraversalProtocolServer.ReportNATProperties(reportNatProperties)
-	//natTraversalProtocolServer.ReportNATTraversalResult(reportNATTraversalResult) // not implemented in nex-protocols-go yet
-	return natTraversalProtocolServer
+	commonNATTraversalProtocol.RequestProbeInitiationExt(requestProbeInitiationExt)
+	commonNATTraversalProtocol.ReportNATProperties(reportNATProperties)
+	commonNATTraversalProtocol.ReportNATTraversalResult(reportNATTraversalResult)
+	return commonNATTraversalProtocol
 }

@@ -1,7 +1,6 @@
 package nattraversal
 
 import (
-	"fmt"
 	"strconv"
 
 	nex "github.com/PretendoNetwork/nex-go"
@@ -9,6 +8,7 @@ import (
 )
 
 func requestProbeInitiationExt(err error, client *nex.Client, callID uint32, targetList []string, stationToProbe string) {
+	server := commonNATTraversalProtocol.server
 	rmcResponse := nex.NewRMCResponse(nat_traversal.ProtocolID, callID)
 	rmcResponse.SetSuccess(nat_traversal.MethodRequestProbeInitiationExt, nil)
 
@@ -34,22 +34,24 @@ func requestProbeInitiationExt(err error, client *nex.Client, callID uint32, tar
 
 	server.Send(responsePacket)
 
-	rmcMessage := nex.RMCRequest{}
+	rmcMessage := nex.NewRMCRequest()
 	rmcMessage.SetProtocolID(nat_traversal.ProtocolID)
 	rmcMessage.SetCallID(0xffff0000 + callID)
 	rmcMessage.SetMethodID(nat_traversal.MethodInitiateProbe)
+
 	rmcRequestStream := nex.NewStreamOut(server)
 	rmcRequestStream.WriteString(stationToProbe)
 	rmcRequestBody := rmcRequestStream.Bytes()
+
 	rmcMessage.SetParameters(rmcRequestBody)
 	rmcMessageBytes := rmcMessage.Bytes()
 
 	for _, target := range targetList {
 		targetUrl := nex.NewStationURL(target)
-		fmt.Println("target: " + target)
-		fmt.Println("toProbe: " + stationToProbe)
-		targetRvcID, _ := strconv.Atoi(targetUrl.RVCID())
-		targetClient := server.FindClientFromConnectionID(uint32(targetRvcID))
+		logger.Info("Target: " + target)
+		logger.Info("ToProbe: " + stationToProbe)
+		targetRVCID, _ := strconv.Atoi(targetUrl.RVCID())
+		targetClient := server.FindClientFromConnectionID(uint32(targetRVCID))
 		if targetClient != nil {
 			var messagePacket nex.PacketInterface
 
@@ -71,7 +73,7 @@ func requestProbeInitiationExt(err error, client *nex.Client, callID uint32, tar
 
 			server.Send(messagePacket)
 		} else {
-			fmt.Println("not found")
+			logger.Warning("Client not found")
 		}
 	}
 }
