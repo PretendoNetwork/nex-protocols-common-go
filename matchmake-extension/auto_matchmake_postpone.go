@@ -8,21 +8,17 @@ import (
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension"
 	"github.com/PretendoNetwork/nex-protocols-go/notifications"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
-	"encoding/json"
 )
 
 func AutoMatchmake_Postpone(err error, client *nex.Client, callID uint32, matchmakeSession *match_making.MatchmakeSession, message string) {
 	server := commonMatchmakeExtensionProtocol.server
-	if commonMatchmakeExtensionProtocol.CleanupSearchMatchmakeSessionHandler == nil {
+	if commonMatchmakeExtensionProtocol.cleanupSearchMatchmakeSessionHandler == nil {
 		logger.Warning("MatchmakeExtension::AutoMatchmake_Postpone missing CleanupSearchMatchmakeSessionHandler!")
 		return
 	}
-	//This is the best way I found to copy the full object. And I still hate it.
-	// TODO - for Jon: Copy in MatchmakeSession (and anything else that needs it)
-	tmp, _ := json.Marshal(matchmakeSession)
-	matchmakeSessionCopy := match_making.NewMatchmakeSession()
-	json.Unmarshal(tmp, &matchmakeSessionCopy)
-	searchMatchmakeSession := commonMatchmakeExtensionProtocol.CleanupSearchMatchmakeSessionHandler(*matchmakeSessionCopy)
+
+	matchmakeSessionCopy := matchmakeSession.Copy().(*match_making.MatchmakeSession)
+	searchMatchmakeSession := commonMatchmakeExtensionProtocol.cleanupSearchMatchmakeSessionHandler(*matchmakeSessionCopy)
 	sessionIndex := uint32(common_globals.FindSearchMatchmakeSession(searchMatchmakeSession))
 	if sessionIndex == math.MaxUint32 {
 		session := common_globals.CommonMatchmakeSession{
@@ -34,10 +30,16 @@ func AutoMatchmake_Postpone(err error, client *nex.Client, callID uint32, matchm
 		common_globals.Sessions[sessionIndex].GameMatchmakeSession.Gathering.ID = uint32(sessionIndex)
 		common_globals.Sessions[sessionIndex].GameMatchmakeSession.Gathering.OwnerPID = client.PID()
 		common_globals.Sessions[sessionIndex].GameMatchmakeSession.Gathering.HostPID = client.PID()
+
+		currentTime := nex.NewDateTime(0)
+		currentTime = nex.NewDateTime(currentTime.UTC())
+		common_globals.Sessions[sessionIndex].GameMatchmakeSession.StartedTime = currentTime
+
 		common_globals.CurrentGatheringID++
 	}
 
 	common_globals.Sessions[sessionIndex].ConnectionIDs = append(common_globals.Sessions[sessionIndex].ConnectionIDs, client.ConnectionID())
+	common_globals.Sessions[sessionIndex].GameMatchmakeSession.ParticipationCount = uint32(len(common_globals.Sessions[sessionIndex].ConnectionIDs))
 
 	rmcResponseStream := nex.NewStreamOut(server)
 	matchmakeDataHolder := nex.NewDataHolder()
@@ -78,17 +80,17 @@ func AutoMatchmake_Postpone(err error, client *nex.Client, callID uint32, matchm
 
 	oEvent := notifications.NewNotificationEvent()
 	oEvent.PIDSource = common_globals.Sessions[sessionIndex].GameMatchmakeSession.Gathering.HostPID
-	// TODO - for Jon: notifications type to make this simpler
-	oEvent.Type = 3001 // New participant
+	oEvent.Type = notifications.NotificationTypes.NewParticipant
 	oEvent.Param1 = uint32(sessionIndex)
 	oEvent.Param2 = client.PID()
+	oEvent.StrParam = message
 
 	stream := nex.NewStreamOut(server)
 	oEventBytes := oEvent.Bytes(stream)
 	rmcMessage.SetParameters(oEventBytes)
 	rmcMessageBytes := rmcMessage.Bytes()
 
-	targetClient := server.FindClientFromPID(uint32(common_globals.Sessions[sessionIndex].GameMatchmakeSession.Gathering.HostPID))
+	targetClient := server.FindClientFromPID(uint32(common_globals.Sessions[sessionIndex].GameMatchmakeSession.Gathering.OwnerPID))
 
 	var messagePacket nex.PacketInterface
 

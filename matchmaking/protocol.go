@@ -14,37 +14,6 @@ var logger = plogger.NewLogger()
 type CommonMatchMakingProtocol struct {
 	*match_making.MatchMakingProtocol
 	server *nex.Server
-
-	GetConnectionUrlsHandler func(rvcid uint32) []string
-	UpdateRoomHostHandler    func(gid uint32, newownerpid uint32)
-	DestroyRoomHandler       func(gid uint32)
-	GetRoomInfoHandler       func(gid uint32) (uint32, uint32, uint32, uint32, uint32)
-	GetRoomPlayersHandler    func(gid uint32) []uint32
-}
-
-// GetConnectionUrls sets the GetConnectionUrls handler function
-func (commonMatchMakingProtocol *CommonMatchMakingProtocol) GetConnectionUrls(handler func(rvcid uint32) []string) {
-	commonMatchMakingProtocol.GetConnectionUrlsHandler = handler
-}
-
-// UpdateRoomHost sets the UpdateRoomHost handler function
-func (commonMatchMakingProtocol *CommonMatchMakingProtocol) UpdateRoomHost(handler func(gid uint32, newownerpid uint32)) {
-	commonMatchMakingProtocol.UpdateRoomHostHandler = handler
-}
-
-// DestroyRoom sets the DestroyRoom handler function
-func (commonMatchMakingProtocol *CommonMatchMakingProtocol) DestroyRoom(handler func(gid uint32)) {
-	commonMatchMakingProtocol.DestroyRoomHandler = handler
-}
-
-// GetRoomInfo sets the GetRoomInfo handler function
-func (commonMatchMakingProtocol *CommonMatchMakingProtocol) GetRoomInfo(handler func(gid uint32) (uint32, uint32, uint32, uint32, uint32)) {
-	commonMatchMakingProtocol.GetRoomInfoHandler = handler
-}
-
-// GetRoomPlayers sets the GetRoomPlayers handler function
-func (commonMatchMakingProtocol *CommonMatchMakingProtocol) GetRoomPlayers(handler func(gid uint32) []uint32) {
-	commonMatchMakingProtocol.GetRoomPlayersHandler = handler
 }
 
 // NewCommonMatchMakingProtocol returns a new CommonMatchMakingProtocol
@@ -52,7 +21,7 @@ func NewCommonMatchMakingProtocol(server *nex.Server) *CommonMatchMakingProtocol
 	matchMakingProtocol := match_making.NewMatchMakingProtocol(server)
 	commonMatchMakingProtocol = &CommonMatchMakingProtocol{MatchMakingProtocol: matchMakingProtocol, server: server}
 
-    common_globals.Sessions = make(map[uint32]*common_globals.CommonMatchmakeSession)
+	common_globals.Sessions = make(map[uint32]*common_globals.CommonMatchmakeSession)
 
 	commonMatchMakingProtocol.GetSessionURLs(getSessionURLs)
 	commonMatchMakingProtocol.UnregisterGathering(unregisterGathering)

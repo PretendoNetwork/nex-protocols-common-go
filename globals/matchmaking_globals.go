@@ -2,7 +2,6 @@ package common_globals
 import (
 	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
 	"math"
-	"reflect"
 )
 
 type CommonMatchmakeSession struct {
@@ -25,7 +24,7 @@ func RemoveConnectionIDFromRoom(clientConnectionID uint32, gathering uint32) {
 		}
 	}
 	if len(Sessions[gathering].ConnectionIDs) == 0 {
-        delete(Sessions, gathering)
+		delete(Sessions, gathering)
 	}
 }
 
@@ -52,7 +51,7 @@ func FindSearchMatchmakeSession(searchMatchmakeSession match_making.MatchmakeSes
 	//this portion finds any sessions that match the search session. It does not care about anything beyond that, such as if the match is already full. This is handled below.
 	candidateSessionIndexes := make([]uint32, 0, len(Sessions))
 	for index, session := range Sessions {
-		if reflect.DeepEqual(session.SearchMatchmakeSession, searchMatchmakeSession) { // TODO - for Jon: Equals in StructureInterface
+		if session.SearchMatchmakeSession.Equals(&searchMatchmakeSession) {
 			candidateSessionIndexes = append(candidateSessionIndexes, index)
 		}
 	}
