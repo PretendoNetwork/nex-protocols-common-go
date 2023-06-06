@@ -10,20 +10,24 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
-func AutoMatchmake_Postpone(err error, client *nex.Client, callID uint32, matchmakeSession *match_making.MatchmakeSession, message string) {
+func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, matchmakeSession *match_making.MatchmakeSession, message string) {
 	server := commonMatchmakeExtensionProtocol.server
 	if commonMatchmakeExtensionProtocol.cleanupSearchMatchmakeSessionHandler == nil {
 		logger.Warning("MatchmakeExtension::AutoMatchmake_Postpone missing CleanupSearchMatchmakeSessionHandler!")
 		return
 	}
 
-	matchmakeSessionCopy := matchmakeSession.Copy().(*match_making.MatchmakeSession)
-	searchMatchmakeSession := commonMatchmakeExtensionProtocol.cleanupSearchMatchmakeSessionHandler(*matchmakeSessionCopy)
+	// A client may disconnect from a session without leaving reliably,
+	// so let's make sure the client is removed from the session
+	common_globals.RemoveConnectionIDFromAllSessions(client.ConnectionID())
+
+	searchMatchmakeSession := matchmakeSession.Copy().(*match_making.MatchmakeSession)
+	commonMatchmakeExtensionProtocol.cleanupSearchMatchmakeSessionHandler(searchMatchmakeSession)
 	sessionIndex := uint32(common_globals.FindSearchMatchmakeSession(searchMatchmakeSession))
 	if sessionIndex == math.MaxUint32 {
 		session := common_globals.CommonMatchmakeSession{
 			SearchMatchmakeSession: searchMatchmakeSession,
-			GameMatchmakeSession:   *matchmakeSession,
+			GameMatchmakeSession:   matchmakeSession,
 		}
 		sessionIndex = common_globals.CurrentGatheringID
 		common_globals.Sessions[sessionIndex] = &session
@@ -32,8 +36,7 @@ func AutoMatchmake_Postpone(err error, client *nex.Client, callID uint32, matchm
 		common_globals.Sessions[sessionIndex].GameMatchmakeSession.Gathering.HostPID = client.PID()
 
 		currentTime := nex.NewDateTime(0)
-		currentTime = nex.NewDateTime(currentTime.UTC())
-		common_globals.Sessions[sessionIndex].GameMatchmakeSession.StartedTime = currentTime
+		common_globals.Sessions[sessionIndex].GameMatchmakeSession.StartedTime = nex.NewDateTime(currentTime.UTC())
 
 		common_globals.CurrentGatheringID++
 	}
@@ -44,7 +47,7 @@ func AutoMatchmake_Postpone(err error, client *nex.Client, callID uint32, matchm
 	rmcResponseStream := nex.NewStreamOut(server)
 	matchmakeDataHolder := nex.NewDataHolder()
 	matchmakeDataHolder.SetTypeName("MatchmakeSession")
-	matchmakeDataHolder.SetObjectData(&common_globals.Sessions[sessionIndex].GameMatchmakeSession)
+	matchmakeDataHolder.SetObjectData(common_globals.Sessions[sessionIndex].GameMatchmakeSession)
 	rmcResponseStream.WriteDataHolder(matchmakeDataHolder)
 
 	rmcResponseBody := rmcResponseStream.Bytes()

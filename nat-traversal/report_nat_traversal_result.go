@@ -23,7 +23,6 @@ func reportNATTraversalResult(err error, client *nex.Client, callID uint32, cid 
 		responsePacket.SetVersion(1)
 	}
 
-	responsePacket.SetVersion(1)
 	responsePacket.SetSource(0xA1)
 	responsePacket.SetDestination(0xAF)
 	responsePacket.SetType(nex.DataPacket)

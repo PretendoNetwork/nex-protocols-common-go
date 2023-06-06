@@ -1,19 +1,26 @@
 package match_making_ext
 
 import (
+	"math"
+
 	nex "github.com/PretendoNetwork/nex-go"
-	match_making_ext "github.com/PretendoNetwork/nex-protocols-go/match-making-ext"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
+	match_making_ext "github.com/PretendoNetwork/nex-protocols-go/match-making-ext"
 	"github.com/PretendoNetwork/nex-protocols-go/notifications"
 )
 
-func EndParticipation(err error, client *nex.Client, callID uint32, idGathering uint32, strMessage string) {
+func endParticipation(err error, client *nex.Client, callID uint32, idGathering uint32, strMessage string) {
 	server := commonMatchMakingExtProtocol.server
 	matchmakeSession := common_globals.Sessions[idGathering].GameMatchmakeSession
 	ownerPID := matchmakeSession.Gathering.OwnerPID
 	if client.PID() == matchmakeSession.Gathering.OwnerPID {
+		// Flag 0x10 tells the server to change the matchmake session owner if they disconnect
+		// If the flag is not set, delete the session
+		// More info: https://nintendo-wiki.pretendo.network/docs/nex/protocols/match-making/types#flags
 		if matchmakeSession.Gathering.Flags & 0x10 == 0 {
 			delete(common_globals.Sessions, idGathering)
+		} else {
+			changeSessionOwner(client.ConnectionID(), idGathering)
 		}
 	}
 
@@ -88,4 +95,18 @@ func EndParticipation(err error, client *nex.Client, callID uint32, idGathering 
 	messagePacket.AddFlag(nex.FlagReliable)
 
 	server.Send(messagePacket)
+}
+
+func changeSessionOwner(ownerConnectionID uint32, gathering uint32) {
+	otherConnectionID := common_globals.FindOtherConnectionID(ownerConnectionID, gathering)
+	if otherConnectionID != math.MaxUint32 {
+		server := commonMatchMakingExtProtocol.server
+
+		otherClient := server.FindClientFromConnectionID(otherConnectionID)
+		if otherClient != nil {
+			common_globals.Sessions[gathering].GameMatchmakeSession.Gathering.OwnerPID = otherClient.PID()
+		} else {
+			logger.Warning("Other client not found")
+		}
+	}
 }
