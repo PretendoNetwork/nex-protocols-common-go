@@ -1,8 +1,6 @@
 package matchmake_extension
 
 import (
-	"math"
-
 	nex "github.com/PretendoNetwork/nex-go"
 	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension"
@@ -23,22 +21,28 @@ func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, matchm
 
 	searchMatchmakeSession := matchmakeSession.Copy().(*match_making.MatchmakeSession)
 	commonMatchmakeExtensionProtocol.cleanupSearchMatchmakeSessionHandler(searchMatchmakeSession)
-	sessionIndex := uint32(common_globals.FindSearchMatchmakeSession(searchMatchmakeSession))
-	if sessionIndex == math.MaxUint32 {
+	sessionIndex := common_globals.SearchGatheringWithMatchmakeSession(searchMatchmakeSession)
+	if sessionIndex == 0 {
+		sessionIndex = common_globals.GetSessionIndex()
+		// This should in theory be impossible, as there aren't enough PIDs creating sessions to fill the uint32 limit.
+		// If we ever get here, we must be not deleting sessions properly
+		if sessionIndex == 0 {
+			logger.Critical("No gatherings available!")
+			return
+		}
+
 		session := common_globals.CommonMatchmakeSession{
 			SearchMatchmakeSession: searchMatchmakeSession,
 			GameMatchmakeSession:   matchmakeSession,
 		}
-		sessionIndex = common_globals.CurrentGatheringID
+
 		common_globals.Sessions[sessionIndex] = &session
-		common_globals.Sessions[sessionIndex].GameMatchmakeSession.Gathering.ID = uint32(sessionIndex)
+		common_globals.Sessions[sessionIndex].GameMatchmakeSession.Gathering.ID = sessionIndex
 		common_globals.Sessions[sessionIndex].GameMatchmakeSession.Gathering.OwnerPID = client.PID()
 		common_globals.Sessions[sessionIndex].GameMatchmakeSession.Gathering.HostPID = client.PID()
 
-		currentTime := nex.NewDateTime(0)
-		common_globals.Sessions[sessionIndex].GameMatchmakeSession.StartedTime = nex.NewDateTime(currentTime.UTC())
-
-		common_globals.CurrentGatheringID++
+		common_globals.Sessions[sessionIndex].GameMatchmakeSession.StartedTime = nex.NewDateTime(0)
+		common_globals.Sessions[sessionIndex].GameMatchmakeSession.StartedTime.UTC()
 	}
 
 	common_globals.Sessions[sessionIndex].ConnectionIDs = append(common_globals.Sessions[sessionIndex].ConnectionIDs, client.ConnectionID())
@@ -84,7 +88,7 @@ func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, matchm
 	oEvent := notifications.NewNotificationEvent()
 	oEvent.PIDSource = common_globals.Sessions[sessionIndex].GameMatchmakeSession.Gathering.HostPID
 	oEvent.Type = notifications.NotificationTypes.NewParticipant
-	oEvent.Param1 = uint32(sessionIndex)
+	oEvent.Param1 = sessionIndex
 	oEvent.Param2 = client.PID()
 	oEvent.StrParam = message
 

@@ -1,8 +1,6 @@
 package match_making_ext
 
 import (
-	"math"
-
 	nex "github.com/PretendoNetwork/nex-go"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 	match_making_ext "github.com/PretendoNetwork/nex-protocols-go/match-making-ext"
@@ -19,7 +17,7 @@ func endParticipation(err error, client *nex.Client, callID uint32, idGathering 
 		// Flag 0x10 tells the server to change the matchmake session owner if they disconnect
 		// If the flag is not set, delete the session
 		// More info: https://nintendo-wiki.pretendo.network/docs/nex/protocols/match-making/types#flags
-		if matchmakeSession.Gathering.Flags & 0x10 == 0 {
+		if matchmakeSession.Gathering.Flags & 0x10 == 0 { // DisconnectChangeOwner
 			deleteSession = true
 		} else {
 			changeSessionOwner(client.ConnectionID(), idGathering, callID)
@@ -108,8 +106,8 @@ func changeSessionOwner(ownerConnectionID uint32, gathering uint32, callID uint3
 	var otherClient *nex.Client
 
 	otherConnectionID := common_globals.FindOtherConnectionID(ownerConnectionID, gathering)
-	if otherConnectionID != math.MaxUint32 {
-		otherClient = server.FindClientFromConnectionID(otherConnectionID)
+	if otherConnectionID != 0 {
+		otherClient = server.FindClientFromConnectionID(uint32(otherConnectionID))
 		if otherClient != nil {
 			common_globals.Sessions[gathering].GameMatchmakeSession.Gathering.OwnerPID = otherClient.PID()
 		} else {
@@ -131,7 +129,7 @@ func changeSessionOwner(ownerConnectionID uint32, gathering uint32, callID uint3
 	oEvent.Param1 = gathering
 	oEvent.Param2 = otherClient.PID()
 
-	// TODO - This doesn't seem to appear on all servers
+	// TODO - StrParam doesn't have this value on some servers
 	// https://github.com/kinnay/NintendoClients/issues/101
 	// unixTime := time.Now()
 	// oEvent.StrParam = strconv.FormatInt(unixTime.UnixMicro(), 10)

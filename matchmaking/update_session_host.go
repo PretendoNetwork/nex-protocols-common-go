@@ -54,7 +54,7 @@ func updateSessionHost(err error, client *nex.Client, callID uint32, gid uint32,
 	oEvent.Param1 = gid
 	oEvent.Param2 = client.PID()
 
-	// TODO - This doesn't seem to appear on all servers
+	// TODO - StrParam doesn't have this value on some servers
 	// https://github.com/kinnay/NintendoClients/issues/101
 	// unixTime := time.Now()
 	// oEvent.StrParam = strconv.FormatInt(unixTime.UnixMicro(), 10)
