@@ -38,8 +38,8 @@ func connect(packet nex.PacketInterface) {
 	ticketTime := ticket.Timestamp().Standard()
 	serverTime := time.Now().UTC()
 
-	timeLimit := serverTime.Add(time.Minute * 2)
-	if ticketTime.After(timeLimit) {
+	timeLimit := ticketTime.Add(time.Minute * 2)
+	if serverTime.After(timeLimit) {
 		logger.Error("Kerberos ticket expired")
 		server.TimeoutKick(packet.Sender())
 		return
