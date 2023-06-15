@@ -2,6 +2,7 @@ package authentication
 
 import (
 	"github.com/PretendoNetwork/nex-go"
+	_ "github.com/PretendoNetwork/nex-protocols-go"
 	"github.com/PretendoNetwork/nex-protocols-go/authentication"
 	"github.com/PretendoNetwork/plogger-go"
 )

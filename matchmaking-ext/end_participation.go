@@ -3,6 +3,7 @@ package match_making_ext
 import (
 	nex "github.com/PretendoNetwork/nex-go"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
+	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
 	match_making_ext "github.com/PretendoNetwork/nex-protocols-go/match-making-ext"
 	"github.com/PretendoNetwork/nex-protocols-go/notifications"
 )
@@ -14,10 +15,10 @@ func endParticipation(err error, client *nex.Client, callID uint32, idGathering 
 
 	var deleteSession bool = false
 	if client.PID() == matchmakeSession.Gathering.OwnerPID {
-		// Flag 0x10 tells the server to change the matchmake session owner if they disconnect
+		// This flag tells the server to change the matchmake session owner if they disconnect
 		// If the flag is not set, delete the session
 		// More info: https://nintendo-wiki.pretendo.network/docs/nex/protocols/match-making/types#flags
-		if matchmakeSession.Gathering.Flags & 0x10 == 0 { // DisconnectChangeOwner
+		if matchmakeSession.Gathering.Flags & match_making.GatheringFlags.DisconnectChangeOwner == 0 {
 			deleteSession = true
 		} else {
 			changeSessionOwner(client.ConnectionID(), idGathering, callID)

@@ -8,7 +8,7 @@ import (
 	"github.com/PretendoNetwork/nex-protocols-go/authentication"
 )
 
-func loginEx(err error, client *nex.Client, callID uint32, username string, authenticationInfo *authentication.AuthenticationInfo) {
+func loginEx(err error, client *nex.Client, callID uint32, username string, oExtraData *nex.DataHolder) {
 	var userPID uint32
 
 	if username == "guest" {

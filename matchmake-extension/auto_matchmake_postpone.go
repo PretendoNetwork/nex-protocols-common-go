@@ -8,7 +8,7 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
-func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, matchmakeSession *match_making.MatchmakeSession, message string) {
+func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, anyGathering *nex.DataHolder, message string) {
 	server := commonMatchmakeExtensionProtocol.server
 	if commonMatchmakeExtensionProtocol.cleanupSearchMatchmakeSessionHandler == nil {
 		logger.Warning("MatchmakeExtension::AutoMatchmake_Postpone missing CleanupSearchMatchmakeSessionHandler!")
@@ -18,6 +18,13 @@ func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, matchm
 	// A client may disconnect from a session without leaving reliably,
 	// so let's make sure the client is removed from the session
 	common_globals.RemoveConnectionIDFromAllSessions(client.ConnectionID())
+
+	var matchmakeSession *match_making.MatchmakeSession
+	anyGatheringDataType := anyGathering.TypeName()
+
+	if anyGatheringDataType == "MatchmakeSession" {
+		matchmakeSession = anyGathering.ObjectData().(*match_making.MatchmakeSession)
+	}
 
 	searchMatchmakeSession := matchmakeSession.Copy().(*match_making.MatchmakeSession)
 	commonMatchmakeExtensionProtocol.cleanupSearchMatchmakeSessionHandler(searchMatchmakeSession)

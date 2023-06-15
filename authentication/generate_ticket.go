@@ -50,15 +50,28 @@ func generateTicket(userPID uint32, targetPID uint32) ([]byte, uint32) {
 	rand.Read(sessionKey)
 
 	ticketInternalData := nex.NewKerberosTicketInternalData()
-	ticketInternalData.SetTimestamp(nex.NewDateTime(0)) // CHANGE THIS
+	serverTime := nex.NewDateTime(0)
+	serverTime.UTC()
+	ticketInternalData.SetTimestamp(serverTime)
 	ticketInternalData.SetUserPID(userPID)
 	ticketInternalData.SetSessionKey(sessionKey)
-	encryptedTicketInternalData := ticketInternalData.Encrypt(targetKey, nex.NewStreamOut(commonAuthenticationProtocol.server))
+
+	encryptedTicketInternalData, err := ticketInternalData.Encrypt(targetKey, nex.NewStreamOut(commonAuthenticationProtocol.server))
+	if err != nil {
+		logger.Error(err.Error())
+		return []byte{}, nex.Errors.Authentication.Unknown
+	}
 
 	ticket := nex.NewKerberosTicket()
 	ticket.SetSessionKey(sessionKey)
 	ticket.SetTargetPID(targetPID)
 	ticket.SetInternalData(encryptedTicketInternalData)
 
-	return ticket.Encrypt(userKey, nex.NewStreamOut(commonAuthenticationProtocol.server)), 0
+	encryptedTicket, err := ticket.Encrypt(userKey, nex.NewStreamOut(commonAuthenticationProtocol.server))
+	if err != nil {
+		logger.Error(err.Error())
+		return []byte{}, nex.Errors.Authentication.Unknown
+	}
+
+	return encryptedTicket, 0
 }

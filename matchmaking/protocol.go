@@ -2,6 +2,7 @@ package matchmaking
 
 import (
 	nex "github.com/PretendoNetwork/nex-go"
+	_ "github.com/PretendoNetwork/nex-protocols-go"
 	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
 	"github.com/PretendoNetwork/plogger-go"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
