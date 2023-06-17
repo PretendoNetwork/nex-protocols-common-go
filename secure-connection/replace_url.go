@@ -7,10 +7,6 @@ import (
 
 func replaceURL(err error, client *nex.Client, callID uint32, oldStation *nex.StationURL, newStation *nex.StationURL) {
 	server := commonSecureConnectionProtocol.server
-	if commonSecureConnectionProtocol.replaceConnectionUrlHandler == nil {
-		logger.Warning("Missing ReplaceConnectionUrlHandler!")
-		return
-	}
 
 	urls := client.StationURLs()
 

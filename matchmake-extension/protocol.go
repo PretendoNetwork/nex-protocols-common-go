@@ -14,12 +14,12 @@ type CommonMatchmakeExtensionProtocol struct {
 	*matchmake_extension.MatchmakeExtensionProtocol
 	server *nex.Server
 
-	CleanupSearchMatchmakeSessionHandler    func(matchmakeSession match_making.MatchmakeSession) match_making.MatchmakeSession
+	cleanupSearchMatchmakeSessionHandler    func(matchmakeSession *match_making.MatchmakeSession)
 }
 
 // CleanupSearchMatchmakeSession sets the CleanupSearchMatchmakeSession handler function
-func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) CleanupSearchMatchmakeSession(handler func(matchmakeSession match_making.MatchmakeSession) match_making.MatchmakeSession) {
-	commonMatchmakeExtensionProtocol.CleanupSearchMatchmakeSessionHandler = handler
+func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) CleanupSearchMatchmakeSession(handler func(matchmakeSession *match_making.MatchmakeSession)) {
+	commonMatchmakeExtensionProtocol.cleanupSearchMatchmakeSessionHandler = handler
 }
 
 // NewCommonMatchmakeExtensionProtocol returns a new CommonMatchmakeExtensionProtocol
@@ -27,7 +27,7 @@ func NewCommonMatchmakeExtensionProtocol(server *nex.Server) *CommonMatchmakeExt
 	MatchmakeExtensionProtocol := matchmake_extension.NewMatchmakeExtensionProtocol(server)
 	commonMatchmakeExtensionProtocol = &CommonMatchmakeExtensionProtocol{MatchmakeExtensionProtocol: MatchmakeExtensionProtocol, server: server}
 
-	MatchmakeExtensionProtocol.AutoMatchmake_Postpone(AutoMatchmake_Postpone)
+	MatchmakeExtensionProtocol.AutoMatchmake_Postpone(autoMatchmake_Postpone)
 
 	return commonMatchmakeExtensionProtocol
 }

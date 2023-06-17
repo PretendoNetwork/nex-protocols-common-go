@@ -3,19 +3,12 @@ package matchmaking
 import (
 	nex "github.com/PretendoNetwork/nex-go"
 	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
 func updateSessionHostV1(err error, client *nex.Client, callID uint32, gid uint32) {
 	server := commonMatchMakingProtocol.server
-	missingHandler := false
-	if commonMatchMakingProtocol.UpdateRoomHostHandler == nil {
-		logger.Warning("MatchMaking::UpdateSessionHostV1 missing UpdateRoomHostHandler!")
-		missingHandler = true
-	}
-	if missingHandler {
-		return
-	}
-	commonMatchMakingProtocol.UpdateRoomHostHandler(gid, client.PID())
+	common_globals.Sessions[gid].GameMatchmakeSession.Gathering.HostPID = client.PID()
 
 	rmcResponse := nex.NewRMCResponse(match_making.ProtocolID, callID)
 	rmcResponse.SetSuccess(match_making.MethodUpdateSessionHostV1, nil)

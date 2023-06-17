@@ -2,7 +2,6 @@ package secureconnection
 
 import (
 	"encoding/hex"
-	"fmt"
 	"strconv"
 
 	nex "github.com/PretendoNetwork/nex-go"
@@ -10,8 +9,8 @@ import (
 )
 
 func sendReport(err error, client *nex.Client, callID uint32, reportID uint32, reportData []byte) {
-	fmt.Println("Report ID: " + strconv.Itoa(int(reportID)))
-	fmt.Println("Report Data: " + hex.EncodeToString(reportData))
+	logger.Info("Report ID: " + strconv.Itoa(int(reportID)))
+	logger.Info("Report Data: " + hex.EncodeToString(reportData))
 
 	rmcResponse := nex.NewRMCResponse(secure_connection.ProtocolID, callID)
 	rmcResponse.SetSuccess(secure_connection.MethodSendReport, nil)

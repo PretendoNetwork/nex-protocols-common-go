@@ -7,36 +7,24 @@ import (
 	nat_traversal "github.com/PretendoNetwork/nex-protocols-go/nat-traversal"
 )
 
-func reportNatProperties(err error, client *nex.Client, callID uint32, natm uint32, natf uint32, rtt uint32) {
-	missingHandler := false
-	if GetConnectionUrlsHandler == nil {
-		logger.Warning("Missing GetConnectionUrlsHandler!")
-		missingHandler = true
-	}
-	if ReplaceConnectionUrlHandler == nil {
-		logger.Warning("Missing ReplaceConnectionUrlHandler!")
-		missingHandler = true
-	}
-	if missingHandler {
-		return
-	}
-	stationUrlsStrings := GetConnectionUrlsHandler(client.ConnectionID())
-	stationUrls := make([]nex.StationURL, len(stationUrlsStrings))
-	pid := strconv.FormatUint(uint64(client.PID()), 10)
-	rvcid := strconv.FormatUint(uint64(client.ConnectionID()), 10)
+func reportNATProperties(err error, client *nex.Client, callID uint32, natm uint32, natf uint32, rtt uint32) {
+	server := commonNATTraversalProtocol.server
 
-	for i := 0; i < len(stationUrlsStrings); i++ {
-		stationUrls[i] = *nex.NewStationURL(stationUrlsStrings[i])
-		if stationUrls[i].Type() == "3" {
+	stationURLsStrings := client.StationURLs()
+	stationURLs := make([]*nex.StationURL, len(stationURLsStrings))
+
+	for i := 0; i < len(stationURLsStrings); i++ {
+		stationURLs[i] = nex.NewStationURL(stationURLsStrings[i])
+		if stationURLs[i].Type() == "3" {
 			natm_s := strconv.FormatUint(uint64(natm), 10)
 			natf_s := strconv.FormatUint(uint64(natf), 10)
-			stationUrls[i].SetNatm(natm_s)
-			stationUrls[i].SetNatf(natf_s)
+			stationURLs[i].SetNatm(natm_s)
+			stationURLs[i].SetNatf(natf_s)
 		}
-		stationUrls[i].SetPID(pid)
-		stationUrls[i].SetRVCID(rvcid)
-		ReplaceConnectionUrlHandler(client.ConnectionID(), stationUrlsStrings[i], stationUrls[i].EncodeToString())
+		stationURLsStrings[i] = stationURLs[i].EncodeToString()
 	}
+
+	client.SetStationURLs(stationURLsStrings)
 
 	rmcResponse := nex.NewRMCResponse(nat_traversal.ProtocolID, callID)
 	rmcResponse.SetSuccess(nat_traversal.MethodReportNATProperties, nil)

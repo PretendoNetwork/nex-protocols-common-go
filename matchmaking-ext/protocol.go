@@ -19,7 +19,7 @@ func NewCommonMatchMakingExtProtocol(server *nex.Server) *CommonMatchMakingExtPr
 	MatchMakingExtProtocol := match_making_ext.NewMatchMakingExtProtocol(server)
 	commonMatchMakingExtProtocol = &CommonMatchMakingExtProtocol{MatchMakingExtProtocol: MatchMakingExtProtocol, server: server}
 
-	MatchMakingExtProtocol.EndParticipation(EndParticipation)
+	MatchMakingExtProtocol.EndParticipation(endParticipation)
 
 	return commonMatchMakingExtProtocol
 }

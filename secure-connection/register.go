@@ -9,22 +9,6 @@ import (
 
 func register(err error, client *nex.Client, callID uint32, stationUrls []*nex.StationURL) {
 	server := commonSecureConnectionProtocol.server
-	missingHandler := false
-	if commonSecureConnectionProtocol.addConnectionHandler == nil {
-		logger.Warning("Missing AddConnectionHandler!")
-		missingHandler = true
-	}
-	if commonSecureConnectionProtocol.updateConnectionHandler == nil {
-		logger.Warning("Missing UpdateConnectionHandler!")
-		missingHandler = true
-	}
-	if commonSecureConnectionProtocol.doesConnectionExistHandler == nil {
-		logger.Warning("Missing DoesConnectionExistHandler!")
-		missingHandler = true
-	}
-	if missingHandler {
-		return
-	}
 	localStation := stationUrls[0]
 	localStationURL := localStation.EncodeToString()
 	pidConnectionID := uint32(server.ConnectionIDCounter().Increment())
