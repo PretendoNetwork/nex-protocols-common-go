@@ -45,6 +45,12 @@ func login(err error, client *nex.Client, callID uint32, username string) {
 		serverTime := nex.NewDateTime(0)
 		pConnectionData.SetTime(serverTime.UTC())
 
+		nexVersion := commonAuthenticationProtocol.server.NEXVersion()
+
+		if nexVersion.Major >= 3 && nexVersion.Minor >= 5 {
+			pConnectionData.SetStructureVersion(1)
+		}
+
 		/*
 			From the wiki:
 
