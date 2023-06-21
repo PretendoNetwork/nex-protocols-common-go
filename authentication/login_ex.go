@@ -43,7 +43,7 @@ func loginEx(err error, client *nex.Client, callID uint32, username string, oExt
 		pConnectionData.SetSpecialProtocols([]byte{})
 		pConnectionData.SetStationURLSpecialProtocols("")
 		serverTime := nex.NewDateTime(0)
-		pConnectionData.SetTime(serverTime.UTC())
+		pConnectionData.SetTime(nex.NewDateTime(serverTime.UTC()))
 
 		/*
 			From the wiki:
