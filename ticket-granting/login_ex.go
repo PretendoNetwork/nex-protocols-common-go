@@ -1,11 +1,11 @@
-package authentication
+package ticket_granting
 
 import (
 	"strconv"
 	"strings"
 
 	nex "github.com/PretendoNetwork/nex-go"
-	"github.com/PretendoNetwork/nex-protocols-go/authentication"
+	ticket_granting "github.com/PretendoNetwork/nex-protocols-go/ticket-granting"
 )
 
 func loginEx(err error, client *nex.Client, callID uint32, username string, oExtraData *nex.DataHolder) {
@@ -26,7 +26,7 @@ func loginEx(err error, client *nex.Client, callID uint32, username string, oExt
 
 	encryptedTicket, errorCode := generateTicket(userPID, targetPID)
 
-	rmcResponse := nex.NewRMCResponse(authentication.ProtocolID, callID)
+	rmcResponse := nex.NewRMCResponse(ticket_granting.ProtocolID, callID)
 
 	if errorCode != 0 && errorCode != nex.Errors.RendezVous.InvalidUsername {
 		// Some other error happened
@@ -39,7 +39,7 @@ func loginEx(err error, client *nex.Client, callID uint32, username string, oExt
 		var strReturnMsg string
 
 		pConnectionData = nex.NewRVConnectionData()
-		pConnectionData.SetStationURL(commonAuthenticationProtocol.secureStationURL.EncodeToString())
+		pConnectionData.SetStationURL(commonTicketGrantingProtocol.secureStationURL.EncodeToString())
 		pConnectionData.SetSpecialProtocols([]byte{})
 		pConnectionData.SetStationURLSpecialProtocols("")
 		serverTime := nex.NewDateTime(0)
@@ -57,10 +57,10 @@ func loginEx(err error, client *nex.Client, callID uint32, username string, oExt
 			retval = nex.NewResultSuccess(nex.Errors.Core.Unknown)
 			pidPrincipal = userPID
 			pbufResponse = encryptedTicket
-			strReturnMsg = commonAuthenticationProtocol.buildName
+			strReturnMsg = commonTicketGrantingProtocol.buildName
 		}
 
-		rmcResponseStream := nex.NewStreamOut(commonAuthenticationProtocol.server)
+		rmcResponseStream := nex.NewStreamOut(commonTicketGrantingProtocol.server)
 
 		rmcResponseStream.WriteResult(retval)
 		rmcResponseStream.WriteUInt32LE(pidPrincipal)
@@ -70,14 +70,14 @@ func loginEx(err error, client *nex.Client, callID uint32, username string, oExt
 
 		rmcResponseBody := rmcResponseStream.Bytes()
 
-		rmcResponse.SetSuccess(authentication.MethodLoginEx, rmcResponseBody)
+		rmcResponse.SetSuccess(ticket_granting.MethodLoginEx, rmcResponseBody)
 	}
 
 	rmcResponseBytes := rmcResponse.Bytes()
 
 	var responsePacket nex.PacketInterface
 
-	if commonAuthenticationProtocol.server.PRUDPVersion() == 0 {
+	if commonTicketGrantingProtocol.server.PRUDPVersion() == 0 {
 		responsePacket, _ = nex.NewPacketV0(client, nil)
 		responsePacket.SetVersion(0)
 	} else {
@@ -93,5 +93,5 @@ func loginEx(err error, client *nex.Client, callID uint32, username string, oExt
 	responsePacket.AddFlag(nex.FlagNeedsAck)
 	responsePacket.AddFlag(nex.FlagReliable)
 
-	commonAuthenticationProtocol.server.Send(responsePacket)
+	commonTicketGrantingProtocol.server.Send(responsePacket)
 }

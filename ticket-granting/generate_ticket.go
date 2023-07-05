@@ -1,4 +1,4 @@
-package authentication
+package ticket_granting
 
 import (
 	"crypto/rand"
@@ -7,7 +7,7 @@ import (
 )
 
 func generateTicket(userPID uint32, targetPID uint32) ([]byte, uint32) {
-	passwordFromPIDHandler := commonAuthenticationProtocol.server.PasswordFromPIDFunction()
+	passwordFromPIDHandler := commonTicketGrantingProtocol.server.PasswordFromPIDFunction()
 	if passwordFromPIDHandler == nil {
 		logger.Warning("Missing passwordFromPIDHandler!")
 		return []byte{}, nex.Errors.Core.Unknown
@@ -17,10 +17,10 @@ func generateTicket(userPID uint32, targetPID uint32) ([]byte, uint32) {
 	var targetPassword string
 	var errorCode uint32
 
-	// TODO: Maybe we should error out if the user PID is the server account?
+	// TODO - Maybe we should error out if the user PID is the server account?
 	switch userPID {
 	case 2: // "Quazal Rendez-Vous" (the server user) account
-		userPassword = commonAuthenticationProtocol.server.KerberosPassword()
+		userPassword = commonTicketGrantingProtocol.server.KerberosPassword()
 	case 100: // guest user account
 		userPassword = "MMQea3n!fsik"
 	default:
@@ -33,7 +33,7 @@ func generateTicket(userPID uint32, targetPID uint32) ([]byte, uint32) {
 
 	switch targetPID {
 	case 2: // "Quazal Rendez-Vous" (the server user) account
-		targetPassword = commonAuthenticationProtocol.server.KerberosPassword()
+		targetPassword = commonTicketGrantingProtocol.server.KerberosPassword()
 	case 100: // guest user account
 		targetPassword = "MMQea3n!fsik"
 	default:
@@ -46,7 +46,7 @@ func generateTicket(userPID uint32, targetPID uint32) ([]byte, uint32) {
 
 	userKey := nex.DeriveKerberosKey(userPID, []byte(userPassword))
 	targetKey := nex.DeriveKerberosKey(targetPID, []byte(targetPassword))
-	sessionKey := make([]byte, commonAuthenticationProtocol.server.KerberosKeySize())
+	sessionKey := make([]byte, commonTicketGrantingProtocol.server.KerberosKeySize())
 	rand.Read(sessionKey)
 
 	ticketInternalData := nex.NewKerberosTicketInternalData()
@@ -56,7 +56,7 @@ func generateTicket(userPID uint32, targetPID uint32) ([]byte, uint32) {
 	ticketInternalData.SetUserPID(userPID)
 	ticketInternalData.SetSessionKey(sessionKey)
 
-	encryptedTicketInternalData, err := ticketInternalData.Encrypt(targetKey, nex.NewStreamOut(commonAuthenticationProtocol.server))
+	encryptedTicketInternalData, err := ticketInternalData.Encrypt(targetKey, nex.NewStreamOut(commonTicketGrantingProtocol.server))
 	if err != nil {
 		logger.Error(err.Error())
 		return []byte{}, nex.Errors.Authentication.Unknown
@@ -67,7 +67,7 @@ func generateTicket(userPID uint32, targetPID uint32) ([]byte, uint32) {
 	ticket.SetTargetPID(targetPID)
 	ticket.SetInternalData(encryptedTicketInternalData)
 
-	encryptedTicket, err := ticket.Encrypt(userKey, nex.NewStreamOut(commonAuthenticationProtocol.server))
+	encryptedTicket, err := ticket.Encrypt(userKey, nex.NewStreamOut(commonTicketGrantingProtocol.server))
 	if err != nil {
 		logger.Error(err.Error())
 		return []byte{}, nex.Errors.Authentication.Unknown

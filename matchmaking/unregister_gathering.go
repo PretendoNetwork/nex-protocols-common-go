@@ -2,9 +2,10 @@ package matchmaking
 
 import (
 	nex "github.com/PretendoNetwork/nex-go"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
 	"github.com/PretendoNetwork/nex-protocols-go/notifications"
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
+	notifications_types "github.com/PretendoNetwork/nex-protocols-go/notifications/types"
 )
 
 func unregisterGathering(err error, client *nex.Client, callID uint32, gatheringId uint32) {
@@ -41,9 +42,12 @@ func unregisterGathering(err error, client *nex.Client, callID uint32, gathering
 	rmcMessage.SetCallID(0xffff0000 + callID)
 	rmcMessage.SetMethodID(notifications.MethodProcessNotificationEvent)
 
-	oEvent := notifications.NewNotificationEvent()
+	category := notifications.NotificationCategories.GatheringUnregistered
+	subtype := notifications.NotificationSubTypes.GatheringUnregistered.None
+
+	oEvent := notifications_types.NewNotificationEvent()
 	oEvent.PIDSource = client.PID()
-	oEvent.Type = notifications.NotificationTypes.GatheringUnregistered
+	oEvent.Type = notifications.BuildNotificationType(category, subtype)
 	oEvent.Param1 = gatheringId
 
 	stream := nex.NewStreamOut(server)

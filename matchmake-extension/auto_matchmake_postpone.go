@@ -2,10 +2,11 @@ package matchmake_extension
 
 import (
 	nex "github.com/PretendoNetwork/nex-go"
-	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
+	match_making_types "github.com/PretendoNetwork/nex-protocols-go/match-making/types"
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension"
 	"github.com/PretendoNetwork/nex-protocols-go/notifications"
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
+	notifications_types "github.com/PretendoNetwork/nex-protocols-go/notifications/types"
 )
 
 func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, anyGathering *nex.DataHolder, message string) {
@@ -19,14 +20,14 @@ func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, anyGat
 	// so let's make sure the client is removed from the session
 	common_globals.RemoveConnectionIDFromAllSessions(client.ConnectionID())
 
-	var matchmakeSession *match_making.MatchmakeSession
+	var matchmakeSession *match_making_types.MatchmakeSession
 	anyGatheringDataType := anyGathering.TypeName()
 
 	if anyGatheringDataType == "MatchmakeSession" {
-		matchmakeSession = anyGathering.ObjectData().(*match_making.MatchmakeSession)
+		matchmakeSession = anyGathering.ObjectData().(*match_making_types.MatchmakeSession)
 	}
 
-	searchMatchmakeSession := matchmakeSession.Copy().(*match_making.MatchmakeSession)
+	searchMatchmakeSession := matchmakeSession.Copy().(*match_making_types.MatchmakeSession)
 	commonMatchmakeExtensionProtocol.cleanupSearchMatchmakeSessionHandler(searchMatchmakeSession)
 	sessionIndex := common_globals.SearchGatheringWithMatchmakeSession(searchMatchmakeSession)
 	if sessionIndex == 0 {
@@ -92,9 +93,12 @@ func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, anyGat
 	rmcMessage.SetCallID(0xffff0000 + callID)
 	rmcMessage.SetMethodID(notifications.MethodProcessNotificationEvent)
 
-	oEvent := notifications.NewNotificationEvent()
+	category := notifications.NotificationCategories.Participation
+	subtype := notifications.NotificationSubTypes.Participation.NewParticipant
+
+	oEvent := notifications_types.NewNotificationEvent()
 	oEvent.PIDSource = common_globals.Sessions[sessionIndex].GameMatchmakeSession.Gathering.HostPID
-	oEvent.Type = notifications.NotificationTypes.NewParticipant
+	oEvent.Type = notifications.BuildNotificationType(category, subtype)
 	oEvent.Param1 = sessionIndex
 	oEvent.Param2 = client.PID()
 	oEvent.StrParam = message

@@ -1,14 +1,15 @@
 package common_globals
+
 import (
 	"math"
 
-	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
+	match_making_types "github.com/PretendoNetwork/nex-protocols-go/match-making/types"
 )
 
 type CommonMatchmakeSession struct {
-	GameMatchmakeSession *match_making.MatchmakeSession // Used by the game, contains the current state of the MatchmakeSession
-	SearchMatchmakeSession *match_making.MatchmakeSession // Used by the server when searching for matches, contains the state of the MatchmakeSession during the search process for easy compares
-	ConnectionIDs []uint32 // Players in the room, referenced by their connection IDs. This is used instead of the PID in order to ensure we're talking to the correct client (in case of e.g. multiple logins)
+	GameMatchmakeSession   *match_making_types.MatchmakeSession // Used by the game, contains the current state of the MatchmakeSession
+	SearchMatchmakeSession *match_making_types.MatchmakeSession // Used by the server when searching for matches, contains the state of the MatchmakeSession during the search process for easy compares
+	ConnectionIDs          []uint32                             // Players in the room, referenced by their connection IDs. This is used instead of the PID in order to ensure we're talking to the correct client (in case of e.g. multiple logins)
 }
 
 var Sessions map[uint32]*CommonMatchmakeSession
@@ -77,7 +78,7 @@ func RemoveConnectionIDFromAllSessions(clientConnectionID uint32) {
 }
 
 // SearchGatheringWithMatchmakeSession finds a gathering that matches with a MatchmakeSession
-func SearchGatheringWithMatchmakeSession(searchMatchmakeSession *match_making.MatchmakeSession) uint32 {
+func SearchGatheringWithMatchmakeSession(searchMatchmakeSession *match_making_types.MatchmakeSession) uint32 {
 	var returnSessionIndex uint32 = 0
 
 	// This portion finds any sessions that match the search session. It does not care about anything beyond that, such as if the match is already full. This is handled below.

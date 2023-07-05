@@ -2,7 +2,7 @@ package matchmake_extension
 
 import (
 	nex "github.com/PretendoNetwork/nex-go"
-	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
+	match_making_types "github.com/PretendoNetwork/nex-protocols-go/match-making/types"
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension"
 	"github.com/PretendoNetwork/plogger-go"
 )
@@ -14,11 +14,11 @@ type CommonMatchmakeExtensionProtocol struct {
 	*matchmake_extension.MatchmakeExtensionProtocol
 	server *nex.Server
 
-	cleanupSearchMatchmakeSessionHandler    func(matchmakeSession *match_making.MatchmakeSession)
+	cleanupSearchMatchmakeSessionHandler func(matchmakeSession *match_making_types.MatchmakeSession)
 }
 
 // CleanupSearchMatchmakeSession sets the CleanupSearchMatchmakeSession handler function
-func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) CleanupSearchMatchmakeSession(handler func(matchmakeSession *match_making.MatchmakeSession)) {
+func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) CleanupSearchMatchmakeSession(handler func(matchmakeSession *match_making_types.MatchmakeSession)) {
 	commonMatchmakeExtensionProtocol.cleanupSearchMatchmakeSessionHandler = handler
 }
 

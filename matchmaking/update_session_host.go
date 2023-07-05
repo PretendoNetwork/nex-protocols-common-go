@@ -2,9 +2,10 @@ package matchmaking
 
 import (
 	nex "github.com/PretendoNetwork/nex-go"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
 	"github.com/PretendoNetwork/nex-protocols-go/notifications"
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
+	notifications_types "github.com/PretendoNetwork/nex-protocols-go/notifications/types"
 )
 
 func updateSessionHost(err error, client *nex.Client, callID uint32, gid uint32, isMigrateOwner bool) {
@@ -48,9 +49,12 @@ func updateSessionHost(err error, client *nex.Client, callID uint32, gid uint32,
 	rmcMessage.SetCallID(0xffff0000 + callID)
 	rmcMessage.SetMethodID(notifications.MethodProcessNotificationEvent)
 
-	oEvent := notifications.NewNotificationEvent()
+	category := notifications.NotificationCategories.OwnershipChanged
+	subtype := notifications.NotificationSubTypes.OwnershipChanged.None
+
+	oEvent := notifications_types.NewNotificationEvent()
 	oEvent.PIDSource = client.PID()
-	oEvent.Type = notifications.NotificationTypes.OwnershipChanged
+	oEvent.Type = notifications.BuildNotificationType(category, subtype)
 	oEvent.Param1 = gid
 	oEvent.Param2 = client.PID()
 

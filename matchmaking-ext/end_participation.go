@@ -6,6 +6,7 @@ import (
 	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
 	match_making_ext "github.com/PretendoNetwork/nex-protocols-go/match-making-ext"
 	"github.com/PretendoNetwork/nex-protocols-go/notifications"
+	notifications_types "github.com/PretendoNetwork/nex-protocols-go/notifications/types"
 )
 
 func endParticipation(err error, client *nex.Client, callID uint32, idGathering uint32, strMessage string) {
@@ -18,7 +19,7 @@ func endParticipation(err error, client *nex.Client, callID uint32, idGathering 
 		// This flag tells the server to change the matchmake session owner if they disconnect
 		// If the flag is not set, delete the session
 		// More info: https://nintendo-wiki.pretendo.network/docs/nex/protocols/match-making/types#flags
-		if matchmakeSession.Gathering.Flags & match_making.GatheringFlags.DisconnectChangeOwner == 0 {
+		if matchmakeSession.Gathering.Flags&match_making.GatheringFlags.DisconnectChangeOwner == 0 {
 			deleteSession = true
 		} else {
 			changeSessionOwner(client.ConnectionID(), idGathering, callID)
@@ -67,9 +68,12 @@ func endParticipation(err error, client *nex.Client, callID uint32, idGathering 
 	rmcMessage.SetCallID(0xffff0000 + callID)
 	rmcMessage.SetMethodID(notifications.MethodProcessNotificationEvent)
 
-	oEvent := notifications.NewNotificationEvent()
+	category := notifications.NotificationCategories.Participation
+	subtype := notifications.NotificationSubTypes.Participation.Ended
+
+	oEvent := notifications_types.NewNotificationEvent()
 	oEvent.PIDSource = client.PID()
-	oEvent.Type = notifications.NotificationTypes.ParticipationEnded
+	oEvent.Type = notifications.BuildNotificationType(category, subtype)
 	oEvent.Param1 = idGathering
 	oEvent.Param2 = client.PID()
 	oEvent.StrParam = strMessage
@@ -124,9 +128,12 @@ func changeSessionOwner(ownerConnectionID uint32, gathering uint32, callID uint3
 	rmcMessage.SetCallID(0xffff0000 + callID)
 	rmcMessage.SetMethodID(notifications.MethodProcessNotificationEvent)
 
-	oEvent := notifications.NewNotificationEvent()
+	category := notifications.NotificationCategories.OwnershipChanged
+	subtype := notifications.NotificationSubTypes.OwnershipChanged.None
+
+	oEvent := notifications_types.NewNotificationEvent()
 	oEvent.PIDSource = otherClient.PID()
-	oEvent.Type = notifications.NotificationTypes.OwnershipChanged
+	oEvent.Type = notifications.BuildNotificationType(category, subtype)
 	oEvent.Param1 = gathering
 	oEvent.Param2 = otherClient.PID()
 
