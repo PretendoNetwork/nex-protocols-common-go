@@ -9,6 +9,11 @@ import (
 )
 
 func login(err error, client *nex.Client, callID uint32, username string) {
+	if !commonTicketGrantingProtocol.allowInsecureLoginMethod {
+		// TODO - Clean way to implement the "not implemented" error. Right now this just hangs
+		return
+	}
+
 	var userPID uint32
 
 	if username == "guest" {
