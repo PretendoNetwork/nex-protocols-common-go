@@ -9,6 +9,7 @@ import (
 type CommonMatchmakeSession struct {
 	GameMatchmakeSession   *match_making_types.MatchmakeSession // Used by the game, contains the current state of the MatchmakeSession
 	SearchMatchmakeSession *match_making_types.MatchmakeSession // Used by the server when searching for matches, contains the state of the MatchmakeSession during the search process for easy compares
+	SearchCriteria		   []*match_making_types.MatchmakeSessionSearchCriteria // Used by the server when searching for matches, contains the list of MatchmakeSessionSearchCriteria
 	ConnectionIDs          []uint32                             // Players in the room, referenced by their connection IDs. This is used instead of the PID in order to ensure we're talking to the correct client (in case of e.g. multiple logins)
 }
 
@@ -86,6 +87,33 @@ func SearchGatheringWithMatchmakeSession(searchMatchmakeSession *match_making_ty
 	for index, session := range Sessions {
 		if session.SearchMatchmakeSession.Equals(searchMatchmakeSession) {
 			candidateSessionIndexes = append(candidateSessionIndexes, index)
+		}
+	}
+	for _, sessionIndex := range candidateSessionIndexes {
+		sessionToCheck := Sessions[sessionIndex]
+		if len(sessionToCheck.ConnectionIDs) >= int(sessionToCheck.GameMatchmakeSession.MaximumParticipants) {
+			continue
+		} else {
+			returnSessionIndex = sessionIndex //found a match
+			break
+		}
+	}
+	return returnSessionIndex
+}
+
+// SearchGatheringWithMatchmakeSession finds a gathering that matches with a MatchmakeSession
+func SearchGatheringWithSearchCriteria(lstSearchCriteria []*match_making_types.MatchmakeSessionSearchCriteria) uint32 {
+	var returnSessionIndex uint32 = 0
+
+	// This portion finds any sessions that match the search session. It does not care about anything beyond that, such as if the match is already full. This is handled below.
+	candidateSessionIndexes := make([]uint32, 0, len(Sessions))
+	for index, session := range Sessions {
+		if(len(lstSearchCriteria) == len(session.SearchCriteria)){
+			for criteriaIndex, criteria := range session.SearchCriteria {
+				if criteria.Equals(lstSearchCriteria[criteriaIndex]) {
+					candidateSessionIndexes = append(candidateSessionIndexes, index)
+				}
+			}
 		}
 	}
 	for _, sessionIndex := range candidateSessionIndexes {

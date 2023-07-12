@@ -22,5 +22,7 @@ func NewCommonNATTraversalProtocol(server *nex.Server) *CommonNATTraversalProtoc
 	commonNATTraversalProtocol.RequestProbeInitiationExt(requestProbeInitiationExt)
 	commonNATTraversalProtocol.ReportNATProperties(reportNATProperties)
 	commonNATTraversalProtocol.ReportNATTraversalResult(reportNATTraversalResult)
+	commonNATTraversalProtocol.GetRelaySignatureKey(getRelaySignatureKey)
+	commonNATTraversalProtocol.ReportNATTraversalResultDetail(reportNATTraversalResultDetail)
 	return commonNATTraversalProtocol
 }
