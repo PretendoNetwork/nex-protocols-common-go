@@ -25,7 +25,7 @@ func autoMatchmakeWithSearchCriteria_Postpone(err error, client *nex.Client, cal
 
 	if anyGatheringDataType == "MatchmakeSession" {
 		matchmakeSession = anyGathering.ObjectData().(*match_making_types.MatchmakeSession)
-	}else{
+	} else {
 		logger.Critical("Non-MatchmakeSession DataType?!")
 		return
 	}
