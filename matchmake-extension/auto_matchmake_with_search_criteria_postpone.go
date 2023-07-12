@@ -11,6 +11,10 @@ import (
 
 func autoMatchmakeWithSearchCriteria_Postpone(err error, client *nex.Client, callID uint32, lstSearchCriteria []*match_making_types.MatchmakeSessionSearchCriteria, anyGathering *nex.DataHolder, message string) {
 	server := commonMatchmakeExtensionProtocol.server
+	if commonMatchmakeExtensionProtocol.cleanupMatchmakeSessionSearchCriteriaHandler == nil {
+		logger.Warning("MatchmakeExtension::AutoMatchmake_Postpone missing CleanupMatchmakeSessionSearchCriteriaHandler!")
+		return
+	}
 
 	// A client may disconnect from a session without leaving reliably,
 	// so let's make sure the client is removed from the session
@@ -21,8 +25,12 @@ func autoMatchmakeWithSearchCriteria_Postpone(err error, client *nex.Client, cal
 
 	if anyGatheringDataType == "MatchmakeSession" {
 		matchmakeSession = anyGathering.ObjectData().(*match_making_types.MatchmakeSession)
+	}else{
+		logger.Critical("Non-MatchmakeSession DataType?!")
+		return
 	}
 
+	commonMatchmakeExtensionProtocol.cleanupMatchmakeSessionSearchCriteriaHandler(lstSearchCriteria)
 	sessionIndex := common_globals.SearchGatheringWithSearchCriteria(lstSearchCriteria)
 	if sessionIndex == 0 {
 		sessionIndex = common_globals.GetSessionIndex()

@@ -8,9 +8,8 @@ import (
 
 func openParticipation(err error, client *nex.Client, callID uint32, gid uint32) {
 	server := commonMatchmakeExtensionProtocol.server
-	session, ok := common_globals.Sessions[gid]
 	rmcResponse := nex.NewRMCResponse(matchmake_extension.ProtocolID, callID)
-	if ok {
+	if session, ok := common_globals.Sessions[gid]; ok{
 		session.GameMatchmakeSession.OpenParticipation = true
 		rmcResponse.SetSuccess(matchmake_extension.MethodOpenParticipation, nil)
 	} else {
