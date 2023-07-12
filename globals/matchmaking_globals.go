@@ -108,7 +108,7 @@ func SearchGatheringWithSearchCriteria(lstSearchCriteria []*match_making_types.M
 	// This portion finds any sessions that match the search session. It does not care about anything beyond that, such as if the match is already full. This is handled below.
 	candidateSessionIndexes := make([]uint32, 0, len(Sessions))
 	for index, session := range Sessions {
-		if(len(lstSearchCriteria) == len(session.SearchCriteria)){
+		if len(lstSearchCriteria) == len(session.SearchCriteria) {
 			for criteriaIndex, criteria := range session.SearchCriteria {
 				if criteria.Equals(lstSearchCriteria[criteriaIndex]) {
 					candidateSessionIndexes = append(candidateSessionIndexes, index)
@@ -120,10 +120,14 @@ func SearchGatheringWithSearchCriteria(lstSearchCriteria []*match_making_types.M
 		sessionToCheck := Sessions[sessionIndex]
 		if len(sessionToCheck.ConnectionIDs) >= int(sessionToCheck.GameMatchmakeSession.MaximumParticipants) {
 			continue
-		} else {
-			returnSessionIndex = sessionIndex //found a match
-			break
 		}
+		
+		if !sessionToCheck.GameMatchmakeExtension.OpenParticipation {
+			continue
+		}
+		
+		returnSessionIndex = sessionIndex // Found a match
+		break
 	}
 	return returnSessionIndex
 }

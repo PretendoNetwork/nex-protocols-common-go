@@ -45,7 +45,7 @@ func autoMatchmakeWithSearchCriteria_Postpone(err error, client *nex.Client, cal
 
 		common_globals.Sessions[sessionIndex].GameMatchmakeSession.StartedTime = nex.NewDateTime(0)
 		common_globals.Sessions[sessionIndex].GameMatchmakeSession.StartedTime.UTC()
-		matchmakeSession.SessionKey = []byte("00000000000000000000000000000000")
+		matchmakeSession.SessionKey = make([]byte, 32)
 	}
 
 	common_globals.Sessions[sessionIndex].ConnectionIDs = append(common_globals.Sessions[sessionIndex].ConnectionIDs, client.ConnectionID())

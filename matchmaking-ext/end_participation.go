@@ -12,7 +12,7 @@ import (
 func endParticipation(err error, client *nex.Client, callID uint32, idGathering uint32, strMessage string) {
 	server := commonMatchMakingExtProtocol.server
 	session, ok := common_globals.Sessions[idGathering]
-	if(!ok){
+	if !ok {
 		rmcResponse := nex.NewRMCResponse(match_making_ext.ProtocolID, callID)
 		rmcResponse.SetError(nex.Errors.RendezVous.SessionVoid)
 	

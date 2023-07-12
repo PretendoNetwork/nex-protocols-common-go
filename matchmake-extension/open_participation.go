@@ -13,7 +13,7 @@ func openParticipation(err error, client *nex.Client, callID uint32, gid uint32)
 	if ok {
 		session.GameMatchmakeSession.OpenParticipation = true
 		rmcResponse.SetSuccess(matchmake_extension.MethodOpenParticipation, nil)
-	}else{
+	} else {
 		rmcResponse.SetError(nex.Errors.RendezVous.SessionVoid)
 	}
 
