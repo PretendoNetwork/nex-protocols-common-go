@@ -11,7 +11,36 @@ import (
 
 func endParticipation(err error, client *nex.Client, callID uint32, idGathering uint32, strMessage string) {
 	server := commonMatchMakingExtProtocol.server
-	matchmakeSession := common_globals.Sessions[idGathering].GameMatchmakeSession
+	var session *common_globals.CommonMatchmakeSession
+	var ok bool
+	if session, ok = common_globals.Sessions[idGathering]; !ok {
+		rmcResponse := nex.NewRMCResponse(match_making_ext.ProtocolID, callID)
+		rmcResponse.SetError(nex.Errors.RendezVous.SessionVoid)
+	
+		rmcResponseBytes := rmcResponse.Bytes()
+	
+		var responsePacket nex.PacketInterface
+	
+		if server.PRUDPVersion() == 0 {
+			responsePacket, _ = nex.NewPacketV0(client, nil)
+			responsePacket.SetVersion(0)
+		} else {
+			responsePacket, _ = nex.NewPacketV1(client, nil)
+			responsePacket.SetVersion(1)
+		}
+	
+		responsePacket.SetSource(0xA1)
+		responsePacket.SetDestination(0xAF)
+		responsePacket.SetType(nex.DataPacket)
+		responsePacket.SetPayload(rmcResponseBytes)
+	
+		responsePacket.AddFlag(nex.FlagNeedsAck)
+		responsePacket.AddFlag(nex.FlagReliable)
+	
+		server.Send(responsePacket)
+		return
+	}
+	matchmakeSession := session.GameMatchmakeSession
 	ownerPID := matchmakeSession.Gathering.OwnerPID
 
 	var deleteSession bool = false

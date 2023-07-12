@@ -9,10 +9,10 @@ import (
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/notifications/types"
 )
 
-func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, anyGathering *nex.DataHolder, message string) {
+func autoMatchmakeWithSearchCriteria_Postpone(err error, client *nex.Client, callID uint32, lstSearchCriteria []*match_making_types.MatchmakeSessionSearchCriteria, anyGathering *nex.DataHolder, message string) {
 	server := commonMatchmakeExtensionProtocol.server
-	if commonMatchmakeExtensionProtocol.cleanupSearchMatchmakeSessionHandler == nil {
-		logger.Warning("MatchmakeExtension::AutoMatchmake_Postpone missing CleanupSearchMatchmakeSessionHandler!")
+	if commonMatchmakeExtensionProtocol.cleanupMatchmakeSessionSearchCriteriaHandler == nil {
+		logger.Warning("MatchmakeExtension::AutoMatchmake_Postpone missing CleanupMatchmakeSessionSearchCriteriaHandler!")
 		return
 	}
 
@@ -30,9 +30,8 @@ func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, anyGat
 		return
 	}
 
-	searchMatchmakeSession := matchmakeSession.Copy().(*match_making_types.MatchmakeSession)
-	commonMatchmakeExtensionProtocol.cleanupSearchMatchmakeSessionHandler(searchMatchmakeSession)
-	sessionIndex := common_globals.SearchGatheringWithMatchmakeSession(searchMatchmakeSession)
+	commonMatchmakeExtensionProtocol.cleanupMatchmakeSessionSearchCriteriaHandler(lstSearchCriteria)
+	sessionIndex := common_globals.SearchGatheringWithSearchCriteria(lstSearchCriteria)
 	if sessionIndex == 0 {
 		sessionIndex = common_globals.GetSessionIndex()
 		// This should in theory be impossible, as there aren't enough PIDs creating sessions to fill the uint32 limit.
@@ -43,7 +42,7 @@ func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, anyGat
 		}
 
 		session := common_globals.CommonMatchmakeSession{
-			SearchMatchmakeSession: searchMatchmakeSession,
+			SearchCriteria: lstSearchCriteria,
 			GameMatchmakeSession:   matchmakeSession,
 		}
 
@@ -54,6 +53,7 @@ func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, anyGat
 
 		common_globals.Sessions[sessionIndex].GameMatchmakeSession.StartedTime = nex.NewDateTime(0)
 		common_globals.Sessions[sessionIndex].GameMatchmakeSession.StartedTime.UTC()
+		matchmakeSession.SessionKey = make([]byte, 32)
 	}
 
 	common_globals.Sessions[sessionIndex].ConnectionIDs = append(common_globals.Sessions[sessionIndex].ConnectionIDs, client.ConnectionID())
@@ -68,7 +68,7 @@ func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, anyGat
 	rmcResponseBody := rmcResponseStream.Bytes()
 
 	rmcResponse := nex.NewRMCResponse(matchmake_extension.ProtocolID, callID)
-	rmcResponse.SetSuccess(matchmake_extension.MethodAutoMatchmake_Postpone, rmcResponseBody)
+	rmcResponse.SetSuccess(matchmake_extension.MethodAutoMatchmakeWithSearchCriteria_Postpone, rmcResponseBody)
 
 	rmcResponseBytes := rmcResponse.Bytes()
 
