@@ -25,7 +25,7 @@ func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, anyGat
 
 	if anyGatheringDataType == "MatchmakeSession" {
 		matchmakeSession = anyGathering.ObjectData().(*match_making_types.MatchmakeSession)
-	}else{
+	} else {
 		logger.Critical("Non-MatchmakeSession DataType?!")
 		return
 	}
