@@ -5,7 +5,7 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
 	match_making_ext "github.com/PretendoNetwork/nex-protocols-go/match-making-ext"
-	"github.com/PretendoNetwork/nex-protocols-go/notifications"
+	notifications "github.com/PretendoNetwork/nex-protocols-go/notifications"
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/notifications/types"
 )
 
@@ -16,11 +16,11 @@ func endParticipation(err error, client *nex.Client, callID uint32, idGathering 
 	if session, ok = common_globals.Sessions[idGathering]; !ok {
 		rmcResponse := nex.NewRMCResponse(match_making_ext.ProtocolID, callID)
 		rmcResponse.SetError(nex.Errors.RendezVous.SessionVoid)
-	
+
 		rmcResponseBytes := rmcResponse.Bytes()
-	
+
 		var responsePacket nex.PacketInterface
-	
+
 		if server.PRUDPVersion() == 0 {
 			responsePacket, _ = nex.NewPacketV0(client, nil)
 			responsePacket.SetVersion(0)
@@ -28,15 +28,15 @@ func endParticipation(err error, client *nex.Client, callID uint32, idGathering 
 			responsePacket, _ = nex.NewPacketV1(client, nil)
 			responsePacket.SetVersion(1)
 		}
-	
+
 		responsePacket.SetSource(0xA1)
 		responsePacket.SetDestination(0xAF)
 		responsePacket.SetType(nex.DataPacket)
 		responsePacket.SetPayload(rmcResponseBytes)
-	
+
 		responsePacket.AddFlag(nex.FlagNeedsAck)
 		responsePacket.AddFlag(nex.FlagReliable)
-	
+
 		server.Send(responsePacket)
 		return
 	}

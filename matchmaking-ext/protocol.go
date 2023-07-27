@@ -10,14 +10,14 @@ var commonMatchMakingExtProtocol *CommonMatchMakingExtProtocol
 var logger = plogger.NewLogger()
 
 type CommonMatchMakingExtProtocol struct {
-	*match_making_ext.MatchMakingExtProtocol
+	*match_making_ext.Protocol
 	server *nex.Server
 }
 
 // NewCommonMatchmakeExtensionProtocol returns a new CommonMatchmakeExtensionProtocol
 func NewCommonMatchMakingExtProtocol(server *nex.Server) *CommonMatchMakingExtProtocol {
-	MatchMakingExtProtocol := match_making_ext.NewMatchMakingExtProtocol(server)
-	commonMatchMakingExtProtocol = &CommonMatchMakingExtProtocol{MatchMakingExtProtocol: MatchMakingExtProtocol, server: server}
+	MatchMakingExtProtocol := match_making_ext.NewProtocol(server)
+	commonMatchMakingExtProtocol = &CommonMatchMakingExtProtocol{Protocol: MatchMakingExtProtocol, server: server}
 
 	MatchMakingExtProtocol.EndParticipation(endParticipation)
 

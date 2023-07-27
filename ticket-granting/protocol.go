@@ -11,7 +11,7 @@ var commonTicketGrantingProtocol *CommonTicketGrantingProtocol
 var logger = plogger.NewLogger()
 
 type CommonTicketGrantingProtocol struct {
-	*ticket_granting.TicketGrantingProtocol
+	*ticket_granting.Protocol
 	server                   *nex.Server
 	secureStationURL         *nex.StationURL
 	buildName                string
@@ -37,10 +37,10 @@ func (commonTicketGrantingProtocol *CommonTicketGrantingProtocol) EnableInsecure
 
 // NewCommonTicketGrantingProtocol returns a new CommonTicketGrantingProtocol
 func NewCommonTicketGrantingProtocol(server *nex.Server) *CommonTicketGrantingProtocol {
-	ticketGrantingProtocol := ticket_granting.NewTicketGrantingProtocol(server)
+	ticketGrantingProtocol := ticket_granting.NewProtocol(server)
 	commonTicketGrantingProtocol = &CommonTicketGrantingProtocol{
-		TicketGrantingProtocol: ticketGrantingProtocol,
-		server:                 server,
+		Protocol: ticketGrantingProtocol,
+		server:   server,
 	}
 
 	commonTicketGrantingProtocol.DisableInsecureLogin() // * Disable insecure login by default
