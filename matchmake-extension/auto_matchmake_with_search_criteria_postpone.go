@@ -5,7 +5,7 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 	match_making_types "github.com/PretendoNetwork/nex-protocols-go/match-making/types"
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension"
-	"github.com/PretendoNetwork/nex-protocols-go/notifications"
+	notifications "github.com/PretendoNetwork/nex-protocols-go/notifications"
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/notifications/types"
 )
 
@@ -42,8 +42,8 @@ func autoMatchmakeWithSearchCriteria_Postpone(err error, client *nex.Client, cal
 		}
 
 		session := common_globals.CommonMatchmakeSession{
-			SearchCriteria: lstSearchCriteria,
-			GameMatchmakeSession:   matchmakeSession,
+			SearchCriteria:       lstSearchCriteria,
+			GameMatchmakeSession: matchmakeSession,
 		}
 
 		common_globals.Sessions[sessionIndex] = &session
@@ -68,7 +68,7 @@ func autoMatchmakeWithSearchCriteria_Postpone(err error, client *nex.Client, cal
 	rmcResponseBody := rmcResponseStream.Bytes()
 
 	rmcResponse := nex.NewRMCResponse(matchmake_extension.ProtocolID, callID)
-	rmcResponse.SetSuccess(matchmake_extension.MethodAutoMatchmakeWithSearchCriteria_Postpone, rmcResponseBody)
+	rmcResponse.SetSuccess(matchmake_extension.MethodAutoMatchmakeWithSearchCriteriaPostpone, rmcResponseBody)
 
 	rmcResponseBytes := rmcResponse.Bytes()
 

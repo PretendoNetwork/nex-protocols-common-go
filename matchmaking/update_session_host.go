@@ -4,7 +4,7 @@ import (
 	nex "github.com/PretendoNetwork/nex-go"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
-	"github.com/PretendoNetwork/nex-protocols-go/notifications"
+	notifications "github.com/PretendoNetwork/nex-protocols-go/notifications"
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/notifications/types"
 )
 

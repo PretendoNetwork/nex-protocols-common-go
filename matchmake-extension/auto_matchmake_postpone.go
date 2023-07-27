@@ -5,7 +5,7 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 	match_making_types "github.com/PretendoNetwork/nex-protocols-go/match-making/types"
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension"
-	"github.com/PretendoNetwork/nex-protocols-go/notifications"
+	notifications "github.com/PretendoNetwork/nex-protocols-go/notifications"
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/notifications/types"
 )
 
@@ -68,7 +68,7 @@ func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, anyGat
 	rmcResponseBody := rmcResponseStream.Bytes()
 
 	rmcResponse := nex.NewRMCResponse(matchmake_extension.ProtocolID, callID)
-	rmcResponse.SetSuccess(matchmake_extension.MethodAutoMatchmake_Postpone, rmcResponseBody)
+	rmcResponse.SetSuccess(matchmake_extension.MethodAutoMatchmakePostpone, rmcResponseBody)
 
 	rmcResponseBytes := rmcResponse.Bytes()
 
