@@ -7,7 +7,12 @@ import (
 	nat_traversal "github.com/PretendoNetwork/nex-protocols-go/nat-traversal"
 )
 
-func requestProbeInitiationExt(err error, client *nex.Client, callID uint32, targetList []string, stationToProbe string) {
+func requestProbeInitiationExt(err error, client *nex.Client, callID uint32, targetList []string, stationToProbe string) uint32 {
+	if err != nil {
+		logger.Error(err.Error())
+		return nex.Errors.Core.InvalidArgument
+	}
+
 	server := commonNATTraversalProtocol.server
 	rmcResponse := nex.NewRMCResponse(nat_traversal.ProtocolID, callID)
 	rmcResponse.SetSuccess(nat_traversal.MethodRequestProbeInitiationExt, nil)
@@ -76,4 +81,6 @@ func requestProbeInitiationExt(err error, client *nex.Client, callID uint32, tar
 			logger.Warning("Client not found")
 		}
 	}
+
+	return 0
 }

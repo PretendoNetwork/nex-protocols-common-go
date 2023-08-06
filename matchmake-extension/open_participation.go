@@ -6,15 +6,28 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
-func openParticipation(err error, client *nex.Client, callID uint32, gid uint32) {
-	server := commonMatchmakeExtensionProtocol.server
-	rmcResponse := nex.NewRMCResponse(matchmake_extension.ProtocolID, callID)
-	if session, ok := common_globals.Sessions[gid]; ok {
-		session.GameMatchmakeSession.OpenParticipation = true
-		rmcResponse.SetSuccess(matchmake_extension.MethodOpenParticipation, nil)
-	} else {
-		rmcResponse.SetError(nex.Errors.RendezVous.SessionVoid)
+func openParticipation(err error, client *nex.Client, callID uint32, gid uint32) uint32 {
+	if err != nil {
+		logger.Error(err.Error())
+		return nex.Errors.Core.InvalidArgument
 	}
+
+	var session *common_globals.CommonMatchmakeSession
+	var ok bool
+	if session, ok = common_globals.Sessions[gid]; !ok {
+		return nex.Errors.RendezVous.SessionVoid
+	}
+
+	if session.GameMatchmakeSession.Gathering.OwnerPID != client.PID() {
+		return nex.Errors.RendezVous.PermissionDenied
+	}
+
+	session.GameMatchmakeSession.OpenParticipation = true
+
+	server := commonMatchmakeExtensionProtocol.server
+
+	rmcResponse := nex.NewRMCResponse(matchmake_extension.ProtocolID, callID)
+	rmcResponse.SetSuccess(matchmake_extension.MethodOpenParticipation, nil)
 
 	rmcResponseBytes := rmcResponse.Bytes()
 
@@ -36,4 +49,6 @@ func openParticipation(err error, client *nex.Client, callID uint32, gid uint32)
 	responsePacket.AddFlag(nex.FlagReliable)
 
 	server.Send(responsePacket)
+
+	return 0
 }

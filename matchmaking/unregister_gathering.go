@@ -8,10 +8,28 @@ import (
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/notifications/types"
 )
 
-func unregisterGathering(err error, client *nex.Client, callID uint32, gatheringId uint32) {
+func unregisterGathering(err error, client *nex.Client, callID uint32, idGathering uint32) uint32 {
+	if err != nil {
+		logger.Error(err.Error())
+		return nex.Errors.Core.InvalidArgument
+	}
+
 	server := commonMatchMakingProtocol.server
-	gatheringPlayers := common_globals.Sessions[gatheringId].ConnectionIDs
-	delete(common_globals.Sessions, gatheringId)
+
+	var session *common_globals.CommonMatchmakeSession
+	var ok bool
+	if session, ok = common_globals.Sessions[idGathering]; !ok {
+		return nex.Errors.RendezVous.SessionVoid
+	}
+
+	if session.GameMatchmakeSession.Gathering.OwnerPID != client.PID() {
+		return nex.Errors.RendezVous.PermissionDenied
+	}
+
+	gatheringPlayers := session.ConnectionIDs
+
+	delete(common_globals.Sessions, idGathering)
+
 	rmcResponse := nex.NewRMCResponse(match_making.ProtocolID, callID)
 	rmcResponse.SetSuccess(match_making.MethodUnregisterGathering, nil)
 
@@ -48,7 +66,7 @@ func unregisterGathering(err error, client *nex.Client, callID uint32, gathering
 	oEvent := notifications_types.NewNotificationEvent()
 	oEvent.PIDSource = client.PID()
 	oEvent.Type = notifications.BuildNotificationType(category, subtype)
-	oEvent.Param1 = gatheringId
+	oEvent.Param1 = idGathering
 
 	stream := nex.NewStreamOut(server)
 	oEventBytes := oEvent.Bytes(stream)
@@ -82,4 +100,6 @@ func unregisterGathering(err error, client *nex.Client, callID uint32, gathering
 			logger.Warning("Client not found")
 		}
 	}
+
+	return 0
 }

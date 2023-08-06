@@ -8,11 +8,26 @@ import (
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/notifications/types"
 )
 
-func updateSessionHost(err error, client *nex.Client, callID uint32, gid uint32, isMigrateOwner bool) {
+func updateSessionHost(err error, client *nex.Client, callID uint32, gid uint32, isMigrateOwner bool) uint32 {
+	if err != nil {
+		logger.Error(err.Error())
+		return nex.Errors.Core.InvalidArgument
+	}
+
+	var session *common_globals.CommonMatchmakeSession
+	var ok bool
+	if session, ok = common_globals.Sessions[gid]; !ok {
+		return nex.Errors.RendezVous.SessionVoid
+	}
+
+	if common_globals.FindClientSession(client.ConnectionID()) != gid {
+		return nex.Errors.RendezVous.PermissionDenied
+	}
+
 	server := commonMatchMakingProtocol.server
-	common_globals.Sessions[gid].GameMatchmakeSession.Gathering.HostPID = client.PID()
+	session.GameMatchmakeSession.Gathering.HostPID = client.PID()
 	if isMigrateOwner {
-		common_globals.Sessions[gid].GameMatchmakeSession.Gathering.OwnerPID = client.PID()
+		session.GameMatchmakeSession.Gathering.OwnerPID = client.PID()
 	}
 
 	rmcResponse := nex.NewRMCResponse(match_making.ProtocolID, callID)
@@ -41,7 +56,7 @@ func updateSessionHost(err error, client *nex.Client, callID uint32, gid uint32,
 	server.Send(responsePacket)
 
 	if !isMigrateOwner {
-		return
+		return 0
 	}
 
 	rmcMessage := nex.NewRMCRequest()
@@ -95,4 +110,6 @@ func updateSessionHost(err error, client *nex.Client, callID uint32, gid uint32,
 			logger.Warning("Client not found")
 		}
 	}
+
+	return 0
 }

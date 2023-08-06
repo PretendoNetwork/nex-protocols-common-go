@@ -5,24 +5,29 @@ import (
 	ticket_granting "github.com/PretendoNetwork/nex-protocols-go/ticket-granting"
 )
 
-func requestTicket(err error, client *nex.Client, callID uint32, userPID uint32, targetPID uint32) {
+func requestTicket(err error, client *nex.Client, callID uint32, userPID uint32, targetPID uint32) uint32 {
+	if err != nil {
+		logger.Error(err.Error())
+		return nex.Errors.Core.InvalidArgument
+	}
+
 	encryptedTicket, errorCode := generateTicket(userPID, targetPID)
 
 	rmcResponse := nex.NewRMCResponse(ticket_granting.ProtocolID, callID)
 
 	// If the source or target pid is invalid, the %retval% field is set to Core::AccessDenied and the ticket is empty.
 	if errorCode != 0 {
-		rmcResponse.SetError(errorCode)
-	} else {
-		rmcResponseStream := nex.NewStreamOut(commonTicketGrantingProtocol.server)
-
-		rmcResponseStream.WriteResult(nex.NewResultSuccess(nex.Errors.Core.Unknown))
-		rmcResponseStream.WriteBuffer(encryptedTicket)
-
-		rmcResponseBody := rmcResponseStream.Bytes()
-
-		rmcResponse.SetSuccess(ticket_granting.MethodRequestTicket, rmcResponseBody)
+		return errorCode
 	}
+
+	rmcResponseStream := nex.NewStreamOut(commonTicketGrantingProtocol.server)
+
+	rmcResponseStream.WriteResult(nex.NewResultSuccess(nex.Errors.Core.Unknown))
+	rmcResponseStream.WriteBuffer(encryptedTicket)
+
+	rmcResponseBody := rmcResponseStream.Bytes()
+
+	rmcResponse.SetSuccess(ticket_granting.MethodRequestTicket, rmcResponseBody)
 
 	rmcResponseBytes := rmcResponse.Bytes()
 
@@ -45,4 +50,6 @@ func requestTicket(err error, client *nex.Client, callID uint32, userPID uint32,
 	responsePacket.AddFlag(nex.FlagReliable)
 
 	commonTicketGrantingProtocol.server.Send(responsePacket)
+
+	return 0
 }

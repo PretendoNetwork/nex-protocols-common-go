@@ -5,7 +5,12 @@ import (
 	nat_traversal "github.com/PretendoNetwork/nex-protocols-go/nat-traversal"
 )
 
-func getRelaySignatureKey(err error, client *nex.Client, callID uint32) {
+func getRelaySignatureKey(err error, client *nex.Client, callID uint32) uint32 {
+	if err != nil {
+		logger.Error(err.Error())
+		return nex.Errors.Core.InvalidArgument
+	}
+
 	server := commonNATTraversalProtocol.server
 	rmcResponseStream := nex.NewStreamOut(server)
 
@@ -16,7 +21,7 @@ func getRelaySignatureKey(err error, client *nex.Client, callID uint32) {
 	rmcResponseStream.WriteString("") // Relay server address. We don't have one, so for now this is empty.
 	rmcResponseStream.WriteUInt16LE(0) // Relay server port. We don't have one, so for now this is empty.
 	rmcResponseStream.WriteInt32LE(0)
-	rmcResponseStream.WriteUInt32LE(0) //Game Server ID. I don't know if this is checked (it doesn't appear to be though).
+	rmcResponseStream.WriteUInt32LE(0) // Game Server ID. I don't know if this is checked (it doesn't appear to be though).
 	rmcResponseBody := rmcResponseStream.Bytes()
 
 	rmcResponse := nex.NewRMCResponse(nat_traversal.ProtocolID, callID)
@@ -42,4 +47,6 @@ func getRelaySignatureKey(err error, client *nex.Client, callID uint32) {
 	responsePacket.AddFlag(nex.FlagReliable)
 
 	server.Send(responsePacket)
+
+	return 0
 }

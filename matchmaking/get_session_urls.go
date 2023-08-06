@@ -6,16 +6,27 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
-func getSessionURLs(err error, client *nex.Client, callID uint32, gatheringId uint32) {
+func getSessionURLs(err error, client *nex.Client, callID uint32, gid uint32) uint32 {
+	if err != nil {
+		logger.Error(err.Error())
+		return nex.Errors.Core.InvalidArgument
+	}
+
+	var session *common_globals.CommonMatchmakeSession
+	var ok bool
+	if session, ok = common_globals.Sessions[gid]; !ok {
+		return nex.Errors.RendezVous.SessionVoid
+	}
+
 	server := commonMatchMakingProtocol.server
 	var stationUrlStrings []string
 
-	hostpid := common_globals.Sessions[gatheringId].GameMatchmakeSession.Gathering.HostPID
+	hostpid := session.GameMatchmakeSession.Gathering.HostPID
 
 	hostclient := server.FindClientFromPID(hostpid)
 	if hostclient == nil {
-		logger.Warning("Host client not found") //this popped up once during testing. Leaving it noted here in case it becomes a problem.
-		return
+		logger.Warning("Host client not found") // This popped up once during testing. Leaving it noted here in case it becomes a problem.
+		return nex.Errors.Core.Exception
 	}
 
 	stationUrlStrings = hostclient.StationURLs()
@@ -50,4 +61,6 @@ func getSessionURLs(err error, client *nex.Client, callID uint32, gatheringId ui
 	responsePacket.AddFlag(nex.FlagReliable)
 
 	server.Send(responsePacket)
+
+	return 0
 }

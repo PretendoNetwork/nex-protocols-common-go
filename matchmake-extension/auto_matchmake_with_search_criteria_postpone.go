@@ -9,12 +9,18 @@ import (
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/notifications/types"
 )
 
-func autoMatchmakeWithSearchCriteria_Postpone(err error, client *nex.Client, callID uint32, lstSearchCriteria []*match_making_types.MatchmakeSessionSearchCriteria, anyGathering *nex.DataHolder, message string) {
-	server := commonMatchmakeExtensionProtocol.server
+func autoMatchmakeWithSearchCriteria_Postpone(err error, client *nex.Client, callID uint32, lstSearchCriteria []*match_making_types.MatchmakeSessionSearchCriteria, anyGathering *nex.DataHolder, message string) uint32 {
 	if commonMatchmakeExtensionProtocol.cleanupMatchmakeSessionSearchCriteriaHandler == nil {
 		logger.Warning("MatchmakeExtension::AutoMatchmake_Postpone missing CleanupMatchmakeSessionSearchCriteriaHandler!")
-		return
+		return nex.Errors.Core.NotImplemented
 	}
+
+	if err != nil {
+		logger.Error(err.Error())
+		return nex.Errors.Core.InvalidArgument
+	}
+
+	server := commonMatchmakeExtensionProtocol.server
 
 	// A client may disconnect from a session without leaving reliably,
 	// so let's make sure the client is removed from the session
@@ -27,7 +33,7 @@ func autoMatchmakeWithSearchCriteria_Postpone(err error, client *nex.Client, cal
 		matchmakeSession = anyGathering.ObjectData().(*match_making_types.MatchmakeSession)
 	} else {
 		logger.Critical("Non-MatchmakeSession DataType?!")
-		return
+		return nex.Errors.Core.InvalidArgument
 	}
 
 	commonMatchmakeExtensionProtocol.cleanupMatchmakeSessionSearchCriteriaHandler(lstSearchCriteria)
@@ -38,7 +44,7 @@ func autoMatchmakeWithSearchCriteria_Postpone(err error, client *nex.Client, cal
 		// If we ever get here, we must be not deleting sessions properly
 		if sessionIndex == 0 {
 			logger.Critical("No gatherings available!")
-			return
+			return nex.Errors.RendezVous.LimitExceeded
 		}
 
 		session := common_globals.CommonMatchmakeSession{
@@ -131,4 +137,6 @@ func autoMatchmakeWithSearchCriteria_Postpone(err error, client *nex.Client, cal
 	messagePacket.AddFlag(nex.FlagReliable)
 
 	server.Send(messagePacket)
+
+	return 0
 }
