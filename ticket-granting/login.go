@@ -10,7 +10,7 @@ import (
 
 func login(err error, client *nex.Client, callID uint32, username string) uint32 {
 	if !commonTicketGrantingProtocol.allowInsecureLoginMethod {
-		return nex.Errors.Core.NotImplemented
+		return nex.Errors.Authentication.ValidationFailed
 	}
 
 	if err != nil {
