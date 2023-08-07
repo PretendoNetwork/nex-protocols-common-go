@@ -5,7 +5,12 @@ import (
 	secure_connection "github.com/PretendoNetwork/nex-protocols-go/secure-connection"
 )
 
-func replaceURL(err error, client *nex.Client, callID uint32, oldStation *nex.StationURL, newStation *nex.StationURL) {
+func replaceURL(err error, client *nex.Client, callID uint32, oldStation *nex.StationURL, newStation *nex.StationURL) uint32 {
+	if err != nil {
+		logger.Error(err.Error())
+		return nex.Errors.Core.InvalidArgument
+	}
+
 	server := commonSecureConnectionProtocol.server
 
 	urls := client.StationURLs()
@@ -41,4 +46,6 @@ func replaceURL(err error, client *nex.Client, callID uint32, oldStation *nex.St
 	responsePacket.AddFlag(nex.FlagReliable)
 
 	server.Send(responsePacket)
+
+	return 0
 }

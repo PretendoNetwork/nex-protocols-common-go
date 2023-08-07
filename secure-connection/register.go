@@ -7,7 +7,12 @@ import (
 	secure_connection "github.com/PretendoNetwork/nex-protocols-go/secure-connection"
 )
 
-func register(err error, client *nex.Client, callID uint32, stationUrls []*nex.StationURL) {
+func register(err error, client *nex.Client, callID uint32, stationUrls []*nex.StationURL) uint32 {
+	if err != nil {
+		logger.Error(err.Error())
+		return nex.Errors.Core.InvalidArgument
+	}
+
 	server := commonSecureConnectionProtocol.server
 	localStation := stationUrls[0]
 	localStationURL := localStation.EncodeToString()
@@ -64,4 +69,6 @@ func register(err error, client *nex.Client, callID uint32, stationUrls []*nex.S
 	responsePacket.AddFlag(nex.FlagReliable)
 
 	server.Send(responsePacket)
+
+	return 0
 }

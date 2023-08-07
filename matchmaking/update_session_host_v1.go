@@ -6,9 +6,24 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
-func updateSessionHostV1(err error, client *nex.Client, callID uint32, gid uint32) {
+func updateSessionHostV1(err error, client *nex.Client, callID uint32, gid uint32) uint32 {
+	if err != nil {
+		logger.Error(err.Error())
+		return nex.Errors.Core.InvalidArgument
+	}
+
+	var session *common_globals.CommonMatchmakeSession
+	var ok bool
+	if session, ok = common_globals.Sessions[gid]; !ok {
+		return nex.Errors.RendezVous.SessionVoid
+	}
+
+	if common_globals.FindClientSession(client.ConnectionID()) != gid {
+		return nex.Errors.RendezVous.PermissionDenied
+	}
+
 	server := commonMatchMakingProtocol.server
-	common_globals.Sessions[gid].GameMatchmakeSession.Gathering.HostPID = client.PID()
+	session.GameMatchmakeSession.Gathering.HostPID = client.PID()
 
 	rmcResponse := nex.NewRMCResponse(match_making.ProtocolID, callID)
 	rmcResponse.SetSuccess(match_making.MethodUpdateSessionHostV1, nil)
@@ -34,4 +49,6 @@ func updateSessionHostV1(err error, client *nex.Client, callID uint32, gid uint3
 	responsePacket.AddFlag(nex.FlagReliable)
 
 	server.Send(responsePacket)
+
+	return 0
 }

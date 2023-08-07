@@ -5,7 +5,12 @@ import (
 	nat_traversal "github.com/PretendoNetwork/nex-protocols-go/nat-traversal"
 )
 
-func reportNATTraversalResultDetail(err error, client *nex.Client, callID uint32, cid uint32, result bool, detail int32, rtt uint32) {
+func reportNATTraversalResultDetail(err error, client *nex.Client, callID uint32, cid uint32, result bool, detail int32, rtt uint32) uint32 {
+	if err != nil {
+		logger.Error(err.Error())
+		return nex.Errors.Core.InvalidArgument
+	}
+
 	server := commonNATTraversalProtocol.server
 
 	rmcResponse := nex.NewRMCResponse(nat_traversal.ProtocolID, callID)
@@ -32,4 +37,6 @@ func reportNATTraversalResultDetail(err error, client *nex.Client, callID uint32
 	responsePacket.AddFlag(nex.FlagReliable)
 
 	server.Send(responsePacket)
+
+	return 0
 }

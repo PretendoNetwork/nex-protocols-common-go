@@ -9,11 +9,16 @@ import (
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/notifications/types"
 )
 
-func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, anyGathering *nex.DataHolder, message string) {
+func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, anyGathering *nex.DataHolder, message string) uint32 {
+	if err != nil {
+		logger.Error(err.Error())
+		return nex.Errors.Core.InvalidArgument
+	}
+
 	server := commonMatchmakeExtensionProtocol.server
 	if commonMatchmakeExtensionProtocol.cleanupSearchMatchmakeSessionHandler == nil {
 		logger.Warning("MatchmakeExtension::AutoMatchmake_Postpone missing CleanupSearchMatchmakeSessionHandler!")
-		return
+		return nex.Errors.Core.Exception
 	}
 
 	// A client may disconnect from a session without leaving reliably,
@@ -27,7 +32,7 @@ func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, anyGat
 		matchmakeSession = anyGathering.ObjectData().(*match_making_types.MatchmakeSession)
 	} else {
 		logger.Critical("Non-MatchmakeSession DataType?!")
-		return
+		return nex.Errors.Core.InvalidArgument
 	}
 
 	searchMatchmakeSession := matchmakeSession.Copy().(*match_making_types.MatchmakeSession)
@@ -39,7 +44,7 @@ func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, anyGat
 		// If we ever get here, we must be not deleting sessions properly
 		if sessionIndex == 0 {
 			logger.Critical("No gatherings available!")
-			return
+			return nex.Errors.RendezVous.LimitExceeded
 		}
 
 		session := common_globals.CommonMatchmakeSession{
@@ -131,4 +136,6 @@ func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, anyGat
 	messagePacket.AddFlag(nex.FlagReliable)
 
 	server.Send(messagePacket)
+
+	return 0
 }

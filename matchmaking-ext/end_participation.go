@@ -9,37 +9,19 @@ import (
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/notifications/types"
 )
 
-func endParticipation(err error, client *nex.Client, callID uint32, idGathering uint32, strMessage string) {
+func endParticipation(err error, client *nex.Client, callID uint32, idGathering uint32, strMessage string) uint32 {
+	if err != nil {
+		logger.Error(err.Error())
+		return nex.Errors.Core.InvalidArgument
+	}
+
 	server := commonMatchMakingExtProtocol.server
 	var session *common_globals.CommonMatchmakeSession
 	var ok bool
 	if session, ok = common_globals.Sessions[idGathering]; !ok {
-		rmcResponse := nex.NewRMCResponse(match_making_ext.ProtocolID, callID)
-		rmcResponse.SetError(nex.Errors.RendezVous.SessionVoid)
-
-		rmcResponseBytes := rmcResponse.Bytes()
-
-		var responsePacket nex.PacketInterface
-
-		if server.PRUDPVersion() == 0 {
-			responsePacket, _ = nex.NewPacketV0(client, nil)
-			responsePacket.SetVersion(0)
-		} else {
-			responsePacket, _ = nex.NewPacketV1(client, nil)
-			responsePacket.SetVersion(1)
-		}
-
-		responsePacket.SetSource(0xA1)
-		responsePacket.SetDestination(0xAF)
-		responsePacket.SetType(nex.DataPacket)
-		responsePacket.SetPayload(rmcResponseBytes)
-
-		responsePacket.AddFlag(nex.FlagNeedsAck)
-		responsePacket.AddFlag(nex.FlagReliable)
-
-		server.Send(responsePacket)
-		return
+		return nex.Errors.RendezVous.SessionVoid
 	}
+
 	matchmakeSession := session.GameMatchmakeSession
 	ownerPID := matchmakeSession.Gathering.OwnerPID
 
@@ -133,6 +115,8 @@ func endParticipation(err error, client *nex.Client, callID uint32, idGathering 
 	messagePacket.AddFlag(nex.FlagReliable)
 
 	server.Send(messagePacket)
+
+	return 0
 }
 
 func changeSessionOwner(ownerConnectionID uint32, gathering uint32, callID uint32) {

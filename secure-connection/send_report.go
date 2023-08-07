@@ -8,7 +8,12 @@ import (
 	secure_connection "github.com/PretendoNetwork/nex-protocols-go/secure-connection"
 )
 
-func sendReport(err error, client *nex.Client, callID uint32, reportID uint32, reportData []byte) {
+func sendReport(err error, client *nex.Client, callID uint32, reportID uint32, reportData []byte) uint32 {
+	if err != nil {
+		logger.Error(err.Error())
+		return nex.Errors.Core.InvalidArgument
+	}
+
 	logger.Info("Report ID: " + strconv.Itoa(int(reportID)))
 	logger.Info("Report Data: " + hex.EncodeToString(reportData))
 
@@ -36,4 +41,6 @@ func sendReport(err error, client *nex.Client, callID uint32, reportID uint32, r
 	responsePacket.AddFlag(nex.FlagReliable)
 
 	commonSecureConnectionProtocol.server.Send(responsePacket)
+
+	return 0
 }
