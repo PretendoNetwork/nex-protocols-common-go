@@ -2,6 +2,7 @@ package secureconnection
 
 import (
 	"time"
+
 	"github.com/PretendoNetwork/nex-go"
 )
 
@@ -85,7 +86,13 @@ func connect(packet nex.PacketInterface) {
 
 	server.AcknowledgePacket(packet, responseValueBufferStream.Bytes())
 
-	packet.Sender().UpdateRC4Key(sessionKey)
+	err = packet.Sender().UpdateRC4Key(sessionKey)
+	if err != nil {
+		logger.Error(err.Error())
+		server.TimeoutKick(packet.Sender())
+		return
+	}
+
 	packet.Sender().SetSessionKey(sessionKey)
 
 	packet.Sender().SetPID(userPID)
