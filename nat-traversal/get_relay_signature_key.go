@@ -18,7 +18,7 @@ func getRelaySignatureKey(err error, client *nex.Client, callID uint32) uint32 {
 	dateTime := nex.NewDateTime(0)
 	dateTime.UTC()
 	rmcResponseStream.WriteDateTime(dateTime)
-	rmcResponseStream.WriteString("") // Relay server address. We don't have one, so for now this is empty.
+	rmcResponseStream.WriteString("")  // Relay server address. We don't have one, so for now this is empty.
 	rmcResponseStream.WriteUInt16LE(0) // Relay server port. We don't have one, so for now this is empty.
 	rmcResponseStream.WriteInt32LE(0)
 	rmcResponseStream.WriteUInt32LE(0) // Game Server ID. I don't know if this is checked (it doesn't appear to be though).
@@ -28,7 +28,7 @@ func getRelaySignatureKey(err error, client *nex.Client, callID uint32) uint32 {
 	rmcResponse.SetSuccess(nat_traversal.MethodGetRelaySignatureKey, rmcResponseBody)
 
 	rmcResponseBytes := rmcResponse.Bytes()
-	
+
 	var responsePacket nex.PacketInterface
 
 	if server.PRUDPVersion() == 0 {

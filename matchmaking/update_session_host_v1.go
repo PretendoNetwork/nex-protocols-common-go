@@ -2,8 +2,8 @@ package matchmaking
 
 import (
 	nex "github.com/PretendoNetwork/nex-go"
-	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
+	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
 )
 
 func updateSessionHostV1(err error, client *nex.Client, callID uint32, gid uint32) uint32 {

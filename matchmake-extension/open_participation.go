@@ -2,8 +2,8 @@ package matchmake_extension
 
 import (
 	nex "github.com/PretendoNetwork/nex-go"
-	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
+	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension"
 )
 
 func openParticipation(err error, client *nex.Client, callID uint32, gid uint32) uint32 {
