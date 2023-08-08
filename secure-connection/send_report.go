@@ -13,7 +13,7 @@ func sendReport(err error, client *nex.Client, callID uint32, reportID uint32, r
 
 	if err != nil {
 		logger.Critical(err.Error())
-		return nex.Errors.Ranking.Unknown
+		return nex.Errors.Core.Unknown
 	}
 
 	err = commonSecureConnectionProtocol.createReportDBRecordHandler(client.PID(), reportID, reportData)
