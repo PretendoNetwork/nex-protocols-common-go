@@ -1,9 +1,12 @@
 package common_globals
 
 import (
+	"fmt"
 	"math"
 
+	"github.com/PretendoNetwork/nex-go"
 	match_making_types "github.com/PretendoNetwork/nex-protocols-go/match-making/types"
+	"golang.org/x/exp/slices"
 )
 
 type CommonMatchmakeSession struct {
@@ -126,4 +129,24 @@ func SearchGatheringWithSearchCriteria(lstSearchCriteria []*match_making_types.M
 		return sessionIndex // Found a match
 	}
 	return 0
+}
+
+// AddPlayersToSession updates the given sessions state to include the provided connection IDs
+// Returns a NEX error code if failed
+func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32) (error, uint32) {
+	if (len(session.ConnectionIDs) + len(connectionIDs)) > int(session.GameMatchmakeSession.Gathering.MaximumParticipants) {
+		return fmt.Errorf("Gathering %d is full", session.GameMatchmakeSession.Gathering.ID), nex.Errors.RendezVous.SessionFull
+	}
+
+	for _, connectedID := range connectionIDs {
+		if slices.Contains(session.ConnectionIDs, connectedID) {
+			return fmt.Errorf("Connection ID %d is already in gathering %d", connectedID, session.GameMatchmakeSession.Gathering.ID), nex.Errors.RendezVous.AlreadyParticipatedGathering
+		}
+
+		session.ConnectionIDs = append(session.ConnectionIDs, connectedID)
+
+		session.GameMatchmakeSession.ParticipationCount += 1
+	}
+
+	return nil, 0
 }

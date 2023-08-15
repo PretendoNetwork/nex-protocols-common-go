@@ -33,9 +33,11 @@ func NewCommonMatchmakeExtensionProtocol(server *nex.Server) *CommonMatchmakeExt
 	MatchmakeExtensionProtocol := matchmake_extension.NewProtocol(server)
 	commonMatchmakeExtensionProtocol = &CommonMatchmakeExtensionProtocol{Protocol: MatchmakeExtensionProtocol, server: server}
 
+	MatchmakeExtensionProtocol.OpenParticipation(openParticipation)
+	MatchmakeExtensionProtocol.CreateMatchmakeSession(createMatchmakeSession)
+	MatchmakeExtensionProtocol.GetSimplePlayingSession(getSimplePlayingSession)
 	MatchmakeExtensionProtocol.AutoMatchmakePostpone(autoMatchmake_Postpone)
 	MatchmakeExtensionProtocol.AutoMatchmakeWithSearchCriteriaPostpone(autoMatchmakeWithSearchCriteria_Postpone)
-	MatchmakeExtensionProtocol.OpenParticipation(openParticipation)
 
 	return commonMatchmakeExtensionProtocol
 }
