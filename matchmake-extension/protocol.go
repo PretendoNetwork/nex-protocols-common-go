@@ -4,6 +4,7 @@ import (
 	nex "github.com/PretendoNetwork/nex-go"
 	match_making_types "github.com/PretendoNetwork/nex-protocols-go/match-making/types"
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension"
+	matchmake_extension_mario_kart_8 "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension/mario-kart-8"
 	"github.com/PretendoNetwork/plogger-go"
 )
 
@@ -11,8 +12,9 @@ var commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol
 var logger = plogger.NewLogger()
 
 type CommonMatchmakeExtensionProtocol struct {
-	*matchmake_extension.Protocol
-	server *nex.Server
+	server             *nex.Server
+	DefaultProtocol    *matchmake_extension.Protocol
+	MarioKart8Protocol *matchmake_extension_mario_kart_8.Protocol
 
 	cleanupSearchMatchmakeSessionHandler         func(matchmakeSession *match_making_types.MatchmakeSession)
 	cleanupMatchmakeSessionSearchCriteriaHandler func(lstSearchCriteria []*match_making_types.MatchmakeSessionSearchCriteria)
@@ -28,16 +30,35 @@ func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) Cleanu
 	commonMatchmakeExtensionProtocol.cleanupMatchmakeSessionSearchCriteriaHandler = handler
 }
 
-// NewCommonMatchmakeExtensionProtocol returns a new CommonMatchmakeExtensionProtocol
-func NewCommonMatchmakeExtensionProtocol(server *nex.Server) *CommonMatchmakeExtensionProtocol {
-	MatchmakeExtensionProtocol := matchmake_extension.NewProtocol(server)
-	commonMatchmakeExtensionProtocol = &CommonMatchmakeExtensionProtocol{Protocol: MatchmakeExtensionProtocol, server: server}
+func initDefault(c *CommonMatchmakeExtensionProtocol) {
+	c.DefaultProtocol = matchmake_extension.NewProtocol(c.server)
+	c.DefaultProtocol.OpenParticipation(openParticipation)
+	c.DefaultProtocol.CreateMatchmakeSession(createMatchmakeSession)
+	c.DefaultProtocol.GetSimplePlayingSession(getSimplePlayingSession)
+	c.DefaultProtocol.AutoMatchmakePostpone(autoMatchmake_Postpone)
+	c.DefaultProtocol.AutoMatchmakeWithSearchCriteriaPostpone(autoMatchmakeWithSearchCriteria_Postpone)
+}
 
-	MatchmakeExtensionProtocol.OpenParticipation(openParticipation)
-	MatchmakeExtensionProtocol.CreateMatchmakeSession(createMatchmakeSession)
-	MatchmakeExtensionProtocol.GetSimplePlayingSession(getSimplePlayingSession)
-	MatchmakeExtensionProtocol.AutoMatchmakePostpone(autoMatchmake_Postpone)
-	MatchmakeExtensionProtocol.AutoMatchmakeWithSearchCriteriaPostpone(autoMatchmakeWithSearchCriteria_Postpone)
+func initMarioKart8(c *CommonMatchmakeExtensionProtocol) {
+	c.MarioKart8Protocol = matchmake_extension_mario_kart_8.NewProtocol(c.server)
+	c.MarioKart8Protocol.OpenParticipation(openParticipation)
+	c.MarioKart8Protocol.CreateMatchmakeSession(createMatchmakeSession)
+	c.MarioKart8Protocol.GetSimplePlayingSession(getSimplePlayingSession)
+	c.MarioKart8Protocol.AutoMatchmakePostpone(autoMatchmake_Postpone)
+	c.MarioKart8Protocol.AutoMatchmakeWithSearchCriteriaPostpone(autoMatchmakeWithSearchCriteria_Postpone)
+}
+
+// NewCommonMatchmakeExtensionProtocol returns a new CommonMatchmakeExtensionProtocol
+func NewCommonMatchmakeExtensionProtocol(server *nex.Server, patch string) *CommonMatchmakeExtensionProtocol {
+	commonMatchmakeExtensionProtocol = &CommonMatchmakeExtensionProtocol{server: server}
+
+	switch patch {
+	case "mario-kart-8":
+		initMarioKart8(commonMatchmakeExtensionProtocol)
+	default:
+		logger.Infof("Patch %q not recognized. Using default protocol", patch)
+		initDefault(commonMatchmakeExtensionProtocol)
+	}
 
 	return commonMatchmakeExtensionProtocol
 }
