@@ -13,14 +13,13 @@ func replaceURL(err error, client *nex.Client, callID uint32, oldStation *nex.St
 
 	server := commonSecureConnectionProtocol.server
 
-	urls := client.StationURLs()
-	for i := 0; i < len(urls); i++ {
-		currentStation := nex.NewStationURL(urls[i])
+	stations := client.StationURLs()
+	for i := 0; i < len(stations); i++ {
+		currentStation := stations[i]
 		if currentStation.Address() == oldStation.Address() && currentStation.Port() == oldStation.Port() {
-			urls[i] = newStation.EncodeToString()
+			stations[i] = newStation
 		}
 	}
-	client.SetStationURLs(urls)
 
 	rmcResponse := nex.NewRMCResponse(secure_connection.ProtocolID, callID)
 	rmcResponse.SetSuccess(secure_connection.MethodReplaceURL, nil)

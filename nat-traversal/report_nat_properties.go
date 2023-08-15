@@ -1,8 +1,6 @@
 package nattraversal
 
 import (
-	"strconv"
-
 	nex "github.com/PretendoNetwork/nex-go"
 	nat_traversal "github.com/PretendoNetwork/nex-protocols-go/nat-traversal"
 )
@@ -15,21 +13,16 @@ func reportNATProperties(err error, client *nex.Client, callID uint32, natm uint
 
 	server := commonNATTraversalProtocol.server
 
-	stationURLsStrings := client.StationURLs()
-	stationURLs := make([]*nex.StationURL, len(stationURLsStrings))
-
-	for i := 0; i < len(stationURLsStrings); i++ {
-		stationURLs[i] = nex.NewStationURL(stationURLsStrings[i])
-		if stationURLs[i].Type() == "3" {
-			natm_s := strconv.FormatUint(uint64(natm), 10)
-			natf_s := strconv.FormatUint(uint64(natf), 10)
-			stationURLs[i].SetNatm(natm_s)
-			stationURLs[i].SetNatf(natf_s)
+	stations := client.StationURLs()
+	for _, station := range stations {
+		if station.IsLocal() {
+			station.SetNatm(natm)
+			station.SetNatf(natf)
 		}
-		stationURLsStrings[i] = stationURLs[i].EncodeToString()
-	}
 
-	client.SetStationURLs(stationURLsStrings)
+		station.SetRVCID(client.ConnectionID())
+		station.SetPID(client.PID())
+	}
 
 	rmcResponse := nex.NewRMCResponse(nat_traversal.ProtocolID, callID)
 	rmcResponse.SetSuccess(nat_traversal.MethodReportNATProperties, nil)

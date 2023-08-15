@@ -12,27 +12,21 @@ func getSessionURLs(err error, client *nex.Client, callID uint32, gid uint32) ui
 		return nex.Errors.Core.InvalidArgument
 	}
 
-	var session *common_globals.CommonMatchmakeSession
-	var ok bool
-	if session, ok = common_globals.Sessions[gid]; !ok {
+	session, ok := common_globals.Sessions[gid]
+	if !ok {
 		return nex.Errors.RendezVous.SessionVoid
 	}
 
 	server := commonMatchMakingProtocol.server
-	var stationUrlStrings []string
-
-	hostpid := session.GameMatchmakeSession.Gathering.HostPID
-
-	hostclient := server.FindClientFromPID(hostpid)
-	if hostclient == nil {
+	hostPID := session.GameMatchmakeSession.Gathering.HostPID
+	host := server.FindClientFromPID(hostPID)
+	if host == nil {
 		logger.Warning("Host client not found") // This popped up once during testing. Leaving it noted here in case it becomes a problem.
 		return nex.Errors.Core.Exception
 	}
 
-	stationUrlStrings = hostclient.StationURLs()
-
 	rmcResponseStream := nex.NewStreamOut(server)
-	rmcResponseStream.WriteListString(stationUrlStrings)
+	rmcResponseStream.WriteListStationURL(host.StationURLs())
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 

@@ -1,8 +1,6 @@
 package secureconnection
 
 import (
-	"strconv"
-
 	nex "github.com/PretendoNetwork/nex-go"
 	secure_connection "github.com/PretendoNetwork/nex-protocols-go/secure-connection"
 )
@@ -14,33 +12,33 @@ func register(err error, client *nex.Client, callID uint32, stationUrls []*nex.S
 	}
 
 	server := commonSecureConnectionProtocol.server
+
+	nextConnectionID := uint32(server.ConnectionIDCounter().Increment())
+	client.SetConnectionID(nextConnectionID)
+
 	localStation := stationUrls[0]
-	localStationURL := localStation.EncodeToString()
-	pidConnectionID := uint32(server.ConnectionIDCounter().Increment())
-	client.SetConnectionID(pidConnectionID)
+	publicStation := localStation.Copy()
 
-	address := client.Address().IP.String()
-	port := strconv.Itoa(client.Address().Port)
-	natf := "0"
-	natm := "0"
-	type_ := "3"
+	publicStation.SetAddress(client.Address().IP.String())
+	publicStation.SetPort(uint32(client.Address().Port))
+	publicStation.SetNatf(0)
+	publicStation.SetNatm(0)
+	publicStation.SetType(3)
+	publicStation.SetPID(client.PID())
 
-	localStation.SetAddress(address)
-	localStation.SetPort(port)
-	localStation.SetNatf(natf)
-	localStation.SetNatm(natm)
-	localStation.SetType(type_)
+	localStation.SetLocal()
+	publicStation.SetPublic()
 
-	urlPublic := localStation.EncodeToString()
-	client.SetStationURLs([]string{localStationURL, urlPublic})
+	client.AddStationURL(localStation)
+	client.AddStationURL(publicStation)
 
 	retval := nex.NewResultSuccess(nex.Errors.Core.Unknown)
 
 	rmcResponseStream := nex.NewStreamOut(server)
 
 	rmcResponseStream.WriteResult(retval) // Success
-	rmcResponseStream.WriteUInt32LE(pidConnectionID)
-	rmcResponseStream.WriteString(urlPublic)
+	rmcResponseStream.WriteUInt32LE(client.ConnectionID())
+	rmcResponseStream.WriteString(publicStation.EncodeToString())
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 

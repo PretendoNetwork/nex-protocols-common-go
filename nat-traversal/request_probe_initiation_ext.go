@@ -1,8 +1,6 @@
 package nattraversal
 
 import (
-	"strconv"
-
 	nex "github.com/PretendoNetwork/nex-go"
 	nat_traversal "github.com/PretendoNetwork/nex-protocols-go/nat-traversal"
 )
@@ -52,11 +50,8 @@ func requestProbeInitiationExt(err error, client *nex.Client, callID uint32, tar
 	rmcMessageBytes := rmcMessage.Bytes()
 
 	for _, target := range targetList {
-		targetUrl := nex.NewStationURL(target)
-		logger.Info("Target: " + target)
-		logger.Info("ToProbe: " + stationToProbe)
-		targetRVCID, _ := strconv.Atoi(targetUrl.RVCID())
-		targetClient := server.FindClientFromConnectionID(uint32(targetRVCID))
+		targetStation := nex.NewStationURL(target)
+		targetClient := server.FindClientFromConnectionID(targetStation.RVCID())
 		if targetClient != nil {
 			var messagePacket nex.PacketInterface
 
