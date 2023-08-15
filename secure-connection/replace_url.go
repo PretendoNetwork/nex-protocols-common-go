@@ -14,9 +14,9 @@ func replaceURL(err error, client *nex.Client, callID uint32, oldStation *nex.St
 	server := commonSecureConnectionProtocol.server
 
 	urls := client.StationURLs()
-
 	for i := 0; i < len(urls); i++ {
-		if urls[i] == oldStation.EncodeToString() {
+		currentStation := nex.NewStationURL(urls[i])
+		if currentStation.Address() == oldStation.Address() && currentStation.Port() == oldStation.Port() {
 			urls[i] = newStation.EncodeToString()
 		}
 	}
