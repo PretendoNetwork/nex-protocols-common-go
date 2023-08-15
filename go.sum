@@ -1,7 +1,7 @@
 github.com/PretendoNetwork/nex-go v1.0.35 h1:2oZxb4YUlMgFcT2tSRETrjsrS/9Wxf3BVr45+bMvjRM=
 github.com/PretendoNetwork/nex-go v1.0.35/go.mod h1:v3dYsytdk7VvZOqplKwVqQOPa9heaq2V4DOAzCwyYNE=
-github.com/PretendoNetwork/nex-protocols-go v1.0.49 h1:CIAjb9H11uTLj4JT2/4eedX1NsnQbBEFAJsSSEE2zR8=
-github.com/PretendoNetwork/nex-protocols-go v1.0.49/go.mod h1:ztsrVFHaJc5MDBpL1rv4PgriLsTjl3R8u5XVxJHUzCk=
+github.com/PretendoNetwork/nex-protocols-go v1.0.50 h1:ZTAXWjCw5rAsQgWtHp6qklRcmVd/y6KRdBYmR3hS/Xw=
+github.com/PretendoNetwork/nex-protocols-go v1.0.50/go.mod h1:ztsrVFHaJc5MDBpL1rv4PgriLsTjl3R8u5XVxJHUzCk=
 github.com/PretendoNetwork/plogger-go v1.0.4 h1:PF7xHw9eDRHH+RsAP9tmAE7fG0N0p6H4iPwHKnsoXwc=
 github.com/PretendoNetwork/plogger-go v1.0.4/go.mod h1:7kD6M4vPq1JL4LTuPg6kuB1OvUBOwQOtAvTaUwMbwvU=
 github.com/fatih/color v1.15.0 h1:kOqh6YHBtK8aywxGerMG2Eq3H6Qgoqeo13Bk2Mv/nBs=
