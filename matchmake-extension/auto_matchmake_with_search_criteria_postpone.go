@@ -22,8 +22,8 @@ func autoMatchmakeWithSearchCriteria_Postpone(err error, client *nex.Client, cal
 
 	server := commonMatchmakeExtensionProtocol.server
 
-	// A client may disconnect from a session without leaving reliably,
-	// so let's make sure the client is removed from the session
+	// * A client may disconnect from a session without leaving reliably,
+	// * so let's make sure the client is removed from the session
 	common_globals.RemoveConnectionIDFromAllSessions(client.ConnectionID())
 
 	var matchmakeSession *match_making_types.MatchmakeSession
@@ -37,11 +37,11 @@ func autoMatchmakeWithSearchCriteria_Postpone(err error, client *nex.Client, cal
 	}
 
 	commonMatchmakeExtensionProtocol.cleanupMatchmakeSessionSearchCriteriaHandler(lstSearchCriteria)
-	sessionIndex := common_globals.SearchGatheringWithSearchCriteria(lstSearchCriteria)
+	sessionIndex := common_globals.SearchGatheringWithSearchCriteria(lstSearchCriteria, commonMatchmakeExtensionProtocol.gameSpecificMatchmakeSessionSearcgCriteriaChecksHandler)
 	if sessionIndex == 0 {
 		sessionIndex = common_globals.GetSessionIndex()
-		// This should in theory be impossible, as there aren't enough PIDs creating sessions to fill the uint32 limit.
-		// If we ever get here, we must be not deleting sessions properly
+		// * This should in theory be impossible, as there aren't enough PIDs creating sessions to fill the uint32 limit.
+		// * If we ever get here, we must be not deleting sessions properly
 		if sessionIndex == 0 {
 			logger.Critical("No gatherings available!")
 			return nex.Errors.RendezVous.LimitExceeded
@@ -87,6 +87,7 @@ func autoMatchmakeWithSearchCriteria_Postpone(err error, client *nex.Client, cal
 		responsePacket, _ = nex.NewPacketV1(client, nil)
 		responsePacket.SetVersion(1)
 	}
+
 	responsePacket.SetSource(0xA1)
 	responsePacket.SetDestination(0xAF)
 	responsePacket.SetType(nex.DataPacket)

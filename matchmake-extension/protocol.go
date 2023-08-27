@@ -16,8 +16,9 @@ type CommonMatchmakeExtensionProtocol struct {
 	DefaultProtocol    *matchmake_extension.Protocol
 	MarioKart8Protocol *matchmake_extension_mario_kart_8.Protocol
 
-	cleanupSearchMatchmakeSessionHandler         func(matchmakeSession *match_making_types.MatchmakeSession)
-	cleanupMatchmakeSessionSearchCriteriaHandler func(lstSearchCriteria []*match_making_types.MatchmakeSessionSearchCriteria)
+	cleanupSearchMatchmakeSessionHandler                    func(matchmakeSession *match_making_types.MatchmakeSession)
+	cleanupMatchmakeSessionSearchCriteriaHandler            func(lstSearchCriteria []*match_making_types.MatchmakeSessionSearchCriteria)
+	gameSpecificMatchmakeSessionSearcgCriteriaChecksHandler func(requestSearchCriteria, sessionSearchCriteria *match_making_types.MatchmakeSessionSearchCriteria) bool
 }
 
 // CleanupSearchMatchmakeSession sets the CleanupSearchMatchmakeSession handler function
@@ -28,6 +29,11 @@ func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) Cleanu
 // CleanupMatchmakeSessionSearchCriteria sets the CleanupMatchmakeSessionSearchCriteria handler function
 func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) CleanupMatchmakeSessionSearchCriteria(handler func(lstSearchCriteria []*match_making_types.MatchmakeSessionSearchCriteria)) {
 	commonMatchmakeExtensionProtocol.cleanupMatchmakeSessionSearchCriteriaHandler = handler
+}
+
+// GameSpecificMatchmakeSessionSearcgCriteriaChecks sets the GameSpecificMatchmakeSessionSearcgCriteriaChecks handler function
+func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) GameSpecificMatchmakeSessionSearcgCriteriaChecks(handler func(requestSearchCriteria, sessionSearchCriteria *match_making_types.MatchmakeSessionSearchCriteria) bool) {
+	commonMatchmakeExtensionProtocol.gameSpecificMatchmakeSessionSearcgCriteriaChecksHandler = handler
 }
 
 func initDefault(c *CommonMatchmakeExtensionProtocol) {

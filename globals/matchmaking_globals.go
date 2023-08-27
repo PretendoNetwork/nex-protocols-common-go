@@ -3,6 +3,8 @@ package common_globals
 import (
 	"fmt"
 	"math"
+	"strconv"
+	"strings"
 
 	"github.com/PretendoNetwork/nex-go"
 	match_making_types "github.com/PretendoNetwork/nex-protocols-go/match-making/types"
@@ -10,10 +12,10 @@ import (
 )
 
 type CommonMatchmakeSession struct {
-	GameMatchmakeSession   *match_making_types.MatchmakeSession                 // Used by the game, contains the current state of the MatchmakeSession
-	SearchMatchmakeSession *match_making_types.MatchmakeSession                 // Used by the server when searching for matches, contains the state of the MatchmakeSession during the search process for easy compares
-	SearchCriteria         []*match_making_types.MatchmakeSessionSearchCriteria // Used by the server when searching for matches, contains the list of MatchmakeSessionSearchCriteria
-	ConnectionIDs          []uint32                                             // Players in the room, referenced by their connection IDs. This is used instead of the PID in order to ensure we're talking to the correct client (in case of e.g. multiple logins)
+	GameMatchmakeSession   *match_making_types.MatchmakeSession                 // * Used by the game, contains the current state of the MatchmakeSession
+	SearchMatchmakeSession *match_making_types.MatchmakeSession                 // * Used by the server when searching for matches, contains the state of the MatchmakeSession during the search process for easy compares
+	SearchCriteria         []*match_making_types.MatchmakeSessionSearchCriteria // * Used by the server when searching for matches, contains the list of MatchmakeSessionSearchCriteria
+	ConnectionIDs          []uint32                                             // * Players in the room, referenced by their connection IDs. This is used instead of the PID in order to ensure we're talking to the correct client (in case of e.g. multiple logins)
 }
 
 var Sessions map[uint32]*CommonMatchmakeSession
@@ -105,18 +107,93 @@ func SearchGatheringWithMatchmakeSession(searchMatchmakeSession *match_making_ty
 }
 
 // SearchGatheringWithSearchCriteria finds a gathering that matches with a MatchmakeSession
-func SearchGatheringWithSearchCriteria(lstSearchCriteria []*match_making_types.MatchmakeSessionSearchCriteria) uint32 {
-	// This portion finds any sessions that match the search session. It does not care about anything beyond that, such as if the match is already full. This is handled below.
+func SearchGatheringWithSearchCriteria(lstSearchCriteria []*match_making_types.MatchmakeSessionSearchCriteria, gameSpecificChecks func(requestSearchCriteria, sessionSearchCriteria *match_making_types.MatchmakeSessionSearchCriteria) bool) uint32 {
+	// * This portion finds any sessions that match the search session. It does not care about anything beyond that, such as if the match is already full. This is handled below.
 	candidateSessionIndexes := make([]uint32, 0, len(Sessions))
+
 	for index, session := range Sessions {
 		if len(lstSearchCriteria) == len(session.SearchCriteria) {
-			for criteriaIndex, criteria := range session.SearchCriteria {
-				if criteria.Equals(lstSearchCriteria[criteriaIndex]) {
-					candidateSessionIndexes = append(candidateSessionIndexes, index)
+			for criteriaIndex, sessionSearchCriteria := range session.SearchCriteria {
+				requestSearchCriteria := lstSearchCriteria[criteriaIndex]
+
+				// * Check things like game specific attributes
+				if gameSpecificChecks != nil && !gameSpecificChecks(lstSearchCriteria[criteriaIndex], sessionSearchCriteria) {
+					continue
 				}
+
+				if requestSearchCriteria.GameMode != "" && requestSearchCriteria.GameMode != sessionSearchCriteria.GameMode {
+					continue
+				}
+
+				if requestSearchCriteria.MinParticipants != "" {
+					split := strings.Split(requestSearchCriteria.MinParticipants, ",")
+					minStr, maxStr := split[0], split[1]
+
+					if minStr != "" {
+						min, err := strconv.Atoi(minStr)
+						if err != nil {
+							// TODO - We don't have a logger here
+							continue
+						}
+
+						if session.SearchMatchmakeSession.MinimumParticipants < uint16(min) {
+							continue
+						}
+					}
+
+					if maxStr != "" {
+						max, err := strconv.Atoi(maxStr)
+						if err != nil {
+							// TODO - We don't have a logger here
+							continue
+						}
+
+						if session.SearchMatchmakeSession.MinimumParticipants > uint16(max) {
+							continue
+						}
+					}
+				}
+
+				if requestSearchCriteria.MaxParticipants != "" {
+					split := strings.Split(requestSearchCriteria.MaxParticipants, ",")
+					minStr := split[0]
+					maxStr := ""
+
+					if len(split) > 1 {
+						maxStr = split[1]
+					}
+
+					if minStr != "" {
+						min, err := strconv.Atoi(minStr)
+						if err != nil {
+							// TODO - We don't have a logger here
+							continue
+						}
+
+						if session.SearchMatchmakeSession.MaximumParticipants < uint16(min) {
+							continue
+						}
+					}
+
+					if maxStr != "" {
+						max, err := strconv.Atoi(maxStr)
+						if err != nil {
+							// TODO - We don't have a logger here
+							continue
+						}
+
+						if session.SearchMatchmakeSession.MaximumParticipants > uint16(max) {
+							continue
+						}
+					}
+				}
+
+				candidateSessionIndexes = append(candidateSessionIndexes, index)
 			}
 		}
 	}
+
+	// * Further filter the candidate sessions
 	for _, sessionIndex := range candidateSessionIndexes {
 		sessionToCheck := Sessions[sessionIndex]
 		if len(sessionToCheck.ConnectionIDs) >= int(sessionToCheck.GameMatchmakeSession.MaximumParticipants) {
@@ -126,8 +203,10 @@ func SearchGatheringWithSearchCriteria(lstSearchCriteria []*match_making_types.M
 		if !sessionToCheck.GameMatchmakeSession.OpenParticipation {
 			continue
 		}
-		return sessionIndex // Found a match
+
+		return sessionIndex // * Found a match
 	}
+
 	return 0
 }
 
