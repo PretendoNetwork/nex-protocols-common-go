@@ -46,6 +46,7 @@ func initDefault(c *CommonMatchmakeExtensionProtocol) {
 	c.DefaultProtocol.AutoMatchmakeWithSearchCriteriaPostpone(autoMatchmakeWithSearchCriteria_Postpone)
 	c.DefaultProtocol.UpdateProgressScore(updateProgressScore)
 	c.DefaultProtocol.CreateMatchmakeSessionWithParam(createMatchmakeSessionWithParam)
+	c.DefaultProtocol.UpdateApplicationBuffer(updateApplicationBuffer)
 }
 
 func initMarioKart8(c *CommonMatchmakeExtensionProtocol) {

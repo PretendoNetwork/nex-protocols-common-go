@@ -6,25 +6,20 @@ import (
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension"
 )
 
-func openParticipation(err error, client *nex.Client, callID uint32, gid uint32) uint32 {
+func updateApplicationBuffer(err error, client *nex.Client, callID uint32, gid uint32, applicationBuffer []byte) uint32 {
 	if err != nil {
 		logger.Error(err.Error())
 		return nex.Errors.Core.InvalidArgument
 	}
 
-	var session *common_globals.CommonMatchmakeSession
-	var ok bool
-	if session, ok = common_globals.Sessions[gid]; !ok {
+	server := client.Server()
+
+	session, ok := common_globals.Sessions[gid]
+	if !ok {
 		return nex.Errors.RendezVous.SessionVoid
 	}
 
-	if session.GameMatchmakeSession.Gathering.OwnerPID != client.PID() {
-		return nex.Errors.RendezVous.PermissionDenied
-	}
-
-	session.GameMatchmakeSession.OpenParticipation = true
-
-	server := commonMatchmakeExtensionProtocol.server
+	session.GameMatchmakeSession.ApplicationData = applicationBuffer
 
 	rmcResponse := nex.NewRMCResponse(matchmake_extension.ProtocolID, callID)
 	rmcResponse.SetSuccess(matchmake_extension.MethodOpenParticipation, nil)
