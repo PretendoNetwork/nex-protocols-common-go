@@ -37,6 +37,7 @@ func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) GameSp
 }
 
 func initDefault(c *CommonMatchmakeExtensionProtocol) {
+	// TODO - Organize by method ID
 	c.DefaultProtocol = matchmake_extension.NewProtocol(c.server)
 	c.DefaultProtocol.OpenParticipation(openParticipation)
 	c.DefaultProtocol.CreateMatchmakeSession(createMatchmakeSession)
@@ -44,9 +45,11 @@ func initDefault(c *CommonMatchmakeExtensionProtocol) {
 	c.DefaultProtocol.AutoMatchmakePostpone(autoMatchmake_Postpone)
 	c.DefaultProtocol.AutoMatchmakeWithSearchCriteriaPostpone(autoMatchmakeWithSearchCriteria_Postpone)
 	c.DefaultProtocol.UpdateProgressScore(updateProgressScore)
+	c.DefaultProtocol.CreateMatchmakeSessionWithParam(createMatchmakeSessionWithParam)
 }
 
 func initMarioKart8(c *CommonMatchmakeExtensionProtocol) {
+	// TODO - Organize by method ID
 	c.MarioKart8Protocol = matchmake_extension_mario_kart_8.NewProtocol(c.server)
 	c.MarioKart8Protocol.OpenParticipation(openParticipation)
 	c.MarioKart8Protocol.CreateMatchmakeSession(createMatchmakeSession)
