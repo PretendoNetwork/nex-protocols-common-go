@@ -3,10 +3,10 @@ module github.com/PretendoNetwork/nex-protocols-common-go
 go 1.19
 
 require (
-	github.com/PretendoNetwork/nex-go v1.0.36
-	github.com/PretendoNetwork/nex-protocols-go v1.0.50
+	github.com/PretendoNetwork/nex-go v1.0.37
+	github.com/PretendoNetwork/nex-protocols-go v1.0.51
 	github.com/PretendoNetwork/plogger-go v1.0.4
-	golang.org/x/exp v0.0.0-20230811145659-89c5cff77bcb
+	golang.org/x/exp v0.0.0-20230817173708-d852ddb80c63
 )
 
 require (

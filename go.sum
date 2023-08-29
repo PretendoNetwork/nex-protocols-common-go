@@ -1,7 +1,7 @@
-github.com/PretendoNetwork/nex-go v1.0.36 h1:eOJM80ytFZgMwyq63pxjfjZrFdtaIJXbM1B2ESvvKhE=
-github.com/PretendoNetwork/nex-go v1.0.36/go.mod h1:v3dYsytdk7VvZOqplKwVqQOPa9heaq2V4DOAzCwyYNE=
-github.com/PretendoNetwork/nex-protocols-go v1.0.50 h1:ZTAXWjCw5rAsQgWtHp6qklRcmVd/y6KRdBYmR3hS/Xw=
-github.com/PretendoNetwork/nex-protocols-go v1.0.50/go.mod h1:ztsrVFHaJc5MDBpL1rv4PgriLsTjl3R8u5XVxJHUzCk=
+github.com/PretendoNetwork/nex-go v1.0.37 h1:ibKdTEeIsCtBPPm1+VFsUMfrFng1LnjGCYbIB1FzSY4=
+github.com/PretendoNetwork/nex-go v1.0.37/go.mod h1:v3dYsytdk7VvZOqplKwVqQOPa9heaq2V4DOAzCwyYNE=
+github.com/PretendoNetwork/nex-protocols-go v1.0.51 h1:1vsYc+MF93+LlnQQuv2PmIPNys5vio/5e+3uLD+GTiw=
+github.com/PretendoNetwork/nex-protocols-go v1.0.51/go.mod h1:BGvDT9wxj7drgej+qfIpPZwnc+V2C6GaK9QdzX1rdac=
 github.com/PretendoNetwork/plogger-go v1.0.4 h1:PF7xHw9eDRHH+RsAP9tmAE7fG0N0p6H4iPwHKnsoXwc=
 github.com/PretendoNetwork/plogger-go v1.0.4/go.mod h1:7kD6M4vPq1JL4LTuPg6kuB1OvUBOwQOtAvTaUwMbwvU=
 github.com/fatih/color v1.15.0 h1:kOqh6YHBtK8aywxGerMG2Eq3H6Qgoqeo13Bk2Mv/nBs=
@@ -16,8 +16,8 @@ github.com/mattn/go-isatty v0.0.19 h1:JITubQf0MOLdlGRuRq+jtsDlekdYPia9ZFsB8h/APP
 github.com/mattn/go-isatty v0.0.19/go.mod h1:W+V8PltTTMOvKvAeJH7IuucS94S2C6jfK/D7dTCTo3Y=
 github.com/superwhiskers/crunch/v3 v3.5.7 h1:N9RLxaR65C36i26BUIpzPXGy2f6pQ7wisu2bawbKNqg=
 github.com/superwhiskers/crunch/v3 v3.5.7/go.mod h1:4ub2EKgF1MAhTjoOCTU4b9uLMsAweHEa89aRrfAypXA=
-golang.org/x/exp v0.0.0-20230811145659-89c5cff77bcb h1:mIKbk8weKhSeLH2GmUTrvx8CjkyJmnU1wFmg59CUjFA=
-golang.org/x/exp v0.0.0-20230811145659-89c5cff77bcb/go.mod h1:FXUEEKJgO7OQYeo8N01OfiKP8RXMtf6e8aTskBGqWdc=
+golang.org/x/exp v0.0.0-20230817173708-d852ddb80c63 h1:m64FZMko/V45gv0bNmrNYoDEq8U5YUhetc9cBWKS1TQ=
+golang.org/x/exp v0.0.0-20230817173708-d852ddb80c63/go.mod h1:0v4NqG35kSWCMzLaMeX+IQrlSnVE/bqGSyC2cz/9Le8=
 golang.org/x/sys v0.0.0-20201119102817-f84b799fce68/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20210220050731-9a76102bfb43/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
