@@ -1,7 +1,7 @@
-github.com/PretendoNetwork/nex-go v1.0.37 h1:ibKdTEeIsCtBPPm1+VFsUMfrFng1LnjGCYbIB1FzSY4=
-github.com/PretendoNetwork/nex-go v1.0.37/go.mod h1:v3dYsytdk7VvZOqplKwVqQOPa9heaq2V4DOAzCwyYNE=
-github.com/PretendoNetwork/nex-protocols-go v1.0.51 h1:1vsYc+MF93+LlnQQuv2PmIPNys5vio/5e+3uLD+GTiw=
-github.com/PretendoNetwork/nex-protocols-go v1.0.51/go.mod h1:BGvDT9wxj7drgej+qfIpPZwnc+V2C6GaK9QdzX1rdac=
+github.com/PretendoNetwork/nex-go v1.0.38 h1:R9Ok53MtOXmideqC3Pd0YLtLXFwz/1r3EqBVwF43tJc=
+github.com/PretendoNetwork/nex-go v1.0.38/go.mod h1:QepeB2ImpmIuAAYMyAsARGdfLntTBROEnBXfxpJ6FQg=
+github.com/PretendoNetwork/nex-protocols-go v1.0.52 h1:romSI1brKF+IGcK6+v2p8AjgbztVnTOVENT2U+dcWq0=
+github.com/PretendoNetwork/nex-protocols-go v1.0.52/go.mod h1:9r4KbNELVZj01TY8p+FGYDb9+e4mHLiWKo5NL1fPqD8=
 github.com/PretendoNetwork/plogger-go v1.0.4 h1:PF7xHw9eDRHH+RsAP9tmAE7fG0N0p6H4iPwHKnsoXwc=
 github.com/PretendoNetwork/plogger-go v1.0.4/go.mod h1:7kD6M4vPq1JL4LTuPg6kuB1OvUBOwQOtAvTaUwMbwvU=
 github.com/fatih/color v1.15.0 h1:kOqh6YHBtK8aywxGerMG2Eq3H6Qgoqeo13Bk2Mv/nBs=
@@ -18,6 +18,8 @@ github.com/superwhiskers/crunch/v3 v3.5.7 h1:N9RLxaR65C36i26BUIpzPXGy2f6pQ7wisu2
 github.com/superwhiskers/crunch/v3 v3.5.7/go.mod h1:4ub2EKgF1MAhTjoOCTU4b9uLMsAweHEa89aRrfAypXA=
 golang.org/x/exp v0.0.0-20230817173708-d852ddb80c63 h1:m64FZMko/V45gv0bNmrNYoDEq8U5YUhetc9cBWKS1TQ=
 golang.org/x/exp v0.0.0-20230817173708-d852ddb80c63/go.mod h1:0v4NqG35kSWCMzLaMeX+IQrlSnVE/bqGSyC2cz/9Le8=
+golang.org/x/mod v0.12.0 h1:rmsUpXtvNzj340zd98LZ4KntptpfRHwpFOHG188oHXc=
+golang.org/x/mod v0.12.0/go.mod h1:iBbtSCu2XBx23ZKBPSOrRkjjQPZFPuis4dIYUhu/chs=
 golang.org/x/sys v0.0.0-20201119102817-f84b799fce68/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20210220050731-9a76102bfb43/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=

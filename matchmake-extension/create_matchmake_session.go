@@ -61,7 +61,7 @@ func createMatchmakeSession(err error, client *nex.Client, callID uint32, anyGat
 
 	rmcResponseStream.WriteUInt32LE(sessionIndex)
 
-	if server.MatchMakingProtocolVersion().Major <= 3 {
+	if server.MatchMakingProtocolVersion().GreaterOrEqual("3.0.0") {
 		rmcResponseStream.WriteBuffer(matchmakeSession.SessionKey)
 	}
 
