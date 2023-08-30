@@ -1,6 +1,8 @@
 package matchmake_extension
 
 import (
+	"strings"
+
 	nex "github.com/PretendoNetwork/nex-go"
 	match_making_types "github.com/PretendoNetwork/nex-protocols-go/match-making/types"
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension"
@@ -63,14 +65,20 @@ func initMarioKart8(c *CommonMatchmakeExtensionProtocol) {
 }
 
 // NewCommonMatchmakeExtensionProtocol returns a new CommonMatchmakeExtensionProtocol
-func NewCommonMatchmakeExtensionProtocol(server *nex.Server, patch string) *CommonMatchmakeExtensionProtocol {
+func NewCommonMatchmakeExtensionProtocol(server *nex.Server) *CommonMatchmakeExtensionProtocol {
 	commonMatchmakeExtensionProtocol = &CommonMatchmakeExtensionProtocol{server: server}
 
-	switch patch {
-	case "mario-kart-8":
+	patch := server.MatchMakingProtocolVersion().GameSpecificPatch
+
+	if strings.EqualFold(patch, "AMKJ") {
+		logger.Info("Using Mario Kart 8 MatchmakeExtension protocol")
 		initMarioKart8(commonMatchmakeExtensionProtocol)
-	default:
-		logger.Infof("Patch %q not recognized. Using default protocol", patch)
+	} else {
+		if patch != "" {
+			logger.Infof("Matchmaking version patch %q not recognized", patch)
+		}
+
+		logger.Info("Using default MatchmakeExtension protocol")
 		initDefault(commonMatchmakeExtensionProtocol)
 	}
 
