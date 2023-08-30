@@ -48,6 +48,7 @@ func initDefault(c *CommonMatchmakeExtensionProtocol) {
 	c.DefaultProtocol.CreateMatchmakeSessionWithParam(createMatchmakeSessionWithParam)
 	c.DefaultProtocol.UpdateApplicationBuffer(updateApplicationBuffer)
 	c.DefaultProtocol.JoinMatchmakeSessionWithParam(joinMatchmakeSessionWithParam)
+	c.DefaultProtocol.ModifyCurrentGameAttribute(modifyCurrentGameAttribute)
 }
 
 func initMarioKart8(c *CommonMatchmakeExtensionProtocol) {
