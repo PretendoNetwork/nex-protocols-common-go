@@ -101,14 +101,14 @@ func FindSessionByMatchmakeSession(searchMatchmakeSession *match_making_types.Ma
 	return 0
 }
 
-// FindSessionByMatchmakeSessionSearchCriterias finds a gathering that matches with a MatchmakeSession
-func FindSessionByMatchmakeSessionSearchCriterias(lstSearchCriteria []*match_making_types.MatchmakeSessionSearchCriteria, gameSpecificChecks func(requestSearchCriteria, sessionSearchCriteria *match_making_types.MatchmakeSessionSearchCriteria) bool) uint32 {
+// FindSessionsByMatchmakeSessionSearchCriterias finds a gathering that matches with a MatchmakeSession
+func FindSessionsByMatchmakeSessionSearchCriterias(lstSearchCriteria []*match_making_types.MatchmakeSessionSearchCriteria, gameSpecificChecks func(requestSearchCriteria, sessionSearchCriteria *match_making_types.MatchmakeSessionSearchCriteria) bool) []*CommonMatchmakeSession {
 	// * This portion finds any sessions that match the search session
 	// * It does not care about anything beyond that, such as if the match is already full
 	// * This is handled below.
-	candidateSessionIndexes := make([]uint32, 0, len(Sessions))
+	candidateSessions := make([]*CommonMatchmakeSession, 0, len(Sessions))
 
-	for index, session := range Sessions {
+	for _, session := range Sessions {
 		if len(lstSearchCriteria) == len(session.SearchCriteria) {
 			for criteriaIndex, sessionSearchCriteria := range session.SearchCriteria {
 				requestSearchCriteria := lstSearchCriteria[criteriaIndex]
@@ -185,26 +185,27 @@ func FindSessionByMatchmakeSessionSearchCriterias(lstSearchCriteria []*match_mak
 					}
 				}
 
-				candidateSessionIndexes = append(candidateSessionIndexes, index)
+				candidateSessions = append(candidateSessions, session)
 			}
 		}
 	}
 
+	filteredSessions := make([]*CommonMatchmakeSession, 0, len(candidateSessions))
+
 	// * Further filter the candidate sessions
-	for _, sessionIndex := range candidateSessionIndexes {
-		sessionToCheck := Sessions[sessionIndex]
-		if len(sessionToCheck.ConnectionIDs) >= int(sessionToCheck.GameMatchmakeSession.MaximumParticipants) {
+	for _, session := range candidateSessions {
+		if len(session.ConnectionIDs) >= int(session.GameMatchmakeSession.MaximumParticipants) {
 			continue
 		}
 
-		if !sessionToCheck.GameMatchmakeSession.OpenParticipation {
+		if !session.GameMatchmakeSession.OpenParticipation {
 			continue
 		}
 
-		return sessionIndex // * Found a match
+		filteredSessions = append(filteredSessions, session) // * Found a match
 	}
 
-	return 0
+	return filteredSessions
 }
 
 // AddPlayersToSession updates the given sessions state to include the provided connection IDs

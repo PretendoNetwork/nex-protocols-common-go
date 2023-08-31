@@ -20,6 +20,8 @@ func autoMatchmakeWithSearchCriteria_Postpone(err error, client *nex.Client, cal
 		return nex.Errors.Core.InvalidArgument
 	}
 
+	commonMatchmakeExtensionProtocol.cleanupMatchmakeSessionSearchCriteriaHandler(lstSearchCriteria)
+
 	server := commonMatchmakeExtensionProtocol.server
 
 	// * A client may disconnect from a session without leaving reliably,
@@ -36,39 +38,43 @@ func autoMatchmakeWithSearchCriteria_Postpone(err error, client *nex.Client, cal
 		return nex.Errors.Core.InvalidArgument
 	}
 
-	commonMatchmakeExtensionProtocol.cleanupMatchmakeSessionSearchCriteriaHandler(lstSearchCriteria)
-	sessionIndex := common_globals.FindSessionByMatchmakeSessionSearchCriterias(lstSearchCriteria, commonMatchmakeExtensionProtocol.gameSpecificMatchmakeSessionSearcgCriteriaChecksHandler)
-	if sessionIndex == 0 {
-		sessionIndex = common_globals.GetAvailableGatheringID()
+	sessions := common_globals.FindSessionsByMatchmakeSessionSearchCriterias(lstSearchCriteria, commonMatchmakeExtensionProtocol.gameSpecificMatchmakeSessionSearcgCriteriaChecksHandler)
+	var session *common_globals.CommonMatchmakeSession
+
+	if len(sessions) == 0 {
+		gatheringID := common_globals.GetAvailableGatheringID()
+
 		// * This should in theory be impossible, as there aren't enough PIDs creating sessions to fill the uint32 limit.
 		// * If we ever get here, we must be not deleting sessions properly
-		if sessionIndex == 0 {
+		if gatheringID == 0 {
 			logger.Critical("No gatherings available!")
 			return nex.Errors.RendezVous.LimitExceeded
 		}
 
-		session := common_globals.CommonMatchmakeSession{
+		session = &common_globals.CommonMatchmakeSession{
 			SearchCriteria:       lstSearchCriteria,
 			GameMatchmakeSession: matchmakeSession,
 		}
 
-		common_globals.Sessions[sessionIndex] = &session
-		common_globals.Sessions[sessionIndex].GameMatchmakeSession.Gathering.ID = sessionIndex
-		common_globals.Sessions[sessionIndex].GameMatchmakeSession.Gathering.OwnerPID = client.PID()
-		common_globals.Sessions[sessionIndex].GameMatchmakeSession.Gathering.HostPID = client.PID()
+		session.GameMatchmakeSession.Gathering.ID = gatheringID
+		session.GameMatchmakeSession.Gathering.OwnerPID = client.PID()
+		session.GameMatchmakeSession.Gathering.HostPID = client.PID()
+		session.GameMatchmakeSession.StartedTime = nex.NewDateTime(0)
+		session.GameMatchmakeSession.StartedTime.UTC()
+		session.GameMatchmakeSession.SessionKey = make([]byte, 32)
 
-		common_globals.Sessions[sessionIndex].GameMatchmakeSession.StartedTime = nex.NewDateTime(0)
-		common_globals.Sessions[sessionIndex].GameMatchmakeSession.StartedTime.UTC()
-		matchmakeSession.SessionKey = make([]byte, 32)
+		common_globals.Sessions[gatheringID] = session
+	} else {
+		session = sessions[0]
 	}
 
-	common_globals.Sessions[sessionIndex].ConnectionIDs = append(common_globals.Sessions[sessionIndex].ConnectionIDs, client.ConnectionID())
-	common_globals.Sessions[sessionIndex].GameMatchmakeSession.ParticipationCount = uint32(len(common_globals.Sessions[sessionIndex].ConnectionIDs))
+	session.ConnectionIDs = append(session.ConnectionIDs, client.ConnectionID())
+	session.GameMatchmakeSession.ParticipationCount = uint32(len(session.ConnectionIDs))
 
 	rmcResponseStream := nex.NewStreamOut(server)
 	matchmakeDataHolder := nex.NewDataHolder()
 	matchmakeDataHolder.SetTypeName("MatchmakeSession")
-	matchmakeDataHolder.SetObjectData(common_globals.Sessions[sessionIndex].GameMatchmakeSession)
+	matchmakeDataHolder.SetObjectData(session.GameMatchmakeSession)
 	rmcResponseStream.WriteDataHolder(matchmakeDataHolder)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
@@ -107,9 +113,9 @@ func autoMatchmakeWithSearchCriteria_Postpone(err error, client *nex.Client, cal
 	subtype := notifications.NotificationSubTypes.Participation.NewParticipant
 
 	oEvent := notifications_types.NewNotificationEvent()
-	oEvent.PIDSource = common_globals.Sessions[sessionIndex].GameMatchmakeSession.Gathering.HostPID
+	oEvent.PIDSource = session.GameMatchmakeSession.Gathering.HostPID
 	oEvent.Type = notifications.BuildNotificationType(category, subtype)
-	oEvent.Param1 = sessionIndex
+	oEvent.Param1 = session.GameMatchmakeSession.Gathering.ID
 	oEvent.Param2 = client.PID()
 	oEvent.StrParam = message
 
@@ -118,7 +124,7 @@ func autoMatchmakeWithSearchCriteria_Postpone(err error, client *nex.Client, cal
 	rmcMessage.SetParameters(oEventBytes)
 	rmcMessageBytes := rmcMessage.Bytes()
 
-	targetClient := server.FindClientFromPID(uint32(common_globals.Sessions[sessionIndex].GameMatchmakeSession.Gathering.OwnerPID))
+	targetClient := server.FindClientFromPID(uint32(session.GameMatchmakeSession.Gathering.OwnerPID))
 
 	var messagePacket nex.PacketInterface
 
@@ -129,6 +135,7 @@ func autoMatchmakeWithSearchCriteria_Postpone(err error, client *nex.Client, cal
 		messagePacket, _ = nex.NewPacketV1(targetClient, nil)
 		messagePacket.SetVersion(1)
 	}
+
 	messagePacket.SetSource(0xA1)
 	messagePacket.SetDestination(0xAF)
 	messagePacket.SetType(nex.DataPacket)
