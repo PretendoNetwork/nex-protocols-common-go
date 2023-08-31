@@ -37,9 +37,9 @@ func autoMatchmakeWithSearchCriteria_Postpone(err error, client *nex.Client, cal
 	}
 
 	commonMatchmakeExtensionProtocol.cleanupMatchmakeSessionSearchCriteriaHandler(lstSearchCriteria)
-	sessionIndex := common_globals.SearchGatheringWithSearchCriteria(lstSearchCriteria, commonMatchmakeExtensionProtocol.gameSpecificMatchmakeSessionSearcgCriteriaChecksHandler)
+	sessionIndex := common_globals.FindSessionByMatchmakeSessionSearchCriterias(lstSearchCriteria, commonMatchmakeExtensionProtocol.gameSpecificMatchmakeSessionSearcgCriteriaChecksHandler)
 	if sessionIndex == 0 {
-		sessionIndex = common_globals.GetSessionIndex()
+		sessionIndex = common_globals.GetAvailableGatheringID()
 		// * This should in theory be impossible, as there aren't enough PIDs creating sessions to fill the uint32 limit.
 		// * If we ever get here, we must be not deleting sessions properly
 		if sessionIndex == 0 {

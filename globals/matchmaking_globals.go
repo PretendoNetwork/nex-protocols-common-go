@@ -20,11 +20,12 @@ type CommonMatchmakeSession struct {
 
 var Sessions map[uint32]*CommonMatchmakeSession
 
-// GetSessionIndex returns a gathering ID which doesn't belong to any session
-func GetSessionIndex() uint32 {
+// GetAvailableGatheringID returns a gathering ID which doesn't belong to any session
+// Returns 0 if no IDs are available (math.MaxUint32 has been reached)
+func GetAvailableGatheringID() uint32 {
 	var gatheringID uint32 = 1
 	for gatheringID < math.MaxUint32 {
-		// If the session does not exist, the gathering ID is empty and can be used
+		// * If the session does not exist, the gathering ID is free
 		if _, ok := Sessions[gatheringID]; !ok {
 			return gatheringID
 		}
@@ -41,57 +42,64 @@ func DeleteIndex(s []uint32, index int) []uint32 {
 	return s[:len(s)-1]
 }
 
-// FindOtherConnectionID searches a connection ID on the gathering that isn't the given one
-func FindOtherConnectionID(myConnectionID uint32, gathering uint32) uint32 {
-	for _, connectionID := range Sessions[gathering].ConnectionIDs {
-		if connectionID != myConnectionID {
+// FindOtherConnectionID searches a connection ID on the session that isn't the given one
+// Returns 0 if no connection ID could be found
+func FindOtherConnectionID(excludedConnectionID uint32, gatheringID uint32) uint32 {
+	for _, connectionID := range Sessions[gatheringID].ConnectionIDs {
+		if connectionID != excludedConnectionID {
 			return connectionID
 		}
 	}
+
 	return 0
 }
 
-// RemoveConnectionIDFromRoom removes a client from the gathering
-func RemoveConnectionIDFromRoom(clientConnectionID uint32, gathering uint32) {
+// RemoveConnectionIDFromSession removes a client from the session
+func RemoveConnectionIDFromSession(clientConnectionID uint32, gathering uint32) {
 	for index, connectionID := range Sessions[gathering].ConnectionIDs {
 		if connectionID == clientConnectionID {
 			Sessions[gathering].ConnectionIDs = DeleteIndex(Sessions[gathering].ConnectionIDs, index)
 		}
 	}
+
 	if len(Sessions[gathering].ConnectionIDs) == 0 {
 		delete(Sessions, gathering)
 	}
 }
 
-// FindClientSession searches the gathering where the client is on
-func FindClientSession(clientConnectionID uint32) uint32 {
+// FindClientSession searches for session the given connection ID is connected to
+func FindClientSession(connectionID uint32) uint32 {
 	for gatheringID := range Sessions {
-		for _, connectionID := range Sessions[gatheringID].ConnectionIDs {
-			if connectionID == clientConnectionID {
-				return gatheringID
-			}
+		if slices.Contains(Sessions[gatheringID].ConnectionIDs, connectionID) {
+			return gatheringID
 		}
 	}
+
 	return 0
 }
 
 // RemoveConnectionIDFromAllSessions removes a client from every session
 func RemoveConnectionIDFromAllSessions(clientConnectionID uint32) {
-	foundSession := FindClientSession(clientConnectionID)
-	if foundSession != 0 {
-		RemoveConnectionIDFromRoom(clientConnectionID, uint32(foundSession))
+	// * Keep checking until no session is found
+	for gid := FindClientSession(clientConnectionID); gid != 0; {
+		RemoveConnectionIDFromSession(clientConnectionID, gid)
+
+		gid = FindClientSession(clientConnectionID)
 	}
 }
 
-// SearchGatheringWithMatchmakeSession finds a gathering that matches with a MatchmakeSession
-func SearchGatheringWithMatchmakeSession(searchMatchmakeSession *match_making_types.MatchmakeSession) uint32 {
-	// This portion finds any sessions that match the search session. It does not care about anything beyond that, such as if the match is already full. This is handled below.
+// FindSessionByMatchmakeSession finds a gathering that matches with a MatchmakeSession
+func FindSessionByMatchmakeSession(searchMatchmakeSession *match_making_types.MatchmakeSession) uint32 {
+	// * This portion finds any sessions that match the search session
+	// * It does not care about anything beyond that, such as if the match is already full
+	// * This is handled below
 	candidateSessionIndexes := make([]uint32, 0, len(Sessions))
 	for index, session := range Sessions {
 		if session.SearchMatchmakeSession.Equals(searchMatchmakeSession) {
 			candidateSessionIndexes = append(candidateSessionIndexes, index)
 		}
 	}
+
 	for _, sessionIndex := range candidateSessionIndexes {
 		sessionToCheck := Sessions[sessionIndex]
 		if len(sessionToCheck.ConnectionIDs) >= int(sessionToCheck.GameMatchmakeSession.MaximumParticipants) {
@@ -101,14 +109,18 @@ func SearchGatheringWithMatchmakeSession(searchMatchmakeSession *match_making_ty
 		if !sessionToCheck.GameMatchmakeSession.OpenParticipation {
 			continue
 		}
-		return sessionIndex // Found a match
+
+		return sessionIndex // * Found a match
 	}
+
 	return 0
 }
 
-// SearchGatheringWithSearchCriteria finds a gathering that matches with a MatchmakeSession
-func SearchGatheringWithSearchCriteria(lstSearchCriteria []*match_making_types.MatchmakeSessionSearchCriteria, gameSpecificChecks func(requestSearchCriteria, sessionSearchCriteria *match_making_types.MatchmakeSessionSearchCriteria) bool) uint32 {
-	// * This portion finds any sessions that match the search session. It does not care about anything beyond that, such as if the match is already full. This is handled below.
+// FindSessionByMatchmakeSessionSearchCriterias finds a gathering that matches with a MatchmakeSession
+func FindSessionByMatchmakeSessionSearchCriterias(lstSearchCriteria []*match_making_types.MatchmakeSessionSearchCriteria, gameSpecificChecks func(requestSearchCriteria, sessionSearchCriteria *match_making_types.MatchmakeSessionSearchCriteria) bool) uint32 {
+	// * This portion finds any sessions that match the search session
+	// * It does not care about anything beyond that, such as if the match is already full
+	// * This is handled below.
 	candidateSessionIndexes := make([]uint32, 0, len(Sessions))
 
 	for index, session := range Sessions {

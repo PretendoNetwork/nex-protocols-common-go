@@ -23,7 +23,7 @@ func createMatchmakeSessionWithParam(err error, client *nex.Client, callID uint3
 
 	joinedMatchmakeSession := createMatchmakeSessionParam.SourceMatchmakeSession.Copy().(*match_making_types.MatchmakeSession)
 
-	sessionIndex := common_globals.GetSessionIndex()
+	sessionIndex := common_globals.GetAvailableGatheringID()
 	if sessionIndex == 0 {
 		logger.Critical("No gatherings available!")
 		return nex.Errors.RendezVous.LimitExceeded

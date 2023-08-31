@@ -29,7 +29,7 @@ func createMatchmakeSession(err error, client *nex.Client, callID uint32, anyGat
 		return nex.Errors.Core.InvalidArgument
 	}
 
-	sessionIndex := common_globals.GetSessionIndex()
+	sessionIndex := common_globals.GetAvailableGatheringID()
 	// This should in theory be impossible, as there aren't enough PIDs creating sessions to fill the uint32 limit.
 	// If we ever get here, we must be not deleting sessions properly
 	if sessionIndex == 0 {

@@ -40,7 +40,7 @@ func endParticipation(err error, client *nex.Client, callID uint32, idGathering 
 	if deleteSession {
 		delete(common_globals.Sessions, idGathering)
 	} else {
-		common_globals.RemoveConnectionIDFromRoom(client.ConnectionID(), idGathering)
+		common_globals.RemoveConnectionIDFromSession(client.ConnectionID(), idGathering)
 	}
 
 	rmcResponseStream := nex.NewStreamOut(server)
