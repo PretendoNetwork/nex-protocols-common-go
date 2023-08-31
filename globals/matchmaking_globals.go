@@ -12,3 +12,4 @@ type CommonMatchmakeSession struct {
 }
 
 var Sessions map[uint32]*CommonMatchmakeSession
+var CurrentGatheringID uint32
