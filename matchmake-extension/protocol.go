@@ -42,6 +42,7 @@ func initDefault(c *CommonMatchmakeExtensionProtocol) {
 	// TODO - Organize by method ID
 	c.DefaultProtocol = matchmake_extension.NewProtocol(c.server)
 	c.DefaultProtocol.OpenParticipation(openParticipation)
+	c.DefaultProtocol.CloseParticipation(closeParticipation)
 	c.DefaultProtocol.CreateMatchmakeSession(createMatchmakeSession)
 	c.DefaultProtocol.GetSimplePlayingSession(getSimplePlayingSession)
 	c.DefaultProtocol.AutoMatchmakePostpone(autoMatchmake_Postpone)
@@ -58,6 +59,7 @@ func initMarioKart8(c *CommonMatchmakeExtensionProtocol) {
 	// TODO - Organize by method ID
 	c.MarioKart8Protocol = matchmake_extension_mario_kart_8.NewProtocol(c.server)
 	c.MarioKart8Protocol.OpenParticipation(openParticipation)
+	c.MarioKart8Protocol.CloseParticipation(closeParticipation)
 	c.MarioKart8Protocol.CreateMatchmakeSession(createMatchmakeSession)
 	c.MarioKart8Protocol.GetSimplePlayingSession(getSimplePlayingSession)
 	c.MarioKart8Protocol.AutoMatchmakePostpone(autoMatchmake_Postpone)
