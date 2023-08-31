@@ -19,6 +19,10 @@ func modifyCurrentGameAttribute(err error, client *nex.Client, callID uint32, gi
 		return nex.Errors.RendezVous.SessionVoid
 	}
 
+	if session.GameMatchmakeSession.Gathering.OwnerPID != client.PID() {
+		return nex.Errors.RendezVous.PermissionDenied
+	}
+
 	if int(attribIndex) > len(session.GameMatchmakeSession.Attributes) {
 		return nex.Errors.Core.InvalidIndex
 	}
