@@ -19,7 +19,7 @@ func createMatchmakeSessionWithParam(err error, client *nex.Client, callID uint3
 
 	// * A client may disconnect from a session without leaving reliably,
 	// * so let's make sure the client is removed from all sessions
-	common_globals.RemoveConnectionIDFromAllSessions(client.ConnectionID())
+	common_globals.RemoveClientFromAllSessions(client)
 
 	joinedMatchmakeSession := createMatchmakeSessionParam.SourceMatchmakeSession.Copy().(*match_making_types.MatchmakeSession)
 

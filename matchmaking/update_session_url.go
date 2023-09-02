@@ -21,6 +21,9 @@ func updateSessionURL(err error, client *nex.Client, callID uint32, idGathering 
 
 	// * Mario Kart 7 seems to set an empty strURL, so I assume this is what the method does?
 	session.GameMatchmakeSession.Gathering.HostPID = client.PID()
+	if session.GameMatchmakeSession.Gathering.Flags&match_making.GatheringFlags.DisconnectChangeOwner != 0 {
+		session.GameMatchmakeSession.Gathering.OwnerPID = client.PID()
+	}
 
 	rmcResponseStream := nex.NewStreamOut(server)
 	rmcResponseStream.WriteBool(true) // %retval%

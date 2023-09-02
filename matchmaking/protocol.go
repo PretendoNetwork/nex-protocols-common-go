@@ -35,7 +35,7 @@ func NewCommonMatchMakingProtocol(server *nex.Server) *CommonMatchMakingProtocol
 
 	server.On("Kick", func(packet nex.PacketInterface) {
 		fmt.Println("Leaving")
-		common_globals.RemoveConnectionIDFromAllSessions(packet.Sender().ConnectionID())
+		common_globals.RemoveClientFromAllSessions(packet.Sender())
 	})
 
 	return commonMatchMakingProtocol

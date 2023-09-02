@@ -6,8 +6,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/PretendoNetwork/nex-go"
+	nex "github.com/PretendoNetwork/nex-go"
+	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
 	match_making_types "github.com/PretendoNetwork/nex-protocols-go/match-making/types"
+	notifications "github.com/PretendoNetwork/nex-protocols-go/notifications"
+	notifications_types "github.com/PretendoNetwork/nex-protocols-go/notifications/types"
 	"golang.org/x/exp/slices"
 )
 
@@ -57,13 +60,83 @@ func FindClientSession(connectionID uint32) uint32 {
 	return 0
 }
 
-// RemoveConnectionIDFromAllSessions removes a client from every session
-func RemoveConnectionIDFromAllSessions(clientConnectionID uint32) {
+// RemoveClientFromAllSessions removes a client from every session
+func RemoveClientFromAllSessions(client *nex.Client) {
 	// * Keep checking until no session is found
-	for gid := FindClientSession(clientConnectionID); gid != 0; {
-		RemoveConnectionIDFromSession(clientConnectionID, gid)
+	for gid := FindClientSession(client.ConnectionID()); gid != 0; {
+		session := Sessions[gid]
+		lenParticipants := len(session.ConnectionIDs)
 
-		gid = FindClientSession(clientConnectionID)
+		RemoveConnectionIDFromSession(client.ConnectionID(), gid)
+
+		if lenParticipants <= 1 {
+			gid = FindClientSession(client.ConnectionID())
+			continue
+		}
+
+		ownerPID := session.GameMatchmakeSession.Gathering.OwnerPID
+
+		if client.PID() == ownerPID {
+			// This flag tells the server to change the matchmake session owner if they disconnect
+			// If the flag is not set, delete the session
+			// More info: https://nintendo-wiki.pretendo.network/docs/nex/protocols/match-making/types#flags
+			if session.GameMatchmakeSession.Gathering.Flags&match_making.GatheringFlags.DisconnectChangeOwner == 0 {
+				delete(Sessions, gid)
+			} else {
+				ChangeSessionOwner(client, gid)
+			}
+		} else {
+			server := client.Server()
+
+			rmcMessage := nex.NewRMCRequest()
+			rmcMessage.SetProtocolID(notifications.ProtocolID)
+			rmcMessage.SetCallID(0xffff0000)
+			rmcMessage.SetMethodID(notifications.MethodProcessNotificationEvent)
+
+			category := notifications.NotificationCategories.Participation
+			subtype := notifications.NotificationSubTypes.Participation.Disconnected
+
+			oEvent := notifications_types.NewNotificationEvent()
+			oEvent.PIDSource = client.PID()
+			oEvent.Type = notifications.BuildNotificationType(category, subtype)
+			oEvent.Param1 = gid
+			oEvent.Param2 = client.PID()
+
+			stream := nex.NewStreamOut(server)
+			oEventBytes := oEvent.Bytes(stream)
+			rmcMessage.SetParameters(oEventBytes)
+
+			rmcMessageBytes := rmcMessage.Bytes()
+
+			targetClient := server.FindClientFromPID(uint32(ownerPID))
+			if targetClient == nil {
+				// TODO - We don't have a logger here
+				// logger.Warning("Owner client not found")
+				gid = FindClientSession(client.ConnectionID())
+				continue
+			}
+
+			var messagePacket nex.PacketInterface
+
+			if server.PRUDPVersion() == 0 {
+				messagePacket, _ = nex.NewPacketV0(targetClient, nil)
+				messagePacket.SetVersion(0)
+			} else {
+				messagePacket, _ = nex.NewPacketV1(targetClient, nil)
+				messagePacket.SetVersion(1)
+			}
+			messagePacket.SetSource(0xA1)
+			messagePacket.SetDestination(0xAF)
+			messagePacket.SetType(nex.DataPacket)
+			messagePacket.SetPayload(rmcMessageBytes)
+
+			messagePacket.AddFlag(nex.FlagNeedsAck)
+			messagePacket.AddFlag(nex.FlagReliable)
+
+			server.Send(messagePacket)
+		}
+
+		gid = FindClientSession(client.ConnectionID())
 	}
 }
 
@@ -220,4 +293,77 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 	}
 
 	return nil, 0
+}
+
+// ChangeSessionOwner changes the session owner to a different client
+func ChangeSessionOwner(ownerClient *nex.Client, gathering uint32) {
+	server := ownerClient.Server()
+	var otherClient *nex.Client
+
+	otherConnectionID := FindOtherConnectionID(ownerClient.ConnectionID(), gathering)
+	if otherConnectionID != 0 {
+		otherClient = server.FindClientFromConnectionID(uint32(otherConnectionID))
+		if otherClient != nil {
+			Sessions[gathering].GameMatchmakeSession.Gathering.OwnerPID = otherClient.PID()
+		} else {
+			// TODO - We don't have a logger here
+			// logger.Warning("Other client not found")
+			return
+		}
+	} else {
+		return
+	}
+
+	rmcMessage := nex.NewRMCRequest()
+	rmcMessage.SetProtocolID(notifications.ProtocolID)
+	rmcMessage.SetCallID(0xffff0000)
+	rmcMessage.SetMethodID(notifications.MethodProcessNotificationEvent)
+
+	category := notifications.NotificationCategories.OwnershipChanged
+	subtype := notifications.NotificationSubTypes.OwnershipChanged.None
+
+	oEvent := notifications_types.NewNotificationEvent()
+	oEvent.PIDSource = otherClient.PID()
+	oEvent.Type = notifications.BuildNotificationType(category, subtype)
+	oEvent.Param1 = gathering
+	oEvent.Param2 = otherClient.PID()
+
+	// TODO - StrParam doesn't have this value on some servers
+	// https://github.com/kinnay/NintendoClients/issues/101
+	// unixTime := time.Now()
+	// oEvent.StrParam = strconv.FormatInt(unixTime.UnixMicro(), 10)
+
+	stream := nex.NewStreamOut(server)
+	oEventBytes := oEvent.Bytes(stream)
+	rmcMessage.SetParameters(oEventBytes)
+
+	rmcRequestBytes := rmcMessage.Bytes()
+
+	for _, connectionID := range Sessions[gathering].ConnectionIDs {
+		targetClient := server.FindClientFromConnectionID(connectionID)
+		if targetClient != nil {
+			var messagePacket nex.PacketInterface
+
+			if server.PRUDPVersion() == 0 {
+				messagePacket, _ = nex.NewPacketV0(targetClient, nil)
+				messagePacket.SetVersion(0)
+			} else {
+				messagePacket, _ = nex.NewPacketV1(targetClient, nil)
+				messagePacket.SetVersion(1)
+			}
+
+			messagePacket.SetSource(0xA1)
+			messagePacket.SetDestination(0xAF)
+			messagePacket.SetType(nex.DataPacket)
+			messagePacket.SetPayload(rmcRequestBytes)
+
+			messagePacket.AddFlag(nex.FlagNeedsAck)
+			messagePacket.AddFlag(nex.FlagReliable)
+
+			server.Send(messagePacket)
+		} else {
+			// TODO - We don't have a logger here
+			// logger.Warning("Client not found")
+		}
+	}
 }
