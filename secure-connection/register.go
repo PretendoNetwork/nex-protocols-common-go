@@ -19,10 +19,16 @@ func register(err error, client *nex.Client, callID uint32, stationUrls []*nex.S
 	localStation := stationUrls[0]
 
 	// * A NEX client can set the public station URL by setting two URLs on the array
+	// * Check each URL for a public station
 	var publicStation *nex.StationURL
-	if len(stationUrls) > 1 {
-		publicStation = stationUrls[1]
-	} else {
+	for _, stationURL := range stationUrls {
+		if stationURL.Type() == 3 {
+			publicStation = stationURL
+			break
+		}
+	}
+
+	if publicStation == nil {
 		publicStation = localStation.Copy()
 
 		publicStation.SetAddress(client.Address().IP.String())
