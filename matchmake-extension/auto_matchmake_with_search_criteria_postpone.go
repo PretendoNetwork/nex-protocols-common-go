@@ -125,6 +125,10 @@ func autoMatchmakeWithSearchCriteria_Postpone(err error, client *nex.Client, cal
 	rmcMessageBytes := rmcMessage.Bytes()
 
 	targetClient := server.FindClientFromPID(uint32(session.GameMatchmakeSession.Gathering.OwnerPID))
+	if targetClient == nil {
+		logger.Warning("Owner client not found")
+		return 0
+	}
 
 	var messagePacket nex.PacketInterface
 

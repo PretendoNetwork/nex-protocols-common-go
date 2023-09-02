@@ -96,6 +96,10 @@ func endParticipation(err error, client *nex.Client, callID uint32, idGathering 
 	rmcMessageBytes := rmcMessage.Bytes()
 
 	targetClient := server.FindClientFromPID(uint32(ownerPID))
+	if targetClient == nil {
+		logger.Warning("Owner client not found")
+		return 0
+	}
 
 	var messagePacket nex.PacketInterface
 

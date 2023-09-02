@@ -67,6 +67,7 @@ func joinMatchmakeSessionWithParam(err error, client *nex.Client, callID uint32,
 		target := server.FindClientFromConnectionID(session.ConnectionIDs[i])
 		if target == nil {
 			// TODO - Error here?
+			logger.Warning("Player not found")
 			continue
 		}
 
