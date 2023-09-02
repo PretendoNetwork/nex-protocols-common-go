@@ -17,14 +17,32 @@ func register(err error, client *nex.Client, callID uint32, stationUrls []*nex.S
 	client.SetConnectionID(nextConnectionID)
 
 	localStation := stationUrls[0]
-	publicStation := localStation.Copy()
 
-	publicStation.SetAddress(client.Address().IP.String())
-	publicStation.SetPort(uint32(client.Address().Port))
-	publicStation.SetNatf(0)
-	publicStation.SetNatm(0)
-	publicStation.SetType(3)
+	// * A NEX client can set the public station URL by setting two URLs on the array
+	// * Check each URL for a public station
+	var publicStation *nex.StationURL
+	for _, stationURL := range stationUrls {
+		if stationURL.Type() == 3 {
+			publicStation = stationURL
+			break
+		}
+	}
+
+	if publicStation == nil {
+		publicStation = localStation.Copy()
+
+		publicStation.SetAddress(client.Address().IP.String())
+		publicStation.SetPort(uint32(client.Address().Port))
+		publicStation.SetNatf(0)
+		publicStation.SetNatm(0)
+		publicStation.SetType(3)
+	}
+
+	localStation.SetPID(client.PID())
 	publicStation.SetPID(client.PID())
+
+	localStation.SetRVCID(client.ConnectionID())
+	publicStation.SetRVCID(client.ConnectionID())
 
 	localStation.SetLocal()
 	publicStation.SetPublic()

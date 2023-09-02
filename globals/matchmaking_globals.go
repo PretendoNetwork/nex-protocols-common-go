@@ -1,6 +1,7 @@
 package common_globals
 
 import (
+	"github.com/PretendoNetwork/nex-go"
 	match_making_types "github.com/PretendoNetwork/nex-protocols-go/match-making/types"
 )
 
@@ -12,3 +13,4 @@ type CommonMatchmakeSession struct {
 }
 
 var Sessions map[uint32]*CommonMatchmakeSession
+var CurrentGatheringID = nex.NewCounter(0)

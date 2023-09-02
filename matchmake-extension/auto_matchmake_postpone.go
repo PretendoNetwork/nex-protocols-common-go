@@ -10,16 +10,17 @@ import (
 )
 
 func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, anyGathering *nex.DataHolder, message string) uint32 {
+	if commonMatchmakeExtensionProtocol.cleanupSearchMatchmakeSessionHandler == nil {
+		logger.Warning("MatchmakeExtension::AutoMatchmake_Postpone missing CleanupSearchMatchmakeSessionHandler!")
+		return nex.Errors.Core.NotImplemented
+	}
+
 	if err != nil {
 		logger.Error(err.Error())
 		return nex.Errors.Core.InvalidArgument
 	}
 
 	server := commonMatchmakeExtensionProtocol.server
-	if commonMatchmakeExtensionProtocol.cleanupSearchMatchmakeSessionHandler == nil {
-		logger.Warning("MatchmakeExtension::AutoMatchmake_Postpone missing CleanupSearchMatchmakeSessionHandler!")
-		return nex.Errors.Core.Exception
-	}
 
 	// A client may disconnect from a session without leaving reliably,
 	// so let's make sure the client is removed from the session
@@ -117,6 +118,10 @@ func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, anyGat
 	rmcMessageBytes := rmcMessage.Bytes()
 
 	targetClient := server.FindClientFromPID(uint32(common_globals.Sessions[sessionIndex].GameMatchmakeSession.Gathering.OwnerPID))
+	if targetClient == nil {
+		logger.Warning("Owner client not found")
+		return 0
+	}
 
 	var messagePacket nex.PacketInterface
 

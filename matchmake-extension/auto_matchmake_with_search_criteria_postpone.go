@@ -11,7 +11,7 @@ import (
 
 func autoMatchmakeWithSearchCriteria_Postpone(err error, client *nex.Client, callID uint32, lstSearchCriteria []*match_making_types.MatchmakeSessionSearchCriteria, anyGathering *nex.DataHolder, message string) uint32 {
 	if commonMatchmakeExtensionProtocol.cleanupMatchmakeSessionSearchCriteriaHandler == nil {
-		logger.Warning("MatchmakeExtension::AutoMatchmake_Postpone missing CleanupMatchmakeSessionSearchCriteriaHandler!")
+		logger.Warning("MatchmakeExtension::AutoMatchmakeWithSearchCriteria_Postpone missing CleanupMatchmakeSessionSearchCriteriaHandler!")
 		return nex.Errors.Core.NotImplemented
 	}
 
@@ -125,6 +125,10 @@ func autoMatchmakeWithSearchCriteria_Postpone(err error, client *nex.Client, cal
 	rmcMessageBytes := rmcMessage.Bytes()
 
 	targetClient := server.FindClientFromPID(uint32(session.GameMatchmakeSession.Gathering.OwnerPID))
+	if targetClient == nil {
+		logger.Warning("Owner client not found")
+		return 0
+	}
 
 	var messagePacket nex.PacketInterface
 

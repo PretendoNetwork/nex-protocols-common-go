@@ -45,6 +45,10 @@ func getSimplePlayingSession(err error, client *nex.Client, callID uint32, listP
 				connectedPIDs := make([]uint32, 0)
 				for _, connectionID := range session.ConnectionIDs {
 					player := server.FindClientFromConnectionID(connectionID)
+					if player == nil {
+						logger.Warning("Player not found")
+						continue
+					}
 
 					connectedPIDs = append(connectedPIDs, player.PID())
 				}

@@ -6,16 +6,15 @@ import (
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension"
 )
 
-func modifyCurrentGameAttribute(err error, client *nex.Client, callID uint32, gid uint32, attribIndex uint32, newValue uint32) uint32 {
+func closeParticipation(err error, client *nex.Client, callID uint32, gid uint32) uint32 {
 	if err != nil {
 		logger.Error(err.Error())
 		return nex.Errors.Core.InvalidArgument
 	}
 
-	server := client.Server()
-
-	session, ok := common_globals.Sessions[gid]
-	if !ok {
+	var session *common_globals.CommonMatchmakeSession
+	var ok bool
+	if session, ok = common_globals.Sessions[gid]; !ok {
 		return nex.Errors.RendezVous.SessionVoid
 	}
 
@@ -23,14 +22,12 @@ func modifyCurrentGameAttribute(err error, client *nex.Client, callID uint32, gi
 		return nex.Errors.RendezVous.PermissionDenied
 	}
 
-	if int(attribIndex) > len(session.GameMatchmakeSession.Attributes) {
-		return nex.Errors.Core.InvalidIndex
-	}
+	session.GameMatchmakeSession.OpenParticipation = false
 
-	session.GameMatchmakeSession.Attributes[attribIndex] = newValue
+	server := commonMatchmakeExtensionProtocol.server
 
 	rmcResponse := nex.NewRMCResponse(matchmake_extension.ProtocolID, callID)
-	rmcResponse.SetSuccess(matchmake_extension.MethodModifyCurrentGameAttribute, nil)
+	rmcResponse.SetSuccess(matchmake_extension.MethodCloseParticipation, nil)
 
 	rmcResponseBytes := rmcResponse.Bytes()
 
