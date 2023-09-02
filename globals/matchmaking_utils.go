@@ -14,12 +14,11 @@ import (
 // GetAvailableGatheringID returns a gathering ID which doesn't belong to any session
 // Returns 0 if no IDs are available (math.MaxUint32 has been reached)
 func GetAvailableGatheringID() uint32 {
-	if CurrentGatheringID == math.MaxUint32 {
+	if CurrentGatheringID.Value() == math.MaxUint32 {
 		return 0
 	}
 
-	CurrentGatheringID++
-	return CurrentGatheringID
+	return CurrentGatheringID.Increment()
 }
 
 // FindOtherConnectionID searches a connection ID on the session that isn't the given one
