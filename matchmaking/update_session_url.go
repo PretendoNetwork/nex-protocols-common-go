@@ -17,29 +17,10 @@ func updateSessionURL(err error, client *nex.Client, callID uint32, idGathering 
 		return nex.Errors.RendezVous.SessionVoid
 	}
 
-	logger.Info("=== UpdateSessionURL ===")
-	logger.Info(strURL)
-	logger.Infof("PID: %d", client.PID())
-	logger.Infof("CID: %d", client.ConnectionID())
-	logger.Info("========================")
-
 	server := commonMatchMakingProtocol.server
-	hostPID := session.GameMatchmakeSession.Gathering.HostPID
-	host := server.FindClientFromPID(hostPID)
-	if host == nil {
-		logger.Warning("Host client not found") // This popped up once during testing. Leaving it noted here in case it becomes a problem.
-		return nex.Errors.Core.Exception
-	}
 
-	stations := host.StationURLs()
-
-	stationURL := nex.NewStationURL(strURL)
-
-	if stationURL.Type() == 3 {
-		stations[1] = stationURL
-	} else {
-		stations[0] = stationURL
-	}
+	// * Mario Kart 7 seems to set an empty strURL, so I assume this is what the method does?
+	session.GameMatchmakeSession.Gathering.HostPID = client.PID()
 
 	rmcResponseStream := nex.NewStreamOut(server)
 	rmcResponseStream.WriteBool(true) // %retval%
