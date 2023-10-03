@@ -50,6 +50,7 @@ func initDefault(c *CommonMatchmakeExtensionProtocol) {
 	c.DefaultProtocol.UpdateProgressScore(updateProgressScore)
 	c.DefaultProtocol.CreateMatchmakeSessionWithParam(createMatchmakeSessionWithParam)
 	c.DefaultProtocol.UpdateApplicationBuffer(updateApplicationBuffer)
+	c.DefaultProtocol.JoinMatchmakeSession(joinMatchmakeSession)
 	c.DefaultProtocol.JoinMatchmakeSessionWithParam(joinMatchmakeSessionWithParam)
 	c.DefaultProtocol.ModifyCurrentGameAttribute(modifyCurrentGameAttribute)
 	c.DefaultProtocol.BrowseMatchmakeSession(browseMatchmakeSession)
