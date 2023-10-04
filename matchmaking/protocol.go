@@ -26,6 +26,7 @@ func NewCommonMatchMakingProtocol(server *nex.Server) *CommonMatchMakingProtocol
 	common_globals.Sessions = make(map[uint32]*common_globals.CommonMatchmakeSession)
 
 	// TODO - Organize these by method ID
+	commonMatchMakingProtocol.UpdateSessionURL(updateSessionURL)
 	commonMatchMakingProtocol.GetSessionURLs(getSessionURLs)
 	commonMatchMakingProtocol.UnregisterGathering(unregisterGathering)
 	commonMatchMakingProtocol.UpdateSessionHostV1(updateSessionHostV1)
@@ -34,7 +35,7 @@ func NewCommonMatchMakingProtocol(server *nex.Server) *CommonMatchMakingProtocol
 
 	server.On("Kick", func(packet nex.PacketInterface) {
 		fmt.Println("Leaving")
-		common_globals.RemoveConnectionIDFromAllSessions(packet.Sender().ConnectionID())
+		common_globals.RemoveClientFromAllSessions(packet.Sender())
 	})
 
 	return commonMatchMakingProtocol

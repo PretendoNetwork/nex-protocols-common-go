@@ -21,8 +21,12 @@ func getSessionURLs(err error, client *nex.Client, callID uint32, gid uint32) ui
 	hostPID := session.GameMatchmakeSession.Gathering.HostPID
 	host := server.FindClientFromPID(hostPID)
 	if host == nil {
-		logger.Warning("Host client not found") // This popped up once during testing. Leaving it noted here in case it becomes a problem.
-		return nex.Errors.Core.Exception
+		logger.Warning("Host client not found, trying with owner client") // This popped up once during testing. Leaving it noted here in case it becomes a problem.
+		host = server.FindClientFromPID(session.GameMatchmakeSession.Gathering.OwnerPID)
+		if host == nil {
+			logger.Error("Owner client not found") // This popped up once during testing. Leaving it noted here in case it becomes a problem.
+			return nex.Errors.Core.Exception
+		}
 	}
 
 	rmcResponseStream := nex.NewStreamOut(server)

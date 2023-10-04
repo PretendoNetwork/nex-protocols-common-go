@@ -33,7 +33,7 @@ func endParticipation(err error, client *nex.Client, callID uint32, idGathering 
 		if matchmakeSession.Gathering.Flags&match_making.GatheringFlags.DisconnectChangeOwner == 0 {
 			deleteSession = true
 		} else {
-			changeSessionOwner(client.ConnectionID(), idGathering, callID)
+			common_globals.ChangeSessionOwner(client, idGathering)
 		}
 	}
 
@@ -121,74 +121,4 @@ func endParticipation(err error, client *nex.Client, callID uint32, idGathering 
 	server.Send(messagePacket)
 
 	return 0
-}
-
-func changeSessionOwner(ownerConnectionID uint32, gathering uint32, callID uint32) {
-	server := commonMatchMakingExtProtocol.server
-	var otherClient *nex.Client
-
-	otherConnectionID := common_globals.FindOtherConnectionID(ownerConnectionID, gathering)
-	if otherConnectionID != 0 {
-		otherClient = server.FindClientFromConnectionID(uint32(otherConnectionID))
-		if otherClient != nil {
-			common_globals.Sessions[gathering].GameMatchmakeSession.Gathering.OwnerPID = otherClient.PID()
-		} else {
-			logger.Warning("Other client not found")
-			return
-		}
-	} else {
-		return
-	}
-
-	rmcMessage := nex.NewRMCRequest()
-	rmcMessage.SetProtocolID(notifications.ProtocolID)
-	rmcMessage.SetCallID(0xffff0000 + callID)
-	rmcMessage.SetMethodID(notifications.MethodProcessNotificationEvent)
-
-	category := notifications.NotificationCategories.OwnershipChanged
-	subtype := notifications.NotificationSubTypes.OwnershipChanged.None
-
-	oEvent := notifications_types.NewNotificationEvent()
-	oEvent.PIDSource = otherClient.PID()
-	oEvent.Type = notifications.BuildNotificationType(category, subtype)
-	oEvent.Param1 = gathering
-	oEvent.Param2 = otherClient.PID()
-
-	// TODO - StrParam doesn't have this value on some servers
-	// https://github.com/kinnay/NintendoClients/issues/101
-	// unixTime := time.Now()
-	// oEvent.StrParam = strconv.FormatInt(unixTime.UnixMicro(), 10)
-
-	stream := nex.NewStreamOut(server)
-	oEventBytes := oEvent.Bytes(stream)
-	rmcMessage.SetParameters(oEventBytes)
-
-	rmcRequestBytes := rmcMessage.Bytes()
-
-	for _, connectionID := range common_globals.Sessions[gathering].ConnectionIDs {
-		targetClient := server.FindClientFromConnectionID(connectionID)
-		if targetClient != nil {
-			var messagePacket nex.PacketInterface
-
-			if server.PRUDPVersion() == 0 {
-				messagePacket, _ = nex.NewPacketV0(targetClient, nil)
-				messagePacket.SetVersion(0)
-			} else {
-				messagePacket, _ = nex.NewPacketV1(targetClient, nil)
-				messagePacket.SetVersion(1)
-			}
-
-			messagePacket.SetSource(0xA1)
-			messagePacket.SetDestination(0xAF)
-			messagePacket.SetType(nex.DataPacket)
-			messagePacket.SetPayload(rmcRequestBytes)
-
-			messagePacket.AddFlag(nex.FlagNeedsAck)
-			messagePacket.AddFlag(nex.FlagReliable)
-
-			server.Send(messagePacket)
-		} else {
-			logger.Warning("Client not found")
-		}
-	}
 }

@@ -17,7 +17,7 @@ func createMatchmakeSession(err error, client *nex.Client, callID uint32, anyGat
 
 	// A client may disconnect from a session without leaving reliably,
 	// so let's make sure the client is removed from the session
-	common_globals.RemoveConnectionIDFromAllSessions(client.ConnectionID())
+	common_globals.RemoveClientFromAllSessions(client)
 
 	var matchmakeSession *match_making_types.MatchmakeSession
 	anyGatheringDataType := anyGathering.TypeName()
