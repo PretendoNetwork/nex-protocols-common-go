@@ -10,8 +10,7 @@ func uploadCommonData(err error, client *nex.Client, callID uint32, commonData [
 		logger.Warning("Ranking::UploadCommonData missing UploadCommonDataHandler!")
 		return nex.Errors.Core.NotImplemented
 	}
-	
-	rmcResponse := nex.NewRMCResponse(ranking.ProtocolID, callID)
+
 	server := client.Server()
 
 	if err != nil {
@@ -19,12 +18,13 @@ func uploadCommonData(err error, client *nex.Client, callID uint32, commonData [
 		return nex.Errors.Ranking.InvalidArgument
 	}
 
-	insertErr := commonRankingProtocol.uploadCommonDataHandler(client.PID(), uniqueID, commonData)
-	if insertErr != nil {
-		logger.Critical(insertErr.Error())
+	err = commonRankingProtocol.uploadCommonDataHandler(client.PID(), uniqueID, commonData)
+	if err != nil {
+		logger.Critical(err.Error())
 		return nex.Errors.Ranking.Unknown
 	}
-
+	
+	rmcResponse := nex.NewRMCResponse(ranking.ProtocolID, callID)
 	rmcResponse.SetSuccess(ranking.MethodUploadCommonData, nil)
 
 	rmcResponseBytes := rmcResponse.Bytes()

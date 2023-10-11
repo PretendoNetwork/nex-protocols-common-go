@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"github.com/PretendoNetwork/nex-go"
-	_ "github.com/PretendoNetwork/nex-protocols-go"
 	ranking "github.com/PretendoNetwork/nex-protocols-go/ranking"
 	ranking_mario_kart_8 "github.com/PretendoNetwork/nex-protocols-go/ranking/mario-kart-8"
 	ranking_types "github.com/PretendoNetwork/nex-protocols-go/ranking/types"

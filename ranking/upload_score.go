@@ -11,8 +11,7 @@ func uploadScore(err error, client *nex.Client, callID uint32, scoreData *rankin
 		logger.Warning("Ranking::UploadScore missing InsertRankingByPIDAndRankingScoreDataHandler!")
 		return nex.Errors.Core.NotImplemented
 	}
-	
-	rmcResponse := nex.NewRMCResponse(ranking.ProtocolID, callID)
+
 	server := client.Server()
 
 	if err != nil {
@@ -20,12 +19,13 @@ func uploadScore(err error, client *nex.Client, callID uint32, scoreData *rankin
 		return nex.Errors.Ranking.InvalidArgument
 	}
 
-	insertErr := commonRankingProtocol.insertRankingByPIDAndRankingScoreDataHandler(client.PID(), scoreData, uniqueID)
-	if insertErr != nil {
-		logger.Critical(insertErr.Error())
+	err = commonRankingProtocol.insertRankingByPIDAndRankingScoreDataHandler(client.PID(), scoreData, uniqueID)
+	if err != nil {
+		logger.Critical(err.Error())
 		return nex.Errors.Ranking.Unknown
 	}
-
+	
+	rmcResponse := nex.NewRMCResponse(ranking.ProtocolID, callID)
 	rmcResponse.SetSuccess(ranking.MethodUploadScore, nil)
 
 	rmcResponseBytes := rmcResponse.Bytes()

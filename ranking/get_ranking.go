@@ -12,7 +12,6 @@ func getRanking(err error, client *nex.Client, callID uint32, rankingMode uint8,
 		return nex.Errors.Core.NotImplemented
 	}
 	
-	rmcResponse := nex.NewRMCResponse(ranking.ProtocolID, callID)
 	server := client.Server()
 
 	if err != nil {
@@ -42,6 +41,7 @@ func getRanking(err error, client *nex.Client, callID uint32, rankingMode uint8,
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
+	rmcResponse := nex.NewRMCResponse(ranking.ProtocolID, callID)
 	rmcResponse.SetSuccess(ranking.MethodGetRanking, rmcResponseBody)
 
 	rmcResponseBytes := rmcResponse.Bytes()
