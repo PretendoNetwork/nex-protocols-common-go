@@ -40,7 +40,9 @@ func getCachedTopXRanking(err error, client *nex.Client, callID uint32, category
 	pResult := ranking_types.NewRankingCachedResult()
 	serverTime := nex.NewDateTime(0)
 	pResult.CreatedTime = nex.NewDateTime(serverTime.UTC())
-	//The real server sends the "CreatedTime" + 5 minutes. It doesn't change, even on subsequent requests, until after the ExpiredTime has passed (seemingly what the "cached" means). Whether we need to replicate this idk, but in case, here's a note.
+	//The real server sends the "CreatedTime" + 5 minutes.
+	//It doesn't change, even on subsequent requests, until after the ExpiredTime has passed (seemingly what the "cached" means).
+	//Whether we need to replicate this idk, but in case, here's a note.
 	pResult.ExpiredTime = nex.NewDateTime(serverTime.FromTimestamp(time.Now().UTC().Add(time.Minute * time.Duration(5))))
 	pResult.MaxLength = 10 //This is the length Ultimate NES Remix uses. TODO: Does this matter? and are other games different?
 
