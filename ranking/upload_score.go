@@ -11,6 +11,7 @@ func uploadScore(err error, client *nex.Client, callID uint32, scoreData *rankin
 		logger.Warning("Ranking::UploadScore missing InsertRankingByPIDAndRankingScoreDataHandler!")
 		return nex.Errors.Core.NotImplemented
 	}
+	
 	rmcResponse := nex.NewRMCResponse(ranking.ProtocolID, callID)
 	server := client.Server()
 
