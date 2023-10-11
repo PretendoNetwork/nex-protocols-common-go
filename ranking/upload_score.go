@@ -16,16 +16,16 @@ func uploadScore(err error, client *nex.Client, callID uint32, scoreData *rankin
 
 	if err != nil {
 		logger.Error(err.Error())
-		rmcResponse.SetError(nex.Errors.Ranking.Unknown)
+		return nex.Errors.Ranking.InvalidArgument
 	}
 
 	insertErr := commonRankingProtocol.insertRankingByPIDAndRankingScoreDataHandler(client.PID(), scoreData, uniqueID)
 	if insertErr != nil {
-		logger.Error(insertErr.Error())
-		rmcResponse.SetError(nex.Errors.Ranking.Unknown)
-	} else {
-		rmcResponse.SetSuccess(ranking.MethodUploadScore, nil)
+		logger.Critical(insertErr.Error())
+		return nex.Errors.Ranking.Unknown
 	}
+
+	rmcResponse.SetSuccess(ranking.MethodUploadScore, nil)
 
 	rmcResponseBytes := rmcResponse.Bytes()
 

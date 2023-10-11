@@ -11,39 +11,38 @@ func getRanking(err error, client *nex.Client, callID uint32, rankingMode uint8,
 		logger.Warning("Ranking::GetRanking missing GetRankingsAndCountByCategoryAndRankingOrderParamHandler!")
 		return nex.Errors.Core.NotImplemented
 	}
+	
 	rmcResponse := nex.NewRMCResponse(ranking.ProtocolID, callID)
 	server := client.Server()
 
 	if err != nil {
 		logger.Error(err.Error())
-		rmcResponse.SetError(nex.Errors.Ranking.Unknown)
+		return nex.Errors.Ranking.InvalidArgument
 	}
 
 	err, rankDataList, totalCount := commonRankingProtocol.getRankingsAndCountByCategoryAndRankingOrderParamHandler(category, orderParam)
 	if err != nil {
-		logger.Error(err.Error())
-		rmcResponse.SetError(nex.Errors.Ranking.Unknown)
+		logger.Critical(err.Error())
+		return nex.Errors.Ranking.Unknown
 	}
 
 	if totalCount == 0 || len(rankDataList) == 0 {
-		rmcResponse.SetError(nex.Errors.Ranking.NotFound)
+		return nex.Errors.Ranking.NotFound
 	}
 
-	if err == nil && totalCount != 0 {
-		pResult := ranking_types.NewRankingResult()
+	pResult := ranking_types.NewRankingResult()
 
-		pResult.RankDataList = rankDataList
-		pResult.TotalCount = totalCount
-		pResult.SinceTime = nex.NewDateTime(0x1f40420000) // * 2000-01-01T00:00:00.000Z, this is what the real server sends back
+	pResult.RankDataList = rankDataList
+	pResult.TotalCount = totalCount
+	pResult.SinceTime = nex.NewDateTime(0x1f40420000) // * 2000-01-01T00:00:00.000Z, this is what the real server sends back
 
-		rmcResponseStream := nex.NewStreamOut(server)
+	rmcResponseStream := nex.NewStreamOut(server)
 
-		rmcResponseStream.WriteStructure(pResult)
+	rmcResponseStream.WriteStructure(pResult)
 
-		rmcResponseBody := rmcResponseStream.Bytes()
+	rmcResponseBody := rmcResponseStream.Bytes()
 
-		rmcResponse.SetSuccess(ranking.MethodGetRanking, rmcResponseBody)
-	}
+	rmcResponse.SetSuccess(ranking.MethodGetRanking, rmcResponseBody)
 
 	rmcResponseBytes := rmcResponse.Bytes()
 

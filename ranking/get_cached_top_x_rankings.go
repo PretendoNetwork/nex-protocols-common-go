@@ -11,40 +11,40 @@ func getCachedTopXRankings(err error, client *nex.Client, callID uint32, categor
 		logger.Warning("Ranking::GetCachedTopXRankings missing GetRankingsAndCountByCategoryAndRankingOrderParamHandler!")
 		return nex.Errors.Core.NotImplemented
 	}
+	
 	rmcResponse := nex.NewRMCResponse(ranking.ProtocolID, callID)
 	server := client.Server()
 
 	if err != nil {
 		logger.Error(err.Error())
-		rmcResponse.SetError(nex.Errors.Ranking.Unknown)
+		return nex.Errors.Ranking.InvalidArgument
 	}
 	
 	var pResult []*ranking_types.RankingCachedResult
 	for i := 0; i < len(categories); i++ {
 		err, rankDataList, totalCount := commonRankingProtocol.getRankingsAndCountByCategoryAndRankingOrderParamHandler(categories[i], orderParams[i])
 		if err != nil {
-			logger.Error(err.Error())
-			rmcResponse.SetError(nex.Errors.Ranking.Unknown)
+			logger.Critical(err.Error())
+			return nex.Errors.Ranking.Unknown
 		}
 
 		if totalCount == 0 || len(rankDataList) == 0 {
-			rmcResponse.SetError(nex.Errors.Ranking.NotFound)
+			return nex.Errors.Ranking.NotFound
 		}
 
-		if err == nil && totalCount != 0 {
-			rankingResult := ranking_types.NewRankingResult()
+		rankingResult := ranking_types.NewRankingResult()
 
-			rankingResult.RankDataList = rankDataList
-			rankingResult.TotalCount = totalCount
-			rankingResult.SinceTime = nex.NewDateTime(0x1f40420000) // * 2000-01-01T00:00:00.000Z, this is what the real server sends back
+		rankingResult.RankDataList = rankDataList
+		rankingResult.TotalCount = totalCount
+		rankingResult.SinceTime = nex.NewDateTime(0x1f40420000) // * 2000-01-01T00:00:00.000Z, this is what the real server sends back
 			
-			result := ranking_types.NewRankingCachedResult()
-			result.CreatedTime = nex.NewDateTime(0x1f40420000) //TODO: does this matter?
-			result.ExpiredTime = nex.NewDateTime(0x1f40420000) //TODO: does this matter?
-			result.MaxLength = 0
-			result.SetParentType(rankingResult)
-			pResult = append(pResult, result)
-		}
+		result := ranking_types.NewRankingCachedResult()
+		pResult.CreatedTime = nex.NewDateTime(nex.NewDateTime(serverTime.UTC()))
+		pResult.ExpiredTime = nex.NewDateTime(serverTime.FromTimestamp(time.Now().UTC()+300)) //The real server sends the "CreatedTime" + 5 minutes. It doesn't change, even on subsequent requests, until after the ExpiredTime has passed (seemingly what the "cached" means). Whether we need to replicate this idk, but in case, here's a note.
+		pResult.MaxLength = 10 //This is the length Ultimate NES Remix uses. TODO: Does this matter? and are other games different?
+			
+		result.SetParentType(rankingResult)
+		pResult = append(pResult, result)
 
 		rmcResponseStream := nex.NewStreamOut(server)
 		rmcResponseStream.WriteListStructure(pResult)

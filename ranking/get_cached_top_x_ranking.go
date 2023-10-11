@@ -11,44 +11,43 @@ func getCachedTopXRanking(err error, client *nex.Client, callID uint32, category
 		logger.Warning("Ranking::GetCachedTopXRanking missing GetRankingsAndCountByCategoryAndRankingOrderParamHandler!")
 		return nex.Errors.Core.NotImplemented
 	}
+
 	rmcResponse := nex.NewRMCResponse(ranking.ProtocolID, callID)
 	server := client.Server()
 
 	if err != nil {
 		logger.Error(err.Error())
-		rmcResponse.SetError(nex.Errors.Ranking.Unknown)
+		return nex.Errors.Ranking.InvalidArgument
 	}
 
 	err, rankDataList, totalCount := commonRankingProtocol.getRankingsAndCountByCategoryAndRankingOrderParamHandler(category, orderParam)
 	if err != nil {
-		logger.Error(err.Error())
-		rmcResponse.SetError(nex.Errors.Ranking.Unknown)
+		logger.Critical(err.Error())
+		return nex.Errors.Ranking.Unknown
 	}
 
 	if totalCount == 0 || len(rankDataList) == 0 {
-		rmcResponse.SetError(nex.Errors.Ranking.NotFound)
+		return nex.Errors.Ranking.NotFound
 	}
 
-	if err == nil && totalCount != 0 {
-		rankingResult := ranking_types.NewRankingResult()
+	rankingResult := ranking_types.NewRankingResult()
 
-		rankingResult.RankDataList = rankDataList
-		rankingResult.TotalCount = totalCount
-		rankingResult.SinceTime = nex.NewDateTime(0x1f40420000) // * 2000-01-01T00:00:00.000Z, this is what the real server sends back
+	rankingResult.RankDataList = rankDataList
+	rankingResult.TotalCount = totalCount
+	rankingResult.SinceTime = nex.NewDateTime(0x1f40420000) // * 2000-01-01T00:00:00.000Z, this is what the real server sends back
 		
-		pResult := ranking_types.NewRankingCachedResult()
-		pResult.CreatedTime = nex.NewDateTime(0x1f40420000) //TODO: does this matter?
-		pResult.ExpiredTime = nex.NewDateTime(0x1f40420000) //TODO: does this matter?
-		pResult.MaxLength = 0
+	pResult := ranking_types.NewRankingCachedResult()
+	pResult.CreatedTime = nex.NewDateTime(nex.NewDateTime(serverTime.UTC()))
+	pResult.ExpiredTime = nex.NewDateTime(serverTime.FromTimestamp(time.Now().UTC()+300)) //The real server sends the "CreatedTime" + 5 minutes. It doesn't change, even on subsequent requests, until after the ExpiredTime has passed (seemingly what the "cached" means). Whether we need to replicate this idk, but in case, here's a note.
+	pResult.MaxLength = 10 //This is the length Ultimate NES Remix uses. TODO: Does this matter? and are other games different?
 
-		rmcResponseStream := nex.NewStreamOut(server)
+	rmcResponseStream := nex.NewStreamOut(server)
 
-		rmcResponseStream.WriteStructure(pResult)
+	rmcResponseStream.WriteStructure(pResult)
 
-		rmcResponseBody := rmcResponseStream.Bytes()
+	rmcResponseBody := rmcResponseStream.Bytes()
 
-		rmcResponse.SetSuccess(ranking.MethodGetCachedTopXRanking, rmcResponseBody)
-	}
+	rmcResponse.SetSuccess(ranking.MethodGetCachedTopXRanking, rmcResponseBody)
 
 	rmcResponseBytes := rmcResponse.Bytes()
 

@@ -10,25 +10,25 @@ func getCommonData(err error, client *nex.Client, callID uint32, uniqueID uint64
 		logger.Warning("Ranking::GetCommonData missing GetCommonDataHandler!")
 		return nex.Errors.Core.NotImplemented
 	}
+
 	rmcResponse := nex.NewRMCResponse(ranking.ProtocolID, callID)
 	server := client.Server()
 
 	if err != nil {
 		logger.Error(err.Error())
-		rmcResponse.SetError(nex.Errors.Ranking.Unknown)
+		return nex.Errors.Ranking.InvalidArgument
 	}
 
 	commonDataErr, commonData := commonRankingProtocol.getCommonDataHandler(uniqueID)
 
-	if commonDataErr == nil {
-		rmcResponseStream := nex.NewStreamOut(server)
-
-		rmcResponseStream.WriteBuffer(commonData)
-
-		rmcResponseBody := rmcResponseStream.Bytes()
-
-		rmcResponse.SetSuccess(ranking.MethodGetCommonData, rmcResponseBody)
+	if commonDataErr != nil {
+		return nex.Errors.Ranking.NotFound
 	}
+		
+	rmcResponseStream := nex.NewStreamOut(server)
+	rmcResponseStream.WriteBuffer(commonData)
+	rmcResponseBody := rmcResponseStream.Bytes()
+	rmcResponse.SetSuccess(ranking.MethodGetCommonData, rmcResponseBody)
 
 	rmcResponseBytes := rmcResponse.Bytes()
 
