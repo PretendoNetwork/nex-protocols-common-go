@@ -20,7 +20,7 @@ func getRanking(err error, client *nex.Client, callID uint32, rankingMode uint8,
 		return nex.Errors.Ranking.InvalidArgument
 	}
 
-	err, rankDataList, totalCount := commonRankingProtocol.getRankingsAndCountByCategoryAndRankingOrderParamHandler(category, orderParam)
+	rankDataList, totalCount, err := commonRankingProtocol.getRankingsAndCountByCategoryAndRankingOrderParamHandler(category, orderParam)
 	if err != nil {
 		logger.Critical(err.Error())
 		return nex.Errors.Ranking.Unknown

@@ -19,7 +19,7 @@ func getCommonData(err error, client *nex.Client, callID uint32, uniqueID uint64
 		return nex.Errors.Ranking.InvalidArgument
 	}
 
-	commonDataErr, commonData := commonRankingProtocol.getCommonDataHandler(uniqueID)
+	commonData, commonDataErr := commonRankingProtocol.getCommonDataHandler(uniqueID)
 
 	if commonDataErr != nil {
 		return nex.Errors.Ranking.NotFound

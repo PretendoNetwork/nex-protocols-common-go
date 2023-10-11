@@ -19,14 +19,14 @@ type CommonRankingProtocol struct {
 	DefaultProtocol    *ranking.Protocol
 	MarioKart8Protocol *ranking_mario_kart_8.Protocol
 
-	getCommonDataHandler                                     func(unique_id uint64) (error, []byte)
+	getCommonDataHandler                                     func(unique_id uint64) ([]byte, error)
 	uploadCommonDataHandler                                  func(pid uint32, uniqueID uint64, commonData []byte) error
 	insertRankingByPIDAndRankingScoreDataHandler             func(pid uint32, rankingScoreData *ranking_types.RankingScoreData, uniqueID uint64) error
-	getRankingsAndCountByCategoryAndRankingOrderParamHandler func(category uint32, rankingOrderParam *ranking_types.RankingOrderParam) (error, []*ranking_types.RankingRankData, uint32)
+	getRankingsAndCountByCategoryAndRankingOrderParamHandler func(category uint32, rankingOrderParam *ranking_types.RankingOrderParam) ([]*ranking_types.RankingRankData, uint32, error)
 }
 
 // GetCommonData sets the GetCommonData handler function
-func (commonRankingProtocol *CommonRankingProtocol) GetCommonData(handler func(unique_id uint64) (error, []byte)) {
+func (commonRankingProtocol *CommonRankingProtocol) GetCommonData(handler func(unique_id uint64) ([]byte, error)) {
 	commonRankingProtocol.getCommonDataHandler = handler
 }
 
@@ -41,7 +41,7 @@ func (commonRankingProtocol *CommonRankingProtocol) InsertRankingByPIDAndRanking
 }
 
 // GetRankingsAndCountByCategoryAndRankingOrderParam sets the GetRankingsAndCountByCategoryAndRankingOrderParam handler function
-func (commonRankingProtocol *CommonRankingProtocol) GetRankingsAndCountByCategoryAndRankingOrderParam(handler func(category uint32, rankingOrderParam *ranking_types.RankingOrderParam) (error, []*ranking_types.RankingRankData, uint32)) {
+func (commonRankingProtocol *CommonRankingProtocol) GetRankingsAndCountByCategoryAndRankingOrderParam(handler func(category uint32, rankingOrderParam *ranking_types.RankingOrderParam) ([]*ranking_types.RankingRankData, uint32, error)) {
 	commonRankingProtocol.getRankingsAndCountByCategoryAndRankingOrderParamHandler = handler
 }
 
