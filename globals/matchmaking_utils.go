@@ -5,6 +5,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"math/rand" 
 
 	nex "github.com/PretendoNetwork/nex-go"
 	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
@@ -90,7 +91,8 @@ func RemoveClientFromAllSessions(client *nex.Client) {
 
 			rmcMessage := nex.NewRMCRequest()
 			rmcMessage.SetProtocolID(notifications.ProtocolID)
-			rmcMessage.SetCallID(0xffff0000)
+			rmcMessage.SetCallID(CurrentMatchmakingCallID)
+			CurrentMatchmakingCallID+=1
 			rmcMessage.SetMethodID(notifications.MethodProcessNotificationEvent)
 
 			category := notifications.NotificationCategories.Participation
@@ -103,8 +105,8 @@ func RemoveClientFromAllSessions(client *nex.Client) {
 			oEvent.Param2 = client.PID()
 
 			stream := nex.NewStreamOut(server)
-			oEventBytes := oEvent.Bytes(stream)
-			rmcMessage.SetParameters(oEventBytes)
+			stream.WriteStructure(oEvent)
+			rmcMessage.SetParameters(stream.Bytes())
 
 			rmcMessageBytes := rmcMessage.Bytes()
 
@@ -140,6 +142,33 @@ func RemoveClientFromAllSessions(client *nex.Client) {
 	}
 }
 
+// CreateSessionByMatchmakeSession creates a gathering from a MatchmakeSession
+func CreateSessionByMatchmakeSession(matchmakeSession *match_making_types.MatchmakeSession, searchMatchmakeSession *match_making_types.MatchmakeSession, hostPID uint32) (*CommonMatchmakeSession, error, uint32) {
+	sessionIndex := GetAvailableGatheringID()
+	// This should in theory be impossible, as there aren't enough PIDs creating sessions to fill the uint32 limit.
+	// If we ever get here, we must be not deleting sessions properly
+	if sessionIndex == 0 {
+		return &CommonMatchmakeSession{}, fmt.Errorf("No gatherings available!"), nex.Errors.RendezVous.LimitExceeded
+	}
+
+	session := CommonMatchmakeSession{
+		SearchMatchmakeSession: searchMatchmakeSession,
+		GameMatchmakeSession:   matchmakeSession,
+	}
+
+	Sessions[sessionIndex] = &session
+	Sessions[sessionIndex].GameMatchmakeSession.Gathering.ID = sessionIndex
+	Sessions[sessionIndex].GameMatchmakeSession.Gathering.OwnerPID = hostPID
+	Sessions[sessionIndex].GameMatchmakeSession.Gathering.HostPID = hostPID
+
+	Sessions[sessionIndex].GameMatchmakeSession.StartedTime = nex.NewDateTime(0)
+	Sessions[sessionIndex].GameMatchmakeSession.StartedTime.UTC()
+	Sessions[sessionIndex].GameMatchmakeSession.SessionKey = make([]byte, 32)
+    rand.Read(Sessions[sessionIndex].GameMatchmakeSession.SessionKey)
+
+	return Sessions[sessionIndex], nil, 0
+}
+
 // FindSessionByMatchmakeSession finds a gathering that matches with a MatchmakeSession
 func FindSessionByMatchmakeSession(searchMatchmakeSession *match_making_types.MatchmakeSession) uint32 {
 	// * This portion finds any sessions that match the search session
@@ -166,6 +195,34 @@ func FindSessionByMatchmakeSession(searchMatchmakeSession *match_making_types.Ma
 	}
 
 	return 0
+}
+
+// CreateSessionBySearchCriteria creates a gathering from MatchmakeSessionSearchCriteria
+func CreateSessionBySearchCriteria(matchmakeSession *match_making_types.MatchmakeSession, lstSearchCriteria []*match_making_types.MatchmakeSessionSearchCriteria, hostPID uint32) (*CommonMatchmakeSession, error, uint32) {
+	sessionIndex := GetAvailableGatheringID()
+
+	// * This should in theory be impossible, as there aren't enough PIDs creating sessions to fill the uint32 limit.
+	// * If we ever get here, we must be not deleting sessions properly
+	if sessionIndex == 0 {
+		return &CommonMatchmakeSession{}, fmt.Errorf("No gatherings available!"), nex.Errors.RendezVous.LimitExceeded
+	}
+
+	session := CommonMatchmakeSession{
+		SearchCriteria:       lstSearchCriteria,
+		GameMatchmakeSession: matchmakeSession,
+	}
+
+	Sessions[sessionIndex] = &session
+	Sessions[sessionIndex].GameMatchmakeSession.Gathering.ID = sessionIndex
+	Sessions[sessionIndex].GameMatchmakeSession.Gathering.OwnerPID = hostPID
+	Sessions[sessionIndex].GameMatchmakeSession.Gathering.HostPID = hostPID
+
+	Sessions[sessionIndex].GameMatchmakeSession.StartedTime = nex.NewDateTime(0)
+	Sessions[sessionIndex].GameMatchmakeSession.StartedTime.UTC()
+	Sessions[sessionIndex].GameMatchmakeSession.SessionKey = make([]byte, 32)
+    rand.Read(Sessions[sessionIndex].GameMatchmakeSession.SessionKey)
+
+	return Sessions[sessionIndex], nil, 0
 }
 
 // FindSessionsByMatchmakeSessionSearchCriterias finds a gathering that matches with a MatchmakeSession
@@ -277,7 +334,7 @@ func FindSessionsByMatchmakeSessionSearchCriterias(lstSearchCriteria []*match_ma
 
 // AddPlayersToSession updates the given sessions state to include the provided connection IDs
 // Returns a NEX error code if failed
-func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32) (error, uint32) {
+func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32, initiatingClient *nex.Client) (error, uint32) {
 	if (len(session.ConnectionIDs) + len(connectionIDs)) > int(session.GameMatchmakeSession.Gathering.MaximumParticipants) {
 		return fmt.Errorf("Gathering %d is full", session.GameMatchmakeSession.Gathering.ID), nex.Errors.RendezVous.SessionFull
 	}
@@ -290,6 +347,185 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 		session.ConnectionIDs = append(session.ConnectionIDs, connectedID)
 
 		session.GameMatchmakeSession.ParticipationCount += 1
+	}
+
+	server := initiatingClient.Server()
+
+	
+	for i := 0; i < len(session.ConnectionIDs); i++ {
+		target := server.FindClientFromConnectionID(session.ConnectionIDs[i])
+		if target == nil {
+			// TODO - Error here?
+			//logger.Warning("Player not found")
+			continue
+		}
+
+		notificationRequestMessage := nex.NewRMCRequest()
+		notificationRequestMessage.SetProtocolID(notifications.ProtocolID)
+		notificationRequestMessage.SetCallID(CurrentMatchmakingCallID)
+		CurrentMatchmakingCallID+=1
+		notificationRequestMessage.SetMethodID(notifications.MethodProcessNotificationEvent)
+
+		notificationCategory := notifications.NotificationCategories.Participation
+		notificationSubtype := notifications.NotificationSubTypes.Participation.NewParticipant
+
+		oEvent := notifications_types.NewNotificationEvent()
+		oEvent.PIDSource = initiatingClient.PID()
+		oEvent.Type = notifications.BuildNotificationType(notificationCategory, notificationSubtype)
+		oEvent.Param1 = session.GameMatchmakeSession.ID
+		oEvent.Param2 = target.PID()
+		oEvent.StrParam = ""
+		oEvent.Param3 = uint32(len(connectionIDs))
+
+		notificationStream := nex.NewStreamOut(server)
+
+		notificationStream.WriteStructure(oEvent)
+
+		notificationRequestMessage.SetParameters(notificationStream.Bytes())
+		notificationRequestBytes := notificationRequestMessage.Bytes()
+
+		var messagePacket nex.PacketInterface
+
+		if server.PRUDPVersion() == 0 {
+			messagePacket, _ = nex.NewPacketV0(target, nil)
+			messagePacket.SetVersion(0)
+		} else {
+			messagePacket, _ = nex.NewPacketV1(target, nil)
+			messagePacket.SetVersion(1)
+		}
+
+		messagePacket.SetSource(0xA1)
+		messagePacket.SetDestination(0xAF)
+		messagePacket.SetType(nex.DataPacket)
+		messagePacket.SetPayload(notificationRequestBytes)
+
+		messagePacket.AddFlag(nex.FlagNeedsAck)
+		messagePacket.AddFlag(nex.FlagReliable)
+
+		server.Send(messagePacket)
+	}
+
+	//This appears to be correct. Tri-Force Heroes uses 3.9.0, and has issues if this is ran.
+	//Minecraft, however, requires this to be ran.
+	//TODO: Check other games both pre and post 3.10.0 and validate.
+	if server.MatchMakingProtocolVersion().GreaterOrEqual("3.10.0") {
+		for i := 0; i < len(session.ConnectionIDs); i++ {
+			target := server.FindClientFromConnectionID(session.ConnectionIDs[i])
+			if target == nil {
+				// TODO - Error here?
+				//logger.Warning("Player not found")
+				continue
+			}
+
+			notificationRequestMessage := nex.NewRMCRequest()
+			notificationRequestMessage.SetProtocolID(notifications.ProtocolID)
+			notificationRequestMessage.SetCallID(CurrentMatchmakingCallID)
+			CurrentMatchmakingCallID+=1
+			notificationRequestMessage.SetMethodID(notifications.MethodProcessNotificationEvent)
+
+			notificationCategory := notifications.NotificationCategories.Participation
+			notificationSubtype := notifications.NotificationSubTypes.Participation.NewParticipant
+
+			oEvent := notifications_types.NewNotificationEvent()
+			oEvent.PIDSource = initiatingClient.PID()
+			oEvent.Type = notifications.BuildNotificationType(notificationCategory, notificationSubtype)
+			oEvent.Param1 = session.GameMatchmakeSession.ID
+			oEvent.Param2 = target.PID()
+			oEvent.StrParam = ""
+			oEvent.Param3 = uint32(len(connectionIDs))
+
+			notificationStream := nex.NewStreamOut(server)
+
+			notificationStream.WriteStructure(oEvent)
+
+			notificationRequestMessage.SetParameters(notificationStream.Bytes())
+			notificationRequestBytes := notificationRequestMessage.Bytes()
+			//fmt.Println(hex.EncodeToString(notificationRequestBytes))
+
+			var messagePacket nex.PacketInterface
+
+			if server.PRUDPVersion() == 0 {
+				messagePacket, _ = nex.NewPacketV0(initiatingClient, nil)
+				messagePacket.SetVersion(0)
+			} else {
+				messagePacket, _ = nex.NewPacketV1(initiatingClient, nil)
+				messagePacket.SetVersion(1)
+			}
+
+			messagePacket.SetSource(0xA1)
+			messagePacket.SetDestination(0xAF)
+			messagePacket.SetType(nex.DataPacket)
+			messagePacket.SetPayload(notificationRequestBytes)
+
+			messagePacket.AddFlag(nex.FlagNeedsAck)
+			messagePacket.AddFlag(nex.FlagReliable)
+
+			server.Send(messagePacket)
+		}
+
+		notificationRequestMessage := nex.NewRMCRequest()
+		notificationRequestMessage.SetProtocolID(notifications.ProtocolID)
+		notificationRequestMessage.SetCallID(CurrentMatchmakingCallID)
+		CurrentMatchmakingCallID+=1
+		notificationRequestMessage.SetMethodID(notifications.MethodProcessNotificationEvent)
+
+		notificationCategory := notifications.NotificationCategories.Participation
+		notificationSubtype := notifications.NotificationSubTypes.Participation.NewParticipant
+
+		oEvent := notifications_types.NewNotificationEvent()
+		oEvent.PIDSource = initiatingClient.PID()
+		oEvent.Type = notifications.BuildNotificationType(notificationCategory, notificationSubtype)
+		oEvent.Param1 = session.GameMatchmakeSession.ID
+		oEvent.Param2 = initiatingClient.PID()
+		oEvent.StrParam = ""
+		oEvent.Param3 = uint32(len(connectionIDs))
+
+		notificationStream := nex.NewStreamOut(server)
+
+		notificationStream.WriteStructure(oEvent)
+
+		notificationRequestMessage.SetParameters(notificationStream.Bytes())
+		notificationRequestBytes := notificationRequestMessage.Bytes()
+
+		target := server.FindClientFromPID(uint32(session.GameMatchmakeSession.Gathering.OwnerPID))
+
+		var messagePacket nex.PacketInterface
+
+		if server.PRUDPVersion() == 0 {
+			messagePacket, _ = nex.NewPacketV0(initiatingClient, nil)
+			messagePacket.SetVersion(0)
+		} else {
+			messagePacket, _ = nex.NewPacketV1(initiatingClient, nil)
+			messagePacket.SetVersion(1)
+		}
+
+		messagePacket.SetSource(0xA1)
+		messagePacket.SetDestination(0xAF)
+		messagePacket.SetType(nex.DataPacket)
+		messagePacket.SetPayload(notificationRequestBytes)
+
+		messagePacket.AddFlag(nex.FlagNeedsAck)
+		messagePacket.AddFlag(nex.FlagReliable)
+
+		server.Send(messagePacket)
+
+		if server.PRUDPVersion() == 0 {
+			messagePacket, _ = nex.NewPacketV0(target, nil)
+			messagePacket.SetVersion(0)
+		} else {
+			messagePacket, _ = nex.NewPacketV1(target, nil)
+			messagePacket.SetVersion(1)
+		}
+
+		messagePacket.SetSource(0xA1)
+		messagePacket.SetDestination(0xAF)
+		messagePacket.SetType(nex.DataPacket)
+		messagePacket.SetPayload(notificationRequestBytes)
+
+		messagePacket.AddFlag(nex.FlagNeedsAck)
+		messagePacket.AddFlag(nex.FlagReliable)
+
+		server.Send(messagePacket)
 	}
 
 	return nil, 0
@@ -316,7 +552,8 @@ func ChangeSessionOwner(ownerClient *nex.Client, gathering uint32) {
 
 	rmcMessage := nex.NewRMCRequest()
 	rmcMessage.SetProtocolID(notifications.ProtocolID)
-	rmcMessage.SetCallID(0xffff0000)
+	rmcMessage.SetCallID(CurrentMatchmakingCallID)
+	CurrentMatchmakingCallID+=1
 	rmcMessage.SetMethodID(notifications.MethodProcessNotificationEvent)
 
 	category := notifications.NotificationCategories.OwnershipChanged
@@ -334,8 +571,8 @@ func ChangeSessionOwner(ownerClient *nex.Client, gathering uint32) {
 	// oEvent.StrParam = strconv.FormatInt(unixTime.UnixMicro(), 10)
 
 	stream := nex.NewStreamOut(server)
-	oEventBytes := oEvent.Bytes(stream)
-	rmcMessage.SetParameters(oEventBytes)
+	stream.WriteStructure(oEvent)
+	rmcMessage.SetParameters(stream.Bytes())
 
 	rmcRequestBytes := rmcMessage.Bytes()
 

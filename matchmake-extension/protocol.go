@@ -46,6 +46,7 @@ func initDefault(c *CommonMatchmakeExtensionProtocol) {
 	c.DefaultProtocol.CreateMatchmakeSession(createMatchmakeSession)
 	c.DefaultProtocol.GetSimplePlayingSession(getSimplePlayingSession)
 	c.DefaultProtocol.AutoMatchmakePostpone(autoMatchmake_Postpone)
+	c.DefaultProtocol.AutoMatchmakeWithParamPostpone(autoMatchmakeWithParam_Postpone)
 	c.DefaultProtocol.AutoMatchmakeWithSearchCriteriaPostpone(autoMatchmakeWithSearchCriteria_Postpone)
 	c.DefaultProtocol.UpdateProgressScore(updateProgressScore)
 	c.DefaultProtocol.CreateMatchmakeSessionWithParam(createMatchmakeSessionWithParam)
