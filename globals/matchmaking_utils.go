@@ -91,8 +91,7 @@ func RemoveClientFromAllSessions(client *nex.Client) {
 
 			rmcMessage := nex.NewRMCRequest()
 			rmcMessage.SetProtocolID(notifications.ProtocolID)
-			rmcMessage.SetCallID(CurrentMatchmakingCallID)
-			CurrentMatchmakingCallID+=1
+			rmcMessage.SetCallID(CurrentMatchmakingCallID.Increment())
 			rmcMessage.SetMethodID(notifications.MethodProcessNotificationEvent)
 
 			category := notifications.NotificationCategories.Participation
@@ -145,10 +144,9 @@ func RemoveClientFromAllSessions(client *nex.Client) {
 // CreateSessionByMatchmakeSession creates a gathering from a MatchmakeSession
 func CreateSessionByMatchmakeSession(matchmakeSession *match_making_types.MatchmakeSession, searchMatchmakeSession *match_making_types.MatchmakeSession, hostPID uint32) (*CommonMatchmakeSession, error, uint32) {
 	sessionIndex := GetAvailableGatheringID()
-	// This should in theory be impossible, as there aren't enough PIDs creating sessions to fill the uint32 limit.
-	// If we ever get here, we must be not deleting sessions properly
 	if sessionIndex == 0 {
-		return &CommonMatchmakeSession{}, fmt.Errorf("No gatherings available!"), nex.Errors.RendezVous.LimitExceeded
+		CurrentGatheringID = nex.NewCounter(0)
+		sessionIndex = GetAvailableGatheringID()
 	}
 
 	session := CommonMatchmakeSession{
@@ -156,15 +154,16 @@ func CreateSessionByMatchmakeSession(matchmakeSession *match_making_types.Matchm
 		GameMatchmakeSession:   matchmakeSession,
 	}
 
-	Sessions[sessionIndex] = &session
-	Sessions[sessionIndex].GameMatchmakeSession.Gathering.ID = sessionIndex
-	Sessions[sessionIndex].GameMatchmakeSession.Gathering.OwnerPID = hostPID
-	Sessions[sessionIndex].GameMatchmakeSession.Gathering.HostPID = hostPID
+	session.GameMatchmakeSession.Gathering.ID = sessionIndex
+	session.GameMatchmakeSession.Gathering.OwnerPID = hostPID
+	session.GameMatchmakeSession.Gathering.HostPID = hostPID
 
-	Sessions[sessionIndex].GameMatchmakeSession.StartedTime = nex.NewDateTime(0)
-	Sessions[sessionIndex].GameMatchmakeSession.StartedTime.UTC()
-	Sessions[sessionIndex].GameMatchmakeSession.SessionKey = make([]byte, 32)
-    rand.Read(Sessions[sessionIndex].GameMatchmakeSession.SessionKey)
+	session.GameMatchmakeSession.StartedTime = nex.NewDateTime(0)
+	session.GameMatchmakeSession.StartedTime.UTC()
+	session.GameMatchmakeSession.SessionKey = make([]byte, 32)
+	rand.Read(session.GameMatchmakeSession.SessionKey)
+
+	Sessions[sessionIndex] = &session
 
 	return Sessions[sessionIndex], nil, 0
 }
@@ -200,11 +199,9 @@ func FindSessionByMatchmakeSession(searchMatchmakeSession *match_making_types.Ma
 // CreateSessionBySearchCriteria creates a gathering from MatchmakeSessionSearchCriteria
 func CreateSessionBySearchCriteria(matchmakeSession *match_making_types.MatchmakeSession, lstSearchCriteria []*match_making_types.MatchmakeSessionSearchCriteria, hostPID uint32) (*CommonMatchmakeSession, error, uint32) {
 	sessionIndex := GetAvailableGatheringID()
-
-	// * This should in theory be impossible, as there aren't enough PIDs creating sessions to fill the uint32 limit.
-	// * If we ever get here, we must be not deleting sessions properly
 	if sessionIndex == 0 {
-		return &CommonMatchmakeSession{}, fmt.Errorf("No gatherings available!"), nex.Errors.RendezVous.LimitExceeded
+		CurrentGatheringID = nex.NewCounter(0)
+		sessionIndex = GetAvailableGatheringID()
 	}
 
 	session := CommonMatchmakeSession{
@@ -212,15 +209,16 @@ func CreateSessionBySearchCriteria(matchmakeSession *match_making_types.Matchmak
 		GameMatchmakeSession: matchmakeSession,
 	}
 
-	Sessions[sessionIndex] = &session
-	Sessions[sessionIndex].GameMatchmakeSession.Gathering.ID = sessionIndex
-	Sessions[sessionIndex].GameMatchmakeSession.Gathering.OwnerPID = hostPID
-	Sessions[sessionIndex].GameMatchmakeSession.Gathering.HostPID = hostPID
+	session.GameMatchmakeSession.Gathering.ID = sessionIndex
+	session.GameMatchmakeSession.Gathering.OwnerPID = hostPID
+	session.GameMatchmakeSession.Gathering.HostPID = hostPID
 
-	Sessions[sessionIndex].GameMatchmakeSession.StartedTime = nex.NewDateTime(0)
-	Sessions[sessionIndex].GameMatchmakeSession.StartedTime.UTC()
-	Sessions[sessionIndex].GameMatchmakeSession.SessionKey = make([]byte, 32)
-    rand.Read(Sessions[sessionIndex].GameMatchmakeSession.SessionKey)
+	session.GameMatchmakeSession.StartedTime = nex.NewDateTime(0)
+	session.GameMatchmakeSession.StartedTime.UTC()
+	session.GameMatchmakeSession.SessionKey = make([]byte, 32)
+	rand.Read(session.GameMatchmakeSession.SessionKey)
+
+	Sessions[sessionIndex] = &session
 
 	return Sessions[sessionIndex], nil, 0
 }
@@ -334,7 +332,7 @@ func FindSessionsByMatchmakeSessionSearchCriterias(lstSearchCriteria []*match_ma
 
 // AddPlayersToSession updates the given sessions state to include the provided connection IDs
 // Returns a NEX error code if failed
-func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32, initiatingClient *nex.Client) (error, uint32) {
+func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32, initiatingClient *nex.Client, joinMessage string) (error, uint32) {
 	if (len(session.ConnectionIDs) + len(connectionIDs)) > int(session.GameMatchmakeSession.Gathering.MaximumParticipants) {
 		return fmt.Errorf("Gathering %d is full", session.GameMatchmakeSession.Gathering.ID), nex.Errors.RendezVous.SessionFull
 	}
@@ -362,8 +360,7 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 
 		notificationRequestMessage := nex.NewRMCRequest()
 		notificationRequestMessage.SetProtocolID(notifications.ProtocolID)
-		notificationRequestMessage.SetCallID(CurrentMatchmakingCallID)
-		CurrentMatchmakingCallID+=1
+		notificationRequestMessage.SetCallID(CurrentMatchmakingCallID.Increment())
 		notificationRequestMessage.SetMethodID(notifications.MethodProcessNotificationEvent)
 
 		notificationCategory := notifications.NotificationCategories.Participation
@@ -374,7 +371,7 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 		oEvent.Type = notifications.BuildNotificationType(notificationCategory, notificationSubtype)
 		oEvent.Param1 = session.GameMatchmakeSession.ID
 		oEvent.Param2 = target.PID()
-		oEvent.StrParam = ""
+		oEvent.StrParam = joinMessage
 		oEvent.Param3 = uint32(len(connectionIDs))
 
 		notificationStream := nex.NewStreamOut(server)
@@ -405,9 +402,9 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 		server.Send(messagePacket)
 	}
 
-	//This appears to be correct. Tri-Force Heroes uses 3.9.0, and has issues if this is ran.
-	//Minecraft, however, requires this to be ran.
-	//TODO: Check other games both pre and post 3.10.0 and validate.
+	// This appears to be correct. Tri-Force Heroes uses 3.9.0, and has issues if these notifications are sent
+	// Minecraft, however, requires these to be sent
+	// TODO: Check other games both pre and post 3.10.0 and validate
 	if server.MatchMakingProtocolVersion().GreaterOrEqual("3.10.0") {
 		for i := 0; i < len(session.ConnectionIDs); i++ {
 			target := server.FindClientFromConnectionID(session.ConnectionIDs[i])
@@ -419,8 +416,7 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 
 			notificationRequestMessage := nex.NewRMCRequest()
 			notificationRequestMessage.SetProtocolID(notifications.ProtocolID)
-			notificationRequestMessage.SetCallID(CurrentMatchmakingCallID)
-			CurrentMatchmakingCallID+=1
+			notificationRequestMessage.SetCallID(CurrentMatchmakingCallID.Increment())
 			notificationRequestMessage.SetMethodID(notifications.MethodProcessNotificationEvent)
 
 			notificationCategory := notifications.NotificationCategories.Participation
@@ -431,7 +427,7 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 			oEvent.Type = notifications.BuildNotificationType(notificationCategory, notificationSubtype)
 			oEvent.Param1 = session.GameMatchmakeSession.ID
 			oEvent.Param2 = target.PID()
-			oEvent.StrParam = ""
+			oEvent.StrParam = joinMessage
 			oEvent.Param3 = uint32(len(connectionIDs))
 
 			notificationStream := nex.NewStreamOut(server)
@@ -440,7 +436,6 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 
 			notificationRequestMessage.SetParameters(notificationStream.Bytes())
 			notificationRequestBytes := notificationRequestMessage.Bytes()
-			//fmt.Println(hex.EncodeToString(notificationRequestBytes))
 
 			var messagePacket nex.PacketInterface
 
@@ -465,8 +460,7 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 
 		notificationRequestMessage := nex.NewRMCRequest()
 		notificationRequestMessage.SetProtocolID(notifications.ProtocolID)
-		notificationRequestMessage.SetCallID(CurrentMatchmakingCallID)
-		CurrentMatchmakingCallID+=1
+		notificationRequestMessage.SetCallID(CurrentMatchmakingCallID.Increment())
 		notificationRequestMessage.SetMethodID(notifications.MethodProcessNotificationEvent)
 
 		notificationCategory := notifications.NotificationCategories.Participation
@@ -477,7 +471,7 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 		oEvent.Type = notifications.BuildNotificationType(notificationCategory, notificationSubtype)
 		oEvent.Param1 = session.GameMatchmakeSession.ID
 		oEvent.Param2 = initiatingClient.PID()
-		oEvent.StrParam = ""
+		oEvent.StrParam = joinMessage
 		oEvent.Param3 = uint32(len(connectionIDs))
 
 		notificationStream := nex.NewStreamOut(server)
@@ -552,8 +546,7 @@ func ChangeSessionOwner(ownerClient *nex.Client, gathering uint32) {
 
 	rmcMessage := nex.NewRMCRequest()
 	rmcMessage.SetProtocolID(notifications.ProtocolID)
-	rmcMessage.SetCallID(CurrentMatchmakingCallID)
-	CurrentMatchmakingCallID+=1
+	rmcMessage.SetCallID(CurrentMatchmakingCallID.Increment())
 	rmcMessage.SetMethodID(notifications.MethodProcessNotificationEvent)
 
 	category := notifications.NotificationCategories.OwnershipChanged

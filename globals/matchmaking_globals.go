@@ -14,4 +14,4 @@ type CommonMatchmakeSession struct {
 
 var Sessions map[uint32]*CommonMatchmakeSession
 var CurrentGatheringID = nex.NewCounter(0)
-var CurrentMatchmakingCallID uint32
+var CurrentMatchmakingCallID = nex.NewCounter(0)

@@ -39,57 +39,11 @@ func autoMatchmakeWithParam_Postpone(err error, client *nex.Client, callID uint3
 			logger.Error(err.Error())
 			return errCode
 		}
-	}else{
+	} else {
 		session = common_globals.Sessions[sessionIndex]
 	}
-		/*sessionIndex = common_globals.GetAvailableGatheringID()
-		// This should in theory be impossible, as there aren't enough PIDs creating sessions to fill the uint32 limit.
-		// If we ever get here, we must be not deleting sessions properly
-		if sessionIndex == 0 {
-			logger.Critical("No gatherings available!")
-			return nex.Errors.RendezVous.LimitExceeded
-		}
 
-		session := common_globals.CommonMatchmakeSession{
-			SearchMatchmakeSession: searchMatchmakeSession,
-			GameMatchmakeSession:   matchmakeSession,
-		}
-
-		session = &session
-		session.GameMatchmakeSession.Gathering.ID = sessionIndex
-		session.GameMatchmakeSession.Gathering.OwnerPID = client.PID()
-		session.GameMatchmakeSession.Gathering.HostPID = client.PID()
-
-		session.GameMatchmakeSession.StartedTime = nex.NewDateTime(0)
-		session.GameMatchmakeSession.StartedTime.UTC()
-		session.GameMatchmakeSession.SessionKey = make([]byte, 32)
-
-		session.GameMatchmakeSession.MatchmakeParam.Parameters["@SR"] = nex.NewVariant()
-		session.GameMatchmakeSession.MatchmakeParam.Parameters["@SR"].TypeID = 3
-		session.GameMatchmakeSession.MatchmakeParam.Parameters["@SR"].Bool = true
-	
-		session.GameMatchmakeSession.MatchmakeParam.Parameters["@GIR"] = nex.NewVariant()
-		session.GameMatchmakeSession.MatchmakeParam.Parameters["@GIR"].TypeID = 1
-		session.GameMatchmakeSession.MatchmakeParam.Parameters["@GIR"].Int64 = 3
-	
-		session.GameMatchmakeSession.MatchmakeParam.Parameters["@Lon"] = nex.NewVariant()
-		session.GameMatchmakeSession.MatchmakeParam.Parameters["@Lon"].TypeID = 2
-		session.GameMatchmakeSession.MatchmakeParam.Parameters["@Lon"].Float64 = 0
-	
-		session.GameMatchmakeSession.MatchmakeParam.Parameters["@Lat"] = nex.NewVariant()
-		session.GameMatchmakeSession.MatchmakeParam.Parameters["@Lat"].TypeID = 2
-		session.GameMatchmakeSession.MatchmakeParam.Parameters["@Lat"].Float64 = 0
-	
-		session.GameMatchmakeSession.MatchmakeParam.Parameters["@CC"] = nex.NewVariant()
-		session.GameMatchmakeSession.MatchmakeParam.Parameters["@CC"].TypeID = 4
-		session.GameMatchmakeSession.MatchmakeParam.Parameters["@CC"].Str = "US"
-	
-		session.GameMatchmakeSession.MatchmakeParam.Parameters["@DR"] = nex.NewVariant()
-		session.GameMatchmakeSession.MatchmakeParam.Parameters["@DR"].TypeID = 1
-		session.GameMatchmakeSession.MatchmakeParam.Parameters["@DR"].Int64 = 0
-	}*/
-
-	err, errCode := common_globals.AddPlayersToSession(session, []uint32{client.ConnectionID()}, client)
+	err, errCode := common_globals.AddPlayersToSession(session, []uint32{client.ConnectionID()}, client, "")
 	if err != nil {
 		logger.Error(err.Error())
 		return errCode

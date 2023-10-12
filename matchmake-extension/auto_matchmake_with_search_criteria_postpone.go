@@ -50,7 +50,7 @@ func autoMatchmakeWithSearchCriteria_Postpone(err error, client *nex.Client, cal
 		session = sessions[0]
 	}
 
-	err, errCode := common_globals.AddPlayersToSession(session, []uint32{client.ConnectionID()}, client)
+	err, errCode := common_globals.AddPlayersToSession(session, []uint32{client.ConnectionID()}, client, message)
 	if err != nil {
 		logger.Error(err.Error())
 		return errCode

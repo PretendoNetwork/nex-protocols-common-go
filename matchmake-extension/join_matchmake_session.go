@@ -21,7 +21,7 @@ func joinMatchmakeSession(err error, client *nex.Client, callID uint32, gid uint
 
 	// TODO - More checks here
 
-	err, errCode := common_globals.AddPlayersToSession(session, []uint32{client.ConnectionID()}, client)
+	err, errCode := common_globals.AddPlayersToSession(session, []uint32{client.ConnectionID()}, client, strMessage)
 	if err != nil {
 		logger.Error(err.Error())
 		return errCode

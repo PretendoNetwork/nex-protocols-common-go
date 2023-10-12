@@ -35,7 +35,7 @@ func createMatchmakeSession(err error, client *nex.Client, callID uint32, anyGat
 		return errCode
 	}
 
-	err, errCode = common_globals.AddPlayersToSession(session, []uint32{client.ConnectionID()}, client)
+	err, errCode = common_globals.AddPlayersToSession(session, []uint32{client.ConnectionID()}, client, message)
 	if err != nil {
 		logger.Error(err.Error())
 		return errCode

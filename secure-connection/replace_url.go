@@ -17,6 +17,7 @@ func replaceURL(err error, client *nex.Client, callID uint32, oldStation *nex.St
 	for i := 0; i < len(stations); i++ {
 		currentStation := stations[i]
 		if currentStation.Address() == oldStation.Address() && currentStation.Port() == oldStation.Port() {
+			newStation.SetPID(client.PID()) //This fixes Minecraft, but is obviously incorrect. TODO: What are we really meant to do here?
 			stations[i] = newStation
 		}
 	}

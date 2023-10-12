@@ -46,11 +46,11 @@ func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, anyGat
 			logger.Error(err.Error())
 			return errCode
 		}
-	}else{
+	} else {
 		session = common_globals.Sessions[sessionIndex]
 	}
 
-	err, errCode := common_globals.AddPlayersToSession(session, []uint32{client.ConnectionID()}, client)
+	err, errCode := common_globals.AddPlayersToSession(session, []uint32{client.ConnectionID()}, client, message)
 	if err != nil {
 		logger.Error(err.Error())
 		return errCode
@@ -81,7 +81,7 @@ func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, anyGat
 	responsePacket.SetSource(0xA1)
 	responsePacket.SetDestination(0xAF)
 	responsePacket.SetType(nex.DataPacket)
-	responsePacket.SetPayload(rmcResponseBytes)	
+	responsePacket.SetPayload(rmcResponseBytes)
 
 	responsePacket.AddFlag(nex.FlagNeedsAck)
 	responsePacket.AddFlag(nex.FlagReliable)
