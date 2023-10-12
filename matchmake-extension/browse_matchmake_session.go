@@ -23,7 +23,7 @@ func browseMatchmakeSession(err error, client *nex.Client, callID uint32, search
 
 	commonMatchmakeExtensionProtocol.cleanupMatchmakeSessionSearchCriteriaHandler(searchCriterias)
 
-	sessions := common_globals.FindSessionsByMatchmakeSessionSearchCriterias(searchCriterias, commonMatchmakeExtensionProtocol.gameSpecificMatchmakeSessionSearcgCriteriaChecksHandler)
+	sessions := common_globals.FindSessionsByMatchmakeSessionSearchCriterias(searchCriterias, commonMatchmakeExtensionProtocol.gameSpecificMatchmakeSessionSearchCriteriaChecksHandler)
 
 	if len(sessions) < int(resultRange.Offset) {
 		return nex.Errors.Core.InvalidIndex

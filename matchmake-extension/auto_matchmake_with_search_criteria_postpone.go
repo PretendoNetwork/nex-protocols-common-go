@@ -38,7 +38,7 @@ func autoMatchmakeWithSearchCriteria_Postpone(err error, client *nex.Client, cal
 		return nex.Errors.Core.InvalidArgument
 	}
 
-	sessions := common_globals.FindSessionsByMatchmakeSessionSearchCriterias(lstSearchCriteria, commonMatchmakeExtensionProtocol.gameSpecificMatchmakeSessionSearcgCriteriaChecksHandler)
+	sessions := common_globals.FindSessionsByMatchmakeSessionSearchCriterias(lstSearchCriteria, commonMatchmakeExtensionProtocol.gameSpecificMatchmakeSessionSearchCriteriaChecksHandler)
 	var session *common_globals.CommonMatchmakeSession
 
 	if len(sessions) == 0 {
