@@ -22,7 +22,7 @@ func updateApplicationBuffer(err error, client *nex.Client, callID uint32, gid u
 	session.GameMatchmakeSession.ApplicationData = applicationBuffer
 
 	rmcResponse := nex.NewRMCResponse(matchmake_extension.ProtocolID, callID)
-	rmcResponse.SetSuccess(matchmake_extension.MethodOpenParticipation, nil)
+	rmcResponse.SetSuccess(matchmake_extension.MethodUpdateApplicationBuffer, nil)
 
 	rmcResponseBytes := rmcResponse.Bytes()
 
