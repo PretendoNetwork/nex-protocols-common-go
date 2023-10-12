@@ -5,7 +5,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
-	"crypto/rand" 
+	"crypto/rand"
 
 	nex "github.com/PretendoNetwork/nex-go"
 	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
