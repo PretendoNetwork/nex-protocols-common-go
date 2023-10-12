@@ -20,7 +20,7 @@ type CommonMatchmakeExtensionProtocol struct {
 
 	cleanupSearchMatchmakeSessionHandler                    func(matchmakeSession *match_making_types.MatchmakeSession)
 	cleanupMatchmakeSessionSearchCriteriaHandler            func(lstSearchCriteria []*match_making_types.MatchmakeSessionSearchCriteria)
-	gameSpecificMatchmakeSessionSearcgCriteriaChecksHandler func(requestSearchCriteria, sessionSearchCriteria *match_making_types.MatchmakeSessionSearchCriteria) bool
+	gameSpecificMatchmakeSessionSearchCriteriaChecksHandler func(requestSearchCriteria, sessionSearchCriteria *match_making_types.MatchmakeSessionSearchCriteria) bool
 }
 
 // CleanupSearchMatchmakeSession sets the CleanupSearchMatchmakeSession handler function
@@ -33,9 +33,9 @@ func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) Cleanu
 	commonMatchmakeExtensionProtocol.cleanupMatchmakeSessionSearchCriteriaHandler = handler
 }
 
-// GameSpecificMatchmakeSessionSearcgCriteriaChecks sets the GameSpecificMatchmakeSessionSearcgCriteriaChecks handler function
-func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) GameSpecificMatchmakeSessionSearcgCriteriaChecks(handler func(requestSearchCriteria, sessionSearchCriteria *match_making_types.MatchmakeSessionSearchCriteria) bool) {
-	commonMatchmakeExtensionProtocol.gameSpecificMatchmakeSessionSearcgCriteriaChecksHandler = handler
+// GameSpecificMatchmakeSessionSearchCriteriaChecks sets the GameSpecificMatchmakeSessionSearchCriteriaChecks handler function
+func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) GameSpecificMatchmakeSessionSearchCriteriaChecks(handler func(requestSearchCriteria, sessionSearchCriteria *match_making_types.MatchmakeSessionSearchCriteria) bool) {
+	commonMatchmakeExtensionProtocol.gameSpecificMatchmakeSessionSearchCriteriaChecksHandler = handler
 }
 
 func initDefault(c *CommonMatchmakeExtensionProtocol) {
