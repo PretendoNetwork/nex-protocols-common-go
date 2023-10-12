@@ -5,7 +5,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
-	"math/rand" 
+	"crypto/rand" 
 
 	nex "github.com/PretendoNetwork/nex-go"
 	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
@@ -481,8 +481,6 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 		notificationRequestMessage.SetParameters(notificationStream.Bytes())
 		notificationRequestBytes := notificationRequestMessage.Bytes()
 
-		target := server.FindClientFromPID(uint32(session.GameMatchmakeSession.Gathering.OwnerPID))
-
 		var messagePacket nex.PacketInterface
 
 		if server.PRUDPVersion() == 0 {
@@ -502,6 +500,13 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 		messagePacket.AddFlag(nex.FlagReliable)
 
 		server.Send(messagePacket)
+
+		target := server.FindClientFromPID(uint32(session.GameMatchmakeSession.Gathering.OwnerPID))
+		if target == nil {
+			// TODO - Error here?
+			//logger.Warning("Player not found")
+			return nil, 0
+		}
 
 		if server.PRUDPVersion() == 0 {
 			messagePacket, _ = nex.NewPacketV0(target, nil)
