@@ -61,7 +61,7 @@ func updateSessionHost(err error, client *nex.Client, callID uint32, gid uint32,
 
 	rmcMessage := nex.NewRMCRequest()
 	rmcMessage.SetProtocolID(notifications.ProtocolID)
-	rmcMessage.SetCallID(0xffff0000 + callID)
+	rmcMessage.SetCallID(common_globals.CurrentMatchmakingCallID.Increment())
 	rmcMessage.SetMethodID(notifications.MethodProcessNotificationEvent)
 
 	category := notifications.NotificationCategories.OwnershipChanged
