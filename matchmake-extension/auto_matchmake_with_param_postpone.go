@@ -8,7 +8,7 @@ import (
 )
 
 func autoMatchmakeWithParam_Postpone(err error, client *nex.Client, callID uint32, autoMatchmakeParam *match_making_types.AutoMatchmakeParam) uint32 {
-	if commonMatchmakeExtensionProtocol.cleanupSearchMatchmakeSessionHandler == nil {
+	if commonMatchmakeExtensionProtocol.cleanupMatchmakeSessionSearchCriteriaHandler == nil {
 		logger.Warning("MatchmakeExtension::AutoMatchmake_Postpone missing CleanupSearchMatchmakeSessionHandler!")
 		return nex.Errors.Core.NotImplemented
 	}
@@ -27,20 +27,20 @@ func autoMatchmakeWithParam_Postpone(err error, client *nex.Client, callID uint3
 	var matchmakeSession *match_making_types.MatchmakeSession
 	matchmakeSession = autoMatchmakeParam.SourceMatchmakeSession
 
-	searchMatchmakeSession := matchmakeSession.Copy().(*match_making_types.MatchmakeSession)
-	commonMatchmakeExtensionProtocol.cleanupSearchMatchmakeSessionHandler(searchMatchmakeSession)
-	sessionIndex := common_globals.FindSessionByMatchmakeSession(searchMatchmakeSession)
+	commonMatchmakeExtensionProtocol.cleanupMatchmakeSessionSearchCriteriaHandler(autoMatchmakeParam.LstSearchCriteria)
+
+	sessions := common_globals.FindSessionsByMatchmakeSessionSearchCriterias(autoMatchmakeParam.LstSearchCriteria, commonMatchmakeExtensionProtocol.gameSpecificMatchmakeSessionSearchCriteriaChecksHandler)
 	var session *common_globals.CommonMatchmakeSession
 
-	if sessionIndex == 0 {
+	if len(sessions) == 0 {
 		var errCode uint32
-		session, err, errCode = common_globals.CreateSessionByMatchmakeSession(matchmakeSession, searchMatchmakeSession, client.PID())
+		session, err, errCode = common_globals.CreateSessionBySearchCriteria(matchmakeSession, autoMatchmakeParam.LstSearchCriteria, client.PID())
 		if err != nil {
 			logger.Error(err.Error())
 			return errCode
 		}
 	} else {
-		session = common_globals.Sessions[sessionIndex]
+		session = sessions[0]
 	}
 
 	err, errCode := common_globals.AddPlayersToSession(session, []uint32{client.ConnectionID()}, client, "")

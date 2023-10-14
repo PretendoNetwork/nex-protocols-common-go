@@ -255,7 +255,7 @@ func FindSessionsByMatchmakeSessionSearchCriterias(lstSearchCriteria []*match_ma
 							continue
 						}
 
-						if session.SearchMatchmakeSession.MinimumParticipants < uint16(min) {
+						if session.GameMatchmakeSession.MinimumParticipants < uint16(min) {
 							continue
 						}
 					}
@@ -267,7 +267,7 @@ func FindSessionsByMatchmakeSessionSearchCriterias(lstSearchCriteria []*match_ma
 							continue
 						}
 
-						if session.SearchMatchmakeSession.MinimumParticipants > uint16(max) {
+						if session.GameMatchmakeSession.MinimumParticipants > uint16(max) {
 							continue
 						}
 					}
@@ -289,7 +289,7 @@ func FindSessionsByMatchmakeSessionSearchCriterias(lstSearchCriteria []*match_ma
 							continue
 						}
 
-						if session.SearchMatchmakeSession.MaximumParticipants < uint16(min) {
+						if session.GameMatchmakeSession.MaximumParticipants < uint16(min) {
 							continue
 						}
 					}
@@ -301,7 +301,7 @@ func FindSessionsByMatchmakeSessionSearchCriterias(lstSearchCriteria []*match_ma
 							continue
 						}
 
-						if session.SearchMatchmakeSession.MaximumParticipants > uint16(max) {
+						if session.GameMatchmakeSession.MaximumParticipants > uint16(max) {
 							continue
 						}
 					}
