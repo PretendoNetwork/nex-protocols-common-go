@@ -20,7 +20,7 @@ func createMatchmakeSessionWithParam(err error, client *nex.Client, callID uint3
 	common_globals.RemoveClientFromAllSessions(client)
 
 	joinedMatchmakeSession := createMatchmakeSessionParam.SourceMatchmakeSession.Copy().(*match_making_types.MatchmakeSession)
-	session, err, errCode := common_globals.CreateSessionBySearchCriteria(joinedMatchmakeSession, make([]*match_making_types.MatchmakeSessionSearchCriteria, 0), client.PID())
+	session, err, errCode := common_globals.CreateSessionByMatchmakeSession(joinedMatchmakeSession, nil, client.PID())
 	if err != nil {
 		logger.Error(err.Error())
 		return errCode

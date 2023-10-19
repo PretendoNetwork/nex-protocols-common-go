@@ -8,11 +8,6 @@ import (
 )
 
 func browseMatchmakeSession(err error, client *nex.Client, callID uint32, searchCriteria *match_making_types.MatchmakeSessionSearchCriteria, resultRange *nex.ResultRange) uint32 {
-	if commonMatchmakeExtensionProtocol.cleanupMatchmakeSessionSearchCriteriaHandler == nil {
-		logger.Warning("MatchmakeExtension::BrowseMatchmakeSession missing CleanupMatchmakeSessionSearchCriteriaHandler!")
-		return nex.Errors.Core.NotImplemented
-	}
-
 	if err != nil {
 		logger.Error(err.Error())
 		return nex.Errors.Core.InvalidArgument
@@ -21,9 +16,7 @@ func browseMatchmakeSession(err error, client *nex.Client, callID uint32, search
 	server := commonMatchmakeExtensionProtocol.server
 	searchCriterias := []*match_making_types.MatchmakeSessionSearchCriteria{searchCriteria}
 
-	commonMatchmakeExtensionProtocol.cleanupMatchmakeSessionSearchCriteriaHandler(searchCriterias)
-
-	sessions := common_globals.FindSessionsByMatchmakeSessionSearchCriterias(searchCriterias, commonMatchmakeExtensionProtocol.gameSpecificMatchmakeSessionSearchCriteriaChecksHandler)
+	sessions := common_globals.FindSessionsByMatchmakeSessionSearchCriterias(client.PID(), searchCriterias, commonMatchmakeExtensionProtocol.gameSpecificMatchmakeSessionSearchCriteriaChecksHandler)
 
 	if len(sessions) < int(resultRange.Offset) {
 		return nex.Errors.Core.InvalidIndex

@@ -29,7 +29,7 @@ func createMatchmakeSession(err error, client *nex.Client, callID uint32, anyGat
 		return nex.Errors.Core.InvalidArgument
 	}
 
-	session, err, errCode := common_globals.CreateSessionBySearchCriteria(matchmakeSession, make([]*match_making_types.MatchmakeSessionSearchCriteria, 0), client.PID())
+	session, err, errCode := common_globals.CreateSessionByMatchmakeSession(matchmakeSession, nil, client.PID())
 	if err != nil {
 		logger.Error(err.Error())
 		return errCode

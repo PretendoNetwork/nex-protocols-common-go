@@ -36,7 +36,7 @@ func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, anyGat
 
 	searchMatchmakeSession := matchmakeSession.Copy().(*match_making_types.MatchmakeSession)
 	commonMatchmakeExtensionProtocol.cleanupSearchMatchmakeSessionHandler(searchMatchmakeSession)
-	sessionIndex := common_globals.FindSessionByMatchmakeSession(searchMatchmakeSession)
+	sessionIndex := common_globals.FindSessionByMatchmakeSession(client.PID(), searchMatchmakeSession)
 	var session *common_globals.CommonMatchmakeSession
 
 	if sessionIndex == 0 {
