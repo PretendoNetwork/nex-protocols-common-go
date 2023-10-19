@@ -7,9 +7,9 @@ import (
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension"
 )
 
-func autoMatchmakeWithSearchCriteria_Postpone(err error, client *nex.Client, callID uint32, lstSearchCriteria []*match_making_types.MatchmakeSessionSearchCriteria, anyGathering *nex.DataHolder, message string) uint32 {
+func autoMatchmakeWithParam_Postpone(err error, client *nex.Client, callID uint32, autoMatchmakeParam *match_making_types.AutoMatchmakeParam) uint32 {
 	if commonMatchmakeExtensionProtocol.cleanupMatchmakeSessionSearchCriteriaHandler == nil {
-		logger.Warning("MatchmakeExtension::AutoMatchmakeWithSearchCriteria_Postpone missing CleanupMatchmakeSessionSearchCriteriaHandler!")
+		logger.Warning("MatchmakeExtension::AutoMatchmake_Postpone missing CleanupSearchMatchmakeSessionHandler!")
 		return nex.Errors.Core.NotImplemented
 	}
 
@@ -18,30 +18,23 @@ func autoMatchmakeWithSearchCriteria_Postpone(err error, client *nex.Client, cal
 		return nex.Errors.Core.InvalidArgument
 	}
 
-	commonMatchmakeExtensionProtocol.cleanupMatchmakeSessionSearchCriteriaHandler(lstSearchCriteria)
-
 	server := commonMatchmakeExtensionProtocol.server
 
-	// * A client may disconnect from a session without leaving reliably,
-	// * so let's make sure the client is removed from the session
+	// A client may disconnect from a session without leaving reliably,
+	// so let's make sure the client is removed from the session
 	common_globals.RemoveClientFromAllSessions(client)
 
 	var matchmakeSession *match_making_types.MatchmakeSession
-	anyGatheringDataType := anyGathering.TypeName()
+	matchmakeSession = autoMatchmakeParam.SourceMatchmakeSession
 
-	if anyGatheringDataType == "MatchmakeSession" {
-		matchmakeSession = anyGathering.ObjectData().(*match_making_types.MatchmakeSession)
-	} else {
-		logger.Critical("Non-MatchmakeSession DataType?!")
-		return nex.Errors.Core.InvalidArgument
-	}
+	commonMatchmakeExtensionProtocol.cleanupMatchmakeSessionSearchCriteriaHandler(autoMatchmakeParam.LstSearchCriteria)
 
-	sessions := common_globals.FindSessionsByMatchmakeSessionSearchCriterias(lstSearchCriteria, commonMatchmakeExtensionProtocol.gameSpecificMatchmakeSessionSearchCriteriaChecksHandler)
+	sessions := common_globals.FindSessionsByMatchmakeSessionSearchCriterias(autoMatchmakeParam.LstSearchCriteria, commonMatchmakeExtensionProtocol.gameSpecificMatchmakeSessionSearchCriteriaChecksHandler)
 	var session *common_globals.CommonMatchmakeSession
 
 	if len(sessions) == 0 {
 		var errCode uint32
-		session, err, errCode = common_globals.CreateSessionBySearchCriteria(matchmakeSession, lstSearchCriteria, client.PID())
+		session, err, errCode = common_globals.CreateSessionBySearchCriteria(matchmakeSession, autoMatchmakeParam.LstSearchCriteria, client.PID())
 		if err != nil {
 			logger.Error(err.Error())
 			return errCode
@@ -50,7 +43,7 @@ func autoMatchmakeWithSearchCriteria_Postpone(err error, client *nex.Client, cal
 		session = sessions[0]
 	}
 
-	err, errCode := common_globals.AddPlayersToSession(session, []uint32{client.ConnectionID()}, client, message)
+	err, errCode := common_globals.AddPlayersToSession(session, []uint32{client.ConnectionID()}, client, "")
 	if err != nil {
 		logger.Error(err.Error())
 		return errCode
@@ -60,12 +53,12 @@ func autoMatchmakeWithSearchCriteria_Postpone(err error, client *nex.Client, cal
 	matchmakeDataHolder := nex.NewDataHolder()
 	matchmakeDataHolder.SetTypeName("MatchmakeSession")
 	matchmakeDataHolder.SetObjectData(session.GameMatchmakeSession)
-	rmcResponseStream.WriteDataHolder(matchmakeDataHolder)
+	rmcResponseStream.WriteStructure(session.GameMatchmakeSession)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
 	rmcResponse := nex.NewRMCResponse(matchmake_extension.ProtocolID, callID)
-	rmcResponse.SetSuccess(matchmake_extension.MethodAutoMatchmakeWithSearchCriteriaPostpone, rmcResponseBody)
+	rmcResponse.SetSuccess(matchmake_extension.MethodAutoMatchmakeWithParamPostpone, rmcResponseBody)
 
 	rmcResponseBytes := rmcResponse.Bytes()
 
@@ -78,7 +71,6 @@ func autoMatchmakeWithSearchCriteria_Postpone(err error, client *nex.Client, cal
 		responsePacket, _ = nex.NewPacketV1(client, nil)
 		responsePacket.SetVersion(1)
 	}
-
 	responsePacket.SetSource(0xA1)
 	responsePacket.SetDestination(0xAF)
 	responsePacket.SetType(nex.DataPacket)

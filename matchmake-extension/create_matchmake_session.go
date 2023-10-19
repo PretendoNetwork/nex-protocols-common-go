@@ -29,29 +29,13 @@ func createMatchmakeSession(err error, client *nex.Client, callID uint32, anyGat
 		return nex.Errors.Core.InvalidArgument
 	}
 
-	sessionIndex := common_globals.GetAvailableGatheringID()
-	// This should in theory be impossible, as there aren't enough PIDs creating sessions to fill the uint32 limit.
-	// If we ever get here, we must be not deleting sessions properly
-	if sessionIndex == 0 {
-		logger.Critical("No gatherings available!")
-		return nex.Errors.RendezVous.LimitExceeded
+	session, err, errCode := common_globals.CreateSessionBySearchCriteria(matchmakeSession, make([]*match_making_types.MatchmakeSessionSearchCriteria, 0), client.PID())
+	if err != nil {
+		logger.Error(err.Error())
+		return errCode
 	}
 
-	session := common_globals.CommonMatchmakeSession{
-		SearchCriteria:       make([]*match_making_types.MatchmakeSessionSearchCriteria, 0),
-		GameMatchmakeSession: matchmakeSession,
-	}
-
-	common_globals.Sessions[sessionIndex] = &session
-	common_globals.Sessions[sessionIndex].GameMatchmakeSession.Gathering.ID = sessionIndex
-	common_globals.Sessions[sessionIndex].GameMatchmakeSession.Gathering.OwnerPID = client.PID()
-	common_globals.Sessions[sessionIndex].GameMatchmakeSession.Gathering.HostPID = client.PID()
-
-	common_globals.Sessions[sessionIndex].GameMatchmakeSession.StartedTime = nex.NewDateTime(0)
-	common_globals.Sessions[sessionIndex].GameMatchmakeSession.StartedTime.UTC()
-	common_globals.Sessions[sessionIndex].GameMatchmakeSession.SessionKey = make([]byte, 32)
-
-	err, errCode := common_globals.AddPlayersToSession(common_globals.Sessions[sessionIndex], []uint32{client.ConnectionID()})
+	err, errCode = common_globals.AddPlayersToSession(session, []uint32{client.ConnectionID()}, client, message)
 	if err != nil {
 		logger.Error(err.Error())
 		return errCode
@@ -59,10 +43,10 @@ func createMatchmakeSession(err error, client *nex.Client, callID uint32, anyGat
 
 	rmcResponseStream := nex.NewStreamOut(server)
 
-	rmcResponseStream.WriteUInt32LE(sessionIndex)
+	rmcResponseStream.WriteUInt32LE(session.GameMatchmakeSession.Gathering.ID)
 
 	if server.MatchMakingProtocolVersion().GreaterOrEqual("3.0.0") {
-		rmcResponseStream.WriteBuffer(matchmakeSession.SessionKey)
+		rmcResponseStream.WriteBuffer(session.GameMatchmakeSession.SessionKey)
 	}
 
 	rmcResponseBody := rmcResponseStream.Bytes()
