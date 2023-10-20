@@ -9,7 +9,7 @@ import (
 
 func browseMatchmakeSession(err error, client *nex.Client, callID uint32, searchCriteria *match_making_types.MatchmakeSessionSearchCriteria, resultRange *nex.ResultRange) uint32 {
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		return nex.Errors.Core.InvalidArgument
 	}
 

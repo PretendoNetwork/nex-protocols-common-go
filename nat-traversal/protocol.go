@@ -3,11 +3,9 @@ package nattraversal
 import (
 	nex "github.com/PretendoNetwork/nex-go"
 	nat_traversal "github.com/PretendoNetwork/nex-protocols-go/nat-traversal"
-	"github.com/PretendoNetwork/plogger-go"
 )
 
 var commonNATTraversalProtocol *CommonNATTraversalProtocol
-var logger = plogger.NewLogger()
 
 type CommonNATTraversalProtocol struct {
 	*nat_traversal.Protocol

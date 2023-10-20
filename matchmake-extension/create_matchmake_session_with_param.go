@@ -9,7 +9,7 @@ import (
 
 func createMatchmakeSessionWithParam(err error, client *nex.Client, callID uint32, createMatchmakeSessionParam *match_making_types.CreateMatchmakeSessionParam) uint32 {
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		return nex.Errors.Core.InvalidArgument
 	}
 
@@ -22,13 +22,13 @@ func createMatchmakeSessionWithParam(err error, client *nex.Client, callID uint3
 	joinedMatchmakeSession := createMatchmakeSessionParam.SourceMatchmakeSession.Copy().(*match_making_types.MatchmakeSession)
 	session, err, errCode := common_globals.CreateSessionByMatchmakeSession(joinedMatchmakeSession, nil, client.PID())
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		return errCode
 	}
 
 	err, errCode = common_globals.AddPlayersToSession(session, []uint32{client.ConnectionID()}, client, createMatchmakeSessionParam.JoinMessage)
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		return errCode
 	}
 

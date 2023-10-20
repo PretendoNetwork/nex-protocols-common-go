@@ -7,11 +7,9 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 	_ "github.com/PretendoNetwork/nex-protocols-go"
 	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
-	"github.com/PretendoNetwork/plogger-go"
 )
 
 var commonMatchMakingProtocol *CommonMatchMakingProtocol
-var logger = plogger.NewLogger()
 
 type CommonMatchMakingProtocol struct {
 	*match_making.Protocol

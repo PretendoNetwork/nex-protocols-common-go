@@ -3,11 +3,9 @@ package secureconnection
 import (
 	"github.com/PretendoNetwork/nex-go"
 	secure_connection "github.com/PretendoNetwork/nex-protocols-go/secure-connection"
-	"github.com/PretendoNetwork/plogger-go"
 )
 
 var commonSecureConnectionProtocol *CommonSecureConnectionProtocol
-var logger = plogger.NewLogger()
 
 type CommonSecureConnectionProtocol struct {
 	*secure_connection.Protocol

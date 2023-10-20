@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"github.com/PretendoNetwork/nex-go"
+
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
 func connect(packet nex.PacketInterface) {
@@ -14,14 +16,14 @@ func connect(packet nex.PacketInterface) {
 
 	ticketData, err := stream.ReadBuffer()
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		server.TimeoutKick(packet.Sender())
 		return
 	}
 
 	requestData, err := stream.ReadBuffer()
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		server.TimeoutKick(packet.Sender())
 		return
 	}
@@ -31,7 +33,7 @@ func connect(packet nex.PacketInterface) {
 	ticket := nex.NewKerberosTicketInternalData()
 	err = ticket.Decrypt(nex.NewStreamIn(ticketData, server), serverKey)
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		server.TimeoutKick(packet.Sender())
 		return
 	}
@@ -41,7 +43,7 @@ func connect(packet nex.PacketInterface) {
 
 	timeLimit := ticketTime.Add(time.Minute * 2)
 	if serverTime.After(timeLimit) {
-		logger.Error("Kerberos ticket expired")
+		common_globals.Logger.Error("Kerberos ticket expired")
 		server.TimeoutKick(packet.Sender())
 		return
 	}
@@ -49,7 +51,7 @@ func connect(packet nex.PacketInterface) {
 	sessionKey := ticket.SessionKey()
 	kerberos, err := nex.NewKerberosEncryption(sessionKey)
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		server.TimeoutKick(packet.Sender())
 		return
 	}
@@ -59,21 +61,21 @@ func connect(packet nex.PacketInterface) {
 
 	userPID, err := checkDataStream.ReadUInt32LE()
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		server.TimeoutKick(packet.Sender())
 		return
 	}
 
 	_, err = checkDataStream.ReadUInt32LE() // CID of secure server station url
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		server.TimeoutKick(packet.Sender())
 		return
 	}
 
 	responseCheck, err := checkDataStream.ReadUInt32LE()
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		server.TimeoutKick(packet.Sender())
 		return
 	}
@@ -88,7 +90,7 @@ func connect(packet nex.PacketInterface) {
 
 	err = packet.Sender().UpdateRC4Key(sessionKey)
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		server.TimeoutKick(packet.Sender())
 		return
 	}

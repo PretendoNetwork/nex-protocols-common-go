@@ -5,13 +5,10 @@ import (
 	"time"
 
 	nex "github.com/PretendoNetwork/nex-go"
-	_ "github.com/PretendoNetwork/nex-protocols-go"
 	utility "github.com/PretendoNetwork/nex-protocols-go/utility"
-	"github.com/PretendoNetwork/plogger-go"
 )
 
 var commonUtilityProtocol *CommonUtilityProtocol
-var logger = plogger.NewLogger()
 
 type CommonUtilityProtocol struct {
 	*utility.Protocol

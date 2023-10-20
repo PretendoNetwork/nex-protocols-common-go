@@ -7,13 +7,11 @@ import (
 	match_making_types "github.com/PretendoNetwork/nex-protocols-go/match-making/types"
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension"
 	matchmake_extension_mario_kart_8 "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension/mario-kart-8"
-	"github.com/PretendoNetwork/plogger-go"
 
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
 var commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol
-var logger = plogger.NewLogger()
 
 type CommonMatchmakeExtensionProtocol struct {
 	server             *nex.Server
@@ -77,14 +75,14 @@ func NewCommonMatchmakeExtensionProtocol(server *nex.Server) *CommonMatchmakeExt
 	patch := server.MatchMakingProtocolVersion().GameSpecificPatch
 
 	if strings.EqualFold(patch, "AMKJ") {
-		logger.Info("Using Mario Kart 8 MatchmakeExtension protocol")
+		common_globals.Logger.Info("Using Mario Kart 8 MatchmakeExtension protocol")
 		initMarioKart8(commonMatchmakeExtensionProtocol)
 	} else {
 		if patch != "" {
-			logger.Infof("Matchmaking version patch %q not recognized", patch)
+			common_globals.Logger.Infof("Matchmaking version patch %q not recognized", patch)
 		}
 
-		logger.Info("Using default MatchmakeExtension protocol")
+		common_globals.Logger.Info("Using default MatchmakeExtension protocol")
 		initDefault(commonMatchmakeExtensionProtocol)
 	}
 

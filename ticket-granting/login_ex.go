@@ -6,11 +6,13 @@ import (
 
 	nex "github.com/PretendoNetwork/nex-go"
 	ticket_granting "github.com/PretendoNetwork/nex-protocols-go/ticket-granting"
+
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
 func loginEx(err error, client *nex.Client, callID uint32, username string, oExtraData *nex.DataHolder) uint32 {
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		return nex.Errors.Core.InvalidArgument
 	}
 

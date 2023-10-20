@@ -8,7 +8,7 @@ import (
 
 func joinMatchmakeSession(err error, client *nex.Client, callID uint32, gid uint32, strMessage string) uint32 {
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		return nex.Errors.Core.InvalidArgument
 	}
 
@@ -23,7 +23,7 @@ func joinMatchmakeSession(err error, client *nex.Client, callID uint32, gid uint
 
 	err, errCode := common_globals.AddPlayersToSession(session, []uint32{client.ConnectionID()}, client, strMessage)
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		return errCode
 	}
 

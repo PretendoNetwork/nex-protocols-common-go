@@ -7,11 +7,11 @@ import (
 	ranking "github.com/PretendoNetwork/nex-protocols-go/ranking"
 	ranking_mario_kart_8 "github.com/PretendoNetwork/nex-protocols-go/ranking/mario-kart-8"
 	ranking_types "github.com/PretendoNetwork/nex-protocols-go/ranking/types"
-	"github.com/PretendoNetwork/plogger-go"
+
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
 var commonRankingProtocol *CommonRankingProtocol
-var logger = plogger.NewLogger()
 
 type CommonRankingProtocol struct {
 	server             *nex.Server
@@ -73,14 +73,14 @@ func NewCommonRankingProtocol(server *nex.Server) *CommonRankingProtocol {
 	patch := server.MatchMakingProtocolVersion().GameSpecificPatch
 
 	if strings.EqualFold(patch, "AMKJ") {
-		logger.Info("Using Mario Kart 8 Ranking protocol")
+		common_globals.Logger.Info("Using Mario Kart 8 Ranking protocol")
 		initMarioKart8(commonRankingProtocol)
 	} else {
 		if patch != "" {
-			logger.Infof("Ranking version patch %q not recognized", patch)
+			common_globals.Logger.Infof("Ranking version patch %q not recognized", patch)
 		}
 
-		logger.Info("Using default Ranking protocol")
+		common_globals.Logger.Info("Using default Ranking protocol")
 		initDefault(commonRankingProtocol)
 	}
 

@@ -3,24 +3,26 @@ package ranking
 import (
 	"github.com/PretendoNetwork/nex-go"
 	ranking "github.com/PretendoNetwork/nex-protocols-go/ranking"
+
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
 func uploadCommonData(err error, client *nex.Client, callID uint32, commonData []byte, uniqueID uint64) uint32 {
 	if commonRankingProtocol.uploadCommonDataHandler == nil {
-		logger.Warning("Ranking::UploadCommonData missing UploadCommonDataHandler!")
+		common_globals.Logger.Warning("Ranking::UploadCommonData missing UploadCommonDataHandler!")
 		return nex.Errors.Core.NotImplemented
 	}
 
 	server := client.Server()
 
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		return nex.Errors.Ranking.InvalidArgument
 	}
 
 	err = commonRankingProtocol.uploadCommonDataHandler(client.PID(), uniqueID, commonData)
 	if err != nil {
-		logger.Critical(err.Error())
+		common_globals.Logger.Critical(err.Error())
 		return nex.Errors.Ranking.Unknown
 	}
 	

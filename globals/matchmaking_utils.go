@@ -111,8 +111,7 @@ func RemoveClientFromAllSessions(client *nex.Client) {
 
 			targetClient := server.FindClientFromPID(uint32(ownerPID))
 			if targetClient == nil {
-				// TODO - We don't have a logger here
-				// logger.Warning("Owner client not found")
+				Logger.Warning("Owner client not found")
 				gid = FindClientSession(client.ConnectionID())
 				continue
 			}
@@ -211,8 +210,7 @@ func FindSessionByMatchmakeSession(pid uint32, searchMatchmakeSession *match_mak
 		// TODO - Is this a flag or a constant?
 		if sessionToCheck.GameMatchmakeSession.ParticipationPolicy == 98 {
 			if GetUserFriendPIDsHandler == nil {
-				// TODO - We don't have a logger here
-				// logger.Warning("Missing GetUserFriendPIDsHandler!")
+				Logger.Warning("Missing GetUserFriendPIDsHandler!")
 				continue
 			}
 
@@ -272,8 +270,7 @@ func FindSessionsByMatchmakeSessionSearchCriterias(pid uint32, lstSearchCriteria
 			// TODO - Is this a flag or a constant?
 			if session.GameMatchmakeSession.ParticipationPolicy == 98 {
 				if GetUserFriendPIDsHandler == nil {
-					// TODO - We don't have a logger here
-					// logger.Warning("Missing GetUserFriendPIDsHandler!")
+					Logger.Warning("Missing GetUserFriendPIDsHandler!")
 					continue
 				}
 
@@ -364,7 +361,7 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 		target := server.FindClientFromConnectionID(session.ConnectionIDs[i])
 		if target == nil {
 			// TODO - Error here?
-			//logger.Warning("Player not found")
+			Logger.Warning("Player not found")
 			continue
 		}
 
@@ -420,7 +417,7 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 			target := server.FindClientFromConnectionID(session.ConnectionIDs[i])
 			if target == nil {
 				// TODO - Error here?
-				//logger.Warning("Player not found")
+				Logger.Warning("Player not found")
 				continue
 			}
 
@@ -514,7 +511,7 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 		target := server.FindClientFromPID(uint32(session.GameMatchmakeSession.Gathering.OwnerPID))
 		if target == nil {
 			// TODO - Error here?
-			//logger.Warning("Player not found")
+			Logger.Warning("Player not found")
 			return nil, 0
 		}
 
@@ -551,8 +548,7 @@ func ChangeSessionOwner(ownerClient *nex.Client, gathering uint32) {
 		if otherClient != nil {
 			Sessions[gathering].GameMatchmakeSession.Gathering.OwnerPID = otherClient.PID()
 		} else {
-			// TODO - We don't have a logger here
-			// logger.Warning("Other client not found")
+			Logger.Warning("Other client not found")
 			return
 		}
 	} else {
@@ -607,8 +603,7 @@ func ChangeSessionOwner(ownerClient *nex.Client, gathering uint32) {
 
 			server.Send(messagePacket)
 		} else {
-			// TODO - We don't have a logger here
-			// logger.Warning("Client not found")
+			Logger.Warning("Client not found")
 		}
 	}
 }
