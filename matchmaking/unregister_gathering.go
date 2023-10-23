@@ -30,8 +30,13 @@ func unregisterGathering(err error, client *nex.Client, callID uint32, idGatheri
 
 	delete(common_globals.Sessions, idGathering)
 
+	rmcResponseStream := nex.NewStreamOut(server)
+	rmcResponseStream.WriteBool(true) // %retval%
+
+	rmcResponseBody := rmcResponseStream.Bytes()
+
 	rmcResponse := nex.NewRMCResponse(match_making.ProtocolID, callID)
-	rmcResponse.SetSuccess(match_making.MethodUnregisterGathering, nil)
+	rmcResponse.SetSuccess(match_making.MethodUnregisterGathering, rmcResponseBody)
 
 	rmcResponseBytes := rmcResponse.Bytes()
 
