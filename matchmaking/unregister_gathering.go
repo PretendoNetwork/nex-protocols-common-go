@@ -10,7 +10,7 @@ import (
 
 func unregisterGathering(err error, client *nex.Client, callID uint32, idGathering uint32) uint32 {
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		return nex.Errors.Core.InvalidArgument
 	}
 
@@ -97,7 +97,7 @@ func unregisterGathering(err error, client *nex.Client, callID uint32, idGatheri
 
 			server.Send(messagePacket)
 		} else {
-			logger.Warning("Client not found")
+			common_globals.Logger.Warning("Client not found")
 		}
 	}
 

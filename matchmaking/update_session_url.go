@@ -8,7 +8,7 @@ import (
 
 func updateSessionURL(err error, client *nex.Client, callID uint32, idGathering uint32, strURL string) uint32 {
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		return nex.Errors.Core.InvalidArgument
 	}
 

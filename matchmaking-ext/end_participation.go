@@ -11,7 +11,7 @@ import (
 
 func endParticipation(err error, client *nex.Client, callID uint32, idGathering uint32, strMessage string) uint32 {
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		return nex.Errors.Core.InvalidArgument
 	}
 
@@ -97,7 +97,7 @@ func endParticipation(err error, client *nex.Client, callID uint32, idGathering 
 
 	targetClient := server.FindClientFromPID(uint32(ownerPID))
 	if targetClient == nil {
-		logger.Warning("Owner client not found")
+		common_globals.Logger.Warning("Owner client not found")
 		return 0
 	}
 

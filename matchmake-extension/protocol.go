@@ -7,11 +7,11 @@ import (
 	match_making_types "github.com/PretendoNetwork/nex-protocols-go/match-making/types"
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension"
 	matchmake_extension_mario_kart_8 "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension/mario-kart-8"
-	"github.com/PretendoNetwork/plogger-go"
+
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
 var commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol
-var logger = plogger.NewLogger()
 
 type CommonMatchmakeExtensionProtocol struct {
 	server             *nex.Server
@@ -19,8 +19,7 @@ type CommonMatchmakeExtensionProtocol struct {
 	MarioKart8Protocol *matchmake_extension_mario_kart_8.Protocol
 
 	cleanupSearchMatchmakeSessionHandler                    func(matchmakeSession *match_making_types.MatchmakeSession)
-	cleanupMatchmakeSessionSearchCriteriaHandler            func(lstSearchCriteria []*match_making_types.MatchmakeSessionSearchCriteria)
-	gameSpecificMatchmakeSessionSearchCriteriaChecksHandler func(requestSearchCriteria, sessionSearchCriteria *match_making_types.MatchmakeSessionSearchCriteria) bool
+	gameSpecificMatchmakeSessionSearchCriteriaChecksHandler func(searchCriteria *match_making_types.MatchmakeSessionSearchCriteria, matchmakeSession *match_making_types.MatchmakeSession) bool
 }
 
 // CleanupSearchMatchmakeSession sets the CleanupSearchMatchmakeSession handler function
@@ -28,14 +27,14 @@ func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) Cleanu
 	commonMatchmakeExtensionProtocol.cleanupSearchMatchmakeSessionHandler = handler
 }
 
-// CleanupMatchmakeSessionSearchCriteria sets the CleanupMatchmakeSessionSearchCriteria handler function
-func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) CleanupMatchmakeSessionSearchCriteria(handler func(lstSearchCriteria []*match_making_types.MatchmakeSessionSearchCriteria)) {
-	commonMatchmakeExtensionProtocol.cleanupMatchmakeSessionSearchCriteriaHandler = handler
+// GameSpecificMatchmakeSessionSearchCriteriaChecks sets the GameSpecificMatchmakeSessionSearchCriteriaChecks handler function
+func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) GameSpecificMatchmakeSessionSearchCriteriaChecks(handler func(searchCriteria *match_making_types.MatchmakeSessionSearchCriteria, matchmakeSession *match_making_types.MatchmakeSession) bool) {
+	commonMatchmakeExtensionProtocol.gameSpecificMatchmakeSessionSearchCriteriaChecksHandler = handler
 }
 
-// GameSpecificMatchmakeSessionSearchCriteriaChecks sets the GameSpecificMatchmakeSessionSearchCriteriaChecks handler function
-func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) GameSpecificMatchmakeSessionSearchCriteriaChecks(handler func(requestSearchCriteria, sessionSearchCriteria *match_making_types.MatchmakeSessionSearchCriteria) bool) {
-	commonMatchmakeExtensionProtocol.gameSpecificMatchmakeSessionSearchCriteriaChecksHandler = handler
+// GetUserFriendPIDs sets the GetUserFriendPIDs handler function
+func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) GetUserFriendPIDs(handler func(pid uint32) []uint32) {
+	common_globals.GetUserFriendPIDsHandler = handler
 }
 
 func initDefault(c *CommonMatchmakeExtensionProtocol) {
@@ -76,14 +75,14 @@ func NewCommonMatchmakeExtensionProtocol(server *nex.Server) *CommonMatchmakeExt
 	patch := server.MatchMakingProtocolVersion().GameSpecificPatch
 
 	if strings.EqualFold(patch, "AMKJ") {
-		logger.Info("Using Mario Kart 8 MatchmakeExtension protocol")
+		common_globals.Logger.Info("Using Mario Kart 8 MatchmakeExtension protocol")
 		initMarioKart8(commonMatchmakeExtensionProtocol)
 	} else {
 		if patch != "" {
-			logger.Infof("Matchmaking version patch %q not recognized", patch)
+			common_globals.Logger.Infof("Matchmaking version patch %q not recognized", patch)
 		}
 
-		logger.Info("Using default MatchmakeExtension protocol")
+		common_globals.Logger.Info("Using default MatchmakeExtension protocol")
 		initDefault(commonMatchmakeExtensionProtocol)
 	}
 

@@ -4,24 +4,26 @@ import (
 	"github.com/PretendoNetwork/nex-go"
 	ranking "github.com/PretendoNetwork/nex-protocols-go/ranking"
 	ranking_types "github.com/PretendoNetwork/nex-protocols-go/ranking/types"
+
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
 func getRanking(err error, client *nex.Client, callID uint32, rankingMode uint8, category uint32, orderParam *ranking_types.RankingOrderParam, uniqueID uint64, principalID uint32) uint32 {
 	if commonRankingProtocol.getRankingsAndCountByCategoryAndRankingOrderParamHandler == nil {
-		logger.Warning("Ranking::GetRanking missing GetRankingsAndCountByCategoryAndRankingOrderParamHandler!")
+		common_globals.Logger.Warning("Ranking::GetRanking missing GetRankingsAndCountByCategoryAndRankingOrderParamHandler!")
 		return nex.Errors.Core.NotImplemented
 	}
 	
 	server := client.Server()
 
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		return nex.Errors.Ranking.InvalidArgument
 	}
 
 	rankDataList, totalCount, err := commonRankingProtocol.getRankingsAndCountByCategoryAndRankingOrderParamHandler(category, orderParam)
 	if err != nil {
-		logger.Critical(err.Error())
+		common_globals.Logger.Critical(err.Error())
 		return nex.Errors.Ranking.Unknown
 	}
 

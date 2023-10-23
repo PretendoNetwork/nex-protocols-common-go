@@ -3,11 +3,13 @@ package nattraversal
 import (
 	nex "github.com/PretendoNetwork/nex-go"
 	nat_traversal "github.com/PretendoNetwork/nex-protocols-go/nat-traversal"
+
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
 func requestProbeInitiationExt(err error, client *nex.Client, callID uint32, targetList []string, stationToProbe string) uint32 {
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		return nex.Errors.Core.InvalidArgument
 	}
 
@@ -73,7 +75,7 @@ func requestProbeInitiationExt(err error, client *nex.Client, callID uint32, tar
 
 			server.Send(messagePacket)
 		} else {
-			logger.Warning("Client not found")
+			common_globals.Logger.Warning("Client not found")
 		}
 	}
 

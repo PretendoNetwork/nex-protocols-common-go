@@ -9,7 +9,7 @@ import (
 
 func createMatchmakeSession(err error, client *nex.Client, callID uint32, anyGathering *nex.DataHolder, message string, participationCount uint16) uint32 {
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		return nex.Errors.Core.InvalidArgument
 	}
 
@@ -25,19 +25,19 @@ func createMatchmakeSession(err error, client *nex.Client, callID uint32, anyGat
 	if anyGatheringDataType == "MatchmakeSession" {
 		matchmakeSession = anyGathering.ObjectData().(*match_making_types.MatchmakeSession)
 	} else {
-		logger.Critical("Non-MatchmakeSession DataType?!")
+		common_globals.Logger.Critical("Non-MatchmakeSession DataType?!")
 		return nex.Errors.Core.InvalidArgument
 	}
 
-	session, err, errCode := common_globals.CreateSessionBySearchCriteria(matchmakeSession, make([]*match_making_types.MatchmakeSessionSearchCriteria, 0), client.PID())
+	session, err, errCode := common_globals.CreateSessionByMatchmakeSession(matchmakeSession, nil, client.PID())
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		return errCode
 	}
 
 	err, errCode = common_globals.AddPlayersToSession(session, []uint32{client.ConnectionID()}, client, message)
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		return errCode
 	}
 

@@ -3,18 +3,20 @@ package ranking
 import (
 	"github.com/PretendoNetwork/nex-go"
 	ranking "github.com/PretendoNetwork/nex-protocols-go/ranking"
+
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
 func getCommonData(err error, client *nex.Client, callID uint32, uniqueID uint64) uint32 {
 	if commonRankingProtocol.getCommonDataHandler == nil {
-		logger.Warning("Ranking::GetCommonData missing GetCommonDataHandler!")
+		common_globals.Logger.Warning("Ranking::GetCommonData missing GetCommonDataHandler!")
 		return nex.Errors.Core.NotImplemented
 	}
 
 	server := client.Server()
 
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		return nex.Errors.Ranking.InvalidArgument
 	}
 

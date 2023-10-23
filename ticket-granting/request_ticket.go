@@ -3,11 +3,13 @@ package ticket_granting
 import (
 	nex "github.com/PretendoNetwork/nex-go"
 	ticket_granting "github.com/PretendoNetwork/nex-protocols-go/ticket-granting"
+
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
 func requestTicket(err error, client *nex.Client, callID uint32, userPID uint32, targetPID uint32) uint32 {
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		return nex.Errors.Core.InvalidArgument
 	}
 

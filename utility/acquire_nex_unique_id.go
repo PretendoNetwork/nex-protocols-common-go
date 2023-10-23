@@ -3,11 +3,13 @@ package utility
 import (
 	nex "github.com/PretendoNetwork/nex-go"
 	utility "github.com/PretendoNetwork/nex-protocols-go/utility"
+
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
 func acquireNexUniqueID(err error, client *nex.Client, callID uint32) uint32 {
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		return nex.Errors.Core.InvalidArgument
 	}
 

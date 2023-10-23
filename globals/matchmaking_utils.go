@@ -111,8 +111,7 @@ func RemoveClientFromAllSessions(client *nex.Client) {
 
 			targetClient := server.FindClientFromPID(uint32(ownerPID))
 			if targetClient == nil {
-				// TODO - We don't have a logger here
-				// logger.Warning("Owner client not found")
+				Logger.Warning("Owner client not found")
 				gid = FindClientSession(client.ConnectionID())
 				continue
 			}
@@ -163,13 +162,29 @@ func CreateSessionByMatchmakeSession(matchmakeSession *match_making_types.Matchm
 	session.GameMatchmakeSession.SessionKey = make([]byte, 32)
 	rand.Read(session.GameMatchmakeSession.SessionKey)
 
+	if session.GameMatchmakeSession.MatchmakeParam == nil {
+		session.GameMatchmakeSession.MatchmakeParam = match_making_types.NewMatchmakeParam()
+	}
+
+	if session.GameMatchmakeSession.MatchmakeParam.Parameters == nil {
+		session.GameMatchmakeSession.MatchmakeParam.Parameters = make(map[string]*nex.Variant)
+	}
+
+	session.GameMatchmakeSession.MatchmakeParam.Parameters["@SR"] = nex.NewVariant()
+	session.GameMatchmakeSession.MatchmakeParam.Parameters["@SR"].TypeID = 3
+	session.GameMatchmakeSession.MatchmakeParam.Parameters["@SR"].Bool = true
+
+	session.GameMatchmakeSession.MatchmakeParam.Parameters["@GIR"] = nex.NewVariant()
+	session.GameMatchmakeSession.MatchmakeParam.Parameters["@GIR"].TypeID = 1
+	session.GameMatchmakeSession.MatchmakeParam.Parameters["@GIR"].Int64 = 3
+
 	Sessions[sessionIndex] = &session
 
 	return Sessions[sessionIndex], nil, 0
 }
 
 // FindSessionByMatchmakeSession finds a gathering that matches with a MatchmakeSession
-func FindSessionByMatchmakeSession(searchMatchmakeSession *match_making_types.MatchmakeSession) uint32 {
+func FindSessionByMatchmakeSession(pid uint32, searchMatchmakeSession *match_making_types.MatchmakeSession) uint32 {
 	// * This portion finds any sessions that match the search session
 	// * It does not care about anything beyond that, such as if the match is already full
 	// * This is handled below
@@ -180,6 +195,7 @@ func FindSessionByMatchmakeSession(searchMatchmakeSession *match_making_types.Ma
 		}
 	}
 
+	var friendList []uint32
 	for _, sessionIndex := range candidateSessionIndexes {
 		sessionToCheck := Sessions[sessionIndex]
 		if len(sessionToCheck.ConnectionIDs) >= int(sessionToCheck.GameMatchmakeSession.MaximumParticipants) {
@@ -190,144 +206,135 @@ func FindSessionByMatchmakeSession(searchMatchmakeSession *match_making_types.Ma
 			continue
 		}
 
+		// If the session only allows friends, check if the owner is in the friend list of the PID
+		// TODO - Is this a flag or a constant?
+		if sessionToCheck.GameMatchmakeSession.ParticipationPolicy == 98 {
+			if GetUserFriendPIDsHandler == nil {
+				Logger.Warning("Missing GetUserFriendPIDsHandler!")
+				continue
+			}
+
+			if len(friendList) == 0 {
+				friendList = GetUserFriendPIDsHandler(pid)
+			}
+
+			if !slices.Contains(friendList, sessionToCheck.GameMatchmakeSession.OwnerPID) {
+				continue
+			}
+		}
+
 		return sessionIndex // * Found a match
 	}
 
 	return 0
 }
 
-// CreateSessionBySearchCriteria creates a gathering from MatchmakeSessionSearchCriteria
-func CreateSessionBySearchCriteria(matchmakeSession *match_making_types.MatchmakeSession, lstSearchCriteria []*match_making_types.MatchmakeSessionSearchCriteria, hostPID uint32) (*CommonMatchmakeSession, error, uint32) {
-	sessionIndex := GetAvailableGatheringID()
-	if sessionIndex == 0 {
-		CurrentGatheringID = nex.NewCounter(0)
-		sessionIndex = GetAvailableGatheringID()
+// FindSessionsByMatchmakeSessionSearchCriterias finds a gathering that matches with the given search criteria
+func FindSessionsByMatchmakeSessionSearchCriterias(pid uint32, lstSearchCriteria []*match_making_types.MatchmakeSessionSearchCriteria, gameSpecificChecks func(searchCriteria *match_making_types.MatchmakeSessionSearchCriteria, matchmakeSession *match_making_types.MatchmakeSession) bool) []*CommonMatchmakeSession {
+	candidateSessions := make([]*CommonMatchmakeSession, 0, len(Sessions))
+	var friendList []uint32
+	for _, session := range Sessions {
+		for _, searchCriteria := range lstSearchCriteria {
+			// * Check things like game specific attributes
+			if gameSpecificChecks != nil {
+				if !gameSpecificChecks(searchCriteria, session.GameMatchmakeSession) {
+					continue
+				}
+			} else {
+				if !compareAttributesSearchCriteria(session.GameMatchmakeSession.Attributes, searchCriteria.Attribs) {
+					continue
+				}
+			}
+
+			if !compareSearchCriteria(session.GameMatchmakeSession.MaximumParticipants, searchCriteria.MaxParticipants) {
+				continue
+			}
+
+			if !compareSearchCriteria(session.GameMatchmakeSession.MinimumParticipants, searchCriteria.MinParticipants) {
+				continue
+			}
+
+			if !compareSearchCriteria(session.GameMatchmakeSession.GameMode, searchCriteria.GameMode) {
+				continue
+			}
+
+			if len(session.ConnectionIDs) >= int(session.GameMatchmakeSession.MaximumParticipants) {
+				continue
+			}
+
+			if !session.GameMatchmakeSession.OpenParticipation {
+				continue
+			}
+
+			// If the session only allows friends, check if the owner is in the friend list of the PID
+			// TODO - Is this a flag or a constant?
+			if session.GameMatchmakeSession.ParticipationPolicy == 98 {
+				if GetUserFriendPIDsHandler == nil {
+					Logger.Warning("Missing GetUserFriendPIDsHandler!")
+					continue
+				}
+
+				if len(friendList) == 0 {
+					friendList = GetUserFriendPIDsHandler(pid)
+				}
+
+				if !slices.Contains(friendList, session.GameMatchmakeSession.OwnerPID) {
+					continue
+				}
+			}
+
+			candidateSessions = append(candidateSessions, session)
+
+			// We don't have to compare with other search criterias
+			break
+		}
 	}
 
-	session := CommonMatchmakeSession{
-		SearchCriteria:       lstSearchCriteria,
-		GameMatchmakeSession: matchmakeSession,
-	}
-
-	session.GameMatchmakeSession.Gathering.ID = sessionIndex
-	session.GameMatchmakeSession.Gathering.OwnerPID = hostPID
-	session.GameMatchmakeSession.Gathering.HostPID = hostPID
-
-	session.GameMatchmakeSession.StartedTime = nex.NewDateTime(0)
-	session.GameMatchmakeSession.StartedTime.UTC()
-	session.GameMatchmakeSession.SessionKey = make([]byte, 32)
-	rand.Read(session.GameMatchmakeSession.SessionKey)
-
-	Sessions[sessionIndex] = &session
-
-	return Sessions[sessionIndex], nil, 0
+	return candidateSessions
 }
 
-// FindSessionsByMatchmakeSessionSearchCriterias finds a gathering that matches with a MatchmakeSession
-func FindSessionsByMatchmakeSessionSearchCriterias(lstSearchCriteria []*match_making_types.MatchmakeSessionSearchCriteria, gameSpecificChecks func(requestSearchCriteria, sessionSearchCriteria *match_making_types.MatchmakeSessionSearchCriteria) bool) []*CommonMatchmakeSession {
-	// * This portion finds any sessions that match the search session
-	// * It does not care about anything beyond that, such as if the match is already full
-	// * This is handled below.
-	candidateSessions := make([]*CommonMatchmakeSession, 0, len(Sessions))
+func compareAttributesSearchCriteria(original []uint32, search []string) bool {
+	if len(original) != len(search) {
+		return false
+	}
 
-	for _, session := range Sessions {
-		if len(lstSearchCriteria) == len(session.SearchCriteria) {
-			for criteriaIndex, sessionSearchCriteria := range session.SearchCriteria {
-				requestSearchCriteria := lstSearchCriteria[criteriaIndex]
+	for index, originalAttribute := range original {
+		searchAttribute := search[index]
 
-				// * Check things like game specific attributes
-				if gameSpecificChecks != nil && !gameSpecificChecks(lstSearchCriteria[criteriaIndex], sessionSearchCriteria) {
-					continue
-				}
-
-				if requestSearchCriteria.GameMode != "" && requestSearchCriteria.GameMode != sessionSearchCriteria.GameMode {
-					continue
-				}
-
-				if requestSearchCriteria.MinParticipants != "" {
-					split := strings.Split(requestSearchCriteria.MinParticipants, ",")
-					minStr, maxStr := split[0], split[1]
-
-					if minStr != "" {
-						min, err := strconv.Atoi(minStr)
-						if err != nil {
-							// TODO - We don't have a logger here
-							continue
-						}
-
-						if session.GameMatchmakeSession.MinimumParticipants < uint16(min) {
-							continue
-						}
-					}
-
-					if maxStr != "" {
-						max, err := strconv.Atoi(maxStr)
-						if err != nil {
-							// TODO - We don't have a logger here
-							continue
-						}
-
-						if session.GameMatchmakeSession.MinimumParticipants > uint16(max) {
-							continue
-						}
-					}
-				}
-
-				if requestSearchCriteria.MaxParticipants != "" {
-					split := strings.Split(requestSearchCriteria.MaxParticipants, ",")
-					minStr := split[0]
-					maxStr := ""
-
-					if len(split) > 1 {
-						maxStr = split[1]
-					}
-
-					if minStr != "" {
-						min, err := strconv.Atoi(minStr)
-						if err != nil {
-							// TODO - We don't have a logger here
-							continue
-						}
-
-						if session.GameMatchmakeSession.MaximumParticipants < uint16(min) {
-							continue
-						}
-					}
-
-					if maxStr != "" {
-						max, err := strconv.Atoi(maxStr)
-						if err != nil {
-							// TODO - We don't have a logger here
-							continue
-						}
-
-						if session.GameMatchmakeSession.MaximumParticipants > uint16(max) {
-							continue
-						}
-					}
-				}
-
-				candidateSessions = append(candidateSessions, session)
-			}
+		if !compareSearchCriteria(originalAttribute, searchAttribute) {
+			return false
 		}
 	}
 
-	filteredSessions := make([]*CommonMatchmakeSession, 0, len(candidateSessions))
+	return true
+}
 
-	// * Further filter the candidate sessions
-	for _, session := range candidateSessions {
-		if len(session.ConnectionIDs) >= int(session.GameMatchmakeSession.MaximumParticipants) {
-			continue
-		}
-
-		if !session.GameMatchmakeSession.OpenParticipation {
-			continue
-		}
-
-		filteredSessions = append(filteredSessions, session) // * Found a match
+func compareSearchCriteria[T ~uint16 | ~uint32](original T, search string) bool {
+	if search == "" { // Accept any value
+		return true
 	}
 
-	return filteredSessions
+	before, after, found := strings.Cut(search, ",")
+	if found {
+		min, err := strconv.ParseUint(before, 10, 64)
+		if err != nil {
+			return false
+		}
+
+		max, err := strconv.ParseUint(after, 10, 64)
+		if err != nil {
+			return false
+		}
+
+		return min <= uint64(original) && max >= uint64(original)
+	} else {
+		searchNum, err := strconv.ParseUint(before, 10, 64)
+		if err != nil {
+			return false
+		}
+
+		return searchNum == uint64(original)
+	}
 }
 
 // AddPlayersToSession updates the given sessions state to include the provided connection IDs
@@ -354,7 +361,7 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 		target := server.FindClientFromConnectionID(session.ConnectionIDs[i])
 		if target == nil {
 			// TODO - Error here?
-			//logger.Warning("Player not found")
+			Logger.Warning("Player not found")
 			continue
 		}
 
@@ -410,7 +417,7 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 			target := server.FindClientFromConnectionID(session.ConnectionIDs[i])
 			if target == nil {
 				// TODO - Error here?
-				//logger.Warning("Player not found")
+				Logger.Warning("Player not found")
 				continue
 			}
 
@@ -504,7 +511,7 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 		target := server.FindClientFromPID(uint32(session.GameMatchmakeSession.Gathering.OwnerPID))
 		if target == nil {
 			// TODO - Error here?
-			//logger.Warning("Player not found")
+			Logger.Warning("Player not found")
 			return nil, 0
 		}
 
@@ -541,8 +548,7 @@ func ChangeSessionOwner(ownerClient *nex.Client, gathering uint32) {
 		if otherClient != nil {
 			Sessions[gathering].GameMatchmakeSession.Gathering.OwnerPID = otherClient.PID()
 		} else {
-			// TODO - We don't have a logger here
-			// logger.Warning("Other client not found")
+			Logger.Warning("Other client not found")
 			return
 		}
 	} else {
@@ -597,8 +603,7 @@ func ChangeSessionOwner(ownerClient *nex.Client, gathering uint32) {
 
 			server.Send(messagePacket)
 		} else {
-			// TODO - We don't have a logger here
-			// logger.Warning("Client not found")
+			Logger.Warning("Client not found")
 		}
 	}
 }

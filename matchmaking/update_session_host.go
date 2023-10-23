@@ -10,7 +10,7 @@ import (
 
 func updateSessionHost(err error, client *nex.Client, callID uint32, gid uint32, isMigrateOwner bool) uint32 {
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		return nex.Errors.Core.InvalidArgument
 	}
 
@@ -107,7 +107,7 @@ func updateSessionHost(err error, client *nex.Client, callID uint32, gid uint32,
 
 			server.Send(messagePacket)
 		} else {
-			logger.Warning("Client not found")
+			common_globals.Logger.Warning("Client not found")
 		}
 	}
 

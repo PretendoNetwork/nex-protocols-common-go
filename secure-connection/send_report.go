@@ -3,22 +3,24 @@ package secureconnection
 import (
 	nex "github.com/PretendoNetwork/nex-go"
 	secure_connection "github.com/PretendoNetwork/nex-protocols-go/secure-connection"
+
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
 func sendReport(err error, client *nex.Client, callID uint32, reportID uint32, reportData []byte) uint32 {
 	if commonSecureConnectionProtocol.createReportDBRecordHandler == nil {
-		logger.Warning("SecureConnection::SendReport missing CreateReportDBRecord!")
+		common_globals.Logger.Warning("SecureConnection::SendReport missing CreateReportDBRecord!")
 		return nex.Errors.Core.NotImplemented
 	}
 
 	if err != nil {
-		logger.Critical(err.Error())
+		common_globals.Logger.Critical(err.Error())
 		return nex.Errors.Core.Unknown
 	}
 
 	err = commonSecureConnectionProtocol.createReportDBRecordHandler(client.PID(), reportID, reportData)
 	if err != nil {
-		logger.Critical(err.Error())
+		common_globals.Logger.Critical(err.Error())
 		return nex.Errors.Core.Unknown
 	}
 

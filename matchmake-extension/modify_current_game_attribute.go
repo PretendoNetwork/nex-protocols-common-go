@@ -8,7 +8,7 @@ import (
 
 func modifyCurrentGameAttribute(err error, client *nex.Client, callID uint32, gid uint32, attribIndex uint32, newValue uint32) uint32 {
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		return nex.Errors.Core.InvalidArgument
 	}
 

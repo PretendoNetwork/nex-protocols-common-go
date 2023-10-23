@@ -22,7 +22,7 @@ func remove[T comparable](l []T, item T) []T {
 
 func getSimplePlayingSession(err error, client *nex.Client, callID uint32, listPID []uint32, includeLoginUser bool) uint32 {
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		return nex.Errors.Core.InvalidArgument
 	}
 
@@ -46,7 +46,7 @@ func getSimplePlayingSession(err error, client *nex.Client, callID uint32, listP
 				for _, connectionID := range session.ConnectionIDs {
 					player := server.FindClientFromConnectionID(connectionID)
 					if player == nil {
-						logger.Warning("Player not found")
+						common_globals.Logger.Warning("Player not found")
 						continue
 					}
 

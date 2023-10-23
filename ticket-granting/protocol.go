@@ -4,11 +4,11 @@ import (
 	"github.com/PretendoNetwork/nex-go"
 	_ "github.com/PretendoNetwork/nex-protocols-go"
 	ticket_granting "github.com/PretendoNetwork/nex-protocols-go/ticket-granting"
-	"github.com/PretendoNetwork/plogger-go"
+
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
 var commonTicketGrantingProtocol *CommonTicketGrantingProtocol
-var logger = plogger.NewLogger()
 
 type CommonTicketGrantingProtocol struct {
 	*ticket_granting.Protocol
@@ -31,7 +31,7 @@ func (commonTicketGrantingProtocol *CommonTicketGrantingProtocol) DisableInsecur
 }
 
 func (commonTicketGrantingProtocol *CommonTicketGrantingProtocol) EnableInsecureLogin() {
-	logger.Warning("INSECURE LOGIN HAS BEEN ENABLED. THIS ALLOWS THE USE OF CUSTOM CLIENTS TO BYPASS THE ACCOUNT SERVER AND CONNECT DIRECTLY TO THIS GAME SERVER, EVADING BANS! USE WITH CAUTION!")
+	common_globals.Logger.Warning("INSECURE LOGIN HAS BEEN ENABLED. THIS ALLOWS THE USE OF CUSTOM CLIENTS TO BYPASS THE ACCOUNT SERVER AND CONNECT DIRECTLY TO THIS GAME SERVER, EVADING BANS! USE WITH CAUTION!")
 	commonTicketGrantingProtocol.allowInsecureLoginMethod = true
 }
 

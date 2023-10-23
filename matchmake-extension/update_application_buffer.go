@@ -8,7 +8,7 @@ import (
 
 func updateApplicationBuffer(err error, client *nex.Client, callID uint32, gid uint32, applicationBuffer []byte) uint32 {
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		return nex.Errors.Core.InvalidArgument
 	}
 

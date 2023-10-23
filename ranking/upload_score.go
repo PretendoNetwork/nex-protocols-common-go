@@ -4,24 +4,26 @@ import (
 	"github.com/PretendoNetwork/nex-go"
 	ranking "github.com/PretendoNetwork/nex-protocols-go/ranking"
 	ranking_types "github.com/PretendoNetwork/nex-protocols-go/ranking/types"
+
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
 func uploadScore(err error, client *nex.Client, callID uint32, scoreData *ranking_types.RankingScoreData, uniqueID uint64) uint32 {
 	if commonRankingProtocol.insertRankingByPIDAndRankingScoreDataHandler == nil {
-		logger.Warning("Ranking::UploadScore missing InsertRankingByPIDAndRankingScoreDataHandler!")
+		common_globals.Logger.Warning("Ranking::UploadScore missing InsertRankingByPIDAndRankingScoreDataHandler!")
 		return nex.Errors.Core.NotImplemented
 	}
 
 	server := client.Server()
 
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		return nex.Errors.Ranking.InvalidArgument
 	}
 
 	err = commonRankingProtocol.insertRankingByPIDAndRankingScoreDataHandler(client.PID(), scoreData, uniqueID)
 	if err != nil {
-		logger.Critical(err.Error())
+		common_globals.Logger.Critical(err.Error())
 		return nex.Errors.Ranking.Unknown
 	}
 	

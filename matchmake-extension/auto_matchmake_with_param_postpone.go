@@ -8,13 +8,8 @@ import (
 )
 
 func autoMatchmakeWithParam_Postpone(err error, client *nex.Client, callID uint32, autoMatchmakeParam *match_making_types.AutoMatchmakeParam) uint32 {
-	if commonMatchmakeExtensionProtocol.cleanupMatchmakeSessionSearchCriteriaHandler == nil {
-		logger.Warning("MatchmakeExtension::AutoMatchmake_Postpone missing CleanupSearchMatchmakeSessionHandler!")
-		return nex.Errors.Core.NotImplemented
-	}
-
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		return nex.Errors.Core.InvalidArgument
 	}
 
@@ -27,16 +22,14 @@ func autoMatchmakeWithParam_Postpone(err error, client *nex.Client, callID uint3
 	var matchmakeSession *match_making_types.MatchmakeSession
 	matchmakeSession = autoMatchmakeParam.SourceMatchmakeSession
 
-	commonMatchmakeExtensionProtocol.cleanupMatchmakeSessionSearchCriteriaHandler(autoMatchmakeParam.LstSearchCriteria)
-
-	sessions := common_globals.FindSessionsByMatchmakeSessionSearchCriterias(autoMatchmakeParam.LstSearchCriteria, commonMatchmakeExtensionProtocol.gameSpecificMatchmakeSessionSearchCriteriaChecksHandler)
+	sessions := common_globals.FindSessionsByMatchmakeSessionSearchCriterias(client.PID(), autoMatchmakeParam.LstSearchCriteria, commonMatchmakeExtensionProtocol.gameSpecificMatchmakeSessionSearchCriteriaChecksHandler)
 	var session *common_globals.CommonMatchmakeSession
 
 	if len(sessions) == 0 {
 		var errCode uint32
-		session, err, errCode = common_globals.CreateSessionBySearchCriteria(matchmakeSession, autoMatchmakeParam.LstSearchCriteria, client.PID())
+		session, err, errCode = common_globals.CreateSessionByMatchmakeSession(matchmakeSession, nil, client.PID())
 		if err != nil {
-			logger.Error(err.Error())
+			common_globals.Logger.Error(err.Error())
 			return errCode
 		}
 	} else {
@@ -45,7 +38,7 @@ func autoMatchmakeWithParam_Postpone(err error, client *nex.Client, callID uint3
 
 	err, errCode := common_globals.AddPlayersToSession(session, []uint32{client.ConnectionID()}, client, "")
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		return errCode
 	}
 

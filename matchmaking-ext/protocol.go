@@ -3,11 +3,9 @@ package match_making_ext
 import (
 	nex "github.com/PretendoNetwork/nex-go"
 	match_making_ext "github.com/PretendoNetwork/nex-protocols-go/match-making-ext"
-	"github.com/PretendoNetwork/plogger-go"
 )
 
 var commonMatchMakingExtProtocol *CommonMatchMakingExtProtocol
-var logger = plogger.NewLogger()
 
 type CommonMatchMakingExtProtocol struct {
 	*match_making_ext.Protocol

@@ -4,12 +4,14 @@ import (
 	"crypto/rand"
 
 	"github.com/PretendoNetwork/nex-go"
+
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
 func generateTicket(userPID uint32, targetPID uint32) ([]byte, uint32) {
 	passwordFromPIDHandler := commonTicketGrantingProtocol.server.PasswordFromPIDFunction()
 	if passwordFromPIDHandler == nil {
-		logger.Warning("Missing passwordFromPIDHandler!")
+		common_globals.Logger.Warning("Missing passwordFromPIDHandler!")
 		return []byte{}, nex.Errors.Core.Unknown
 	}
 
@@ -49,7 +51,7 @@ func generateTicket(userPID uint32, targetPID uint32) ([]byte, uint32) {
 	sessionKey := make([]byte, commonTicketGrantingProtocol.server.KerberosKeySize())
 	_, err := rand.Read(sessionKey)
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		return []byte{}, nex.Errors.Authentication.Unknown
 	}
 
@@ -62,7 +64,7 @@ func generateTicket(userPID uint32, targetPID uint32) ([]byte, uint32) {
 
 	encryptedTicketInternalData, err := ticketInternalData.Encrypt(targetKey, nex.NewStreamOut(commonTicketGrantingProtocol.server))
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		return []byte{}, nex.Errors.Authentication.Unknown
 	}
 
@@ -73,7 +75,7 @@ func generateTicket(userPID uint32, targetPID uint32) ([]byte, uint32) {
 
 	encryptedTicket, err := ticket.Encrypt(userKey, nex.NewStreamOut(commonTicketGrantingProtocol.server))
 	if err != nil {
-		logger.Error(err.Error())
+		common_globals.Logger.Error(err.Error())
 		return []byte{}, nex.Errors.Authentication.Unknown
 	}
 
