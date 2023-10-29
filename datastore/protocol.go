@@ -142,6 +142,7 @@ func initDefault(c *CommonDataStoreProtocol) {
 	c.DefaultProtocol.PrepareGetObject(prepareGetObject)
 	c.DefaultProtocol.CompletePostObject(completePostObject)
 	c.DefaultProtocol.GetMetasMultipleParam(getMetasMultipleParam)
+	c.DefaultProtocol.CompletePostObjects(completePostObjects)
 	c.DefaultProtocol.ChangeMeta(changeMeta)
 	c.DefaultProtocol.RateObjects(rateObjects)
 }
@@ -153,6 +154,7 @@ func initSuperMarioMaker(c *CommonDataStoreProtocol) {
 	c.SuperMarioMakerProtocol.PrepareGetObject(prepareGetObject)
 	c.SuperMarioMakerProtocol.CompletePostObject(completePostObject)
 	c.SuperMarioMakerProtocol.GetMetasMultipleParam(getMetasMultipleParam)
+	c.SuperMarioMakerProtocol.CompletePostObjects(completePostObjects)
 	c.SuperMarioMakerProtocol.ChangeMeta(changeMeta)
 	c.SuperMarioMakerProtocol.RateObjects(rateObjects)
 }
