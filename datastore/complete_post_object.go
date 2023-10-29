@@ -37,7 +37,7 @@ func completePostObject(err error, client *nex.Client, callID uint32, param *dat
 
 	if param.IsSuccess {
 		bucket := commonDataStoreProtocol.s3Bucket
-		key := fmt.Sprintf("%d.bin", param.DataID)
+		key := fmt.Sprintf("%s/%d.bin", commonDataStoreProtocol.s3DataKeyBase, param.DataID)
 
 		objectSizeS3, err := commonDataStoreProtocol.s3ObjectSizeHandler(bucket, key)
 		if err != nil {

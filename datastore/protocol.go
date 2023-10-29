@@ -20,6 +20,8 @@ type CommonDataStoreProtocol struct {
 	SuperMarioMakerProtocol *datastore_super_mario_maker.Protocol
 
 	s3Bucket                                            string
+	s3DataKeyBase                                       string
+	s3NotifyKeyBase                                     string
 	rootCACert                                          []byte
 	getObjectInfoByDataIDHandler                        func(dataID uint64) (*datastore_types.DataStoreMetaInfo, uint32)
 	verifyObjectPermissionHandler                       func(ownerPID uint32, accessorPID uint32, permission *datastore_types.DataStorePermission) uint32
@@ -46,6 +48,22 @@ type CommonDataStoreProtocol struct {
 // SetS3Bucket sets the S3 bucket
 func (c *CommonDataStoreProtocol) SetS3Bucket(bucket string) {
 	c.s3Bucket = bucket
+}
+
+// SetDataKeyBase sets the base for the key to be used when uploading standard DataStore objects
+func (c *CommonDataStoreProtocol) SetDataKeyBase(base string) {
+	// * Just in case someone passes a badly formatted key
+	base = strings.TrimPrefix(base, "/")
+	base = strings.TrimSuffix(base, "/")
+	c.s3DataKeyBase = base
+}
+
+// SetNotifyKeyBase sets the base for the key to be used when uploading DataStore notification data
+func (c *CommonDataStoreProtocol) SetNotifyKeyBase(base string) {
+	// * Just in case someone passes a badly formatted key
+	base = strings.TrimPrefix(base, "/")
+	base = strings.TrimSuffix(base, "/")
+	c.s3NotifyKeyBase = base
 }
 
 // SetRootCACert sets the S3 root CA

@@ -48,7 +48,7 @@ func preparePostObject(err error, client *nex.Client, callID uint32, param *data
 	}
 
 	bucket := commonDataStoreProtocol.s3Bucket
-	key := fmt.Sprintf("%d.bin", dataID)
+	key := fmt.Sprintf("%s/%d.bin", commonDataStoreProtocol.s3DataKeyBase, dataID)
 
 	URL, formData, err := commonDataStoreProtocol.presignPostObjectHandler(bucket, key, time.Minute*15)
 	if err != nil {

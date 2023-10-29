@@ -31,7 +31,7 @@ func completePostObjects(err error, client *nex.Client, callID uint32, dataIDs [
 
 	for _, dataID := range dataIDs {
 		bucket := commonDataStoreProtocol.s3Bucket
-		key := fmt.Sprintf("%d.bin", dataID)
+		key := fmt.Sprintf("%s/%d.bin", commonDataStoreProtocol.s3DataKeyBase, dataID)
 
 		objectSizeS3, err := commonDataStoreProtocol.s3ObjectSizeHandler(bucket, key)
 		if err != nil {

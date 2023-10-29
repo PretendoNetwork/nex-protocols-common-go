@@ -32,7 +32,7 @@ func prepareGetObject(err error, client *nex.Client, callID uint32, param *datas
 	}
 
 	bucket := commonDataStoreProtocol.s3Bucket
-	key := fmt.Sprintf("%d.bin", param.DataID)
+	key := fmt.Sprintf("%s/%d.bin", commonDataStoreProtocol.s3DataKeyBase, param.DataID)
 
 	objectInfo, errCode := commonDataStoreProtocol.getObjectInfoByDataIDHandler(param.DataID)
 	if errCode != 0 {
