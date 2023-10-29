@@ -25,12 +25,16 @@ func completePostObject(err error, client *nex.Client, callID uint32, param *dat
 		return nex.Errors.Core.NotImplemented
 	}
 
+	if commonDataStoreProtocol.deleteObjectByDataIDHandler == nil {
+		common_globals.Logger.Warning("DeleteObjectByDataIDHandler not defined")
+		return nex.Errors.Core.NotImplemented
+	}
+
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nex.Errors.DataStore.Unknown
 	}
 
-	// TODO - What is param.IsSuccess? Is this correct?
 	if param.IsSuccess {
 		bucket := commonDataStoreProtocol.s3Bucket
 		key := fmt.Sprintf("%d.bin", param.DataID)
@@ -52,6 +56,11 @@ func completePostObject(err error, client *nex.Client, callID uint32, param *dat
 		}
 
 		errCode = commonDataStoreProtocol.updateObjectUploadCompletedByDataIDHandler(param.DataID, true)
+		if errCode != 0 {
+			return errCode
+		}
+	} else {
+		errCode := commonDataStoreProtocol.deleteObjectByDataIDHandler(param.DataID)
 		if errCode != 0 {
 			return errCode
 		}

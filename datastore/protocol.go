@@ -39,6 +39,7 @@ type CommonDataStoreProtocol struct {
 	initializeObjectRatingWithSlotHandler               func(dataID uint64, param *datastore_types.DataStoreRatingInitParamWithSlot) uint32
 	rateObjectWithPasswordHandler                       func(dataID uint64, slot uint8, ratingValue int32, accessPassword uint64) (*datastore_types.DataStoreRatingInfo, uint32)
 	deleteObjectByDataIDWithPasswordHandler             func(dataID uint64, password uint64) uint32
+	deleteObjectByDataIDHandler                         func(dataID uint64) uint32
 	getObjectInfosByDataStoreSearchParamHandler         func(param *datastore_types.DataStoreSearchParam) ([]*datastore_types.DataStoreMetaInfo, uint32, uint32)
 }
 
@@ -140,6 +141,11 @@ func (c *CommonDataStoreProtocol) RateObjectWithPassword(handler func(dataID uin
 // DeleteObjectByDataIDWithPassword sets the DeleteObjectByDataIDWithPassword handler function
 func (c *CommonDataStoreProtocol) DeleteObjectByDataIDWithPassword(handler func(dataID uint64, password uint64) uint32) {
 	c.deleteObjectByDataIDWithPasswordHandler = handler
+}
+
+// DeleteObjectByDataID sets the DeleteObjectByDataID handler function
+func (c *CommonDataStoreProtocol) DeleteObjectByDataID(handler func(dataID uint64) uint32) {
+	c.deleteObjectByDataIDHandler = handler
 }
 
 // GetObjectInfosByDataStoreSearchParam sets the GetObjectInfosByDataStoreSearchParam handler function
