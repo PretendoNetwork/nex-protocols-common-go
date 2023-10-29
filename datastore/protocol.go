@@ -39,6 +39,7 @@ type CommonDataStoreProtocol struct {
 	initializeObjectRatingWithSlotHandler               func(dataID uint64, param *datastore_types.DataStoreRatingInitParamWithSlot) uint32
 	rateObjectWithPasswordHandler                       func(dataID uint64, slot uint8, ratingValue int32, accessPassword uint64) (*datastore_types.DataStoreRatingInfo, uint32)
 	deleteObjectByDataIDWithPasswordHandler             func(dataID uint64, password uint64) uint32
+	getObjectInfosByDataStoreSearchParamHandler         func(param *datastore_types.DataStoreSearchParam) ([]*datastore_types.DataStoreMetaInfo, uint32, uint32)
 }
 
 // SetS3Bucket sets the S3 bucket
@@ -141,11 +142,17 @@ func (c *CommonDataStoreProtocol) DeleteObjectByDataIDWithPassword(handler func(
 	c.deleteObjectByDataIDWithPasswordHandler = handler
 }
 
+// GetObjectInfosByDataStoreSearchParam sets the GetObjectInfosByDataStoreSearchParam handler function
+func (c *CommonDataStoreProtocol) GetObjectInfosByDataStoreSearchParam(handler func(param *datastore_types.DataStoreSearchParam) ([]*datastore_types.DataStoreMetaInfo, uint32, uint32)) {
+	c.getObjectInfosByDataStoreSearchParamHandler = handler
+}
+
 func initDefault(c *CommonDataStoreProtocol) {
 	c.DefaultProtocol = datastore.NewProtocol(c.server)
 	c.DefaultProtocol.DeleteObject(deleteObject)
 	c.DefaultProtocol.GetMeta(getMeta)
 	c.DefaultProtocol.GetMetas(getMetas)
+	c.DefaultProtocol.SearchObject(searchObject)
 	c.DefaultProtocol.RateObject(rateObject)
 	c.DefaultProtocol.PostMetaBinary(postMetaBinary)
 	c.DefaultProtocol.PreparePostObject(preparePostObject)
@@ -162,6 +169,7 @@ func initSuperMarioMaker(c *CommonDataStoreProtocol) {
 	c.SuperMarioMakerProtocol.DeleteObject(deleteObject)
 	c.SuperMarioMakerProtocol.GetMeta(getMeta)
 	c.SuperMarioMakerProtocol.GetMetas(getMetas)
+	c.SuperMarioMakerProtocol.SearchObject(searchObject)
 	c.SuperMarioMakerProtocol.RateObject(rateObject)
 	c.SuperMarioMakerProtocol.PostMetaBinary(postMetaBinary)
 	c.SuperMarioMakerProtocol.PreparePostObject(preparePostObject)
