@@ -21,8 +21,8 @@ func prepareGetObject(err error, client *nex.Client, callID uint32, param *datas
 		return nex.Errors.Core.NotImplemented
 	}
 
-	if commonDataStoreProtocol.presignGetObjectHandler == nil {
-		common_globals.Logger.Warning("PresignGetObject not defined")
+	if commonDataStoreProtocol.S3Presigner == nil {
+		common_globals.Logger.Warning("S3Presigner not defined")
 		return nex.Errors.Core.NotImplemented
 	}
 
@@ -44,7 +44,7 @@ func prepareGetObject(err error, client *nex.Client, callID uint32, param *datas
 		return errCode
 	}
 
-	url, err := commonDataStoreProtocol.presignGetObjectHandler(bucket, key, time.Minute*15)
+	url, err := commonDataStoreProtocol.S3Presigner.GetObject(bucket, key, time.Minute*15)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nex.Errors.DataStore.OperationNotAllowed

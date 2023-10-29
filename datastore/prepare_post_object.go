@@ -21,8 +21,8 @@ func preparePostObject(err error, client *nex.Client, callID uint32, param *data
 		return nex.Errors.Core.NotImplemented
 	}
 
-	if commonDataStoreProtocol.presignPostObjectHandler == nil {
-		common_globals.Logger.Warning("PresignPostObject not defined")
+	if commonDataStoreProtocol.S3Presigner == nil {
+		common_globals.Logger.Warning("S3Presigner not defined")
 		return nex.Errors.Core.NotImplemented
 	}
 
@@ -50,7 +50,7 @@ func preparePostObject(err error, client *nex.Client, callID uint32, param *data
 	bucket := commonDataStoreProtocol.s3Bucket
 	key := fmt.Sprintf("%s/%d.bin", commonDataStoreProtocol.s3DataKeyBase, dataID)
 
-	URL, formData, err := commonDataStoreProtocol.presignPostObjectHandler(bucket, key, time.Minute*15)
+	URL, formData, err := commonDataStoreProtocol.S3Presigner.PostObject(bucket, key, time.Minute*15)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nex.Errors.DataStore.OperationNotAllowed

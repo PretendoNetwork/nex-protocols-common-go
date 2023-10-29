@@ -9,8 +9,8 @@ import (
 )
 
 func completePostObjects(err error, client *nex.Client, callID uint32, dataIDs []uint64) uint32 {
-	if commonDataStoreProtocol.s3ObjectSizeHandler == nil {
-		common_globals.Logger.Warning("S3ObjectSize not defined")
+	if commonDataStoreProtocol.MinIOClient == nil {
+		common_globals.Logger.Warning("MinIOClient not defined")
 		return nex.Errors.Core.NotImplemented
 	}
 
@@ -33,7 +33,7 @@ func completePostObjects(err error, client *nex.Client, callID uint32, dataIDs [
 		bucket := commonDataStoreProtocol.s3Bucket
 		key := fmt.Sprintf("%s/%d.bin", commonDataStoreProtocol.s3DataKeyBase, dataID)
 
-		objectSizeS3, err := commonDataStoreProtocol.s3ObjectSizeHandler(bucket, key)
+		objectSizeS3, err := commonDataStoreProtocol.S3ObjectSize(bucket, key)
 		if err != nil {
 			common_globals.Logger.Error(err.Error())
 			return nex.Errors.DataStore.NotFound
