@@ -136,7 +136,6 @@ func (c *CommonDataStoreProtocol) RateObjectWithPassword(handler func(dataID uin
 }
 
 func initDefault(c *CommonDataStoreProtocol) {
-	// TODO - Organize by method ID
 	c.DefaultProtocol = datastore.NewProtocol(c.server)
 	c.DefaultProtocol.GetMeta(getMeta)
 	c.DefaultProtocol.PreparePostObject(preparePostObject)
@@ -148,7 +147,6 @@ func initDefault(c *CommonDataStoreProtocol) {
 }
 
 func initSuperMarioMaker(c *CommonDataStoreProtocol) {
-	// TODO - Organize by method ID
 	c.SuperMarioMakerProtocol = datastore_super_mario_maker.NewProtocol(c.server)
 	c.SuperMarioMakerProtocol.GetMeta(getMeta)
 	c.SuperMarioMakerProtocol.PreparePostObject(preparePostObject)
