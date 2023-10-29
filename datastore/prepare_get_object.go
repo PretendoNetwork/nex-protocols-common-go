@@ -44,7 +44,7 @@ func prepareGetObject(err error, client *nex.Client, callID uint32, param *datas
 		return errCode
 	}
 
-	URL, err := commonDataStoreProtocol.presignGetObjectHandler(bucket, key, time.Minute*15)
+	url, err := commonDataStoreProtocol.presignGetObjectHandler(bucket, key, time.Minute*15)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nex.Errors.DataStore.OperationNotAllowed
@@ -57,7 +57,7 @@ func prepareGetObject(err error, client *nex.Client, callID uint32, param *datas
 
 	pReqGetInfo := datastore_types.NewDataStoreReqGetInfo()
 
-	pReqGetInfo.URL = URL.String()
+	pReqGetInfo.URL = url.String()
 	pReqGetInfo.RequestHeaders = requestHeaders
 	pReqGetInfo.Size = objectInfo.Size
 	pReqGetInfo.RootCACert = commonDataStoreProtocol.rootCACert
