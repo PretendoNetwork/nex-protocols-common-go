@@ -51,6 +51,7 @@ func completePostObject(err error, client *nex.Client, callID uint32, param *dat
 		}
 
 		if objectSizeS3 != uint64(objectSizeDB) {
+			common_globals.Logger.Errorf("Object with DataID %d did not upload correctly! Mismatched sizes", param.DataID)
 			// TODO - Is this a good error?
 			return nex.Errors.DataStore.Unknown
 		}
