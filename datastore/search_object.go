@@ -37,13 +37,14 @@ func searchObject(err error, client *nex.Client, callID uint32, param *datastore
 
 	pSearchResult := datastore_types.NewDataStoreSearchResult()
 
-	pSearchResult.TotalCount = totalCount
 	pSearchResult.Result = make([]*datastore_types.DataStoreMetaInfo, 0, len(objects))
-	pSearchResult.TotalCountType = uint8(param.DataType) // TODO - Is this right?
 
 	for _, object := range objects {
 		errCode = commonDataStoreProtocol.verifyObjectPermissionHandler(object.OwnerID, client.PID(), object.Permission)
 		if errCode != 0 {
+			// * Since we don't error here, should we also
+			// * "hide" these results by also decrementing
+			// * totalCount?
 			continue
 		}
 
@@ -70,6 +71,32 @@ func searchObject(err error, client *nex.Client, callID uint32, param *datastore
 
 		pSearchResult.Result = append(pSearchResult.Result, object)
 	}
+
+	var totalCountType uint8
+
+	// * Doing this here since the object
+	// * the permissions checks in the
+	// * previous loop will mutate the data
+	// * returned from the database
+	if totalCount == uint32(len(pSearchResult.Result)) {
+		totalCountType = 0 // * Has no more data. All possible results were returned
+	} else {
+		totalCountType = 1 // * Has more data. Not all possible results were returned
+	}
+
+	// * Disables the TotalCount
+	// *
+	// * Only seen in struct revision 3 or
+	// * NEX 4.0+
+	if param.StructureVersion() >= 3 || commonDataStoreProtocol.server.DataStoreProtocolVersion().GreaterOrEqual("4.0.0") {
+		if !param.TotalCountEnabled {
+			totalCount = 0
+			totalCountType = 3
+		}
+	}
+
+	pSearchResult.TotalCount = totalCount
+	pSearchResult.TotalCountType = totalCountType
 
 	rmcResponseStream := nex.NewStreamOut(commonDataStoreProtocol.server)
 
