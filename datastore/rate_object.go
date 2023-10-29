@@ -13,11 +13,6 @@ func rateObject(err error, client *nex.Client, callID uint32, target *datastore_
 		return nex.Errors.Core.NotImplemented
 	}
 
-	if commonDataStoreProtocol.verifyObjectPermissionHandler == nil {
-		common_globals.Logger.Warning("VerifyObjectPermission not defined")
-		return nex.Errors.Core.NotImplemented
-	}
-
 	if commonDataStoreProtocol.rateObjectWithPasswordHandler == nil {
 		common_globals.Logger.Warning("RateObjectWithPassword not defined")
 		return nex.Errors.Core.NotImplemented
@@ -33,7 +28,7 @@ func rateObject(err error, client *nex.Client, callID uint32, target *datastore_
 		return errCode
 	}
 
-	errCode = commonDataStoreProtocol.verifyObjectPermissionHandler(objectInfo.OwnerID, client.PID(), objectInfo.Permission)
+	errCode = commonDataStoreProtocol.VerifyObjectPermission(objectInfo.OwnerID, client.PID(), objectInfo.Permission)
 	if errCode != 0 {
 		return errCode
 	}

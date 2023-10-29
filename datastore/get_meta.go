@@ -18,11 +18,6 @@ func getMeta(err error, client *nex.Client, callID uint32, param *datastore_type
 		return nex.Errors.Core.NotImplemented
 	}
 
-	if commonDataStoreProtocol.verifyObjectPermissionHandler == nil {
-		common_globals.Logger.Warning("VerifyObjectPermission not defined")
-		return nex.Errors.Core.NotImplemented
-	}
-
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nex.Errors.DataStore.Unknown
@@ -42,7 +37,7 @@ func getMeta(err error, client *nex.Client, callID uint32, param *datastore_type
 		return errCode
 	}
 
-	errCode = commonDataStoreProtocol.verifyObjectPermissionHandler(pMetaInfo.OwnerID, client.PID(), pMetaInfo.Permission)
+	errCode = commonDataStoreProtocol.VerifyObjectPermission(pMetaInfo.OwnerID, client.PID(), pMetaInfo.Permission)
 	if errCode != 0 {
 		return errCode
 	}

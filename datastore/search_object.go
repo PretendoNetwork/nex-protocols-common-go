@@ -13,11 +13,6 @@ func searchObject(err error, client *nex.Client, callID uint32, param *datastore
 		return nex.Errors.Core.NotImplemented
 	}
 
-	if commonDataStoreProtocol.verifyObjectPermissionHandler == nil {
-		common_globals.Logger.Warning("VerifyObjectPermission not defined")
-		return nex.Errors.Core.NotImplemented
-	}
-
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nex.Errors.DataStore.Unknown
@@ -40,7 +35,7 @@ func searchObject(err error, client *nex.Client, callID uint32, param *datastore
 	pSearchResult.Result = make([]*datastore_types.DataStoreMetaInfo, 0, len(objects))
 
 	for _, object := range objects {
-		errCode = commonDataStoreProtocol.verifyObjectPermissionHandler(object.OwnerID, client.PID(), object.Permission)
+		errCode = commonDataStoreProtocol.VerifyObjectPermission(object.OwnerID, client.PID(), object.Permission)
 		if errCode != 0 {
 			// * Since we don't error here, should we also
 			// * "hide" these results by also decrementing

@@ -2,6 +2,7 @@ package datastore
 
 import (
 	"context"
+	"slices"
 	"strings"
 
 	nex "github.com/PretendoNetwork/nex-go"
@@ -25,8 +26,8 @@ type CommonDataStoreProtocol struct {
 	rootCACert                                          []byte
 	MinIOClient                                         *minio.Client
 	S3Presigner                                         S3PresignerInterface
+	getUserFriendPIDsHandler                            func(pid uint32) []uint32
 	getObjectInfoByDataIDHandler                        func(dataID uint64) (*datastore_types.DataStoreMetaInfo, uint32)
-	verifyObjectPermissionHandler                       func(ownerPID uint32, accessorPID uint32, permission *datastore_types.DataStorePermission) uint32
 	updateObjectPeriodByDataIDWithPasswordHandler       func(dataID uint64, dataType uint16, password uint64) uint32
 	updateObjectMetaBinaryByDataIDWithPasswordHandler   func(dataID uint64, metaBinary []byte, password uint64) uint32
 	updateObjectDataTypeByDataIDWithPasswordHandler     func(dataID uint64, period uint16, password uint64) uint32
@@ -55,6 +56,42 @@ func (c *CommonDataStoreProtocol) S3ObjectSize(bucket, key string) (uint64, erro
 	}
 
 	return uint64(info.Size), nil
+}
+
+func (c *CommonDataStoreProtocol) VerifyObjectPermission(ownerPID, accessorPID uint32, permission *datastore_types.DataStorePermission) uint32 {
+	if permission.Permission > 3 {
+		return nex.Errors.DataStore.InvalidArgument
+	}
+
+	// * Allow anyone
+	if permission.Permission == 0 {
+		return 0
+	}
+
+	// * Allow friends
+	if permission.Permission == 1 {
+		friendsList := c.getUserFriendPIDsHandler(ownerPID)
+
+		if !slices.Contains(friendsList, accessorPID) {
+			return nex.Errors.DataStore.PermissionDenied
+		}
+	}
+
+	// * Allow people in permission.RecipientIDs
+	if permission.Permission == 2 {
+		if !slices.Contains(permission.RecipientIDs, accessorPID) {
+			return nex.Errors.DataStore.PermissionDenied
+		}
+	}
+
+	// * Allow only the owner
+	if permission.Permission == 3 {
+		if ownerPID != accessorPID {
+			return nex.Errors.DataStore.PermissionDenied
+		}
+	}
+
+	return 0
 }
 
 // SetS3Bucket sets the S3 bucket
@@ -94,14 +131,14 @@ func (c *CommonDataStoreProtocol) SetS3Presigner(presigner S3PresignerInterface)
 	c.S3Presigner = presigner
 }
 
+// SetGetUserFriendPIDs sets the handler for a function which gets a list of a users friend PIDs
+func (c *CommonDataStoreProtocol) SetGetUserFriendPIDs(handler func(pid uint32) []uint32) {
+	c.getUserFriendPIDsHandler = handler
+}
+
 // GetObjectInfoByDataID sets the GetObjectInfoByDataID handler function
 func (c *CommonDataStoreProtocol) GetObjectInfoByDataID(handler func(dataID uint64) (*datastore_types.DataStoreMetaInfo, uint32)) {
 	c.getObjectInfoByDataIDHandler = handler
-}
-
-// VerifyObjectPermission sets the VerifyObjectPermission handler function
-func (c *CommonDataStoreProtocol) VerifyObjectPermission(handler func(ownerPID uint32, accessorPID uint32, permission *datastore_types.DataStorePermission) uint32) {
-	c.verifyObjectPermissionHandler = handler
 }
 
 // UpdateObjectPeriodByDataIDWithPassword sets the UpdateObjectPeriodByDataIDWithPassword handler function

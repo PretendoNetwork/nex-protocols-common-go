@@ -16,11 +16,6 @@ func prepareGetObject(err error, client *nex.Client, callID uint32, param *datas
 		return nex.Errors.Core.NotImplemented
 	}
 
-	if commonDataStoreProtocol.verifyObjectPermissionHandler == nil {
-		common_globals.Logger.Warning("VerifyObjectPermission not defined")
-		return nex.Errors.Core.NotImplemented
-	}
-
 	if commonDataStoreProtocol.S3Presigner == nil {
 		common_globals.Logger.Warning("S3Presigner not defined")
 		return nex.Errors.Core.NotImplemented
@@ -39,7 +34,7 @@ func prepareGetObject(err error, client *nex.Client, callID uint32, param *datas
 		return errCode
 	}
 
-	errCode = commonDataStoreProtocol.verifyObjectPermissionHandler(objectInfo.OwnerID, client.PID(), objectInfo.Permission)
+	errCode = commonDataStoreProtocol.VerifyObjectPermission(objectInfo.OwnerID, client.PID(), objectInfo.Permission)
 	if errCode != 0 {
 		return errCode
 	}

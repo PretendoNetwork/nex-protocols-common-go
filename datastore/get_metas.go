@@ -13,11 +13,6 @@ func getMetas(err error, client *nex.Client, callID uint32, dataIDs []uint64, pa
 		return nex.Errors.Core.NotImplemented
 	}
 
-	if commonDataStoreProtocol.verifyObjectPermissionHandler == nil {
-		common_globals.Logger.Warning("VerifyObjectPermission not defined")
-		return nex.Errors.Core.NotImplemented
-	}
-
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nex.Errors.DataStore.Unknown
@@ -65,7 +60,7 @@ func getMetas(err error, client *nex.Client, callID uint32, dataIDs []uint64, pa
 
 			pResults = append(pResults, nex.NewResultError(errCode))
 		} else {
-			errCode = commonDataStoreProtocol.verifyObjectPermissionHandler(objectInfo.OwnerID, client.PID(), objectInfo.Permission)
+			errCode = commonDataStoreProtocol.VerifyObjectPermission(objectInfo.OwnerID, client.PID(), objectInfo.Permission)
 			if errCode != 0 {
 				// TODO - Maybe this should be broken out into a util function in globals?
 				objectInfo = datastore_types.NewDataStoreMetaInfo()

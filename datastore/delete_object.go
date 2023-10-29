@@ -13,11 +13,6 @@ func deleteObject(err error, client *nex.Client, callID uint32, param *datastore
 		return nex.Errors.Core.NotImplemented
 	}
 
-	if commonDataStoreProtocol.verifyObjectPermissionHandler == nil {
-		common_globals.Logger.Warning("VerifyObjectPermission not defined")
-		return nex.Errors.Core.NotImplemented
-	}
-
 	if commonDataStoreProtocol.deleteObjectByDataIDWithPasswordHandler == nil {
 		common_globals.Logger.Warning("DeleteObjectByDataIDWithPassword not defined")
 		return nex.Errors.Core.NotImplemented
@@ -33,7 +28,7 @@ func deleteObject(err error, client *nex.Client, callID uint32, param *datastore
 		return errCode
 	}
 
-	errCode = commonDataStoreProtocol.verifyObjectPermissionHandler(metaInfo.OwnerID, client.PID(), metaInfo.DelPermission)
+	errCode = commonDataStoreProtocol.VerifyObjectPermission(metaInfo.OwnerID, client.PID(), metaInfo.DelPermission)
 	if errCode != 0 {
 		return errCode
 	}

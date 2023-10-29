@@ -13,11 +13,6 @@ func changeMeta(err error, client *nex.Client, callID uint32, param *datastore_t
 		return nex.Errors.Core.NotImplemented
 	}
 
-	if commonDataStoreProtocol.verifyObjectPermissionHandler == nil {
-		common_globals.Logger.Warning("VerifyObjectPermission not defined")
-		return nex.Errors.Core.NotImplemented
-	}
-
 	if commonDataStoreProtocol.updateObjectPeriodByDataIDWithPasswordHandler == nil {
 		common_globals.Logger.Warning("UpdateObjectPeriodByDataIDWithPassword not defined")
 		return nex.Errors.Core.NotImplemented
@@ -44,7 +39,7 @@ func changeMeta(err error, client *nex.Client, callID uint32, param *datastore_t
 	}
 
 	// TODO - Is this the right permission?
-	errCode = commonDataStoreProtocol.verifyObjectPermissionHandler(metaInfo.OwnerID, client.PID(), metaInfo.DelPermission)
+	errCode = commonDataStoreProtocol.VerifyObjectPermission(metaInfo.OwnerID, client.PID(), metaInfo.DelPermission)
 	if errCode != 0 {
 		return errCode
 	}
