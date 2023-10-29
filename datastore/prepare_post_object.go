@@ -31,6 +31,7 @@ func preparePostObject(err error, client *nex.Client, callID uint32, param *data
 		return nex.Errors.DataStore.Unknown
 	}
 
+	// TODO - Need to verify what param.PersistenceInitParam.DeleteLastObject really means. It's often set to true even when it wouldn't make sense
 	dataID, errCode := commonDataStoreProtocol.initializeObjectByPreparePostParamHandler(client.PID(), param)
 	if errCode != 0 {
 		common_globals.Logger.Errorf("Error code %d on object init", errCode)
