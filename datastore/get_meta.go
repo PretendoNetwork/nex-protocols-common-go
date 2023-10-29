@@ -78,9 +78,16 @@ func getMeta(err error, client *nex.Client, callID uint32, param *datastore_type
 
 	rmcResponseBytes := rmcResponse.Bytes()
 
-	responsePacket, _ := nex.NewPacketV1(client, nil)
+	var responsePacket nex.PacketInterface
 
-	responsePacket.SetVersion(1)
+	if commonDataStoreProtocol.server.PRUDPVersion() == 0 {
+		responsePacket, _ = nex.NewPacketV0(client, nil)
+		responsePacket.SetVersion(0)
+	} else {
+		responsePacket, _ = nex.NewPacketV1(client, nil)
+		responsePacket.SetVersion(1)
+	}
+
 	responsePacket.SetSource(0xA1)
 	responsePacket.SetDestination(0xAF)
 	responsePacket.SetType(nex.DataPacket)
