@@ -38,6 +38,7 @@ type CommonDataStoreProtocol struct {
 	initializeObjectByPreparePostParamHandler           func(ownerPID uint32, param *datastore_types.DataStorePreparePostParam) (uint64, uint32)
 	initializeObjectRatingWithSlotHandler               func(dataID uint64, param *datastore_types.DataStoreRatingInitParamWithSlot) uint32
 	rateObjectWithPasswordHandler                       func(dataID uint64, slot uint8, ratingValue int32, accessPassword uint64) (*datastore_types.DataStoreRatingInfo, uint32)
+	deleteObjectByDataIDWithPasswordHandler             func(dataID uint64, password uint64) uint32
 }
 
 // SetS3Bucket sets the S3 bucket
@@ -135,8 +136,14 @@ func (c *CommonDataStoreProtocol) RateObjectWithPassword(handler func(dataID uin
 	c.rateObjectWithPasswordHandler = handler
 }
 
+// DeleteObjectByDataIDWithPassword sets the DeleteObjectByDataIDWithPassword handler function
+func (c *CommonDataStoreProtocol) DeleteObjectByDataIDWithPassword(handler func(dataID uint64, password uint64) uint32) {
+	c.deleteObjectByDataIDWithPasswordHandler = handler
+}
+
 func initDefault(c *CommonDataStoreProtocol) {
 	c.DefaultProtocol = datastore.NewProtocol(c.server)
+	c.DefaultProtocol.DeleteObject(deleteObject)
 	c.DefaultProtocol.GetMeta(getMeta)
 	c.DefaultProtocol.PreparePostObject(preparePostObject)
 	c.DefaultProtocol.PrepareGetObject(prepareGetObject)
@@ -149,6 +156,7 @@ func initDefault(c *CommonDataStoreProtocol) {
 
 func initSuperMarioMaker(c *CommonDataStoreProtocol) {
 	c.SuperMarioMakerProtocol = datastore_super_mario_maker.NewProtocol(c.server)
+	c.SuperMarioMakerProtocol.DeleteObject(deleteObject)
 	c.SuperMarioMakerProtocol.GetMeta(getMeta)
 	c.SuperMarioMakerProtocol.PreparePostObject(preparePostObject)
 	c.SuperMarioMakerProtocol.PrepareGetObject(prepareGetObject)
