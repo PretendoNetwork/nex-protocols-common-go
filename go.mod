@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/PretendoNetwork/nex-go v1.0.41
-	github.com/PretendoNetwork/nex-protocols-go v1.0.56
+	github.com/PretendoNetwork/nex-protocols-go v1.0.57
 	github.com/PretendoNetwork/plogger-go v1.0.4
 	github.com/minio/minio-go/v7 v7.0.63
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d

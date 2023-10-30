@@ -45,26 +45,7 @@ func getMetas(err error, client *nex.Client, callID uint32, dataIDs []uint64, pa
 				pResults = append(pResults, nex.NewResultSuccess(nex.Errors.DataStore.Unknown))
 			}
 
-			// * This is kind of backwards.
-			// * The database pulls this data
-			// * by default, so it can be done
-			// * in a single query. So instead
-			// * of checking if a flag *IS*
-			// * set, and conditionally *ADDING*
-			// * the fields, we check if a flag
-			// * is *NOT* set and conditionally
-			// * *REMOVE* the field
-			if param.ResultOption&0x1 == 0 {
-				objectInfo.Tags = make([]string, 0)
-			}
-
-			if param.ResultOption&0x2 == 0 {
-				objectInfo.Ratings = make([]*datastore_types.DataStoreRatingInfoWithSlot, 0)
-			}
-
-			if param.ResultOption&0x4 == 0 {
-				objectInfo.MetaBinary = make([]byte, 0)
-			}
+			objectInfo.FilterPropertiesByResultOption(param.ResultOption)
 		}
 
 		pMetaInfo = append(pMetaInfo, objectInfo)

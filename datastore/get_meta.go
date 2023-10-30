@@ -42,26 +42,7 @@ func getMeta(err error, client *nex.Client, callID uint32, param *datastore_type
 		return errCode
 	}
 
-	// * This is kind of backwards.
-	// * The database pulls this data
-	// * by default, so it can be done
-	// * in a single query. So instead
-	// * of checking if a flag *IS*
-	// * set, and conditionally *ADDING*
-	// * the fields, we check if a flag
-	// * is *NOT* set and conditionally
-	// * *REMOVE* the field
-	if param.ResultOption&0x1 == 0 {
-		pMetaInfo.Tags = make([]string, 0)
-	}
-
-	if param.ResultOption&0x2 == 0 {
-		pMetaInfo.Ratings = make([]*datastore_types.DataStoreRatingInfoWithSlot, 0)
-	}
-
-	if param.ResultOption&0x4 == 0 {
-		pMetaInfo.MetaBinary = make([]byte, 0)
-	}
+	pMetaInfo.FilterPropertiesByResultOption(param.ResultOption)
 
 	rmcResponseStream := nex.NewStreamOut(commonDataStoreProtocol.server)
 	rmcResponseStream.WriteStructure(pMetaInfo)
