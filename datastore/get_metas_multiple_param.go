@@ -38,61 +38,13 @@ func getMetasMultipleParam(err error, client *nex.Client, callID uint32, params 
 		}
 
 		if errCode != 0 {
-			// TODO - Maybe this should be broken out into a util function in globals?
 			objectInfo = datastore_types.NewDataStoreMetaInfo()
-			objectInfo.DataID = 0
-			objectInfo.OwnerID = 0
-			objectInfo.Size = 0
-			objectInfo.Name = ""
-			objectInfo.DataType = 0
-			objectInfo.MetaBinary = []byte{}
-			objectInfo.Permission = datastore_types.NewDataStorePermission()
-			objectInfo.Permission.Permission = 0
-			objectInfo.Permission.RecipientIDs = []uint32{}
-			objectInfo.DelPermission = datastore_types.NewDataStorePermission()
-			objectInfo.DelPermission.Permission = 0
-			objectInfo.DelPermission.RecipientIDs = []uint32{}
-			objectInfo.CreatedTime = nex.NewDateTime(0)
-			objectInfo.UpdatedTime = nex.NewDateTime(0)
-			objectInfo.Period = 0
-			objectInfo.Status = 0
-			objectInfo.ReferredCnt = 0
-			objectInfo.ReferDataID = 0
-			objectInfo.Flag = 0
-			objectInfo.ReferredTime = nex.NewDateTime(0)
-			objectInfo.ExpireTime = nex.NewDateTime(0)
-			objectInfo.Tags = []string{}
-			objectInfo.Ratings = []*datastore_types.DataStoreRatingInfoWithSlot{}
 
 			pResults = append(pResults, nex.NewResultError(errCode))
 		} else {
 			errCode = commonDataStoreProtocol.VerifyObjectPermission(objectInfo.OwnerID, client.PID(), objectInfo.Permission)
 			if errCode != 0 {
-				// TODO - Maybe this should be broken out into a util function in globals?
 				objectInfo = datastore_types.NewDataStoreMetaInfo()
-				objectInfo.DataID = 0
-				objectInfo.OwnerID = 0
-				objectInfo.Size = 0
-				objectInfo.Name = ""
-				objectInfo.DataType = 0
-				objectInfo.MetaBinary = []byte{}
-				objectInfo.Permission = datastore_types.NewDataStorePermission()
-				objectInfo.Permission.Permission = 0
-				objectInfo.Permission.RecipientIDs = []uint32{}
-				objectInfo.DelPermission = datastore_types.NewDataStorePermission()
-				objectInfo.DelPermission.Permission = 0
-				objectInfo.DelPermission.RecipientIDs = []uint32{}
-				objectInfo.CreatedTime = nex.NewDateTime(0)
-				objectInfo.UpdatedTime = nex.NewDateTime(0)
-				objectInfo.Period = 0
-				objectInfo.Status = 0
-				objectInfo.ReferredCnt = 0
-				objectInfo.ReferDataID = 0
-				objectInfo.Flag = 0
-				objectInfo.ReferredTime = nex.NewDateTime(0)
-				objectInfo.ExpireTime = nex.NewDateTime(0)
-				objectInfo.Tags = []string{}
-				objectInfo.Ratings = []*datastore_types.DataStoreRatingInfoWithSlot{}
 
 				pResults = append(pResults, nex.NewResultError(errCode))
 			} else {
