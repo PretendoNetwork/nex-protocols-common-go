@@ -63,12 +63,17 @@ func (c *CommonDataStoreProtocol) VerifyObjectPermission(ownerPID, accessorPID u
 		return nex.Errors.DataStore.InvalidArgument
 	}
 
+	// * Owner can always access their own objects
+	if ownerPID == accessorPID {
+		return 0
+	}
+
 	// * Allow anyone
 	if permission.Permission == 0 {
 		return 0
 	}
 
-	// * Allow friends
+	// * Allow only friends of the owner
 	if permission.Permission == 1 {
 		friendsList := c.getUserFriendPIDsHandler(ownerPID)
 
@@ -77,7 +82,7 @@ func (c *CommonDataStoreProtocol) VerifyObjectPermission(ownerPID, accessorPID u
 		}
 	}
 
-	// * Allow people in permission.RecipientIDs
+	// * Allow only users whose PIDs are defined in permission.RecipientIDs
 	if permission.Permission == 2 {
 		if !slices.Contains(permission.RecipientIDs, accessorPID) {
 			return nex.Errors.DataStore.PermissionDenied
