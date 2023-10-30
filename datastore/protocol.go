@@ -31,7 +31,7 @@ type CommonDataStoreProtocol struct {
 	updateObjectPeriodByDataIDWithPasswordHandler       func(dataID uint64, dataType uint16, password uint64) uint32
 	updateObjectMetaBinaryByDataIDWithPasswordHandler   func(dataID uint64, metaBinary []byte, password uint64) uint32
 	updateObjectDataTypeByDataIDWithPasswordHandler     func(dataID uint64, period uint16, password uint64) uint32
-	getObjectSizeDataIDHandler                          func(dataID uint64) (uint32, uint32)
+	getObjectSizeByDataIDHandler                        func(dataID uint64) (uint32, uint32)
 	updateObjectUploadCompletedByDataIDHandler          func(dataID uint64, uploadCompleted bool) uint32
 	getObjectInfoByPersistenceTargetWithPasswordHandler func(persistenceTarget *datastore_types.DataStorePersistenceTarget, password uint64) (*datastore_types.DataStoreMetaInfo, uint32)
 	getObjectInfoByDataIDWithPasswordHandler            func(dataID uint64, password uint64) (*datastore_types.DataStoreMetaInfo, uint32)
@@ -158,7 +158,7 @@ func (c *CommonDataStoreProtocol) UpdateObjectDataTypeByDataIDWithPassword(handl
 
 // GetObjectSizeDataID sets the GetObjectSizeDataID handler function
 func (c *CommonDataStoreProtocol) GetObjectSizeDataID(handler func(dataID uint64) (uint32, uint32)) {
-	c.getObjectSizeDataIDHandler = handler
+	c.getObjectSizeByDataIDHandler = handler
 }
 
 // UpdateObjectUploadCompletedByDataID sets the UpdateObjectUploadCompletedByDataID handler function

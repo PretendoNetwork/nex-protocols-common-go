@@ -14,8 +14,8 @@ func completePostObjects(err error, client *nex.Client, callID uint32, dataIDs [
 		return nex.Errors.Core.NotImplemented
 	}
 
-	if commonDataStoreProtocol.getObjectSizeDataIDHandler == nil {
-		common_globals.Logger.Warning("GetObjectSizeDataID not defined")
+	if commonDataStoreProtocol.getObjectSizeByDataIDHandler == nil {
+		common_globals.Logger.Warning("GetObjectSizeByDataID not defined")
 		return nex.Errors.Core.NotImplemented
 	}
 
@@ -39,7 +39,7 @@ func completePostObjects(err error, client *nex.Client, callID uint32, dataIDs [
 			return nex.Errors.DataStore.NotFound
 		}
 
-		objectSizeDB, errCode := commonDataStoreProtocol.getObjectSizeDataIDHandler(dataID)
+		objectSizeDB, errCode := commonDataStoreProtocol.getObjectSizeByDataIDHandler(dataID)
 		if errCode != 0 {
 			return errCode
 		}
