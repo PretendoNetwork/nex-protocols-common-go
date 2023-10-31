@@ -15,6 +15,16 @@ func completePostObject(err error, client *nex.Client, callID uint32, param *dat
 		return nex.Errors.Core.NotImplemented
 	}
 
+	if commonDataStoreProtocol.getObjectInfoByDataIDHandler == nil {
+		common_globals.Logger.Warning("GetObjectInfoByDataID not defined")
+		return nex.Errors.Core.NotImplemented
+	}
+
+	if commonDataStoreProtocol.getObjectOwnerByDataIDHandler == nil {
+		common_globals.Logger.Warning("GetObjectOwnerByDataID not defined")
+		return nex.Errors.Core.NotImplemented
+	}
+
 	if commonDataStoreProtocol.getObjectSizeByDataIDHandler == nil {
 		common_globals.Logger.Warning("GetObjectSizeByDataID not defined")
 		return nex.Errors.Core.NotImplemented
@@ -26,13 +36,31 @@ func completePostObject(err error, client *nex.Client, callID uint32, param *dat
 	}
 
 	if commonDataStoreProtocol.deleteObjectByDataIDHandler == nil {
-		common_globals.Logger.Warning("DeleteObjectByDataIDHandler not defined")
+		common_globals.Logger.Warning("DeleteObjectByDataID not defined")
 		return nex.Errors.Core.NotImplemented
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nex.Errors.DataStore.Unknown
+	}
+
+	// * If GetObjectInfoByDataID returns data then that means
+	// * the object has already been marked as uploaded. So do
+	// * nothing
+	objectInfo, _ := commonDataStoreProtocol.getObjectInfoByDataIDHandler(param.DataID)
+	if objectInfo != nil {
+		return nex.Errors.DataStore.PermissionDenied
+	}
+
+	// * Only allow an objects owner to make this request
+	ownerPID, errCode := commonDataStoreProtocol.getObjectOwnerByDataIDHandler(param.DataID)
+	if errCode != 0 {
+		return errCode
+	}
+
+	if ownerPID != client.PID() {
+		return nex.Errors.DataStore.PermissionDenied
 	}
 
 	bucket := commonDataStoreProtocol.s3Bucket

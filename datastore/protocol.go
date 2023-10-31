@@ -43,6 +43,7 @@ type CommonDataStoreProtocol struct {
 	deleteObjectByDataIDWithPasswordHandler             func(dataID uint64, password uint64) uint32
 	deleteObjectByDataIDHandler                         func(dataID uint64) uint32
 	getObjectInfosByDataStoreSearchParamHandler         func(param *datastore_types.DataStoreSearchParam) ([]*datastore_types.DataStoreMetaInfo, uint32, uint32)
+	getObjectOwnerByDataIDHandler                       func(dataID uint64) (uint32, uint32)
 }
 
 func (c *CommonDataStoreProtocol) S3StatObject(bucket, key string) (minio.ObjectInfo, error) {
@@ -219,6 +220,11 @@ func (c *CommonDataStoreProtocol) DeleteObjectByDataID(handler func(dataID uint6
 // GetObjectInfosByDataStoreSearchParam sets the GetObjectInfosByDataStoreSearchParam handler function
 func (c *CommonDataStoreProtocol) GetObjectInfosByDataStoreSearchParam(handler func(param *datastore_types.DataStoreSearchParam) ([]*datastore_types.DataStoreMetaInfo, uint32, uint32)) {
 	c.getObjectInfosByDataStoreSearchParamHandler = handler
+}
+
+// GetObjectOwnerByDataID sets the GetObjectOwnerByDataID handler function
+func (c *CommonDataStoreProtocol) GetObjectOwnerByDataID(handler func(dataID uint64) (uint32, uint32)) {
+	c.getObjectOwnerByDataIDHandler = handler
 }
 
 func initDefault(c *CommonDataStoreProtocol) {
