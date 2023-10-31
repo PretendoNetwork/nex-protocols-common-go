@@ -61,13 +61,9 @@ func completePostObject(err error, client *nex.Client, callID uint32, param *dat
 			return errCode
 		}
 	} else {
-		// * Query to see if the
-		_, err := commonDataStoreProtocol.S3StatObject(bucket, key)
-		if err != nil {
-			errCode := commonDataStoreProtocol.deleteObjectByDataIDHandler(param.DataID)
-			if errCode != 0 {
-				return errCode
-			}
+		errCode := commonDataStoreProtocol.deleteObjectByDataIDHandler(param.DataID)
+		if errCode != 0 {
+			return errCode
 		}
 	}
 
