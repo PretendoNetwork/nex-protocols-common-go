@@ -10,7 +10,7 @@ import (
 )
 
 func completePostObject(err error, client *nex.Client, callID uint32, param *datastore_types.DataStoreCompletePostParam) uint32 {
-	if commonDataStoreProtocol.MinIOClient == nil {
+	if commonDataStoreProtocol.minIOClient == nil {
 		common_globals.Logger.Warning("MinIOClient not defined")
 		return nex.Errors.Core.NotImplemented
 	}
@@ -35,10 +35,10 @@ func completePostObject(err error, client *nex.Client, callID uint32, param *dat
 		return nex.Errors.DataStore.Unknown
 	}
 
-	if param.IsSuccess {
-		bucket := commonDataStoreProtocol.s3Bucket
-		key := fmt.Sprintf("%s/%d.bin", commonDataStoreProtocol.s3DataKeyBase, param.DataID)
+	bucket := commonDataStoreProtocol.s3Bucket
+	key := fmt.Sprintf("%s/%d.bin", commonDataStoreProtocol.s3DataKeyBase, param.DataID)
 
+	if param.IsSuccess {
 		objectSizeS3, err := commonDataStoreProtocol.S3ObjectSize(bucket, key)
 		if err != nil {
 			common_globals.Logger.Error(err.Error())
@@ -61,9 +61,13 @@ func completePostObject(err error, client *nex.Client, callID uint32, param *dat
 			return errCode
 		}
 	} else {
-		errCode := commonDataStoreProtocol.deleteObjectByDataIDHandler(param.DataID)
-		if errCode != 0 {
-			return errCode
+		// * Query to see if the
+		_, err := commonDataStoreProtocol.S3StatObject(bucket, key)
+		if err != nil {
+			errCode := commonDataStoreProtocol.deleteObjectByDataIDHandler(param.DataID)
+			if errCode != 0 {
+				return errCode
+			}
 		}
 	}
 

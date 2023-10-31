@@ -9,7 +9,7 @@ import (
 )
 
 func completePostObjects(err error, client *nex.Client, callID uint32, dataIDs []uint64) uint32 {
-	if commonDataStoreProtocol.MinIOClient == nil {
+	if commonDataStoreProtocol.minIOClient == nil {
 		common_globals.Logger.Warning("MinIOClient not defined")
 		return nex.Errors.Core.NotImplemented
 	}

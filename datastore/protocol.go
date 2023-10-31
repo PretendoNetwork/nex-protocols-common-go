@@ -24,7 +24,7 @@ type CommonDataStoreProtocol struct {
 	s3DataKeyBase                                       string
 	s3NotifyKeyBase                                     string
 	rootCACert                                          []byte
-	MinIOClient                                         *minio.Client
+	minIOClient                                         *minio.Client
 	S3Presigner                                         S3PresignerInterface
 	getUserFriendPIDsHandler                            func(pid uint32) []uint32
 	getObjectInfoByDataIDHandler                        func(dataID uint64) (*datastore_types.DataStoreMetaInfo, uint32)
@@ -46,7 +46,7 @@ type CommonDataStoreProtocol struct {
 }
 
 func (c *CommonDataStoreProtocol) S3StatObject(bucket, key string) (minio.ObjectInfo, error) {
-	return c.MinIOClient.StatObject(context.TODO(), bucket, key, minio.StatObjectOptions{})
+	return c.minIOClient.StatObject(context.TODO(), bucket, key, minio.StatObjectOptions{})
 }
 
 func (c *CommonDataStoreProtocol) S3ObjectSize(bucket, key string) (uint64, error) {
@@ -127,8 +127,8 @@ func (c *CommonDataStoreProtocol) SetRootCACert(rootCACert []byte) {
 
 // SetMinIOClient sets the MinIO S3 client
 func (c *CommonDataStoreProtocol) SetMinIOClient(client *minio.Client) {
-	c.MinIOClient = client
-	c.SetS3Presigner(NewS3Presigner(c.MinIOClient))
+	c.minIOClient = client
+	c.SetS3Presigner(NewS3Presigner(c.minIOClient))
 }
 
 // SetS3Presigner sets the struct which creates presigned S3 URLs
