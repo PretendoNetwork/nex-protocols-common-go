@@ -7,12 +7,13 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
-func uploadCommonData(err error, client *nex.Client, callID uint32, commonData []byte, uniqueID uint64) uint32 {
+func uploadCommonData(err error, packet nex.PacketInterface, callID uint32, commonData []byte, uniqueID uint64) uint32 {
 	if commonRankingProtocol.uploadCommonDataHandler == nil {
 		common_globals.Logger.Warning("Ranking::UploadCommonData missing UploadCommonDataHandler!")
 		return nex.Errors.Core.NotImplemented
 	}
 
+	client := packet.Sender()
 	server := client.Server()
 
 	if err != nil {
@@ -25,7 +26,7 @@ func uploadCommonData(err error, client *nex.Client, callID uint32, commonData [
 		common_globals.Logger.Critical(err.Error())
 		return nex.Errors.Ranking.Unknown
 	}
-	
+
 	rmcResponse := nex.NewRMCResponse(ranking.ProtocolID, callID)
 	rmcResponse.SetSuccess(ranking.MethodUploadCommonData, nil)
 
@@ -41,8 +42,8 @@ func uploadCommonData(err error, client *nex.Client, callID uint32, commonData [
 		responsePacket.SetVersion(1)
 	}
 
-	responsePacket.SetSource(0xA1)
-	responsePacket.SetDestination(0xAF)
+	responsePacket.SetSource(packet.Destination())
+	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
 	responsePacket.SetPayload(rmcResponseBytes)
 

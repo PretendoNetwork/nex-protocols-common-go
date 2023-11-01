@@ -7,7 +7,7 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
 )
 
-func searchObject(err error, client *nex.Client, callID uint32, param *datastore_types.DataStoreSearchParam) uint32 {
+func searchObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreSearchParam) uint32 {
 	if commonDataStoreProtocol.getObjectInfosByDataStoreSearchParamHandler == nil {
 		common_globals.Logger.Warning("GetObjectInfosByDataStoreSearchParam not defined")
 		return nex.Errors.Core.NotImplemented
@@ -17,6 +17,8 @@ func searchObject(err error, client *nex.Client, callID uint32, param *datastore
 		common_globals.Logger.Error(err.Error())
 		return nex.Errors.DataStore.Unknown
 	}
+
+	client := packet.Sender()
 
 	// * This is likely game-specific. Also developer note:
 	// * Please keep in mind that no results is allowed. errCode
@@ -95,8 +97,8 @@ func searchObject(err error, client *nex.Client, callID uint32, param *datastore
 		responsePacket.SetVersion(1)
 	}
 
-	responsePacket.SetSource(0xA1)
-	responsePacket.SetDestination(0xAF)
+	responsePacket.SetSource(packet.Destination())
+	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
 	responsePacket.SetPayload(rmcResponseBytes)
 

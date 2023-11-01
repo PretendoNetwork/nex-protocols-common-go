@@ -7,12 +7,13 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
-func getCommonData(err error, client *nex.Client, callID uint32, uniqueID uint64) uint32 {
+func getCommonData(err error, packet nex.PacketInterface, callID uint32, uniqueID uint64) uint32 {
 	if commonRankingProtocol.getCommonDataHandler == nil {
 		common_globals.Logger.Warning("Ranking::GetCommonData missing GetCommonDataHandler!")
 		return nex.Errors.Core.NotImplemented
 	}
 
+	client := packet.Sender()
 	server := client.Server()
 
 	if err != nil {
@@ -24,7 +25,7 @@ func getCommonData(err error, client *nex.Client, callID uint32, uniqueID uint64
 	if err != nil {
 		return nex.Errors.Ranking.NotFound
 	}
-		
+
 	rmcResponseStream := nex.NewStreamOut(server)
 	rmcResponseStream.WriteBuffer(commonData)
 	rmcResponseBody := rmcResponseStream.Bytes()
@@ -44,8 +45,8 @@ func getCommonData(err error, client *nex.Client, callID uint32, uniqueID uint64
 		responsePacket.SetVersion(1)
 	}
 
-	responsePacket.SetSource(0xA1)
-	responsePacket.SetDestination(0xAF)
+	responsePacket.SetSource(packet.Destination())
+	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
 	responsePacket.SetPayload(rmcResponseBytes)
 

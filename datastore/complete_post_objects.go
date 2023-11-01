@@ -8,7 +8,7 @@ import (
 	datastore "github.com/PretendoNetwork/nex-protocols-go/datastore"
 )
 
-func completePostObjects(err error, client *nex.Client, callID uint32, dataIDs []uint64) uint32 {
+func completePostObjects(err error, packet nex.PacketInterface, callID uint32, dataIDs []uint64) uint32 {
 	if commonDataStoreProtocol.minIOClient == nil {
 		common_globals.Logger.Warning("MinIOClient not defined")
 		return nex.Errors.Core.NotImplemented
@@ -28,6 +28,8 @@ func completePostObjects(err error, client *nex.Client, callID uint32, dataIDs [
 		common_globals.Logger.Error(err.Error())
 		return nex.Errors.DataStore.Unknown
 	}
+
+	client := packet.Sender()
 
 	for _, dataID := range dataIDs {
 		bucket := commonDataStoreProtocol.s3Bucket
@@ -71,8 +73,8 @@ func completePostObjects(err error, client *nex.Client, callID uint32, dataIDs [
 		responsePacket.SetVersion(1)
 	}
 
-	responsePacket.SetSource(0xA1)
-	responsePacket.SetDestination(0xAF)
+	responsePacket.SetSource(packet.Destination())
+	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
 	responsePacket.SetPayload(rmcResponseBytes)
 

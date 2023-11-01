@@ -10,11 +10,13 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
-func loginEx(err error, client *nex.Client, callID uint32, username string, oExtraData *nex.DataHolder) uint32 {
+func loginEx(err error, packet nex.PacketInterface, callID uint32, username string, oExtraData *nex.DataHolder) uint32 {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nex.Errors.Core.InvalidArgument
 	}
+
+	client := packet.Sender()
 
 	var userPID uint32
 
@@ -92,8 +94,8 @@ func loginEx(err error, client *nex.Client, callID uint32, username string, oExt
 		responsePacket.SetVersion(1)
 	}
 
-	responsePacket.SetSource(0xA1)
-	responsePacket.SetDestination(0xAF)
+	responsePacket.SetSource(packet.Destination())
+	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
 	responsePacket.SetPayload(rmcResponseBytes)
 

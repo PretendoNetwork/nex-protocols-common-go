@@ -7,7 +7,7 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
 )
 
-func deleteObject(err error, client *nex.Client, callID uint32, param *datastore_types.DataStoreDeleteParam) uint32 {
+func deleteObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreDeleteParam) uint32 {
 	if commonDataStoreProtocol.getObjectInfoByDataIDHandler == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataID not defined")
 		return nex.Errors.Core.NotImplemented
@@ -22,6 +22,8 @@ func deleteObject(err error, client *nex.Client, callID uint32, param *datastore
 		common_globals.Logger.Error(err.Error())
 		return nex.Errors.DataStore.Unknown
 	}
+
+	client := packet.Sender()
 
 	metaInfo, errCode := commonDataStoreProtocol.getObjectInfoByDataIDHandler(param.DataID)
 	if errCode != 0 {
@@ -53,8 +55,8 @@ func deleteObject(err error, client *nex.Client, callID uint32, param *datastore
 		responsePacket.SetVersion(1)
 	}
 
-	responsePacket.SetSource(0xA1)
-	responsePacket.SetDestination(0xAF)
+	responsePacket.SetSource(packet.Destination())
+	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
 	responsePacket.SetPayload(rmcResponseBytes)
 

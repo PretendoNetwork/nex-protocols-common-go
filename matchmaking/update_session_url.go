@@ -6,7 +6,7 @@ import (
 	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
 )
 
-func updateSessionURL(err error, client *nex.Client, callID uint32, idGathering uint32, strURL string) uint32 {
+func updateSessionURL(err error, packet nex.PacketInterface, callID uint32, idGathering uint32, strURL string) uint32 {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nex.Errors.Core.InvalidArgument
@@ -18,6 +18,7 @@ func updateSessionURL(err error, client *nex.Client, callID uint32, idGathering 
 	}
 
 	server := commonMatchMakingProtocol.server
+	client := packet.Sender()
 
 	// * Mario Kart 7 seems to set an empty strURL, so I assume this is what the method does?
 	session.GameMatchmakeSession.Gathering.HostPID = client.PID()
@@ -46,8 +47,8 @@ func updateSessionURL(err error, client *nex.Client, callID uint32, idGathering 
 		responsePacket.SetVersion(1)
 	}
 
-	responsePacket.SetSource(0xA1)
-	responsePacket.SetDestination(0xAF)
+	responsePacket.SetSource(packet.Destination())
+	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
 	responsePacket.SetPayload(rmcResponseBytes)
 

@@ -7,13 +7,15 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
-func getRelaySignatureKey(err error, client *nex.Client, callID uint32) uint32 {
+func getRelaySignatureKey(err error, packet nex.PacketInterface, callID uint32) uint32 {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nex.Errors.Core.InvalidArgument
 	}
 
+	client := packet.Sender()
 	server := commonNATTraversalProtocol.server
+
 	rmcResponseStream := nex.NewStreamOut(server)
 
 	rmcResponseStream.WriteInt32LE(0)
@@ -40,8 +42,8 @@ func getRelaySignatureKey(err error, client *nex.Client, callID uint32) uint32 {
 		responsePacket, _ = nex.NewPacketV1(client, nil)
 		responsePacket.SetVersion(1)
 	}
-	responsePacket.SetSource(0xA1)
-	responsePacket.SetDestination(0xAF)
+	responsePacket.SetSource(packet.Destination())
+	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
 	responsePacket.SetPayload(rmcResponseBytes)
 

@@ -20,12 +20,13 @@ func remove[T comparable](l []T, item T) []T {
 	return l
 }
 
-func getSimplePlayingSession(err error, client *nex.Client, callID uint32, listPID []uint32, includeLoginUser bool) uint32 {
+func getSimplePlayingSession(err error, packet nex.PacketInterface, callID uint32, listPID []uint32, includeLoginUser bool) uint32 {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nex.Errors.Core.InvalidArgument
 	}
 
+	client := packet.Sender()
 	server := client.Server()
 
 	if slices.Contains(listPID, client.PID()) {
@@ -91,8 +92,8 @@ func getSimplePlayingSession(err error, client *nex.Client, callID uint32, listP
 		responsePacket.SetVersion(1)
 	}
 
-	responsePacket.SetSource(0xA1)
-	responsePacket.SetDestination(0xAF)
+	responsePacket.SetSource(packet.Destination())
+	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
 	responsePacket.SetPayload(rmcResponseBytes)
 

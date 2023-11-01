@@ -6,11 +6,13 @@ import (
 	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
 )
 
-func updateSessionHostV1(err error, client *nex.Client, callID uint32, gid uint32) uint32 {
+func updateSessionHostV1(err error, packet nex.PacketInterface, callID uint32, gid uint32) uint32 {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nex.Errors.Core.InvalidArgument
 	}
+
+	client := packet.Sender()
 
 	var session *common_globals.CommonMatchmakeSession
 	var ok bool
@@ -43,8 +45,8 @@ func updateSessionHostV1(err error, client *nex.Client, callID uint32, gid uint3
 		responsePacket.SetVersion(1)
 	}
 
-	responsePacket.SetSource(0xA1)
-	responsePacket.SetDestination(0xAF)
+	responsePacket.SetSource(packet.Destination())
+	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
 	responsePacket.SetPayload(rmcResponseBytes)
 

@@ -8,12 +8,13 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
-func uploadScore(err error, client *nex.Client, callID uint32, scoreData *ranking_types.RankingScoreData, uniqueID uint64) uint32 {
+func uploadScore(err error, packet nex.PacketInterface, callID uint32, scoreData *ranking_types.RankingScoreData, uniqueID uint64) uint32 {
 	if commonRankingProtocol.insertRankingByPIDAndRankingScoreDataHandler == nil {
 		common_globals.Logger.Warning("Ranking::UploadScore missing InsertRankingByPIDAndRankingScoreDataHandler!")
 		return nex.Errors.Core.NotImplemented
 	}
 
+	client := packet.Sender()
 	server := client.Server()
 
 	if err != nil {
@@ -26,7 +27,7 @@ func uploadScore(err error, client *nex.Client, callID uint32, scoreData *rankin
 		common_globals.Logger.Critical(err.Error())
 		return nex.Errors.Ranking.Unknown
 	}
-	
+
 	rmcResponse := nex.NewRMCResponse(ranking.ProtocolID, callID)
 	rmcResponse.SetSuccess(ranking.MethodUploadScore, nil)
 
@@ -42,8 +43,8 @@ func uploadScore(err error, client *nex.Client, callID uint32, scoreData *rankin
 		responsePacket.SetVersion(1)
 	}
 
-	responsePacket.SetSource(0xA1)
-	responsePacket.SetDestination(0xAF)
+	responsePacket.SetSource(packet.Destination())
+	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
 	responsePacket.SetPayload(rmcResponseBytes)
 

@@ -7,7 +7,7 @@ import (
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension"
 )
 
-func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, anyGathering *nex.DataHolder, message string) uint32 {
+func autoMatchmake_Postpone(err error, packet nex.PacketInterface, callID uint32, anyGathering *nex.DataHolder, message string) uint32 {
 	if commonMatchmakeExtensionProtocol.cleanupSearchMatchmakeSessionHandler == nil {
 		common_globals.Logger.Warning("MatchmakeExtension::AutoMatchmake_Postpone missing CleanupSearchMatchmakeSessionHandler!")
 		return nex.Errors.Core.NotImplemented
@@ -19,6 +19,7 @@ func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, anyGat
 	}
 
 	server := commonMatchmakeExtensionProtocol.server
+	client := packet.Sender()
 
 	// A client may disconnect from a session without leaving reliably,
 	// so let's make sure the client is removed from the session
@@ -78,8 +79,8 @@ func autoMatchmake_Postpone(err error, client *nex.Client, callID uint32, anyGat
 		responsePacket, _ = nex.NewPacketV1(client, nil)
 		responsePacket.SetVersion(1)
 	}
-	responsePacket.SetSource(0xA1)
-	responsePacket.SetDestination(0xAF)
+	responsePacket.SetSource(packet.Destination())
+	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
 	responsePacket.SetPayload(rmcResponseBytes)
 

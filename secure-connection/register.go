@@ -7,13 +7,14 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
-func register(err error, client *nex.Client, callID uint32, stationUrls []*nex.StationURL) uint32 {
+func register(err error, packet nex.PacketInterface, callID uint32, stationUrls []*nex.StationURL) uint32 {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nex.Errors.Core.InvalidArgument
 	}
 
 	server := commonSecureConnectionProtocol.server
+	client := packet.Sender()
 
 	nextConnectionID := uint32(server.ConnectionIDCounter().Increment())
 	client.SetConnectionID(nextConnectionID)
@@ -78,8 +79,8 @@ func register(err error, client *nex.Client, callID uint32, stationUrls []*nex.S
 		responsePacket.SetVersion(1)
 	}
 
-	responsePacket.SetSource(0xA1)
-	responsePacket.SetDestination(0xAF)
+	responsePacket.SetSource(packet.Destination())
+	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
 	responsePacket.SetPayload(rmcResponseBytes)
 
