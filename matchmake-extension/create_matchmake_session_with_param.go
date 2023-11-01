@@ -14,7 +14,7 @@ func createMatchmakeSessionWithParam(err error, packet nex.PacketInterface, call
 	}
 
 	client := packet.Sender()
-	server := client.Server()
+	server := commonMatchmakeExtensionProtocol.server
 
 	// * A client may disconnect from a session without leaving reliably,
 	// * so let's make sure the client is removed from all sessions

@@ -13,7 +13,7 @@ func modifyCurrentGameAttribute(err error, packet nex.PacketInterface, callID ui
 	}
 
 	client := packet.Sender()
-	server := client.Server()
+	server := commonMatchmakeExtensionProtocol.server
 
 	session, ok := common_globals.Sessions[gid]
 	if !ok {

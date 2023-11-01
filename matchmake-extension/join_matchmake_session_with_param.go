@@ -14,7 +14,7 @@ func joinMatchmakeSessionWithParam(err error, packet nex.PacketInterface, callID
 	}
 
 	client := packet.Sender()
-	server := client.Server()
+	server := commonMatchmakeExtensionProtocol.server
 
 	session, ok := common_globals.Sessions[joinMatchmakeSessionParam.GID]
 	if !ok {

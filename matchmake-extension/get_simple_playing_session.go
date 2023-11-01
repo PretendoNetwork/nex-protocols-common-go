@@ -27,7 +27,7 @@ func getSimplePlayingSession(err error, packet nex.PacketInterface, callID uint3
 	}
 
 	client := packet.Sender()
-	server := client.Server()
+	server := commonMatchmakeExtensionProtocol.server
 
 	if slices.Contains(listPID, client.PID()) {
 		listPID = remove(listPID, client.PID())

@@ -17,7 +17,7 @@ func getCachedTopXRanking(err error, packet nex.PacketInterface, callID uint32, 
 	}
 
 	client := packet.Sender()
-	server := client.Server()
+	server := commonRankingProtocol.server
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
