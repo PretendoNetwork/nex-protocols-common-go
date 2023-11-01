@@ -8,13 +8,14 @@ import (
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/notifications/types"
 )
 
-func unregisterGathering(err error, client *nex.Client, callID uint32, idGathering uint32) uint32 {
+func unregisterGathering(err error, packet nex.PacketInterface, callID uint32, idGathering uint32) uint32 {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nex.Errors.Core.InvalidArgument
 	}
 
 	server := commonMatchMakingProtocol.server
+	client := packet.Sender()
 
 	var session *common_globals.CommonMatchmakeSession
 	var ok bool
@@ -50,8 +51,8 @@ func unregisterGathering(err error, client *nex.Client, callID uint32, idGatheri
 		responsePacket.SetVersion(1)
 	}
 
-	responsePacket.SetSource(0xA1)
-	responsePacket.SetDestination(0xAF)
+	responsePacket.SetSource(packet.Destination())
+	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
 	responsePacket.SetPayload(rmcResponseBytes)
 

@@ -7,7 +7,7 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
 )
 
-func postMetaBinary(err error, client *nex.Client, callID uint32, param *datastore_types.DataStorePreparePostParam) uint32 {
+func postMetaBinary(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStorePreparePostParam) uint32 {
 	// * This method looks to function identically to DataStore::PreparePostObject,
 	// * except the only difference being it doesn't return an S3 upload URL. This
 	// * needs to be verified though, as there are other methods in the family such
@@ -29,6 +29,8 @@ func postMetaBinary(err error, client *nex.Client, callID uint32, param *datasto
 		common_globals.Logger.Error(err.Error())
 		return nex.Errors.DataStore.Unknown
 	}
+
+	client := packet.Sender()
 
 	// TODO - Need to verify what param.PersistenceInitParam.DeleteLastObject really means. It's often set to true even when it wouldn't make sense
 	dataID, errCode := commonDataStoreProtocol.initializeObjectByPreparePostParamHandler(client.PID(), param)
@@ -67,8 +69,8 @@ func postMetaBinary(err error, client *nex.Client, callID uint32, param *datasto
 		responsePacket.SetVersion(1)
 	}
 
-	responsePacket.SetSource(0xA1)
-	responsePacket.SetDestination(0xAF)
+	responsePacket.SetSource(packet.Destination())
+	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
 	responsePacket.SetPayload(rmcResponseBytes)
 

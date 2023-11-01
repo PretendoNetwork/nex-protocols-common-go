@@ -8,11 +8,13 @@ import (
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/notifications/types"
 )
 
-func updateSessionHost(err error, client *nex.Client, callID uint32, gid uint32, isMigrateOwner bool) uint32 {
+func updateSessionHost(err error, packet nex.PacketInterface, callID uint32, gid uint32, isMigrateOwner bool) uint32 {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nex.Errors.Core.InvalidArgument
 	}
+
+	client := packet.Sender()
 
 	var session *common_globals.CommonMatchmakeSession
 	var ok bool
@@ -45,8 +47,8 @@ func updateSessionHost(err error, client *nex.Client, callID uint32, gid uint32,
 		responsePacket.SetVersion(1)
 	}
 
-	responsePacket.SetSource(0xA1)
-	responsePacket.SetDestination(0xAF)
+	responsePacket.SetSource(packet.Destination())
+	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
 	responsePacket.SetPayload(rmcResponseBytes)
 

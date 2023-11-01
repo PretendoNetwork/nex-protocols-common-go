@@ -10,7 +10,7 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
 )
 
-func preparePostObject(err error, client *nex.Client, callID uint32, param *datastore_types.DataStorePreparePostParam) uint32 {
+func preparePostObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStorePreparePostParam) uint32 {
 	if commonDataStoreProtocol.initializeObjectByPreparePostParamHandler == nil {
 		common_globals.Logger.Warning("InitializeObjectByPreparePostParam not defined")
 		return nex.Errors.Core.NotImplemented
@@ -30,6 +30,8 @@ func preparePostObject(err error, client *nex.Client, callID uint32, param *data
 		common_globals.Logger.Error(err.Error())
 		return nex.Errors.DataStore.Unknown
 	}
+
+	client := packet.Sender()
 
 	// TODO - Need to verify what param.PersistenceInitParam.DeleteLastObject really means. It's often set to true even when it wouldn't make sense
 	dataID, errCode := commonDataStoreProtocol.initializeObjectByPreparePostParamHandler(client.PID(), param)
@@ -98,8 +100,8 @@ func preparePostObject(err error, client *nex.Client, callID uint32, param *data
 		responsePacket.SetVersion(1)
 	}
 
-	responsePacket.SetSource(0xA1)
-	responsePacket.SetDestination(0xAF)
+	responsePacket.SetSource(packet.Destination())
+	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
 	responsePacket.SetPayload(rmcResponseBytes)
 

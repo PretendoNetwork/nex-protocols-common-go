@@ -7,13 +7,14 @@ import (
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension"
 )
 
-func createMatchmakeSession(err error, client *nex.Client, callID uint32, anyGathering *nex.DataHolder, message string, participationCount uint16) uint32 {
+func createMatchmakeSession(err error, packet nex.PacketInterface, callID uint32, anyGathering *nex.DataHolder, message string, participationCount uint16) uint32 {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nex.Errors.Core.InvalidArgument
 	}
 
-	server := client.Server()
+	client := packet.Sender()
+	server := commonMatchmakeExtensionProtocol.server
 
 	// A client may disconnect from a session without leaving reliably,
 	// so let's make sure the client is removed from the session
@@ -65,8 +66,8 @@ func createMatchmakeSession(err error, client *nex.Client, callID uint32, anyGat
 		responsePacket, _ = nex.NewPacketV1(client, nil)
 		responsePacket.SetVersion(1)
 	}
-	responsePacket.SetSource(0xA1)
-	responsePacket.SetDestination(0xAF)
+	responsePacket.SetSource(packet.Destination())
+	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
 	responsePacket.SetPayload(rmcResponseBytes)
 

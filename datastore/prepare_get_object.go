@@ -10,7 +10,7 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
 )
 
-func prepareGetObject(err error, client *nex.Client, callID uint32, param *datastore_types.DataStorePrepareGetParam) uint32 {
+func prepareGetObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStorePrepareGetParam) uint32 {
 	if commonDataStoreProtocol.getObjectInfoByDataIDHandler == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataID not defined")
 		return nex.Errors.Core.NotImplemented
@@ -25,6 +25,8 @@ func prepareGetObject(err error, client *nex.Client, callID uint32, param *datas
 		common_globals.Logger.Error(err.Error())
 		return nex.Errors.Core.Unknown
 	}
+
+	client := packet.Sender()
 
 	bucket := commonDataStoreProtocol.s3Bucket
 	key := fmt.Sprintf("%s/%d.bin", commonDataStoreProtocol.s3DataKeyBase, param.DataID)
@@ -79,8 +81,8 @@ func prepareGetObject(err error, client *nex.Client, callID uint32, param *datas
 		responsePacket.SetVersion(1)
 	}
 
-	responsePacket.SetSource(0xA1)
-	responsePacket.SetDestination(0xAF)
+	responsePacket.SetSource(packet.Destination())
+	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
 	responsePacket.SetPayload(rmcResponseBytes)
 

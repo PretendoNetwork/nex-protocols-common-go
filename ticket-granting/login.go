@@ -10,7 +10,7 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
-func login(err error, client *nex.Client, callID uint32, username string) uint32 {
+func login(err error, packet nex.PacketInterface, callID uint32, username string) uint32 {
 	if !commonTicketGrantingProtocol.allowInsecureLoginMethod {
 		return nex.Errors.Authentication.ValidationFailed
 	}
@@ -19,6 +19,8 @@ func login(err error, client *nex.Client, callID uint32, username string) uint32
 		common_globals.Logger.Error(err.Error())
 		return nex.Errors.Core.InvalidArgument
 	}
+
+	client := packet.Sender()
 
 	var userPID uint32
 
@@ -96,8 +98,8 @@ func login(err error, client *nex.Client, callID uint32, username string) uint32
 		responsePacket.SetVersion(1)
 	}
 
-	responsePacket.SetSource(0xA1)
-	responsePacket.SetDestination(0xAF)
+	responsePacket.SetSource(packet.Destination())
+	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
 	responsePacket.SetPayload(rmcResponseBytes)
 

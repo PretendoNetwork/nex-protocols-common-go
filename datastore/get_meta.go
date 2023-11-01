@@ -7,7 +7,7 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
 )
 
-func getMeta(err error, client *nex.Client, callID uint32, param *datastore_types.DataStoreGetMetaParam) uint32 {
+func getMeta(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreGetMetaParam) uint32 {
 	if commonDataStoreProtocol.getObjectInfoByPersistenceTargetWithPasswordHandler == nil {
 		common_globals.Logger.Warning("GetObjectInfoByPersistenceTargetWithPassword not defined")
 		return nex.Errors.Core.NotImplemented
@@ -22,6 +22,8 @@ func getMeta(err error, client *nex.Client, callID uint32, param *datastore_type
 		common_globals.Logger.Error(err.Error())
 		return nex.Errors.DataStore.Unknown
 	}
+
+	client := packet.Sender()
 
 	var pMetaInfo *datastore_types.DataStoreMetaInfo
 	var errCode uint32
@@ -64,8 +66,8 @@ func getMeta(err error, client *nex.Client, callID uint32, param *datastore_type
 		responsePacket.SetVersion(1)
 	}
 
-	responsePacket.SetSource(0xA1)
-	responsePacket.SetDestination(0xAF)
+	responsePacket.SetSource(packet.Destination())
+	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
 	responsePacket.SetPayload(rmcResponseBytes)
 

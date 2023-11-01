@@ -7,7 +7,7 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
 )
 
-func rateObject(err error, client *nex.Client, callID uint32, target *datastore_types.DataStoreRatingTarget, param *datastore_types.DataStoreRateObjectParam, fetchRatings bool) uint32 {
+func rateObject(err error, packet nex.PacketInterface, callID uint32, target *datastore_types.DataStoreRatingTarget, param *datastore_types.DataStoreRateObjectParam, fetchRatings bool) uint32 {
 	if commonDataStoreProtocol.getObjectInfoByDataIDWithPasswordHandler == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataIDWithPassword not defined")
 		return nex.Errors.Core.NotImplemented
@@ -22,6 +22,8 @@ func rateObject(err error, client *nex.Client, callID uint32, target *datastore_
 		common_globals.Logger.Error(err.Error())
 		return nex.Errors.DataStore.Unknown
 	}
+
+	client := packet.Sender()
 
 	objectInfo, errCode := commonDataStoreProtocol.getObjectInfoByDataIDWithPasswordHandler(target.DataID, param.AccessPassword)
 	if errCode != 0 {
@@ -67,8 +69,8 @@ func rateObject(err error, client *nex.Client, callID uint32, target *datastore_
 		responsePacket.SetVersion(1)
 	}
 
-	responsePacket.SetSource(0xA1)
-	responsePacket.SetDestination(0xAF)
+	responsePacket.SetSource(packet.Destination())
+	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
 	responsePacket.SetPayload(rmcResponseBytes)
 

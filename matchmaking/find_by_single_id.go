@@ -6,13 +6,14 @@ import (
 	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
 )
 
-func findBySingleID(err error, client *nex.Client, callID uint32, id uint32) uint32 {
+func findBySingleID(err error, packet nex.PacketInterface, callID uint32, id uint32) uint32 {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nex.Errors.Core.InvalidArgument
 	}
 
-	server := client.Server()
+	client := packet.Sender()
+	server := commonMatchMakingProtocol.server
 
 	session, ok := common_globals.Sessions[id]
 	if !ok {
@@ -46,8 +47,8 @@ func findBySingleID(err error, client *nex.Client, callID uint32, id uint32) uin
 		responsePacket.SetVersion(1)
 	}
 
-	responsePacket.SetSource(0xA1)
-	responsePacket.SetDestination(0xAF)
+	responsePacket.SetSource(packet.Destination())
+	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
 	responsePacket.SetPayload(rmcResponseBytes)
 

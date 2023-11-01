@@ -1,11 +1,11 @@
 package common_globals
 
 import (
+	"crypto/rand"
 	"fmt"
 	"math"
 	"strconv"
 	"strings"
-	"crypto/rand"
 
 	nex "github.com/PretendoNetwork/nex-go"
 	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
@@ -356,7 +356,6 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 
 	server := initiatingClient.Server()
 
-	
 	for i := 0; i < len(session.ConnectionIDs); i++ {
 		target := server.FindClientFromConnectionID(session.ConnectionIDs[i])
 		if target == nil {

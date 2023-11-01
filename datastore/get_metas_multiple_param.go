@@ -7,7 +7,7 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
 )
 
-func getMetasMultipleParam(err error, client *nex.Client, callID uint32, params []*datastore_types.DataStoreGetMetaParam) uint32 {
+func getMetasMultipleParam(err error, packet nex.PacketInterface, callID uint32, params []*datastore_types.DataStoreGetMetaParam) uint32 {
 	if commonDataStoreProtocol.getObjectInfoByPersistenceTargetWithPasswordHandler == nil {
 		common_globals.Logger.Warning("GetObjectInfoByPersistenceTargetWithPassword not defined")
 		return nex.Errors.Core.NotImplemented
@@ -22,6 +22,8 @@ func getMetasMultipleParam(err error, client *nex.Client, callID uint32, params 
 		common_globals.Logger.Error(err.Error())
 		return nex.Errors.DataStore.Unknown
 	}
+
+	client := packet.Sender()
 
 	pMetaInfo := make([]*datastore_types.DataStoreMetaInfo, 0, len(params))
 	pResults := make([]*nex.Result, 0, len(params))
@@ -79,8 +81,8 @@ func getMetasMultipleParam(err error, client *nex.Client, callID uint32, params 
 		responsePacket.SetVersion(1)
 	}
 
-	responsePacket.SetSource(0xA1)
-	responsePacket.SetDestination(0xAF)
+	responsePacket.SetSource(packet.Destination())
+	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
 	responsePacket.SetPayload(rmcResponseBytes)
 

@@ -9,6 +9,7 @@ import (
 )
 
 func connect(packet nex.PacketInterface) {
+	client := packet.Sender()
 	payload := packet.Payload()
 	server := commonSecureConnectionProtocol.server
 
@@ -17,14 +18,14 @@ func connect(packet nex.PacketInterface) {
 	ticketData, err := stream.ReadBuffer()
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		server.TimeoutKick(packet.Sender())
+		server.TimeoutKick(client)
 		return
 	}
 
 	requestData, err := stream.ReadBuffer()
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		server.TimeoutKick(packet.Sender())
+		server.TimeoutKick(client)
 		return
 	}
 
@@ -34,7 +35,7 @@ func connect(packet nex.PacketInterface) {
 	err = ticket.Decrypt(nex.NewStreamIn(ticketData, server), serverKey)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		server.TimeoutKick(packet.Sender())
+		server.TimeoutKick(client)
 		return
 	}
 
@@ -44,7 +45,7 @@ func connect(packet nex.PacketInterface) {
 	timeLimit := ticketTime.Add(time.Minute * 2)
 	if serverTime.After(timeLimit) {
 		common_globals.Logger.Error("Kerberos ticket expired")
-		server.TimeoutKick(packet.Sender())
+		server.TimeoutKick(client)
 		return
 	}
 
@@ -52,7 +53,7 @@ func connect(packet nex.PacketInterface) {
 	kerberos, err := nex.NewKerberosEncryption(sessionKey)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		server.TimeoutKick(packet.Sender())
+		server.TimeoutKick(client)
 		return
 	}
 
@@ -62,21 +63,21 @@ func connect(packet nex.PacketInterface) {
 	userPID, err := checkDataStream.ReadUInt32LE()
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		server.TimeoutKick(packet.Sender())
+		server.TimeoutKick(client)
 		return
 	}
 
 	_, err = checkDataStream.ReadUInt32LE() // CID of secure server station url
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		server.TimeoutKick(packet.Sender())
+		server.TimeoutKick(client)
 		return
 	}
 
 	responseCheck, err := checkDataStream.ReadUInt32LE()
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		server.TimeoutKick(packet.Sender())
+		server.TimeoutKick(client)
 		return
 	}
 
@@ -88,14 +89,14 @@ func connect(packet nex.PacketInterface) {
 
 	server.AcknowledgePacket(packet, responseValueBufferStream.Bytes())
 
-	err = packet.Sender().UpdateRC4Key(sessionKey)
+	err = client.UpdateRC4Key(sessionKey)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		server.TimeoutKick(packet.Sender())
+		server.TimeoutKick(client)
 		return
 	}
 
-	packet.Sender().SetSessionKey(sessionKey)
+	client.SetSessionKey(sessionKey)
 
-	packet.Sender().SetPID(userPID)
+	client.SetPID(userPID)
 }

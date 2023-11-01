@@ -6,11 +6,13 @@ import (
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension"
 )
 
-func updateProgressScore(err error, client *nex.Client, callID uint32, gid uint32, progressScore uint8) uint32 {
+func updateProgressScore(err error, packet nex.PacketInterface, callID uint32, gid uint32, progressScore uint8) uint32 {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nex.Errors.Core.InvalidArgument
 	}
+
+	client := packet.Sender()
 
 	session := common_globals.Sessions[gid]
 	if session == nil {
@@ -44,8 +46,8 @@ func updateProgressScore(err error, client *nex.Client, callID uint32, gid uint3
 		responsePacket.SetVersion(1)
 	}
 
-	responsePacket.SetSource(0xA1)
-	responsePacket.SetDestination(0xAF)
+	responsePacket.SetSource(packet.Destination())
+	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
 	responsePacket.SetPayload(rmcResponseBytes)
 

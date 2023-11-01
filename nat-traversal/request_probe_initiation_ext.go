@@ -7,13 +7,15 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
-func requestProbeInitiationExt(err error, client *nex.Client, callID uint32, targetList []string, stationToProbe string) uint32 {
+func requestProbeInitiationExt(err error, packet nex.PacketInterface, callID uint32, targetList []string, stationToProbe string) uint32 {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nex.Errors.Core.InvalidArgument
 	}
 
+	client := packet.Sender()
 	server := commonNATTraversalProtocol.server
+
 	rmcResponse := nex.NewRMCResponse(nat_traversal.ProtocolID, callID)
 	rmcResponse.SetSuccess(nat_traversal.MethodRequestProbeInitiationExt, nil)
 
@@ -29,8 +31,8 @@ func requestProbeInitiationExt(err error, client *nex.Client, callID uint32, tar
 		responsePacket.SetVersion(1)
 	}
 
-	responsePacket.SetSource(0xA1)
-	responsePacket.SetDestination(0xAF)
+	responsePacket.SetSource(packet.Destination())
+	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
 	responsePacket.SetPayload(rmcResponseBytes)
 

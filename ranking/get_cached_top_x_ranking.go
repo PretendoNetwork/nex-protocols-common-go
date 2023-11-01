@@ -10,13 +10,14 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
-func getCachedTopXRanking(err error, client *nex.Client, callID uint32, category uint32, orderParam *ranking_types.RankingOrderParam) uint32 {
+func getCachedTopXRanking(err error, packet nex.PacketInterface, callID uint32, category uint32, orderParam *ranking_types.RankingOrderParam) uint32 {
 	if commonRankingProtocol.getRankingsAndCountByCategoryAndRankingOrderParamHandler == nil {
 		common_globals.Logger.Warning("Ranking::GetCachedTopXRanking missing GetRankingsAndCountByCategoryAndRankingOrderParamHandler!")
 		return nex.Errors.Core.NotImplemented
 	}
 
-	server := client.Server()
+	client := packet.Sender()
+	server := commonRankingProtocol.server
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
@@ -38,7 +39,7 @@ func getCachedTopXRanking(err error, client *nex.Client, callID uint32, category
 	rankingResult.RankDataList = rankDataList
 	rankingResult.TotalCount = totalCount
 	rankingResult.SinceTime = nex.NewDateTime(0x1f40420000) // * 2000-01-01T00:00:00.000Z, this is what the real server sends back
-		
+
 	pResult := ranking_types.NewRankingCachedResult()
 	serverTime := nex.NewDateTime(0)
 	pResult.CreatedTime = nex.NewDateTime(serverTime.UTC())
@@ -69,8 +70,8 @@ func getCachedTopXRanking(err error, client *nex.Client, callID uint32, category
 		responsePacket.SetVersion(1)
 	}
 
-	responsePacket.SetSource(0xA1)
-	responsePacket.SetDestination(0xAF)
+	responsePacket.SetSource(packet.Destination())
+	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
 	responsePacket.SetPayload(rmcResponseBytes)
 
