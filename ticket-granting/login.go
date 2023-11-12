@@ -20,7 +20,7 @@ func login(err error, packet nex.PacketInterface, callID uint32, username string
 		return nex.Errors.Core.InvalidArgument
 	}
 
-	client := packet.Sender()
+	client := packet.Sender().(*nex.PRUDPClient)
 
 	var userPID uint32
 
@@ -38,8 +38,6 @@ func login(err error, packet nex.PacketInterface, callID uint32, username string
 	var targetPID uint32 = 2 // "Quazal Rendez-Vous" (the server user) account PID
 
 	encryptedTicket, errorCode := generateTicket(userPID, targetPID)
-
-	rmcResponse := nex.NewRMCResponse(ticket_granting.ProtocolID, callID)
 
 	if errorCode != 0 && errorCode != nex.Errors.RendezVous.InvalidUsername {
 		// Some other error happened
@@ -84,27 +82,29 @@ func login(err error, packet nex.PacketInterface, callID uint32, username string
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse.SetSuccess(ticket_granting.MethodLogin, rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(rmcResponseBody)
+	rmcResponse.ProtocolID = ticket_granting.ProtocolID
+	rmcResponse.MethodID = ticket_granting.MethodLogin
+	rmcResponse.CallID = callID
 
 	rmcResponseBytes := rmcResponse.Bytes()
 
-	var responsePacket nex.PacketInterface
+	var responsePacket nex.PRUDPPacketInterface
 
-	if commonTicketGrantingProtocol.server.PRUDPVersion() == 0 {
-		responsePacket, _ = nex.NewPacketV0(client, nil)
-		responsePacket.SetVersion(0)
+	if commonTicketGrantingProtocol.server.PRUDPVersion == 0 {
+		responsePacket, _ = nex.NewPRUDPPacketV0(client, nil)
 	} else {
-		responsePacket, _ = nex.NewPacketV1(client, nil)
-		responsePacket.SetVersion(1)
+		responsePacket, _ = nex.NewPRUDPPacketV1(client, nil)
 	}
 
-	responsePacket.SetSource(packet.Destination())
-	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
-	responsePacket.SetPayload(rmcResponseBytes)
-
 	responsePacket.AddFlag(nex.FlagNeedsAck)
 	responsePacket.AddFlag(nex.FlagReliable)
+	responsePacket.SetSourceStreamType(packet.(nex.PRUDPPacketInterface).DestinationStreamType())
+	responsePacket.SetSourcePort(packet.(nex.PRUDPPacketInterface).DestinationPort())
+	responsePacket.SetDestinationStreamType(packet.(nex.PRUDPPacketInterface).SourceStreamType())
+	responsePacket.SetDestinationPort(packet.(nex.PRUDPPacketInterface).SourcePort())
+	responsePacket.SetPayload(rmcResponseBytes)
 
 	commonTicketGrantingProtocol.server.Send(responsePacket)
 

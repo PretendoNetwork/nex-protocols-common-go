@@ -18,7 +18,7 @@ func updateSessionURL(err error, packet nex.PacketInterface, callID uint32, idGa
 	}
 
 	server := commonMatchMakingProtocol.server
-	client := packet.Sender()
+	client := packet.Sender().(*nex.PRUDPClient)
 
 	// * Mario Kart 7 seems to set an empty strURL, so I assume this is what the method does?
 	session.GameMatchmakeSession.Gathering.HostPID = client.PID()
@@ -31,29 +31,29 @@ func updateSessionURL(err error, packet nex.PacketInterface, callID uint32, idGa
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	// Build response packet
-	rmcResponse := nex.NewRMCResponse(match_making.ProtocolID, callID)
-	rmcResponse.SetSuccess(match_making.MethodGetSessionURLs, rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(rmcResponseBody)
+	rmcResponse.ProtocolID = match_making.ProtocolID
+	rmcResponse.MethodID = match_making.MethodGetSessionURLs
+	rmcResponse.CallID = callID
 
 	rmcResponseBytes := rmcResponse.Bytes()
 
-	var responsePacket nex.PacketInterface
+	var responsePacket nex.PRUDPPacketInterface
 
-	if server.PRUDPVersion() == 0 {
-		responsePacket, _ = nex.NewPacketV0(client, nil)
-		responsePacket.SetVersion(0)
+	if server.PRUDPVersion == 0 {
+		responsePacket, _ = nex.NewPRUDPPacketV0(client, nil)
 	} else {
-		responsePacket, _ = nex.NewPacketV1(client, nil)
-		responsePacket.SetVersion(1)
+		responsePacket, _ = nex.NewPRUDPPacketV1(client, nil)
 	}
 
-	responsePacket.SetSource(packet.Destination())
-	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
-	responsePacket.SetPayload(rmcResponseBytes)
-
 	responsePacket.AddFlag(nex.FlagNeedsAck)
 	responsePacket.AddFlag(nex.FlagReliable)
+	responsePacket.SetSourceStreamType(packet.(nex.PRUDPPacketInterface).DestinationStreamType())
+	responsePacket.SetSourcePort(packet.(nex.PRUDPPacketInterface).DestinationPort())
+	responsePacket.SetDestinationStreamType(packet.(nex.PRUDPPacketInterface).SourceStreamType())
+	responsePacket.SetDestinationPort(packet.(nex.PRUDPPacketInterface).SourcePort())
+	responsePacket.SetPayload(rmcResponseBytes)
 
 	server.Send(responsePacket)
 

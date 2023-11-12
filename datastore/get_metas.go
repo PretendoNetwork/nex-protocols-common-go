@@ -18,7 +18,7 @@ func getMetas(err error, packet nex.PacketInterface, callID uint32, dataIDs []ui
 		return nex.Errors.DataStore.Unknown
 	}
 
-	client := packet.Sender()
+	client := packet.Sender().(*nex.PRUDPClient)
 
 	// TODO - Verify if param.PersistenceTarget is respected? It wouldn't make sense here but who knows
 
@@ -60,28 +60,29 @@ func getMetas(err error, packet nex.PacketInterface, callID uint32, dataIDs []ui
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCResponse(datastore.ProtocolID, callID)
-	rmcResponse.SetSuccess(datastore.MethodGetMetas, rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(rmcResponseBody)
+	rmcResponse.ProtocolID = datastore.ProtocolID
+	rmcResponse.MethodID = datastore.MethodGetMetas
+	rmcResponse.CallID = callID
 
 	rmcResponseBytes := rmcResponse.Bytes()
 
-	var responsePacket nex.PacketInterface
+	var responsePacket nex.PRUDPPacketInterface
 
-	if commonDataStoreProtocol.server.PRUDPVersion() == 0 {
-		responsePacket, _ = nex.NewPacketV0(client, nil)
-		responsePacket.SetVersion(0)
+	if commonDataStoreProtocol.server.PRUDPVersion == 0 {
+		responsePacket, _ = nex.NewPRUDPPacketV0(client, nil)
 	} else {
-		responsePacket, _ = nex.NewPacketV1(client, nil)
-		responsePacket.SetVersion(1)
+		responsePacket, _ = nex.NewPRUDPPacketV1(client, nil)
 	}
 
-	responsePacket.SetSource(packet.Destination())
-	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
-	responsePacket.SetPayload(rmcResponseBytes)
-
 	responsePacket.AddFlag(nex.FlagNeedsAck)
 	responsePacket.AddFlag(nex.FlagReliable)
+	responsePacket.SetSourceStreamType(packet.(nex.PRUDPPacketInterface).DestinationStreamType())
+	responsePacket.SetSourcePort(packet.(nex.PRUDPPacketInterface).DestinationPort())
+	responsePacket.SetDestinationStreamType(packet.(nex.PRUDPPacketInterface).SourceStreamType())
+	responsePacket.SetDestinationPort(packet.(nex.PRUDPPacketInterface).SourcePort())
+	responsePacket.SetPayload(rmcResponseBytes)
 
 	commonDataStoreProtocol.server.Send(responsePacket)
 

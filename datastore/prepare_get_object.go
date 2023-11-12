@@ -26,7 +26,7 @@ func prepareGetObject(err error, packet nex.PacketInterface, callID uint32, para
 		return nex.Errors.Core.Unknown
 	}
 
-	client := packet.Sender()
+	client := packet.Sender().(*nex.PRUDPClient)
 
 	bucket := commonDataStoreProtocol.s3Bucket
 	key := fmt.Sprintf("%s/%d.bin", commonDataStoreProtocol.s3DataKeyBase, param.DataID)
@@ -66,28 +66,29 @@ func prepareGetObject(err error, packet nex.PacketInterface, callID uint32, para
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCResponse(datastore.ProtocolID, callID)
-	rmcResponse.SetSuccess(datastore.MethodPrepareGetObject, rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(rmcResponseBody)
+	rmcResponse.ProtocolID = datastore.ProtocolID
+	rmcResponse.MethodID = datastore.MethodPrepareGetObject
+	rmcResponse.CallID = callID
 
 	rmcResponseBytes := rmcResponse.Bytes()
 
-	var responsePacket nex.PacketInterface
+	var responsePacket nex.PRUDPPacketInterface
 
-	if commonDataStoreProtocol.server.PRUDPVersion() == 0 {
-		responsePacket, _ = nex.NewPacketV0(client, nil)
-		responsePacket.SetVersion(0)
+	if commonDataStoreProtocol.server.PRUDPVersion == 0 {
+		responsePacket, _ = nex.NewPRUDPPacketV0(client, nil)
 	} else {
-		responsePacket, _ = nex.NewPacketV1(client, nil)
-		responsePacket.SetVersion(1)
+		responsePacket, _ = nex.NewPRUDPPacketV1(client, nil)
 	}
 
-	responsePacket.SetSource(packet.Destination())
-	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
-	responsePacket.SetPayload(rmcResponseBytes)
-
 	responsePacket.AddFlag(nex.FlagNeedsAck)
 	responsePacket.AddFlag(nex.FlagReliable)
+	responsePacket.SetSourceStreamType(packet.(nex.PRUDPPacketInterface).DestinationStreamType())
+	responsePacket.SetSourcePort(packet.(nex.PRUDPPacketInterface).DestinationPort())
+	responsePacket.SetDestinationStreamType(packet.(nex.PRUDPPacketInterface).SourceStreamType())
+	responsePacket.SetDestinationPort(packet.(nex.PRUDPPacketInterface).SourcePort())
+	responsePacket.SetPayload(rmcResponseBytes)
 
 	commonDataStoreProtocol.server.Send(responsePacket)
 

@@ -15,7 +15,7 @@ func unregisterGathering(err error, packet nex.PacketInterface, callID uint32, i
 	}
 
 	server := commonMatchMakingProtocol.server
-	client := packet.Sender()
+	client := packet.Sender().(*nex.PRUDPClient)
 
 	var session *common_globals.CommonMatchmakeSession
 	var ok bool
@@ -36,35 +36,31 @@ func unregisterGathering(err error, packet nex.PacketInterface, callID uint32, i
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCResponse(match_making.ProtocolID, callID)
-	rmcResponse.SetSuccess(match_making.MethodUnregisterGathering, rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(rmcResponseBody)
+	rmcResponse.ProtocolID = match_making.ProtocolID
+	rmcResponse.MethodID = match_making.MethodUnregisterGathering
+	rmcResponse.CallID = callID
 
 	rmcResponseBytes := rmcResponse.Bytes()
 
-	var responsePacket nex.PacketInterface
+	var responsePacket nex.PRUDPPacketInterface
 
-	if server.PRUDPVersion() == 0 {
-		responsePacket, _ = nex.NewPacketV0(client, nil)
-		responsePacket.SetVersion(0)
+	if server.PRUDPVersion == 0 {
+		responsePacket, _ = nex.NewPRUDPPacketV0(client, nil)
 	} else {
-		responsePacket, _ = nex.NewPacketV1(client, nil)
-		responsePacket.SetVersion(1)
+		responsePacket, _ = nex.NewPRUDPPacketV1(client, nil)
 	}
 
-	responsePacket.SetSource(packet.Destination())
-	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
-	responsePacket.SetPayload(rmcResponseBytes)
-
 	responsePacket.AddFlag(nex.FlagNeedsAck)
 	responsePacket.AddFlag(nex.FlagReliable)
+	responsePacket.SetSourceStreamType(packet.(nex.PRUDPPacketInterface).DestinationStreamType())
+	responsePacket.SetSourcePort(packet.(nex.PRUDPPacketInterface).DestinationPort())
+	responsePacket.SetDestinationStreamType(packet.(nex.PRUDPPacketInterface).SourceStreamType())
+	responsePacket.SetDestinationPort(packet.(nex.PRUDPPacketInterface).SourcePort())
+	responsePacket.SetPayload(rmcResponseBytes)
 
 	server.Send(responsePacket)
-
-	rmcMessage := nex.NewRMCRequest()
-	rmcMessage.SetProtocolID(notifications.ProtocolID)
-	rmcMessage.SetCallID(common_globals.CurrentMatchmakingCallID.Increment())
-	rmcMessage.SetMethodID(notifications.MethodProcessNotificationEvent)
 
 	category := notifications.NotificationCategories.GatheringUnregistered
 	subtype := notifications.NotificationSubTypes.GatheringUnregistered.None
@@ -76,30 +72,34 @@ func unregisterGathering(err error, packet nex.PacketInterface, callID uint32, i
 
 	stream := nex.NewStreamOut(server)
 	oEventBytes := oEvent.Bytes(stream)
-	rmcMessage.SetParameters(oEventBytes)
 
-	rmcRequestBytes := rmcMessage.Bytes()
+	rmcRequest := nex.NewRMCRequest()
+	rmcRequest.ProtocolID = notifications.ProtocolID
+	rmcRequest.CallID = common_globals.CurrentMatchmakingCallID.Next()
+	rmcRequest.MethodID = notifications.MethodProcessNotificationEvent
+	rmcRequest.Parameters = oEventBytes
+
+	rmcRequestBytes := rmcRequest.Bytes()
 
 	for _, connectionID := range gatheringPlayers {
-		targetClient := server.FindClientFromConnectionID(connectionID)
+		targetClient := server.FindClientByConnectionID(connectionID)
 		if targetClient != nil {
-			var messagePacket nex.PacketInterface
+			var messagePacket nex.PRUDPPacketInterface
 
-			if server.PRUDPVersion() == 0 {
-				messagePacket, _ = nex.NewPacketV0(targetClient, nil)
-				messagePacket.SetVersion(0)
+			if server.PRUDPVersion == 0 {
+				messagePacket, _ = nex.NewPRUDPPacketV0(targetClient, nil)
 			} else {
-				messagePacket, _ = nex.NewPacketV1(targetClient, nil)
-				messagePacket.SetVersion(1)
+				messagePacket, _ = nex.NewPRUDPPacketV1(targetClient, nil)
 			}
 
-			messagePacket.SetSource(0xA1)
-			messagePacket.SetDestination(0xAF)
 			messagePacket.SetType(nex.DataPacket)
-			messagePacket.SetPayload(rmcRequestBytes)
-
 			messagePacket.AddFlag(nex.FlagNeedsAck)
 			messagePacket.AddFlag(nex.FlagReliable)
+			messagePacket.SetSourceStreamType(client.DestinationStreamType)
+			messagePacket.SetSourcePort(client.DestinationPort)
+			messagePacket.SetDestinationStreamType(client.SourceStreamType)
+			messagePacket.SetDestinationPort(client.SourcePort)
+			messagePacket.SetPayload(rmcRequestBytes)
 
 			server.Send(messagePacket)
 		} else {

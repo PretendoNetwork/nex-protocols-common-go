@@ -13,7 +13,7 @@ func uploadCommonData(err error, packet nex.PacketInterface, callID uint32, comm
 		return nex.Errors.Core.NotImplemented
 	}
 
-	client := packet.Sender()
+	client := packet.Sender().(*nex.PRUDPClient)
 	server := commonRankingProtocol.server
 
 	if err != nil {
@@ -27,28 +27,29 @@ func uploadCommonData(err error, packet nex.PacketInterface, callID uint32, comm
 		return nex.Errors.Ranking.Unknown
 	}
 
-	rmcResponse := nex.NewRMCResponse(ranking.ProtocolID, callID)
-	rmcResponse.SetSuccess(ranking.MethodUploadCommonData, nil)
+	rmcResponse := nex.NewRMCSuccess(nil)
+	rmcResponse.ProtocolID = ranking.ProtocolID
+	rmcResponse.MethodID = ranking.MethodUploadCommonData
+	rmcResponse.CallID = callID
 
 	rmcResponseBytes := rmcResponse.Bytes()
 
-	var responsePacket nex.PacketInterface
+	var responsePacket nex.PRUDPPacketInterface
 
-	if server.PRUDPVersion() == 0 {
-		responsePacket, _ = nex.NewPacketV0(client, nil)
-		responsePacket.SetVersion(0)
+	if server.PRUDPVersion == 0 {
+		responsePacket, _ = nex.NewPRUDPPacketV0(client, nil)
 	} else {
-		responsePacket, _ = nex.NewPacketV1(client, nil)
-		responsePacket.SetVersion(1)
+		responsePacket, _ = nex.NewPRUDPPacketV1(client, nil)
 	}
 
-	responsePacket.SetSource(packet.Destination())
-	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
-	responsePacket.SetPayload(rmcResponseBytes)
-
 	responsePacket.AddFlag(nex.FlagNeedsAck)
 	responsePacket.AddFlag(nex.FlagReliable)
+	responsePacket.SetSourceStreamType(packet.(nex.PRUDPPacketInterface).DestinationStreamType())
+	responsePacket.SetSourcePort(packet.(nex.PRUDPPacketInterface).DestinationPort())
+	responsePacket.SetDestinationStreamType(packet.(nex.PRUDPPacketInterface).SourceStreamType())
+	responsePacket.SetDestinationPort(packet.(nex.PRUDPPacketInterface).SourcePort())
+	responsePacket.SetPayload(rmcResponseBytes)
 
 	server.Send(responsePacket)
 

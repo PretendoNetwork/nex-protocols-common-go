@@ -9,7 +9,7 @@ var commonSecureConnectionProtocol *CommonSecureConnectionProtocol
 
 type CommonSecureConnectionProtocol struct {
 	*secure_connection.Protocol
-	server                      *nex.Server
+	server                      *nex.PRUDPServer
 	createReportDBRecordHandler func(pid uint32, reportID uint32, reportData []byte) error
 }
 
@@ -19,11 +19,10 @@ func (commonSecureConnectionProtocol *CommonSecureConnectionProtocol) CreateRepo
 }
 
 // NewCommonSecureConnectionProtocol returns a new CommonSecureConnectionProtocol
-func NewCommonSecureConnectionProtocol(server *nex.Server) *CommonSecureConnectionProtocol {
+func NewCommonSecureConnectionProtocol(server *nex.PRUDPServer) *CommonSecureConnectionProtocol {
 	secureConnectionProtocol := secure_connection.NewProtocol(server)
 	commonSecureConnectionProtocol = &CommonSecureConnectionProtocol{Protocol: secureConnectionProtocol, server: server}
 
-	server.On("Connect", connect)
 	commonSecureConnectionProtocol.Register(register)
 	commonSecureConnectionProtocol.ReplaceURL(replaceURL)
 	commonSecureConnectionProtocol.SendReport(sendReport)

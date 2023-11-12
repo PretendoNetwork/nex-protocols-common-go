@@ -9,11 +9,11 @@ var commonMatchMakingExtProtocol *CommonMatchMakingExtProtocol
 
 type CommonMatchMakingExtProtocol struct {
 	*match_making_ext.Protocol
-	server *nex.Server
+	server *nex.PRUDPServer
 }
 
 // NewCommonMatchmakeExtensionProtocol returns a new CommonMatchmakeExtensionProtocol
-func NewCommonMatchMakingExtProtocol(server *nex.Server) *CommonMatchMakingExtProtocol {
+func NewCommonMatchMakingExtProtocol(server *nex.PRUDPServer) *CommonMatchMakingExtProtocol {
 	MatchMakingExtProtocol := match_making_ext.NewProtocol(server)
 	commonMatchMakingExtProtocol = &CommonMatchMakingExtProtocol{Protocol: MatchMakingExtProtocol, server: server}
 

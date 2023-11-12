@@ -30,7 +30,7 @@ import (
 	"github.com/PretendoNetwork/nex-protocols-common-go/authentication"
 )
 
-var nexServer *nex.Server
+var nexServer *nex.PRUDPServer
 
 func main() {
 	nexServer = nex.NewServer()

@@ -18,7 +18,7 @@ func sendReport(err error, packet nex.PacketInterface, callID uint32, reportID u
 		return nex.Errors.Core.Unknown
 	}
 
-	client := packet.Sender()
+	client := packet.Sender().(*nex.PRUDPClient)
 
 	err = commonSecureConnectionProtocol.createReportDBRecordHandler(client.PID(), reportID, reportData)
 	if err != nil {
@@ -26,28 +26,29 @@ func sendReport(err error, packet nex.PacketInterface, callID uint32, reportID u
 		return nex.Errors.Core.Unknown
 	}
 
-	rmcResponse := nex.NewRMCResponse(secure_connection.ProtocolID, callID)
-	rmcResponse.SetSuccess(secure_connection.MethodSendReport, nil)
+	rmcResponse := nex.NewRMCSuccess(nil)
+	rmcResponse.ProtocolID = secure_connection.ProtocolID
+	rmcResponse.MethodID = secure_connection.MethodSendReport
+	rmcResponse.CallID = callID
 
 	rmcResponseBytes := rmcResponse.Bytes()
 
-	var responsePacket nex.PacketInterface
+	var responsePacket nex.PRUDPPacketInterface
 
-	if commonSecureConnectionProtocol.server.PRUDPVersion() == 0 {
-		responsePacket, _ = nex.NewPacketV0(client, nil)
-		responsePacket.SetVersion(0)
+	if commonSecureConnectionProtocol.server.PRUDPVersion == 0 {
+		responsePacket, _ = nex.NewPRUDPPacketV0(client, nil)
 	} else {
-		responsePacket, _ = nex.NewPacketV1(client, nil)
-		responsePacket.SetVersion(1)
+		responsePacket, _ = nex.NewPRUDPPacketV1(client, nil)
 	}
 
-	responsePacket.SetSource(packet.Destination())
-	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
-	responsePacket.SetPayload(rmcResponseBytes)
-
 	responsePacket.AddFlag(nex.FlagNeedsAck)
 	responsePacket.AddFlag(nex.FlagReliable)
+	responsePacket.SetSourceStreamType(packet.(nex.PRUDPPacketInterface).DestinationStreamType())
+	responsePacket.SetSourcePort(packet.(nex.PRUDPPacketInterface).DestinationPort())
+	responsePacket.SetDestinationStreamType(packet.(nex.PRUDPPacketInterface).SourceStreamType())
+	responsePacket.SetDestinationPort(packet.(nex.PRUDPPacketInterface).SourcePort())
+	responsePacket.SetPayload(rmcResponseBytes)
 
 	commonSecureConnectionProtocol.server.Send(responsePacket)
 

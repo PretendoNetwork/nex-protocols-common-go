@@ -14,9 +14,9 @@ func replaceURL(err error, packet nex.PacketInterface, callID uint32, oldStation
 	}
 
 	server := commonSecureConnectionProtocol.server
-	client := packet.Sender()
+	client := packet.Sender().(*nex.PRUDPClient)
 
-	stations := client.StationURLs()
+	stations := client.StationURLs
 	for i := 0; i < len(stations); i++ {
 		currentStation := stations[i]
 		if currentStation.Address() == oldStation.Address() && currentStation.Port() == oldStation.Port() {
@@ -25,28 +25,29 @@ func replaceURL(err error, packet nex.PacketInterface, callID uint32, oldStation
 		}
 	}
 
-	rmcResponse := nex.NewRMCResponse(secure_connection.ProtocolID, callID)
-	rmcResponse.SetSuccess(secure_connection.MethodReplaceURL, nil)
+	rmcResponse := nex.NewRMCSuccess(nil)
+	rmcResponse.ProtocolID = secure_connection.ProtocolID
+	rmcResponse.MethodID = secure_connection.MethodReplaceURL
+	rmcResponse.CallID = callID
 
 	rmcResponseBytes := rmcResponse.Bytes()
 
-	var responsePacket nex.PacketInterface
+	var responsePacket nex.PRUDPPacketInterface
 
-	if server.PRUDPVersion() == 0 {
-		responsePacket, _ = nex.NewPacketV0(client, nil)
-		responsePacket.SetVersion(0)
+	if server.PRUDPVersion == 0 {
+		responsePacket, _ = nex.NewPRUDPPacketV0(client, nil)
 	} else {
-		responsePacket, _ = nex.NewPacketV1(client, nil)
-		responsePacket.SetVersion(1)
+		responsePacket, _ = nex.NewPRUDPPacketV1(client, nil)
 	}
 
-	responsePacket.SetSource(packet.Destination())
-	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
-	responsePacket.SetPayload(rmcResponseBytes)
-
 	responsePacket.AddFlag(nex.FlagNeedsAck)
 	responsePacket.AddFlag(nex.FlagReliable)
+	responsePacket.SetSourceStreamType(packet.(nex.PRUDPPacketInterface).DestinationStreamType())
+	responsePacket.SetSourcePort(packet.(nex.PRUDPPacketInterface).DestinationPort())
+	responsePacket.SetDestinationStreamType(packet.(nex.PRUDPPacketInterface).SourceStreamType())
+	responsePacket.SetDestinationPort(packet.(nex.PRUDPPacketInterface).SourcePort())
+	responsePacket.SetPayload(rmcResponseBytes)
 
 	server.Send(responsePacket)
 

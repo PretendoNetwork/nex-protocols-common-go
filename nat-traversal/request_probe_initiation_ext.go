@@ -13,67 +13,68 @@ func requestProbeInitiationExt(err error, packet nex.PacketInterface, callID uin
 		return nex.Errors.Core.InvalidArgument
 	}
 
-	client := packet.Sender()
+	client := packet.Sender().(*nex.PRUDPClient)
 	server := commonNATTraversalProtocol.server
 
-	rmcResponse := nex.NewRMCResponse(nat_traversal.ProtocolID, callID)
-	rmcResponse.SetSuccess(nat_traversal.MethodRequestProbeInitiationExt, nil)
+	rmcResponse := nex.NewRMCSuccess(nil)
+	rmcResponse.ProtocolID = nat_traversal.ProtocolID
+	rmcResponse.MethodID = nat_traversal.MethodRequestProbeInitiationExt
+	rmcResponse.CallID = callID
 
 	rmcResponseBytes := rmcResponse.Bytes()
 
-	var responsePacket nex.PacketInterface
+	var responsePacket nex.PRUDPPacketInterface
 
-	if server.PRUDPVersion() == 0 {
-		responsePacket, _ = nex.NewPacketV0(client, nil)
-		responsePacket.SetVersion(0)
+	if server.PRUDPVersion == 0 {
+		responsePacket, _ = nex.NewPRUDPPacketV0(client, nil)
 	} else {
-		responsePacket, _ = nex.NewPacketV1(client, nil)
-		responsePacket.SetVersion(1)
+		responsePacket, _ = nex.NewPRUDPPacketV1(client, nil)
 	}
 
-	responsePacket.SetSource(packet.Destination())
-	responsePacket.SetDestination(packet.Source())
 	responsePacket.SetType(nex.DataPacket)
-	responsePacket.SetPayload(rmcResponseBytes)
-
 	responsePacket.AddFlag(nex.FlagNeedsAck)
 	responsePacket.AddFlag(nex.FlagReliable)
+	responsePacket.SetSourceStreamType(packet.(nex.PRUDPPacketInterface).DestinationStreamType())
+	responsePacket.SetSourcePort(packet.(nex.PRUDPPacketInterface).DestinationPort())
+	responsePacket.SetDestinationStreamType(packet.(nex.PRUDPPacketInterface).SourceStreamType())
+	responsePacket.SetDestinationPort(packet.(nex.PRUDPPacketInterface).SourcePort())
+	responsePacket.SetPayload(rmcResponseBytes)
 
 	server.Send(responsePacket)
 
-	rmcMessage := nex.NewRMCRequest()
-	rmcMessage.SetProtocolID(nat_traversal.ProtocolID)
-	rmcMessage.SetCallID(0xffff0000 + callID)
-	rmcMessage.SetMethodID(nat_traversal.MethodInitiateProbe)
-
 	rmcRequestStream := nex.NewStreamOut(server)
 	rmcRequestStream.WriteString(stationToProbe)
+
 	rmcRequestBody := rmcRequestStream.Bytes()
 
-	rmcMessage.SetParameters(rmcRequestBody)
-	rmcMessageBytes := rmcMessage.Bytes()
+	rmcRequest := nex.NewRMCRequest()
+	rmcRequest.ProtocolID = nat_traversal.ProtocolID
+	rmcRequest.CallID = 0xffff0000 + callID
+	rmcRequest.MethodID = nat_traversal.MethodInitiateProbe
+	rmcRequest.Parameters = rmcRequestBody
+
+	rmcRequestBytes := rmcRequest.Bytes()
 
 	for _, target := range targetList {
 		targetStation := nex.NewStationURL(target)
-		targetClient := server.FindClientFromConnectionID(targetStation.RVCID())
+		targetClient := server.FindClientByConnectionID(targetStation.RVCID())
 		if targetClient != nil {
-			var messagePacket nex.PacketInterface
+			var messagePacket nex.PRUDPPacketInterface
 
-			if server.PRUDPVersion() == 0 {
-				messagePacket, _ = nex.NewPacketV0(targetClient, nil)
-				messagePacket.SetVersion(0)
+			if server.PRUDPVersion == 0 {
+				messagePacket, _ = nex.NewPRUDPPacketV0(targetClient, nil)
 			} else {
-				messagePacket, _ = nex.NewPacketV1(targetClient, nil)
-				messagePacket.SetVersion(1)
+				messagePacket, _ = nex.NewPRUDPPacketV1(targetClient, nil)
 			}
 
-			messagePacket.SetSource(0xA1)
-			messagePacket.SetDestination(0xAF)
 			messagePacket.SetType(nex.DataPacket)
-			messagePacket.SetPayload(rmcMessageBytes)
-
 			messagePacket.AddFlag(nex.FlagNeedsAck)
 			messagePacket.AddFlag(nex.FlagReliable)
+			messagePacket.SetSourceStreamType(client.DestinationStreamType)
+			messagePacket.SetSourcePort(client.DestinationPort)
+			messagePacket.SetDestinationStreamType(client.SourceStreamType)
+			messagePacket.SetDestinationPort(client.SourcePort)
+			messagePacket.SetPayload(rmcRequestBytes)
 
 			server.Send(messagePacket)
 		} else {

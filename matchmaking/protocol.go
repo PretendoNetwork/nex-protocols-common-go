@@ -13,11 +13,11 @@ var commonMatchMakingProtocol *CommonMatchMakingProtocol
 
 type CommonMatchMakingProtocol struct {
 	*match_making.Protocol
-	server *nex.Server
+	server *nex.PRUDPServer
 }
 
 // NewCommonMatchMakingProtocol returns a new CommonMatchMakingProtocol
-func NewCommonMatchMakingProtocol(server *nex.Server) *CommonMatchMakingProtocol {
+func NewCommonMatchMakingProtocol(server *nex.PRUDPServer) *CommonMatchMakingProtocol {
 	matchMakingProtocol := match_making.NewProtocol(server)
 	commonMatchMakingProtocol = &CommonMatchMakingProtocol{Protocol: matchMakingProtocol, server: server}
 
@@ -31,9 +31,9 @@ func NewCommonMatchMakingProtocol(server *nex.Server) *CommonMatchMakingProtocol
 	commonMatchMakingProtocol.UpdateSessionHost(updateSessionHost)
 	commonMatchMakingProtocol.FindBySingleID(findBySingleID)
 
-	server.On("Kick", func(packet nex.PacketInterface) {
+	server.OnClientRemoved(func(client *nex.PRUDPClient) {
 		fmt.Println("Leaving")
-		common_globals.RemoveClientFromAllSessions(packet.Sender())
+		common_globals.RemoveClientFromAllSessions(client)
 	})
 
 	return commonMatchMakingProtocol

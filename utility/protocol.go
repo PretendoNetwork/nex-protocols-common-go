@@ -12,7 +12,7 @@ var commonUtilityProtocol *CommonUtilityProtocol
 
 type CommonUtilityProtocol struct {
 	*utility.Protocol
-	server           *nex.Server
+	server           *nex.PRUDPServer
 	randSource       rand.Source
 	randGenerator    *rand.Rand
 	randomU64Handler func() uint64
@@ -24,7 +24,7 @@ func (c *CommonUtilityProtocol) RandomU64(handler func() uint64) {
 }
 
 // NewCommonUtilityProtocol returns a new CommonUtilityProtocol
-func NewCommonUtilityProtocol(server *nex.Server) *CommonUtilityProtocol {
+func NewCommonUtilityProtocol(server *nex.PRUDPServer) *CommonUtilityProtocol {
 	utilityProtocol := utility.NewProtocol(server)
 	commonUtilityProtocol = &CommonUtilityProtocol{Protocol: utilityProtocol, server: server}
 

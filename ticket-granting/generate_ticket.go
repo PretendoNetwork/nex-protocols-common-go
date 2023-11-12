@@ -8,25 +8,56 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
+/*
+func generateTicket(userPID uint32, targetPID uint32) []byte {
+	userKey := nex.DeriveKerberosKey(userPID, []byte("3QiwwjAmGJGluYFV"))
+	targetKey := nex.DeriveKerberosKey(targetPID, []byte("password"))
+	sessionKey := make([]byte, authServer.KerberosKeySize())
+
+	rand.Read(sessionKey)
+
+	ticketInternalData := nex.NewKerberosTicketInternalData()
+	serverTime := nex.NewDateTime(0)
+	serverTime.UTC()
+
+	ticketInternalData.Issued = serverTime
+	ticketInternalData.SourcePID = userPID
+	ticketInternalData.SessionKey = sessionKey
+
+	encryptedTicketInternalData, _ := ticketInternalData.Encrypt(targetKey, nex.NewStreamOut(authServer))
+
+	ticket := nex.NewKerberosTicket()
+	ticket.SessionKey = sessionKey
+	ticket.TargetPID = targetPID
+	ticket.InternalData = encryptedTicketInternalData
+
+	encryptedTicket, _ := ticket.Encrypt(userKey, nex.NewStreamOut(authServer))
+
+	return encryptedTicket
+}
+*/
+
 func generateTicket(userPID uint32, targetPID uint32) ([]byte, uint32) {
-	passwordFromPIDHandler := commonTicketGrantingProtocol.server.PasswordFromPIDFunction()
+	passwordFromPIDHandler := commonTicketGrantingProtocol.server.PasswordFromPID
 	if passwordFromPIDHandler == nil {
-		common_globals.Logger.Warning("Missing passwordFromPIDHandler!")
+		common_globals.Logger.Warning("Server is missing PasswordFromPID handler!")
 		return []byte{}, nex.Errors.Core.Unknown
 	}
 
-	var userPassword string
-	var targetPassword string
+	var userPassword []byte
+	var targetPassword []byte
 	var errorCode uint32
 
 	// TODO - Maybe we should error out if the user PID is the server account?
 	switch userPID {
-	case 2: // "Quazal Rendez-Vous" (the server user) account
+	case 2: // * "Quazal Rendez-Vous" (the server user) account. Used as the Kerberos target
 		userPassword = commonTicketGrantingProtocol.server.KerberosPassword()
-	case 100: // guest user account
-		userPassword = "MMQea3n!fsik"
+	case 100: // * Guest user account. Used when creating a new NEX account
+		userPassword = []byte("MMQea3n!fsik")
 	default:
-		userPassword, errorCode = passwordFromPIDHandler(userPID)
+		password, err := passwordFromPIDHandler(userPID)
+		userPassword = []byte(password)
+		errorCode = err
 	}
 
 	if errorCode != 0 {
@@ -34,12 +65,14 @@ func generateTicket(userPID uint32, targetPID uint32) ([]byte, uint32) {
 	}
 
 	switch targetPID {
-	case 2: // "Quazal Rendez-Vous" (the server user) account
+	case 2: // * "Quazal Rendez-Vous" (the server user) account. Used as the Kerberos target
 		targetPassword = commonTicketGrantingProtocol.server.KerberosPassword()
-	case 100: // guest user account
-		targetPassword = "MMQea3n!fsik"
+	case 100: // * Guest user account. Used when creating a new NEX account
+		targetPassword = []byte("MMQea3n!fsik")
 	default:
-		targetPassword, errorCode = passwordFromPIDHandler(userPID)
+		password, err := passwordFromPIDHandler(userPID)
+		targetPassword = []byte(password)
+		errorCode = err
 	}
 
 	if errorCode != 0 {
@@ -58,9 +91,10 @@ func generateTicket(userPID uint32, targetPID uint32) ([]byte, uint32) {
 	ticketInternalData := nex.NewKerberosTicketInternalData()
 	serverTime := nex.NewDateTime(0)
 	serverTime.UTC()
-	ticketInternalData.SetTimestamp(serverTime)
-	ticketInternalData.SetUserPID(userPID)
-	ticketInternalData.SetSessionKey(sessionKey)
+
+	ticketInternalData.Issued = serverTime
+	ticketInternalData.SourcePID = userPID
+	ticketInternalData.SessionKey = sessionKey
 
 	encryptedTicketInternalData, err := ticketInternalData.Encrypt(targetKey, nex.NewStreamOut(commonTicketGrantingProtocol.server))
 	if err != nil {
@@ -69,9 +103,9 @@ func generateTicket(userPID uint32, targetPID uint32) ([]byte, uint32) {
 	}
 
 	ticket := nex.NewKerberosTicket()
-	ticket.SetSessionKey(sessionKey)
-	ticket.SetTargetPID(targetPID)
-	ticket.SetInternalData(encryptedTicketInternalData)
+	ticket.SessionKey = sessionKey
+	ticket.TargetPID = targetPID
+	ticket.InternalData = encryptedTicketInternalData
 
 	encryptedTicket, err := ticket.Encrypt(userKey, nex.NewStreamOut(commonTicketGrantingProtocol.server))
 	if err != nil {

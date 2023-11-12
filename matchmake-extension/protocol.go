@@ -14,7 +14,7 @@ import (
 var commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol
 
 type CommonMatchmakeExtensionProtocol struct {
-	server             *nex.Server
+	server             *nex.PRUDPServer
 	DefaultProtocol    *matchmake_extension.Protocol
 	MarioKart8Protocol *matchmake_extension_mario_kart_8.Protocol
 
@@ -69,7 +69,7 @@ func initMarioKart8(c *CommonMatchmakeExtensionProtocol) {
 }
 
 // NewCommonMatchmakeExtensionProtocol returns a new CommonMatchmakeExtensionProtocol
-func NewCommonMatchmakeExtensionProtocol(server *nex.Server) *CommonMatchmakeExtensionProtocol {
+func NewCommonMatchmakeExtensionProtocol(server *nex.PRUDPServer) *CommonMatchmakeExtensionProtocol {
 	commonMatchmakeExtensionProtocol = &CommonMatchmakeExtensionProtocol{server: server}
 
 	patch := server.MatchMakingProtocolVersion().GameSpecificPatch
