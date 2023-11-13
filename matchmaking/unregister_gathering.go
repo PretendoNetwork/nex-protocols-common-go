@@ -23,7 +23,7 @@ func unregisterGathering(err error, packet nex.PacketInterface, callID uint32, i
 		return nex.Errors.RendezVous.SessionVoid
 	}
 
-	if session.GameMatchmakeSession.Gathering.OwnerPID != client.PID() {
+	if session.GameMatchmakeSession.Gathering.OwnerPID != client.PID().LegacyValue() {
 		return nex.Errors.RendezVous.PermissionDenied
 	}
 
@@ -66,7 +66,7 @@ func unregisterGathering(err error, packet nex.PacketInterface, callID uint32, i
 	subtype := notifications.NotificationSubTypes.GatheringUnregistered.None
 
 	oEvent := notifications_types.NewNotificationEvent()
-	oEvent.PIDSource = client.PID()
+	oEvent.PIDSource = client.PID().LegacyValue()
 	oEvent.Type = notifications.BuildNotificationType(category, subtype)
 	oEvent.Param1 = idGathering
 

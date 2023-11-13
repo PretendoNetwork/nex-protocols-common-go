@@ -45,7 +45,7 @@ func rateObjects(err error, packet nex.PacketInterface, callID uint32, targets [
 			return errCode
 		}
 
-		errCode = commonDataStoreProtocol.VerifyObjectPermission(objectInfo.OwnerID, client.PID(), objectInfo.Permission)
+		errCode = commonDataStoreProtocol.VerifyObjectPermission(objectInfo.OwnerID, client.PID().LegacyValue(), objectInfo.Permission)
 		if errCode != 0 {
 			return errCode
 		}

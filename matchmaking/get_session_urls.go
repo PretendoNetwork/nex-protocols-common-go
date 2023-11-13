@@ -21,10 +21,10 @@ func getSessionURLs(err error, packet nex.PacketInterface, callID uint32, gid ui
 
 	server := commonMatchMakingProtocol.server
 	hostPID := session.GameMatchmakeSession.Gathering.HostPID
-	host := server.FindClientByPID(hostPID)
+	host := server.FindClientByPID(uint64(hostPID))
 	if host == nil {
 		common_globals.Logger.Warning("Host client not found, trying with owner client") // This popped up once during testing. Leaving it noted here in case it becomes a problem.
-		host = server.FindClientByPID(session.GameMatchmakeSession.Gathering.OwnerPID)
+		host = server.FindClientByPID(uint64(session.GameMatchmakeSession.Gathering.OwnerPID))
 		if host == nil {
 			common_globals.Logger.Error("Owner client not found") // This popped up once during testing. Leaving it noted here in case it becomes a problem.
 			return nex.Errors.Core.Exception

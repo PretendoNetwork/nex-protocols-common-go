@@ -30,7 +30,7 @@ func deleteObject(err error, packet nex.PacketInterface, callID uint32, param *d
 		return errCode
 	}
 
-	errCode = commonDataStoreProtocol.VerifyObjectPermission(metaInfo.OwnerID, client.PID(), metaInfo.DelPermission)
+	errCode = commonDataStoreProtocol.VerifyObjectPermission(metaInfo.OwnerID, client.PID().LegacyValue(), metaInfo.DelPermission)
 	if errCode != 0 {
 		return errCode
 	}

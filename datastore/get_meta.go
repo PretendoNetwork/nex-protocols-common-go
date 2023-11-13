@@ -39,7 +39,7 @@ func getMeta(err error, packet nex.PacketInterface, callID uint32, param *datast
 		return errCode
 	}
 
-	errCode = commonDataStoreProtocol.VerifyObjectPermission(pMetaInfo.OwnerID, client.PID(), pMetaInfo.Permission)
+	errCode = commonDataStoreProtocol.VerifyObjectPermission(pMetaInfo.OwnerID, client.PID().LegacyValue(), pMetaInfo.Permission)
 	if errCode != 0 {
 		return errCode
 	}

@@ -23,7 +23,7 @@ func updateProgressScore(err error, packet nex.PacketInterface, callID uint32, g
 		return nex.Errors.Core.InvalidArgument
 	}
 
-	if session.GameMatchmakeSession.Gathering.OwnerPID != client.PID() {
+	if session.GameMatchmakeSession.Gathering.OwnerPID != client.PID().LegacyValue() {
 		return nex.Errors.RendezVous.PermissionDenied
 	}
 

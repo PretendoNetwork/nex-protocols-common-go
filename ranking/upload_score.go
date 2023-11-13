@@ -22,7 +22,7 @@ func uploadScore(err error, packet nex.PacketInterface, callID uint32, scoreData
 		return nex.Errors.Ranking.InvalidArgument
 	}
 
-	err = commonRankingProtocol.insertRankingByPIDAndRankingScoreDataHandler(client.PID(), scoreData, uniqueID)
+	err = commonRankingProtocol.insertRankingByPIDAndRankingScoreDataHandler(client.PID().LegacyValue(), scoreData, uniqueID)
 	if err != nil {
 		common_globals.Logger.Critical(err.Error())
 		return nex.Errors.Ranking.Unknown

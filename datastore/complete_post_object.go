@@ -61,7 +61,7 @@ func completePostObject(err error, packet nex.PacketInterface, callID uint32, pa
 		return errCode
 	}
 
-	if ownerPID != client.PID() {
+	if ownerPID != client.PID().LegacyValue() {
 		return nex.Errors.DataStore.PermissionDenied
 	}
 

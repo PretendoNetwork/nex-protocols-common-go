@@ -72,7 +72,7 @@ func RemoveClientFromAllSessions(client *nex.PRUDPClient) {
 
 		ownerPID := session.GameMatchmakeSession.Gathering.OwnerPID
 
-		if client.PID() == ownerPID {
+		if client.PID().LegacyValue() == ownerPID {
 			// This flag tells the server to change the matchmake session owner if they disconnect
 			// If the flag is not set, delete the session
 			// More info: https://nintendo-wiki.pretendo.network/docs/nex/protocols/match-making/types#flags
@@ -88,10 +88,10 @@ func RemoveClientFromAllSessions(client *nex.PRUDPClient) {
 			subtype := notifications.NotificationSubTypes.Participation.Disconnected
 
 			oEvent := notifications_types.NewNotificationEvent()
-			oEvent.PIDSource = client.PID()
+			oEvent.PIDSource = client.PID().LegacyValue()
 			oEvent.Type = notifications.BuildNotificationType(category, subtype)
 			oEvent.Param1 = gid
-			oEvent.Param2 = client.PID()
+			oEvent.Param2 = client.PID().LegacyValue()
 
 			stream := nex.NewStreamOut(server)
 			stream.WriteStructure(oEvent)
@@ -104,7 +104,7 @@ func RemoveClientFromAllSessions(client *nex.PRUDPClient) {
 
 			rmcRequestBytes := rmcRequest.Bytes()
 
-			targetClient := server.FindClientByPID(uint32(ownerPID))
+			targetClient := server.FindClientByPID(uint64(ownerPID))
 			if targetClient == nil {
 				Logger.Warning("Owner client not found")
 				gid = FindClientSession(client.ConnectionID)
@@ -362,10 +362,10 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 		notificationSubtype := notifications.NotificationSubTypes.Participation.NewParticipant
 
 		oEvent := notifications_types.NewNotificationEvent()
-		oEvent.PIDSource = initiatingClient.PID()
+		oEvent.PIDSource = initiatingClient.PID().LegacyValue()
 		oEvent.Type = notifications.BuildNotificationType(notificationCategory, notificationSubtype)
 		oEvent.Param1 = session.GameMatchmakeSession.ID
-		oEvent.Param2 = target.PID()
+		oEvent.Param2 = target.PID().LegacyValue()
 		oEvent.StrParam = joinMessage
 		oEvent.Param3 = uint32(len(connectionIDs))
 
@@ -417,10 +417,10 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 			notificationSubtype := notifications.NotificationSubTypes.Participation.NewParticipant
 
 			oEvent := notifications_types.NewNotificationEvent()
-			oEvent.PIDSource = initiatingClient.PID()
+			oEvent.PIDSource = initiatingClient.PID().LegacyValue()
 			oEvent.Type = notifications.BuildNotificationType(notificationCategory, notificationSubtype)
 			oEvent.Param1 = session.GameMatchmakeSession.ID
-			oEvent.Param2 = target.PID()
+			oEvent.Param2 = target.PID().LegacyValue()
 			oEvent.StrParam = joinMessage
 			oEvent.Param3 = uint32(len(connectionIDs))
 
@@ -460,10 +460,10 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 		notificationSubtype := notifications.NotificationSubTypes.Participation.NewParticipant
 
 		oEvent := notifications_types.NewNotificationEvent()
-		oEvent.PIDSource = initiatingClient.PID()
+		oEvent.PIDSource = initiatingClient.PID().LegacyValue()
 		oEvent.Type = notifications.BuildNotificationType(notificationCategory, notificationSubtype)
 		oEvent.Param1 = session.GameMatchmakeSession.ID
-		oEvent.Param2 = initiatingClient.PID()
+		oEvent.Param2 = initiatingClient.PID().LegacyValue()
 		oEvent.StrParam = joinMessage
 		oEvent.Param3 = uint32(len(connectionIDs))
 
@@ -498,7 +498,7 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 
 		server.Send(messagePacket)
 
-		target := server.FindClientByPID(uint32(session.GameMatchmakeSession.Gathering.OwnerPID))
+		target := server.FindClientByPID(uint64(session.GameMatchmakeSession.Gathering.OwnerPID))
 		if target == nil {
 			// TODO - Error here?
 			Logger.Warning("Player not found")
@@ -533,9 +533,9 @@ func ChangeSessionOwner(ownerClient *nex.PRUDPClient, gathering uint32) {
 
 	otherConnectionID := FindOtherConnectionID(ownerClient.ConnectionID, gathering)
 	if otherConnectionID != 0 {
-		otherClient = server.FindClientByConnectionID(uint32(otherConnectionID))
+		otherClient = server.FindClientByConnectionID(otherConnectionID)
 		if otherClient != nil {
-			Sessions[gathering].GameMatchmakeSession.Gathering.OwnerPID = otherClient.PID()
+			Sessions[gathering].GameMatchmakeSession.Gathering.OwnerPID = otherClient.PID().LegacyValue()
 		} else {
 			Logger.Warning("Other client not found")
 			return
@@ -548,10 +548,10 @@ func ChangeSessionOwner(ownerClient *nex.PRUDPClient, gathering uint32) {
 	subtype := notifications.NotificationSubTypes.OwnershipChanged.None
 
 	oEvent := notifications_types.NewNotificationEvent()
-	oEvent.PIDSource = otherClient.PID()
+	oEvent.PIDSource = otherClient.PID().LegacyValue()
 	oEvent.Type = notifications.BuildNotificationType(category, subtype)
 	oEvent.Param1 = gathering
-	oEvent.Param2 = otherClient.PID()
+	oEvent.Param2 = otherClient.PID().LegacyValue()
 
 	// TODO - StrParam doesn't have this value on some servers
 	// https://github.com/kinnay/NintendoClients/issues/101

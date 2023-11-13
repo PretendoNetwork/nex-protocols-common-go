@@ -25,9 +25,9 @@ func updateSessionHostV1(err error, packet nex.PacketInterface, callID uint32, g
 	}
 
 	server := commonMatchMakingProtocol.server
-	session.GameMatchmakeSession.Gathering.HostPID = client.PID()
+	session.GameMatchmakeSession.Gathering.HostPID = client.PID().LegacyValue()
 	if session.GameMatchmakeSession.Gathering.Flags&match_making.GatheringFlags.DisconnectChangeOwner != 0 {
-		session.GameMatchmakeSession.Gathering.OwnerPID = client.PID()
+		session.GameMatchmakeSession.Gathering.OwnerPID = client.PID().LegacyValue()
 	}
 
 	rmcResponse := nex.NewRMCSuccess(nil)

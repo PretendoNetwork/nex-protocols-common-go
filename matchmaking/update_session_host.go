@@ -27,9 +27,9 @@ func updateSessionHost(err error, packet nex.PacketInterface, callID uint32, gid
 	}
 
 	server := commonMatchMakingProtocol.server
-	session.GameMatchmakeSession.Gathering.HostPID = client.PID()
+	session.GameMatchmakeSession.Gathering.HostPID = client.PID().LegacyValue()
 	if isMigrateOwner {
-		session.GameMatchmakeSession.Gathering.OwnerPID = client.PID()
+		session.GameMatchmakeSession.Gathering.OwnerPID = client.PID().LegacyValue()
 	}
 
 	rmcResponse := nex.NewRMCSuccess(nil)
@@ -66,10 +66,10 @@ func updateSessionHost(err error, packet nex.PacketInterface, callID uint32, gid
 	subtype := notifications.NotificationSubTypes.OwnershipChanged.None
 
 	oEvent := notifications_types.NewNotificationEvent()
-	oEvent.PIDSource = client.PID()
+	oEvent.PIDSource = client.PID().LegacyValue()
 	oEvent.Type = notifications.BuildNotificationType(category, subtype)
 	oEvent.Param1 = gid
-	oEvent.Param2 = client.PID()
+	oEvent.Param2 = client.PID().LegacyValue()
 
 	// TODO - StrParam doesn't have this value on some servers
 	// https://github.com/kinnay/NintendoClients/issues/101

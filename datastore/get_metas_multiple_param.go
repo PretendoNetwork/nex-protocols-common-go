@@ -44,7 +44,7 @@ func getMetasMultipleParam(err error, packet nex.PacketInterface, callID uint32,
 
 			pResults = append(pResults, nex.NewResultError(errCode))
 		} else {
-			errCode = commonDataStoreProtocol.VerifyObjectPermission(objectInfo.OwnerID, client.PID(), objectInfo.Permission)
+			errCode = commonDataStoreProtocol.VerifyObjectPermission(objectInfo.OwnerID, client.PID().LegacyValue(), objectInfo.Permission)
 			if errCode != 0 {
 				objectInfo = datastore_types.NewDataStoreMetaInfo()
 

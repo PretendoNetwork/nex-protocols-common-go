@@ -23,12 +23,12 @@ func autoMatchmakeWithParam_Postpone(err error, packet nex.PacketInterface, call
 	var matchmakeSession *match_making_types.MatchmakeSession
 	matchmakeSession = autoMatchmakeParam.SourceMatchmakeSession
 
-	sessions := common_globals.FindSessionsByMatchmakeSessionSearchCriterias(client.PID(), autoMatchmakeParam.LstSearchCriteria, commonMatchmakeExtensionProtocol.gameSpecificMatchmakeSessionSearchCriteriaChecksHandler)
+	sessions := common_globals.FindSessionsByMatchmakeSessionSearchCriterias(client.PID().LegacyValue(), autoMatchmakeParam.LstSearchCriteria, commonMatchmakeExtensionProtocol.gameSpecificMatchmakeSessionSearchCriteriaChecksHandler)
 	var session *common_globals.CommonMatchmakeSession
 
 	if len(sessions) == 0 {
 		var errCode uint32
-		session, err, errCode = common_globals.CreateSessionByMatchmakeSession(matchmakeSession, nil, client.PID())
+		session, err, errCode = common_globals.CreateSessionByMatchmakeSession(matchmakeSession, nil, client.PID().LegacyValue())
 		if err != nil {
 			common_globals.Logger.Error(err.Error())
 			return errCode

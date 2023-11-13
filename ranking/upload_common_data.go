@@ -21,7 +21,7 @@ func uploadCommonData(err error, packet nex.PacketInterface, callID uint32, comm
 		return nex.Errors.Ranking.InvalidArgument
 	}
 
-	err = commonRankingProtocol.uploadCommonDataHandler(client.PID(), uniqueID, commonData)
+	err = commonRankingProtocol.uploadCommonDataHandler(client.PID().LegacyValue(), uniqueID, commonData)
 	if err != nil {
 		common_globals.Logger.Critical(err.Error())
 		return nex.Errors.Ranking.Unknown

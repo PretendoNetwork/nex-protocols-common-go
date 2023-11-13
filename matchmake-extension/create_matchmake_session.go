@@ -30,7 +30,7 @@ func createMatchmakeSession(err error, packet nex.PacketInterface, callID uint32
 		return nex.Errors.Core.InvalidArgument
 	}
 
-	session, err, errCode := common_globals.CreateSessionByMatchmakeSession(matchmakeSession, nil, client.PID())
+	session, err, errCode := common_globals.CreateSessionByMatchmakeSession(matchmakeSession, nil, client.PID().LegacyValue())
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return errCode

@@ -20,7 +20,7 @@ func modifyCurrentGameAttribute(err error, packet nex.PacketInterface, callID ui
 		return nex.Errors.RendezVous.SessionVoid
 	}
 
-	if session.GameMatchmakeSession.Gathering.OwnerPID != client.PID() {
+	if session.GameMatchmakeSession.Gathering.OwnerPID != client.PID().LegacyValue() {
 		return nex.Errors.RendezVous.PermissionDenied
 	}
 

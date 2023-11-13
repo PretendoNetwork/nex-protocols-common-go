@@ -28,7 +28,7 @@ func endParticipation(err error, packet nex.PacketInterface, callID uint32, idGa
 	ownerPID := matchmakeSession.Gathering.OwnerPID
 
 	var deleteSession bool = false
-	if client.PID() == matchmakeSession.Gathering.OwnerPID {
+	if client.PID().LegacyValue() == matchmakeSession.Gathering.OwnerPID {
 		// This flag tells the server to change the matchmake session owner if they disconnect
 		// If the flag is not set, delete the session
 		// More info: https://nintendo-wiki.pretendo.network/docs/nex/protocols/match-making/types#flags
@@ -81,10 +81,10 @@ func endParticipation(err error, packet nex.PacketInterface, callID uint32, idGa
 	subtype := notifications.NotificationSubTypes.Participation.Ended
 
 	oEvent := notifications_types.NewNotificationEvent()
-	oEvent.PIDSource = client.PID()
+	oEvent.PIDSource = client.PID().LegacyValue()
 	oEvent.Type = notifications.BuildNotificationType(category, subtype)
 	oEvent.Param1 = idGathering
-	oEvent.Param2 = client.PID()
+	oEvent.Param2 = client.PID().LegacyValue()
 	oEvent.StrParam = strMessage
 
 	stream := nex.NewStreamOut(server)
@@ -98,7 +98,7 @@ func endParticipation(err error, packet nex.PacketInterface, callID uint32, idGa
 
 	rmcRequestBytes := rmcRequest.Bytes()
 
-	targetClient := server.FindClientByPID(uint32(ownerPID))
+	targetClient := server.FindClientByPID(uint64(ownerPID))
 	if targetClient == nil {
 		common_globals.Logger.Warning("Owner client not found")
 		return 0

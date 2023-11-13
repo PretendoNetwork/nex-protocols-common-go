@@ -21,7 +21,7 @@ func createMatchmakeSessionWithParam(err error, packet nex.PacketInterface, call
 	common_globals.RemoveClientFromAllSessions(client)
 
 	joinedMatchmakeSession := createMatchmakeSessionParam.SourceMatchmakeSession.Copy().(*match_making_types.MatchmakeSession)
-	session, err, errCode := common_globals.CreateSessionByMatchmakeSession(joinedMatchmakeSession, nil, client.PID())
+	session, err, errCode := common_globals.CreateSessionByMatchmakeSession(joinedMatchmakeSession, nil, client.PID().LegacyValue())
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return errCode

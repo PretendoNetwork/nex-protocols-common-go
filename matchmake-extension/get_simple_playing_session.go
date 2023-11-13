@@ -29,12 +29,12 @@ func getSimplePlayingSession(err error, packet nex.PacketInterface, callID uint3
 	client := packet.Sender().(*nex.PRUDPClient)
 	server := commonMatchmakeExtensionProtocol.server
 
-	if slices.Contains(listPID, client.PID()) {
-		listPID = remove(listPID, client.PID())
+	if slices.Contains(listPID, client.PID().LegacyValue()) {
+		listPID = remove(listPID, client.PID().LegacyValue())
 	}
 
-	if includeLoginUser && !slices.Contains(listPID, client.PID()) {
-		listPID = append(listPID, client.PID())
+	if includeLoginUser && !slices.Contains(listPID, client.PID().LegacyValue()) {
+		listPID = append(listPID, client.PID().LegacyValue())
 	}
 
 	simplePlayingSessions := make(map[string]*match_making_types.SimplePlayingSession)
@@ -51,7 +51,7 @@ func getSimplePlayingSession(err error, packet nex.PacketInterface, callID uint3
 						continue
 					}
 
-					connectedPIDs = append(connectedPIDs, player.PID())
+					connectedPIDs = append(connectedPIDs, player.PID().LegacyValue())
 				}
 
 				if slices.Contains(connectedPIDs, pid) {

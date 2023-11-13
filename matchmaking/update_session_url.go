@@ -21,9 +21,9 @@ func updateSessionURL(err error, packet nex.PacketInterface, callID uint32, idGa
 	client := packet.Sender().(*nex.PRUDPClient)
 
 	// * Mario Kart 7 seems to set an empty strURL, so I assume this is what the method does?
-	session.GameMatchmakeSession.Gathering.HostPID = client.PID()
+	session.GameMatchmakeSession.Gathering.HostPID = client.PID().LegacyValue()
 	if session.GameMatchmakeSession.Gathering.Flags&match_making.GatheringFlags.DisconnectChangeOwner != 0 {
-		session.GameMatchmakeSession.Gathering.OwnerPID = client.PID()
+		session.GameMatchmakeSession.Gathering.OwnerPID = client.PID().LegacyValue()
 	}
 
 	rmcResponseStream := nex.NewStreamOut(server)

@@ -37,7 +37,7 @@ func searchObject(err error, packet nex.PacketInterface, callID uint32, param *d
 	pSearchResult.Result = make([]*datastore_types.DataStoreMetaInfo, 0, len(objects))
 
 	for _, object := range objects {
-		errCode = commonDataStoreProtocol.VerifyObjectPermission(object.OwnerID, client.PID(), object.Permission)
+		errCode = commonDataStoreProtocol.VerifyObjectPermission(object.OwnerID, client.PID().LegacyValue(), object.Permission)
 		if errCode != 0 {
 			// * Since we don't error here, should we also
 			// * "hide" these results by also decrementing

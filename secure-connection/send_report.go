@@ -20,7 +20,7 @@ func sendReport(err error, packet nex.PacketInterface, callID uint32, reportID u
 
 	client := packet.Sender().(*nex.PRUDPClient)
 
-	err = commonSecureConnectionProtocol.createReportDBRecordHandler(client.PID(), reportID, reportData)
+	err = commonSecureConnectionProtocol.createReportDBRecordHandler(client.PID().LegacyValue(), reportID, reportData)
 	if err != nil {
 		common_globals.Logger.Critical(err.Error())
 		return nex.Errors.Core.Unknown

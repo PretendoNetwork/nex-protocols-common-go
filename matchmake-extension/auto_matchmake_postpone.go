@@ -37,12 +37,12 @@ func autoMatchmake_Postpone(err error, packet nex.PacketInterface, callID uint32
 
 	searchMatchmakeSession := matchmakeSession.Copy().(*match_making_types.MatchmakeSession)
 	commonMatchmakeExtensionProtocol.cleanupSearchMatchmakeSessionHandler(searchMatchmakeSession)
-	sessionIndex := common_globals.FindSessionByMatchmakeSession(client.PID(), searchMatchmakeSession)
+	sessionIndex := common_globals.FindSessionByMatchmakeSession(client.PID().LegacyValue(), searchMatchmakeSession)
 	var session *common_globals.CommonMatchmakeSession
 
 	if sessionIndex == 0 {
 		var errCode uint32
-		session, err, errCode = common_globals.CreateSessionByMatchmakeSession(matchmakeSession, searchMatchmakeSession, client.PID())
+		session, err, errCode = common_globals.CreateSessionByMatchmakeSession(matchmakeSession, searchMatchmakeSession, client.PID().LegacyValue())
 		if err != nil {
 			common_globals.Logger.Error(err.Error())
 			return errCode
