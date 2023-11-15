@@ -40,32 +40,32 @@ func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) GetUse
 func initDefault(c *CommonMatchmakeExtensionProtocol) {
 	// TODO - Organize by method ID
 	c.DefaultProtocol = matchmake_extension.NewProtocol(c.server)
-	c.DefaultProtocol.OpenParticipation(openParticipation)
-	c.DefaultProtocol.CloseParticipation(closeParticipation)
-	c.DefaultProtocol.CreateMatchmakeSession(createMatchmakeSession)
-	c.DefaultProtocol.GetSimplePlayingSession(getSimplePlayingSession)
-	c.DefaultProtocol.AutoMatchmakePostpone(autoMatchmake_Postpone)
-	c.DefaultProtocol.AutoMatchmakeWithParamPostpone(autoMatchmakeWithParam_Postpone)
-	c.DefaultProtocol.AutoMatchmakeWithSearchCriteriaPostpone(autoMatchmakeWithSearchCriteria_Postpone)
-	c.DefaultProtocol.UpdateProgressScore(updateProgressScore)
-	c.DefaultProtocol.CreateMatchmakeSessionWithParam(createMatchmakeSessionWithParam)
-	c.DefaultProtocol.UpdateApplicationBuffer(updateApplicationBuffer)
-	c.DefaultProtocol.JoinMatchmakeSession(joinMatchmakeSession)
-	c.DefaultProtocol.JoinMatchmakeSessionWithParam(joinMatchmakeSessionWithParam)
-	c.DefaultProtocol.ModifyCurrentGameAttribute(modifyCurrentGameAttribute)
-	c.DefaultProtocol.BrowseMatchmakeSession(browseMatchmakeSession)
+	c.DefaultProtocol.OpenParticipation = openParticipation
+	c.DefaultProtocol.CloseParticipation = closeParticipation
+	c.DefaultProtocol.CreateMatchmakeSession = createMatchmakeSession
+	c.DefaultProtocol.GetSimplePlayingSession = getSimplePlayingSession
+	c.DefaultProtocol.AutoMatchmakePostpone = autoMatchmake_Postpone
+	c.DefaultProtocol.AutoMatchmakeWithParamPostpone = autoMatchmakeWithParam_Postpone
+	c.DefaultProtocol.AutoMatchmakeWithSearchCriteriaPostpone = autoMatchmakeWithSearchCriteria_Postpone
+	c.DefaultProtocol.UpdateProgressScore = updateProgressScore
+	c.DefaultProtocol.CreateMatchmakeSessionWithParam = createMatchmakeSessionWithParam
+	c.DefaultProtocol.UpdateApplicationBuffer = updateApplicationBuffer
+	c.DefaultProtocol.JoinMatchmakeSession = joinMatchmakeSession
+	c.DefaultProtocol.JoinMatchmakeSessionWithParam = joinMatchmakeSessionWithParam
+	c.DefaultProtocol.ModifyCurrentGameAttribute = modifyCurrentGameAttribute
+	c.DefaultProtocol.BrowseMatchmakeSession = browseMatchmakeSession
 }
 
 func initMarioKart8(c *CommonMatchmakeExtensionProtocol) {
 	// TODO - Organize by method ID
 	c.MarioKart8Protocol = matchmake_extension_mario_kart_8.NewProtocol(c.server)
-	c.MarioKart8Protocol.OpenParticipation(openParticipation)
-	c.MarioKart8Protocol.CloseParticipation(closeParticipation)
-	c.MarioKart8Protocol.CreateMatchmakeSession(createMatchmakeSession)
-	c.MarioKart8Protocol.GetSimplePlayingSession(getSimplePlayingSession)
-	c.MarioKart8Protocol.AutoMatchmakePostpone(autoMatchmake_Postpone)
-	c.MarioKart8Protocol.AutoMatchmakeWithSearchCriteriaPostpone(autoMatchmakeWithSearchCriteria_Postpone)
-	c.MarioKart8Protocol.UpdateProgressScore(updateProgressScore)
+	c.MarioKart8Protocol.OpenParticipation = openParticipation
+	c.MarioKart8Protocol.CloseParticipation = closeParticipation
+	c.MarioKart8Protocol.CreateMatchmakeSession = createMatchmakeSession
+	c.MarioKart8Protocol.GetSimplePlayingSession = getSimplePlayingSession
+	c.MarioKart8Protocol.AutoMatchmakePostpone = autoMatchmake_Postpone
+	c.MarioKart8Protocol.AutoMatchmakeWithSearchCriteriaPostpone = autoMatchmakeWithSearchCriteria_Postpone
+	c.MarioKart8Protocol.UpdateProgressScore = updateProgressScore
 }
 
 // NewCommonMatchmakeExtensionProtocol returns a new CommonMatchmakeExtensionProtocol

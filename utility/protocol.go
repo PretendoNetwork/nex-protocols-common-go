@@ -33,7 +33,7 @@ func NewCommonUtilityProtocol(server *nex.PRUDPServer) *CommonUtilityProtocol {
 	commonUtilityProtocol.randGenerator = rand.New(commonUtilityProtocol.randSource)
 
 	// TODO - Organize these by method ID
-	commonUtilityProtocol.AcquireNexUniqueID(acquireNexUniqueID)
+	commonUtilityProtocol.AcquireNexUniqueID = acquireNexUniqueID
 
 	return commonUtilityProtocol
 }

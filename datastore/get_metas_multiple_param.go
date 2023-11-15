@@ -7,20 +7,20 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
 )
 
-func getMetasMultipleParam(err error, packet nex.PacketInterface, callID uint32, params []*datastore_types.DataStoreGetMetaParam) uint32 {
+func getMetasMultipleParam(err error, packet nex.PacketInterface, callID uint32, params []*datastore_types.DataStoreGetMetaParam) (*nex.RMCMessage, uint32) {
 	if commonDataStoreProtocol.getObjectInfoByPersistenceTargetWithPasswordHandler == nil {
 		common_globals.Logger.Warning("GetObjectInfoByPersistenceTargetWithPassword not defined")
-		return nex.Errors.Core.NotImplemented
+		return nil, nex.Errors.Core.NotImplemented
 	}
 
 	if commonDataStoreProtocol.getObjectInfoByDataIDWithPasswordHandler == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataIDWithPassword not defined")
-		return nex.Errors.Core.NotImplemented
+		return nil, nex.Errors.Core.NotImplemented
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.DataStore.Unknown
+		return nil, nex.Errors.DataStore.Unknown
 	}
 
 	client := packet.Sender().(*nex.PRUDPClient)
@@ -44,7 +44,7 @@ func getMetasMultipleParam(err error, packet nex.PacketInterface, callID uint32,
 
 			pResults = append(pResults, nex.NewResultError(errCode))
 		} else {
-			errCode = commonDataStoreProtocol.VerifyObjectPermission(objectInfo.OwnerID, client.PID().LegacyValue(), objectInfo.Permission)
+			errCode = commonDataStoreProtocol.VerifyObjectPermission(objectInfo.OwnerID, client.PID(), objectInfo.Permission)
 			if errCode != 0 {
 				objectInfo = datastore_types.NewDataStoreMetaInfo()
 
@@ -71,26 +71,5 @@ func getMetasMultipleParam(err error, packet nex.PacketInterface, callID uint32,
 	rmcResponse.MethodID = datastore.MethodGetMetasMultipleParam
 	rmcResponse.CallID = callID
 
-	rmcResponseBytes := rmcResponse.Bytes()
-
-	var responsePacket nex.PRUDPPacketInterface
-
-	if commonDataStoreProtocol.server.PRUDPVersion == 0 {
-		responsePacket, _ = nex.NewPRUDPPacketV0(client, nil)
-	} else {
-		responsePacket, _ = nex.NewPRUDPPacketV1(client, nil)
-	}
-
-	responsePacket.SetType(nex.DataPacket)
-	responsePacket.AddFlag(nex.FlagNeedsAck)
-	responsePacket.AddFlag(nex.FlagReliable)
-	responsePacket.SetSourceStreamType(packet.(nex.PRUDPPacketInterface).DestinationStreamType())
-	responsePacket.SetSourcePort(packet.(nex.PRUDPPacketInterface).DestinationPort())
-	responsePacket.SetDestinationStreamType(packet.(nex.PRUDPPacketInterface).SourceStreamType())
-	responsePacket.SetDestinationPort(packet.(nex.PRUDPPacketInterface).SourcePort())
-	responsePacket.SetPayload(rmcResponseBytes)
-
-	commonDataStoreProtocol.server.Send(responsePacket)
-
-	return 0
+	return rmcResponse, 0
 }

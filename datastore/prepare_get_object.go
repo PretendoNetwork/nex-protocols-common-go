@@ -10,20 +10,20 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
 )
 
-func prepareGetObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStorePrepareGetParam) uint32 {
+func prepareGetObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStorePrepareGetParam) (*nex.RMCMessage, uint32) {
 	if commonDataStoreProtocol.getObjectInfoByDataIDHandler == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataID not defined")
-		return nex.Errors.Core.NotImplemented
+		return nil, nex.Errors.Core.NotImplemented
 	}
 
 	if commonDataStoreProtocol.S3Presigner == nil {
 		common_globals.Logger.Warning("S3Presigner not defined")
-		return nex.Errors.Core.NotImplemented
+		return nil, nex.Errors.Core.NotImplemented
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.Core.Unknown
+		return nil, nex.Errors.Core.Unknown
 	}
 
 	client := packet.Sender().(*nex.PRUDPClient)
@@ -33,23 +33,23 @@ func prepareGetObject(err error, packet nex.PacketInterface, callID uint32, para
 
 	objectInfo, errCode := commonDataStoreProtocol.getObjectInfoByDataIDHandler(param.DataID)
 	if errCode != 0 {
-		return errCode
+		return nil, errCode
 	}
 
-	errCode = commonDataStoreProtocol.VerifyObjectPermission(objectInfo.OwnerID, client.PID().LegacyValue(), objectInfo.Permission)
+	errCode = commonDataStoreProtocol.VerifyObjectPermission(objectInfo.OwnerID, client.PID(), objectInfo.Permission)
 	if errCode != 0 {
-		return errCode
+		return nil, errCode
 	}
 
 	url, err := commonDataStoreProtocol.S3Presigner.GetObject(bucket, key, time.Minute*15)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.DataStore.OperationNotAllowed
+		return nil, nex.Errors.DataStore.OperationNotAllowed
 	}
 
 	requestHeaders, errCode := commonDataStoreProtocol.s3GetRequestHeadersHandler()
 	if errCode != 0 {
-		return errCode
+		return nil, errCode
 	}
 
 	pReqGetInfo := datastore_types.NewDataStoreReqGetInfo()
@@ -71,26 +71,5 @@ func prepareGetObject(err error, packet nex.PacketInterface, callID uint32, para
 	rmcResponse.MethodID = datastore.MethodPrepareGetObject
 	rmcResponse.CallID = callID
 
-	rmcResponseBytes := rmcResponse.Bytes()
-
-	var responsePacket nex.PRUDPPacketInterface
-
-	if commonDataStoreProtocol.server.PRUDPVersion == 0 {
-		responsePacket, _ = nex.NewPRUDPPacketV0(client, nil)
-	} else {
-		responsePacket, _ = nex.NewPRUDPPacketV1(client, nil)
-	}
-
-	responsePacket.SetType(nex.DataPacket)
-	responsePacket.AddFlag(nex.FlagNeedsAck)
-	responsePacket.AddFlag(nex.FlagReliable)
-	responsePacket.SetSourceStreamType(packet.(nex.PRUDPPacketInterface).DestinationStreamType())
-	responsePacket.SetSourcePort(packet.(nex.PRUDPPacketInterface).DestinationPort())
-	responsePacket.SetDestinationStreamType(packet.(nex.PRUDPPacketInterface).SourceStreamType())
-	responsePacket.SetDestinationPort(packet.(nex.PRUDPPacketInterface).SourcePort())
-	responsePacket.SetPayload(rmcResponseBytes)
-
-	commonDataStoreProtocol.server.Send(responsePacket)
-
-	return 0
+	return rmcResponse, 0
 }

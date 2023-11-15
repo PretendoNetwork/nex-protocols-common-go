@@ -24,12 +24,12 @@ func NewCommonMatchMakingProtocol(server *nex.PRUDPServer) *CommonMatchMakingPro
 	common_globals.Sessions = make(map[uint32]*common_globals.CommonMatchmakeSession)
 
 	// TODO - Organize these by method ID
-	commonMatchMakingProtocol.UpdateSessionURL(updateSessionURL)
-	commonMatchMakingProtocol.GetSessionURLs(getSessionURLs)
-	commonMatchMakingProtocol.UnregisterGathering(unregisterGathering)
-	commonMatchMakingProtocol.UpdateSessionHostV1(updateSessionHostV1)
-	commonMatchMakingProtocol.UpdateSessionHost(updateSessionHost)
-	commonMatchMakingProtocol.FindBySingleID(findBySingleID)
+	commonMatchMakingProtocol.UpdateSessionURL = updateSessionURL
+	commonMatchMakingProtocol.GetSessionURLs = getSessionURLs
+	commonMatchMakingProtocol.UnregisterGathering = unregisterGathering
+	commonMatchMakingProtocol.UpdateSessionHostV1 = updateSessionHostV1
+	commonMatchMakingProtocol.UpdateSessionHost = updateSessionHost
+	commonMatchMakingProtocol.FindBySingleID = findBySingleID
 
 	server.OnClientRemoved(func(client *nex.PRUDPClient) {
 		fmt.Println("Leaving")

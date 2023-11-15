@@ -7,15 +7,15 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
 )
 
-func searchObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreSearchParam) uint32 {
+func searchObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreSearchParam) (*nex.RMCMessage, uint32) {
 	if commonDataStoreProtocol.getObjectInfosByDataStoreSearchParamHandler == nil {
 		common_globals.Logger.Warning("GetObjectInfosByDataStoreSearchParam not defined")
-		return nex.Errors.Core.NotImplemented
+		return nil, nex.Errors.Core.NotImplemented
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.DataStore.Unknown
+		return nil, nex.Errors.DataStore.Unknown
 	}
 
 	client := packet.Sender().(*nex.PRUDPClient)
@@ -29,7 +29,7 @@ func searchObject(err error, packet nex.PacketInterface, callID uint32, param *d
 	// * in the database, whereas objects is the limited results
 	objects, totalCount, errCode := commonDataStoreProtocol.getObjectInfosByDataStoreSearchParamHandler(param)
 	if errCode != 0 {
-		return errCode
+		return nil, errCode
 	}
 
 	pSearchResult := datastore_types.NewDataStoreSearchResult()
@@ -37,7 +37,7 @@ func searchObject(err error, packet nex.PacketInterface, callID uint32, param *d
 	pSearchResult.Result = make([]*datastore_types.DataStoreMetaInfo, 0, len(objects))
 
 	for _, object := range objects {
-		errCode = commonDataStoreProtocol.VerifyObjectPermission(object.OwnerID, client.PID().LegacyValue(), object.Permission)
+		errCode = commonDataStoreProtocol.VerifyObjectPermission(object.OwnerID, client.PID(), object.Permission)
 		if errCode != 0 {
 			// * Since we don't error here, should we also
 			// * "hide" these results by also decrementing
@@ -87,26 +87,5 @@ func searchObject(err error, packet nex.PacketInterface, callID uint32, param *d
 	rmcResponse.MethodID = datastore.MethodSearchObject
 	rmcResponse.CallID = callID
 
-	rmcResponseBytes := rmcResponse.Bytes()
-
-	var responsePacket nex.PRUDPPacketInterface
-
-	if commonDataStoreProtocol.server.PRUDPVersion == 0 {
-		responsePacket, _ = nex.NewPRUDPPacketV0(client, nil)
-	} else {
-		responsePacket, _ = nex.NewPRUDPPacketV1(client, nil)
-	}
-
-	responsePacket.SetType(nex.DataPacket)
-	responsePacket.AddFlag(nex.FlagNeedsAck)
-	responsePacket.AddFlag(nex.FlagReliable)
-	responsePacket.SetSourceStreamType(packet.(nex.PRUDPPacketInterface).DestinationStreamType())
-	responsePacket.SetSourcePort(packet.(nex.PRUDPPacketInterface).DestinationPort())
-	responsePacket.SetDestinationStreamType(packet.(nex.PRUDPPacketInterface).SourceStreamType())
-	responsePacket.SetDestinationPort(packet.(nex.PRUDPPacketInterface).SourcePort())
-	responsePacket.SetPayload(rmcResponseBytes)
-
-	commonDataStoreProtocol.server.Send(responsePacket)
-
-	return 0
+	return rmcResponse, 0
 }

@@ -72,10 +72,10 @@ func RemoveClientFromAllSessions(client *nex.PRUDPClient) {
 
 		ownerPID := session.GameMatchmakeSession.Gathering.OwnerPID
 
-		if client.PID().LegacyValue() == ownerPID {
-			// This flag tells the server to change the matchmake session owner if they disconnect
-			// If the flag is not set, delete the session
-			// More info: https://nintendo-wiki.pretendo.network/docs/nex/protocols/match-making/types#flags
+		if ownerPID.Equals(client.PID()) {
+			// * This flag tells the server to change the matchmake session owner if they disconnect
+			// * If the flag is not set, delete the session
+			// * More info: https://nintendo-wiki.pretendo.network/docs/nex/protocols/match-making/types#flags
 			if session.GameMatchmakeSession.Gathering.Flags&match_making.GatheringFlags.DisconnectChangeOwner == 0 {
 				delete(Sessions, gid)
 			} else {
@@ -88,10 +88,10 @@ func RemoveClientFromAllSessions(client *nex.PRUDPClient) {
 			subtype := notifications.NotificationSubTypes.Participation.Disconnected
 
 			oEvent := notifications_types.NewNotificationEvent()
-			oEvent.PIDSource = client.PID().LegacyValue()
+			oEvent.PIDSource = client.PID()
 			oEvent.Type = notifications.BuildNotificationType(category, subtype)
 			oEvent.Param1 = gid
-			oEvent.Param2 = client.PID().LegacyValue()
+			oEvent.Param2 = client.PID().LegacyValue() // TODO - This assumes a legacy client. This won't work on the Switch
 
 			stream := nex.NewStreamOut(server)
 			stream.WriteStructure(oEvent)
@@ -104,7 +104,7 @@ func RemoveClientFromAllSessions(client *nex.PRUDPClient) {
 
 			rmcRequestBytes := rmcRequest.Bytes()
 
-			targetClient := server.FindClientByPID(uint64(ownerPID))
+			targetClient := server.FindClientByPID(ownerPID.Value())
 			if targetClient == nil {
 				Logger.Warning("Owner client not found")
 				gid = FindClientSession(client.ConnectionID)
@@ -136,7 +136,7 @@ func RemoveClientFromAllSessions(client *nex.PRUDPClient) {
 }
 
 // CreateSessionByMatchmakeSession creates a gathering from a MatchmakeSession
-func CreateSessionByMatchmakeSession(matchmakeSession *match_making_types.MatchmakeSession, searchMatchmakeSession *match_making_types.MatchmakeSession, hostPID uint32) (*CommonMatchmakeSession, error, uint32) {
+func CreateSessionByMatchmakeSession(matchmakeSession *match_making_types.MatchmakeSession, searchMatchmakeSession *match_making_types.MatchmakeSession, hostPID *nex.PID) (*CommonMatchmakeSession, error, uint32) {
 	sessionIndex := GetAvailableGatheringID()
 	if sessionIndex == 0 {
 		sessionIndex = GetAvailableGatheringID() // * Skip to index 1
@@ -151,8 +151,7 @@ func CreateSessionByMatchmakeSession(matchmakeSession *match_making_types.Matchm
 	session.GameMatchmakeSession.Gathering.OwnerPID = hostPID
 	session.GameMatchmakeSession.Gathering.HostPID = hostPID
 
-	session.GameMatchmakeSession.StartedTime = nex.NewDateTime(0)
-	session.GameMatchmakeSession.StartedTime.UTC()
+	session.GameMatchmakeSession.StartedTime = nex.NewDateTime(0).Now()
 	session.GameMatchmakeSession.SessionKey = make([]byte, 32)
 	rand.Read(session.GameMatchmakeSession.SessionKey)
 
@@ -178,7 +177,7 @@ func CreateSessionByMatchmakeSession(matchmakeSession *match_making_types.Matchm
 }
 
 // FindSessionByMatchmakeSession finds a gathering that matches with a MatchmakeSession
-func FindSessionByMatchmakeSession(pid uint32, searchMatchmakeSession *match_making_types.MatchmakeSession) uint32 {
+func FindSessionByMatchmakeSession(pid *nex.PID, searchMatchmakeSession *match_making_types.MatchmakeSession) uint32 {
 	// * This portion finds any sessions that match the search session
 	// * It does not care about anything beyond that, such as if the match is already full
 	// * This is handled below
@@ -189,6 +188,7 @@ func FindSessionByMatchmakeSession(pid uint32, searchMatchmakeSession *match_mak
 		}
 	}
 
+	// TODO - This whole section assumes legacy clients. None of it will work on the Switch
 	var friendList []uint32
 	for _, sessionIndex := range candidateSessionIndexes {
 		sessionToCheck := Sessions[sessionIndex]
@@ -200,7 +200,7 @@ func FindSessionByMatchmakeSession(pid uint32, searchMatchmakeSession *match_mak
 			continue
 		}
 
-		// If the session only allows friends, check if the owner is in the friend list of the PID
+		// * If the session only allows friends, check if the owner is in the friend list of the PID
 		// TODO - Is this a flag or a constant?
 		if sessionToCheck.GameMatchmakeSession.ParticipationPolicy == 98 {
 			if GetUserFriendPIDsHandler == nil {
@@ -209,10 +209,10 @@ func FindSessionByMatchmakeSession(pid uint32, searchMatchmakeSession *match_mak
 			}
 
 			if len(friendList) == 0 {
-				friendList = GetUserFriendPIDsHandler(pid)
+				friendList = GetUserFriendPIDsHandler(pid.LegacyValue()) // TODO - This grpc method needs to support the Switch
 			}
 
-			if !slices.Contains(friendList, sessionToCheck.GameMatchmakeSession.OwnerPID) {
+			if !slices.Contains(friendList, sessionToCheck.GameMatchmakeSession.OwnerPID.LegacyValue()) {
 				continue
 			}
 		}
@@ -224,8 +224,10 @@ func FindSessionByMatchmakeSession(pid uint32, searchMatchmakeSession *match_mak
 }
 
 // FindSessionsByMatchmakeSessionSearchCriterias finds a gathering that matches with the given search criteria
-func FindSessionsByMatchmakeSessionSearchCriterias(pid uint32, lstSearchCriteria []*match_making_types.MatchmakeSessionSearchCriteria, gameSpecificChecks func(searchCriteria *match_making_types.MatchmakeSessionSearchCriteria, matchmakeSession *match_making_types.MatchmakeSession) bool) []*CommonMatchmakeSession {
+func FindSessionsByMatchmakeSessionSearchCriterias(pid *nex.PID, lstSearchCriteria []*match_making_types.MatchmakeSessionSearchCriteria, gameSpecificChecks func(searchCriteria *match_making_types.MatchmakeSessionSearchCriteria, matchmakeSession *match_making_types.MatchmakeSession) bool) []*CommonMatchmakeSession {
 	candidateSessions := make([]*CommonMatchmakeSession, 0, len(Sessions))
+
+	// TODO - This whole section assumes legacy clients. None of it will work on the Switch
 	var friendList []uint32
 	for _, session := range Sessions {
 		for _, searchCriteria := range lstSearchCriteria {
@@ -260,7 +262,7 @@ func FindSessionsByMatchmakeSessionSearchCriterias(pid uint32, lstSearchCriteria
 				continue
 			}
 
-			// If the session only allows friends, check if the owner is in the friend list of the PID
+			// * If the session only allows friends, check if the owner is in the friend list of the PID
 			// TODO - Is this a flag or a constant?
 			if session.GameMatchmakeSession.ParticipationPolicy == 98 {
 				if GetUserFriendPIDsHandler == nil {
@@ -269,10 +271,10 @@ func FindSessionsByMatchmakeSessionSearchCriterias(pid uint32, lstSearchCriteria
 				}
 
 				if len(friendList) == 0 {
-					friendList = GetUserFriendPIDsHandler(pid)
+					friendList = GetUserFriendPIDsHandler(pid.LegacyValue()) // TODO - Support the Switch
 				}
 
-				if !slices.Contains(friendList, session.GameMatchmakeSession.OwnerPID) {
+				if !slices.Contains(friendList, session.GameMatchmakeSession.OwnerPID.LegacyValue()) {
 					continue
 				}
 			}
@@ -304,7 +306,7 @@ func compareAttributesSearchCriteria(original []uint32, search []string) bool {
 }
 
 func compareSearchCriteria[T ~uint16 | ~uint32](original T, search string) bool {
-	if search == "" { // Accept any value
+	if search == "" { // * Accept any value
 		return true
 	}
 
@@ -362,10 +364,10 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 		notificationSubtype := notifications.NotificationSubTypes.Participation.NewParticipant
 
 		oEvent := notifications_types.NewNotificationEvent()
-		oEvent.PIDSource = initiatingClient.PID().LegacyValue()
+		oEvent.PIDSource = initiatingClient.PID()
 		oEvent.Type = notifications.BuildNotificationType(notificationCategory, notificationSubtype)
 		oEvent.Param1 = session.GameMatchmakeSession.ID
-		oEvent.Param2 = target.PID().LegacyValue()
+		oEvent.Param2 = target.PID().LegacyValue() // TODO - This assumes a legacy client. Will not work on the Switch
 		oEvent.StrParam = joinMessage
 		oEvent.Param3 = uint32(len(connectionIDs))
 
@@ -401,9 +403,10 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 		server.Send(messagePacket)
 	}
 
-	// This appears to be correct. Tri-Force Heroes uses 3.9.0, and has issues if these notifications are sent
-	// Minecraft, however, requires these to be sent
-	// TODO: Check other games both pre and post 3.10.0 and validate
+	// * This appears to be correct. Tri-Force Heroes uses 3.9.0,
+	// * and has issues if these notifications are sent.
+	// * Minecraft, however, requires these to be sent
+	// TODO - Check other games both pre and post 3.10.0 and validate
 	if server.MatchMakingProtocolVersion().GreaterOrEqual("3.10.0") {
 		for i := 0; i < len(session.ConnectionIDs); i++ {
 			target := server.FindClientByConnectionID(session.ConnectionIDs[i])
@@ -417,10 +420,10 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 			notificationSubtype := notifications.NotificationSubTypes.Participation.NewParticipant
 
 			oEvent := notifications_types.NewNotificationEvent()
-			oEvent.PIDSource = initiatingClient.PID().LegacyValue()
+			oEvent.PIDSource = initiatingClient.PID()
 			oEvent.Type = notifications.BuildNotificationType(notificationCategory, notificationSubtype)
 			oEvent.Param1 = session.GameMatchmakeSession.ID
-			oEvent.Param2 = target.PID().LegacyValue()
+			oEvent.Param2 = target.PID().LegacyValue() // TODO - This assumes a legacy client. Will not work on the Switch
 			oEvent.StrParam = joinMessage
 			oEvent.Param3 = uint32(len(connectionIDs))
 
@@ -460,10 +463,10 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 		notificationSubtype := notifications.NotificationSubTypes.Participation.NewParticipant
 
 		oEvent := notifications_types.NewNotificationEvent()
-		oEvent.PIDSource = initiatingClient.PID().LegacyValue()
+		oEvent.PIDSource = initiatingClient.PID()
 		oEvent.Type = notifications.BuildNotificationType(notificationCategory, notificationSubtype)
 		oEvent.Param1 = session.GameMatchmakeSession.ID
-		oEvent.Param2 = initiatingClient.PID().LegacyValue()
+		oEvent.Param2 = initiatingClient.PID().LegacyValue() // TODO - This assumes a legacy client. Will not work on the Switch
 		oEvent.StrParam = joinMessage
 		oEvent.Param3 = uint32(len(connectionIDs))
 
@@ -498,7 +501,7 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 
 		server.Send(messagePacket)
 
-		target := server.FindClientByPID(uint64(session.GameMatchmakeSession.Gathering.OwnerPID))
+		target := server.FindClientByPID(session.GameMatchmakeSession.Gathering.OwnerPID.Value())
 		if target == nil {
 			// TODO - Error here?
 			Logger.Warning("Player not found")
@@ -535,7 +538,7 @@ func ChangeSessionOwner(ownerClient *nex.PRUDPClient, gathering uint32) {
 	if otherConnectionID != 0 {
 		otherClient = server.FindClientByConnectionID(otherConnectionID)
 		if otherClient != nil {
-			Sessions[gathering].GameMatchmakeSession.Gathering.OwnerPID = otherClient.PID().LegacyValue()
+			Sessions[gathering].GameMatchmakeSession.Gathering.OwnerPID = otherClient.PID()
 		} else {
 			Logger.Warning("Other client not found")
 			return
@@ -548,15 +551,15 @@ func ChangeSessionOwner(ownerClient *nex.PRUDPClient, gathering uint32) {
 	subtype := notifications.NotificationSubTypes.OwnershipChanged.None
 
 	oEvent := notifications_types.NewNotificationEvent()
-	oEvent.PIDSource = otherClient.PID().LegacyValue()
+	oEvent.PIDSource = otherClient.PID()
 	oEvent.Type = notifications.BuildNotificationType(category, subtype)
 	oEvent.Param1 = gathering
-	oEvent.Param2 = otherClient.PID().LegacyValue()
+	oEvent.Param2 = otherClient.PID().LegacyValue() // TODO - This assumes a legacy client. Will not work on the Switch
 
 	// TODO - StrParam doesn't have this value on some servers
-	// https://github.com/kinnay/NintendoClients/issues/101
-	// unixTime := time.Now()
-	// oEvent.StrParam = strconv.FormatInt(unixTime.UnixMicro(), 10)
+	// * https://github.com/kinnay/NintendoClients/issues/101
+	// * unixTime := time.Now()
+	// * oEvent.StrParam = strconv.FormatInt(unixTime.UnixMicro(), 10)
 
 	stream := nex.NewStreamOut(server)
 	stream.WriteStructure(oEvent)

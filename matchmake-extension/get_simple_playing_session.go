@@ -10,40 +10,49 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-// * https://stackoverflow.com/a/70808522
-func remove[T comparable](l []T, item T) []T {
+func remove(l []*nex.PID, p *nex.PID) []*nex.PID {
 	for i, other := range l {
-		if other == item {
+		if other.Value() == p.Value() {
 			return append(l[:i], l[i+1:]...)
 		}
 	}
 	return l
 }
 
-func getSimplePlayingSession(err error, packet nex.PacketInterface, callID uint32, listPID []uint32, includeLoginUser bool) uint32 {
+func includes(l []*nex.PID, p *nex.PID) bool {
+	for _, other := range l {
+		if other.Value() == p.Value() {
+			return true
+		}
+	}
+
+	return false
+}
+
+func getSimplePlayingSession(err error, packet nex.PacketInterface, callID uint32, listPID []*nex.PID, includeLoginUser bool) (*nex.RMCMessage, uint32) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.Core.InvalidArgument
+		return nil, nex.Errors.Core.InvalidArgument
 	}
 
 	client := packet.Sender().(*nex.PRUDPClient)
 	server := commonMatchmakeExtensionProtocol.server
 
-	if slices.Contains(listPID, client.PID().LegacyValue()) {
-		listPID = remove(listPID, client.PID().LegacyValue())
+	if includes(listPID, client.PID()) {
+		listPID = remove(listPID, client.PID())
 	}
 
-	if includeLoginUser && !slices.Contains(listPID, client.PID().LegacyValue()) {
-		listPID = append(listPID, client.PID().LegacyValue())
+	if includeLoginUser && !includes(listPID, client.PID()) {
+		listPID = append(listPID, client.PID())
 	}
 
 	simplePlayingSessions := make(map[string]*match_making_types.SimplePlayingSession)
 
 	for gatheringID, session := range common_globals.Sessions {
 		for _, pid := range listPID {
-			key := fmt.Sprintf("%d-%d", gatheringID, pid)
+			key := fmt.Sprintf("%d-%d", gatheringID, pid.Value())
 			if simplePlayingSessions[key] == nil {
-				connectedPIDs := make([]uint32, 0)
+				connectedPIDs := make([]uint64, 0)
 				for _, connectionID := range session.ConnectionIDs {
 					player := server.FindClientByConnectionID(connectionID)
 					if player == nil {
@@ -51,10 +60,10 @@ func getSimplePlayingSession(err error, packet nex.PacketInterface, callID uint3
 						continue
 					}
 
-					connectedPIDs = append(connectedPIDs, player.PID().LegacyValue())
+					connectedPIDs = append(connectedPIDs, player.PID().Value())
 				}
 
-				if slices.Contains(connectedPIDs, pid) {
+				if slices.Contains(connectedPIDs, pid.Value()) {
 					simplePlayingSessions[key] = match_making_types.NewSimplePlayingSession()
 					simplePlayingSessions[key].PrincipalID = pid
 					simplePlayingSessions[key].GatheringID = gatheringID
@@ -82,26 +91,5 @@ func getSimplePlayingSession(err error, packet nex.PacketInterface, callID uint3
 	rmcResponse.MethodID = matchmake_extension.MethodGetSimplePlayingSession
 	rmcResponse.CallID = callID
 
-	rmcResponseBytes := rmcResponse.Bytes()
-
-	var responsePacket nex.PRUDPPacketInterface
-
-	if server.PRUDPVersion == 0 {
-		responsePacket, _ = nex.NewPRUDPPacketV0(client, nil)
-	} else {
-		responsePacket, _ = nex.NewPRUDPPacketV1(client, nil)
-	}
-
-	responsePacket.SetType(nex.DataPacket)
-	responsePacket.AddFlag(nex.FlagNeedsAck)
-	responsePacket.AddFlag(nex.FlagReliable)
-	responsePacket.SetSourceStreamType(packet.(nex.PRUDPPacketInterface).DestinationStreamType())
-	responsePacket.SetSourcePort(packet.(nex.PRUDPPacketInterface).DestinationPort())
-	responsePacket.SetDestinationStreamType(packet.(nex.PRUDPPacketInterface).SourceStreamType())
-	responsePacket.SetDestinationPort(packet.(nex.PRUDPPacketInterface).SourcePort())
-	responsePacket.SetPayload(rmcResponseBytes)
-
-	server.Send(responsePacket)
-
-	return 0
+	return rmcResponse, 0
 }

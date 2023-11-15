@@ -59,13 +59,13 @@ func (c *CommonDataStoreProtocol) S3ObjectSize(bucket, key string) (uint64, erro
 	return uint64(info.Size), nil
 }
 
-func (c *CommonDataStoreProtocol) VerifyObjectPermission(ownerPID, accessorPID uint32, permission *datastore_types.DataStorePermission) uint32 {
+func (c *CommonDataStoreProtocol) VerifyObjectPermission(ownerPID, accessorPID *nex.PID, permission *datastore_types.DataStorePermission) uint32 {
 	if permission.Permission > 3 {
 		return nex.Errors.DataStore.InvalidArgument
 	}
 
 	// * Owner can always access their own objects
-	if ownerPID == accessorPID {
+	if ownerPID.Equals(accessorPID) {
 		return 0
 	}
 
@@ -76,9 +76,10 @@ func (c *CommonDataStoreProtocol) VerifyObjectPermission(ownerPID, accessorPID u
 
 	// * Allow only friends of the owner
 	if permission.Permission == 1 {
-		friendsList := c.getUserFriendPIDsHandler(ownerPID)
+		// TODO - This assumes a legacy client. Will not work on the Switch
+		friendsList := c.getUserFriendPIDsHandler(ownerPID.LegacyValue())
 
-		if !slices.Contains(friendsList, accessorPID) {
+		if !slices.Contains(friendsList, accessorPID.LegacyValue()) {
 			return nex.Errors.DataStore.PermissionDenied
 		}
 	}
@@ -92,7 +93,7 @@ func (c *CommonDataStoreProtocol) VerifyObjectPermission(ownerPID, accessorPID u
 
 	// * Allow only the owner
 	if permission.Permission == 3 {
-		if ownerPID != accessorPID {
+		if !ownerPID.Equals(accessorPID) {
 			return nex.Errors.DataStore.PermissionDenied
 		}
 	}
@@ -229,36 +230,36 @@ func (c *CommonDataStoreProtocol) GetObjectOwnerByDataID(handler func(dataID uin
 
 func initDefault(c *CommonDataStoreProtocol) {
 	c.DefaultProtocol = datastore.NewProtocol(c.server)
-	c.DefaultProtocol.DeleteObject(deleteObject)
-	c.DefaultProtocol.GetMeta(getMeta)
-	c.DefaultProtocol.GetMetas(getMetas)
-	c.DefaultProtocol.SearchObject(searchObject)
-	c.DefaultProtocol.RateObject(rateObject)
-	c.DefaultProtocol.PostMetaBinary(postMetaBinary)
-	c.DefaultProtocol.PreparePostObject(preparePostObject)
-	c.DefaultProtocol.PrepareGetObject(prepareGetObject)
-	c.DefaultProtocol.CompletePostObject(completePostObject)
-	c.DefaultProtocol.GetMetasMultipleParam(getMetasMultipleParam)
-	c.DefaultProtocol.CompletePostObjects(completePostObjects)
-	c.DefaultProtocol.ChangeMeta(changeMeta)
-	c.DefaultProtocol.RateObjects(rateObjects)
+	c.DefaultProtocol.DeleteObject = deleteObject
+	c.DefaultProtocol.GetMeta = getMeta
+	c.DefaultProtocol.GetMetas = getMetas
+	c.DefaultProtocol.SearchObject = searchObject
+	c.DefaultProtocol.RateObject = rateObject
+	c.DefaultProtocol.PostMetaBinary = postMetaBinary
+	c.DefaultProtocol.PreparePostObject = preparePostObject
+	c.DefaultProtocol.PrepareGetObject = prepareGetObject
+	c.DefaultProtocol.CompletePostObject = completePostObject
+	c.DefaultProtocol.GetMetasMultipleParam = getMetasMultipleParam
+	c.DefaultProtocol.CompletePostObjects = completePostObjects
+	c.DefaultProtocol.ChangeMeta = changeMeta
+	c.DefaultProtocol.RateObjects = rateObjects
 }
 
 func initSuperMarioMaker(c *CommonDataStoreProtocol) {
 	c.SuperMarioMakerProtocol = datastore_super_mario_maker.NewProtocol(c.server)
-	c.SuperMarioMakerProtocol.DeleteObject(deleteObject)
-	c.SuperMarioMakerProtocol.GetMeta(getMeta)
-	c.SuperMarioMakerProtocol.GetMetas(getMetas)
-	c.SuperMarioMakerProtocol.SearchObject(searchObject)
-	c.SuperMarioMakerProtocol.RateObject(rateObject)
-	c.SuperMarioMakerProtocol.PostMetaBinary(postMetaBinary)
-	c.SuperMarioMakerProtocol.PreparePostObject(preparePostObject)
-	c.SuperMarioMakerProtocol.PrepareGetObject(prepareGetObject)
-	c.SuperMarioMakerProtocol.CompletePostObject(completePostObject)
-	c.SuperMarioMakerProtocol.GetMetasMultipleParam(getMetasMultipleParam)
-	c.SuperMarioMakerProtocol.CompletePostObjects(completePostObjects)
-	c.SuperMarioMakerProtocol.ChangeMeta(changeMeta)
-	c.SuperMarioMakerProtocol.RateObjects(rateObjects)
+	c.SuperMarioMakerProtocol.DeleteObject = deleteObject
+	c.SuperMarioMakerProtocol.GetMeta = getMeta
+	c.SuperMarioMakerProtocol.GetMetas = getMetas
+	c.SuperMarioMakerProtocol.SearchObject = searchObject
+	c.SuperMarioMakerProtocol.RateObject = rateObject
+	c.SuperMarioMakerProtocol.PostMetaBinary = postMetaBinary
+	c.SuperMarioMakerProtocol.PreparePostObject = preparePostObject
+	c.SuperMarioMakerProtocol.PrepareGetObject = prepareGetObject
+	c.SuperMarioMakerProtocol.CompletePostObject = completePostObject
+	c.SuperMarioMakerProtocol.GetMetasMultipleParam = getMetasMultipleParam
+	c.SuperMarioMakerProtocol.CompletePostObjects = completePostObjects
+	c.SuperMarioMakerProtocol.ChangeMeta = changeMeta
+	c.SuperMarioMakerProtocol.RateObjects = rateObjects
 }
 
 // NewCommonDataStoreProtocol returns a new CommonDataStoreProtocol

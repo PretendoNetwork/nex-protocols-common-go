@@ -7,37 +7,37 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
 )
 
-func deleteObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreDeleteParam) uint32 {
+func deleteObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreDeleteParam) (*nex.RMCMessage, uint32) {
 	if commonDataStoreProtocol.getObjectInfoByDataIDHandler == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataID not defined")
-		return nex.Errors.Core.NotImplemented
+		return nil, nex.Errors.Core.NotImplemented
 	}
 
 	if commonDataStoreProtocol.deleteObjectByDataIDWithPasswordHandler == nil {
 		common_globals.Logger.Warning("DeleteObjectByDataIDWithPassword not defined")
-		return nex.Errors.Core.NotImplemented
+		return nil, nex.Errors.Core.NotImplemented
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.DataStore.Unknown
+		return nil, nex.Errors.DataStore.Unknown
 	}
 
 	client := packet.Sender().(*nex.PRUDPClient)
 
 	metaInfo, errCode := commonDataStoreProtocol.getObjectInfoByDataIDHandler(param.DataID)
 	if errCode != 0 {
-		return errCode
+		return nil, errCode
 	}
 
-	errCode = commonDataStoreProtocol.VerifyObjectPermission(metaInfo.OwnerID, client.PID().LegacyValue(), metaInfo.DelPermission)
+	errCode = commonDataStoreProtocol.VerifyObjectPermission(metaInfo.OwnerID, client.PID(), metaInfo.DelPermission)
 	if errCode != 0 {
-		return errCode
+		return nil, errCode
 	}
 
 	errCode = commonDataStoreProtocol.deleteObjectByDataIDWithPasswordHandler(param.DataID, param.UpdatePassword)
 	if errCode != 0 {
-		return errCode
+		return nil, errCode
 	}
 
 	rmcResponse := nex.NewRMCSuccess(nil)
@@ -45,26 +45,5 @@ func deleteObject(err error, packet nex.PacketInterface, callID uint32, param *d
 	rmcResponse.MethodID = datastore.MethodDeleteObject
 	rmcResponse.CallID = callID
 
-	rmcResponseBytes := rmcResponse.Bytes()
-
-	var responsePacket nex.PRUDPPacketInterface
-
-	if commonDataStoreProtocol.server.PRUDPVersion == 0 {
-		responsePacket, _ = nex.NewPRUDPPacketV0(client, nil)
-	} else {
-		responsePacket, _ = nex.NewPRUDPPacketV1(client, nil)
-	}
-
-	responsePacket.SetType(nex.DataPacket)
-	responsePacket.AddFlag(nex.FlagNeedsAck)
-	responsePacket.AddFlag(nex.FlagReliable)
-	responsePacket.SetSourceStreamType(packet.(nex.PRUDPPacketInterface).DestinationStreamType())
-	responsePacket.SetSourcePort(packet.(nex.PRUDPPacketInterface).DestinationPort())
-	responsePacket.SetDestinationStreamType(packet.(nex.PRUDPPacketInterface).SourceStreamType())
-	responsePacket.SetDestinationPort(packet.(nex.PRUDPPacketInterface).SourcePort())
-	responsePacket.SetPayload(rmcResponseBytes)
-
-	commonDataStoreProtocol.server.Send(responsePacket)
-
-	return 0
+	return rmcResponse, 0
 }

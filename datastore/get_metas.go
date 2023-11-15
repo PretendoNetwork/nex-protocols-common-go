@@ -7,15 +7,15 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
 )
 
-func getMetas(err error, packet nex.PacketInterface, callID uint32, dataIDs []uint64, param *datastore_types.DataStoreGetMetaParam) uint32 {
+func getMetas(err error, packet nex.PacketInterface, callID uint32, dataIDs []uint64, param *datastore_types.DataStoreGetMetaParam) (*nex.RMCMessage, uint32) {
 	if commonDataStoreProtocol.getObjectInfoByDataIDHandler == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataID not defined")
-		return nex.Errors.Core.NotImplemented
+		return nil, nex.Errors.Core.NotImplemented
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.DataStore.Unknown
+		return nil, nex.Errors.DataStore.Unknown
 	}
 
 	client := packet.Sender().(*nex.PRUDPClient)
@@ -38,7 +38,7 @@ func getMetas(err error, packet nex.PacketInterface, callID uint32, dataIDs []ui
 
 			pResults = append(pResults, nex.NewResultError(errCode))
 		} else {
-			errCode = commonDataStoreProtocol.VerifyObjectPermission(objectInfo.OwnerID, client.PID().LegacyValue(), objectInfo.Permission)
+			errCode = commonDataStoreProtocol.VerifyObjectPermission(objectInfo.OwnerID, client.PID(), objectInfo.Permission)
 			if errCode != 0 {
 				objectInfo = datastore_types.NewDataStoreMetaInfo()
 
@@ -65,26 +65,5 @@ func getMetas(err error, packet nex.PacketInterface, callID uint32, dataIDs []ui
 	rmcResponse.MethodID = datastore.MethodGetMetas
 	rmcResponse.CallID = callID
 
-	rmcResponseBytes := rmcResponse.Bytes()
-
-	var responsePacket nex.PRUDPPacketInterface
-
-	if commonDataStoreProtocol.server.PRUDPVersion == 0 {
-		responsePacket, _ = nex.NewPRUDPPacketV0(client, nil)
-	} else {
-		responsePacket, _ = nex.NewPRUDPPacketV1(client, nil)
-	}
-
-	responsePacket.SetType(nex.DataPacket)
-	responsePacket.AddFlag(nex.FlagNeedsAck)
-	responsePacket.AddFlag(nex.FlagReliable)
-	responsePacket.SetSourceStreamType(packet.(nex.PRUDPPacketInterface).DestinationStreamType())
-	responsePacket.SetSourcePort(packet.(nex.PRUDPPacketInterface).DestinationPort())
-	responsePacket.SetDestinationStreamType(packet.(nex.PRUDPPacketInterface).SourceStreamType())
-	responsePacket.SetDestinationPort(packet.(nex.PRUDPPacketInterface).SourcePort())
-	responsePacket.SetPayload(rmcResponseBytes)
-
-	commonDataStoreProtocol.server.Send(responsePacket)
-
-	return 0
+	return rmcResponse, 0
 }

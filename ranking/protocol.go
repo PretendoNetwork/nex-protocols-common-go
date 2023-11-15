@@ -47,23 +47,23 @@ func (commonRankingProtocol *CommonRankingProtocol) GetRankingsAndCountByCategor
 func initDefault(c *CommonRankingProtocol) {
 	// TODO - Organize by method ID
 	c.DefaultProtocol = ranking.NewProtocol(c.server)
-	c.DefaultProtocol.GetCachedTopXRanking(getCachedTopXRanking)
-	c.DefaultProtocol.GetCachedTopXRankings(getCachedTopXRankings)
-	c.DefaultProtocol.GetCommonData(getCommonData)
-	c.DefaultProtocol.GetRanking(getRanking)
-	c.DefaultProtocol.UploadCommonData(uploadCommonData)
-	c.DefaultProtocol.UploadScore(uploadScore)
+	c.DefaultProtocol.GetCachedTopXRanking = getCachedTopXRanking
+	c.DefaultProtocol.GetCachedTopXRankings = getCachedTopXRankings
+	c.DefaultProtocol.GetCommonData = getCommonData
+	c.DefaultProtocol.GetRanking = getRanking
+	c.DefaultProtocol.UploadCommonData = uploadCommonData
+	c.DefaultProtocol.UploadScore = uploadScore
 }
 
 func initMarioKart8(c *CommonRankingProtocol) {
 	// TODO - Organize by method ID
 	c.MarioKart8Protocol = ranking_mario_kart_8.NewProtocol(c.server)
-	c.MarioKart8Protocol.GetCachedTopXRanking(getCachedTopXRanking)
-	c.MarioKart8Protocol.GetCachedTopXRankings(getCachedTopXRankings)
-	c.MarioKart8Protocol.GetCommonData(getCommonData)
-	c.MarioKart8Protocol.GetRanking(getRanking)
-	c.MarioKart8Protocol.UploadCommonData(uploadCommonData)
-	c.MarioKart8Protocol.UploadScore(uploadScore)
+	c.MarioKart8Protocol.GetCachedTopXRanking = getCachedTopXRanking
+	c.MarioKart8Protocol.GetCachedTopXRankings = getCachedTopXRankings
+	c.MarioKart8Protocol.GetCommonData = getCommonData
+	c.MarioKart8Protocol.GetRanking = getRanking
+	c.MarioKart8Protocol.UploadCommonData = uploadCommonData
+	c.MarioKart8Protocol.UploadScore = uploadScore
 }
 
 // NewCommonRankingProtocol returns a new CommonRankingProtocol

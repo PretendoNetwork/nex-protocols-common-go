@@ -8,10 +8,10 @@ import (
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/notifications/types"
 )
 
-func unregisterGathering(err error, packet nex.PacketInterface, callID uint32, idGathering uint32) uint32 {
+func unregisterGathering(err error, packet nex.PacketInterface, callID uint32, idGathering uint32) (*nex.RMCMessage, uint32) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.Core.InvalidArgument
+		return nil, nex.Errors.Core.InvalidArgument
 	}
 
 	server := commonMatchMakingProtocol.server
@@ -20,11 +20,11 @@ func unregisterGathering(err error, packet nex.PacketInterface, callID uint32, i
 	var session *common_globals.CommonMatchmakeSession
 	var ok bool
 	if session, ok = common_globals.Sessions[idGathering]; !ok {
-		return nex.Errors.RendezVous.SessionVoid
+		return nil, nex.Errors.RendezVous.SessionVoid
 	}
 
-	if session.GameMatchmakeSession.Gathering.OwnerPID != client.PID().LegacyValue() {
-		return nex.Errors.RendezVous.PermissionDenied
+	if session.GameMatchmakeSession.Gathering.OwnerPID.Equals(client.PID()) {
+		return nil, nex.Errors.RendezVous.PermissionDenied
 	}
 
 	gatheringPlayers := session.ConnectionIDs
@@ -32,7 +32,7 @@ func unregisterGathering(err error, packet nex.PacketInterface, callID uint32, i
 	delete(common_globals.Sessions, idGathering)
 
 	rmcResponseStream := nex.NewStreamOut(server)
-	rmcResponseStream.WriteBool(true) // %retval%
+	rmcResponseStream.WriteBool(true) // * %retval%
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
@@ -41,32 +41,11 @@ func unregisterGathering(err error, packet nex.PacketInterface, callID uint32, i
 	rmcResponse.MethodID = match_making.MethodUnregisterGathering
 	rmcResponse.CallID = callID
 
-	rmcResponseBytes := rmcResponse.Bytes()
-
-	var responsePacket nex.PRUDPPacketInterface
-
-	if server.PRUDPVersion == 0 {
-		responsePacket, _ = nex.NewPRUDPPacketV0(client, nil)
-	} else {
-		responsePacket, _ = nex.NewPRUDPPacketV1(client, nil)
-	}
-
-	responsePacket.SetType(nex.DataPacket)
-	responsePacket.AddFlag(nex.FlagNeedsAck)
-	responsePacket.AddFlag(nex.FlagReliable)
-	responsePacket.SetSourceStreamType(packet.(nex.PRUDPPacketInterface).DestinationStreamType())
-	responsePacket.SetSourcePort(packet.(nex.PRUDPPacketInterface).DestinationPort())
-	responsePacket.SetDestinationStreamType(packet.(nex.PRUDPPacketInterface).SourceStreamType())
-	responsePacket.SetDestinationPort(packet.(nex.PRUDPPacketInterface).SourcePort())
-	responsePacket.SetPayload(rmcResponseBytes)
-
-	server.Send(responsePacket)
-
 	category := notifications.NotificationCategories.GatheringUnregistered
 	subtype := notifications.NotificationSubTypes.GatheringUnregistered.None
 
 	oEvent := notifications_types.NewNotificationEvent()
-	oEvent.PIDSource = client.PID().LegacyValue()
+	oEvent.PIDSource = client.PID()
 	oEvent.Type = notifications.BuildNotificationType(category, subtype)
 	oEvent.Param1 = idGathering
 
@@ -107,5 +86,5 @@ func unregisterGathering(err error, packet nex.PacketInterface, callID uint32, i
 		}
 	}
 
-	return 0
+	return rmcResponse, 0
 }

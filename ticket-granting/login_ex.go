@@ -10,38 +10,40 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
-func loginEx(err error, packet nex.PacketInterface, callID uint32, username string, oExtraData *nex.DataHolder) uint32 {
+func loginEx(err error, packet nex.PacketInterface, callID uint32, username string, oExtraData *nex.DataHolder) (*nex.RMCMessage, uint32) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.Core.InvalidArgument
+		return nil, nex.Errors.Core.InvalidArgument
 	}
 
-	client := packet.Sender().(*nex.PRUDPClient)
+	userPID := nex.NewPID[uint64](0)
 
-	var userPID uint32
-
+	// TODO - This needs to change to support QRV clients, who may not send PIDs as usernames
 	if username == "guest" {
-		userPID = 100
+		userPID = nex.NewPID[uint64](100)
 	} else {
 		converted, err := strconv.Atoi(strings.TrimRight(username, "\x00"))
 		if err != nil {
 			panic(err)
 		}
 
-		userPID = uint32(converted)
+		if commonTicketGrantingProtocol.server.LibraryVersion().GreaterOrEqual("4.0.0") {
+			userPID = nex.NewPID[uint64](uint64(converted))
+		} else {
+			userPID = nex.NewPID[uint32](uint32(converted))
+		}
 	}
 
-	var targetPID uint32 = 2 // "Quazal Rendez-Vous" (the server user) account PID
+	targetPID := nex.NewPID[uint64](2) // * "Quazal Rendez-Vous" (the server user) account PID
 
 	encryptedTicket, errorCode := generateTicket(userPID, targetPID)
 
 	if errorCode != 0 && errorCode != nex.Errors.RendezVous.InvalidUsername {
-		// Some other error happened
-		return errorCode
+		return nil, errorCode
 	}
 
 	var retval *nex.Result
-	var pidPrincipal uint32
+	pidPrincipal := nex.NewPID[uint64](0)
 	var pbufResponse []byte
 	var pConnectionData *nex.RVConnectionData
 	var strReturnMsg string
@@ -50,15 +52,12 @@ func loginEx(err error, packet nex.PacketInterface, callID uint32, username stri
 	pConnectionData.SetStationURL(commonTicketGrantingProtocol.secureStationURL.EncodeToString())
 	pConnectionData.SetSpecialProtocols([]byte{})
 	pConnectionData.SetStationURLSpecialProtocols("")
-	serverTime := nex.NewDateTime(0)
-	pConnectionData.SetTime(nex.NewDateTime(serverTime.UTC()))
+	pConnectionData.SetTime(nex.NewDateTime(0).Now())
 
-	/*
-		From the wiki:
-
-		"If the username does not exist, the %retval% field is set to
-		RendezVous::InvalidUsername and the other fields are left blank."
-	*/
+	// * From the wiki:
+	// *
+	// * "If the username does not exist, the %retval% field is set to
+	// * RendezVous::InvalidUsername and the other fields are left blank."
 	if errorCode == nex.Errors.RendezVous.InvalidUsername {
 		retval = nex.NewResultError(errorCode)
 	} else {
@@ -71,7 +70,7 @@ func loginEx(err error, packet nex.PacketInterface, callID uint32, username stri
 	rmcResponseStream := nex.NewStreamOut(commonTicketGrantingProtocol.server)
 
 	rmcResponseStream.WriteResult(retval)
-	rmcResponseStream.WriteUInt32LE(pidPrincipal)
+	rmcResponseStream.WritePID(pidPrincipal)
 	rmcResponseStream.WriteBuffer(pbufResponse)
 	rmcResponseStream.WriteStructure(pConnectionData)
 	rmcResponseStream.WriteString(strReturnMsg)
@@ -83,26 +82,5 @@ func loginEx(err error, packet nex.PacketInterface, callID uint32, username stri
 	rmcResponse.MethodID = ticket_granting.MethodLoginEx
 	rmcResponse.CallID = callID
 
-	rmcResponseBytes := rmcResponse.Bytes()
-
-	var responsePacket nex.PRUDPPacketInterface
-
-	if commonTicketGrantingProtocol.server.PRUDPVersion == 0 {
-		responsePacket, _ = nex.NewPRUDPPacketV0(client, nil)
-	} else {
-		responsePacket, _ = nex.NewPRUDPPacketV1(client, nil)
-	}
-
-	responsePacket.SetType(nex.DataPacket)
-	responsePacket.AddFlag(nex.FlagNeedsAck)
-	responsePacket.AddFlag(nex.FlagReliable)
-	responsePacket.SetSourceStreamType(packet.(nex.PRUDPPacketInterface).DestinationStreamType())
-	responsePacket.SetSourcePort(packet.(nex.PRUDPPacketInterface).DestinationPort())
-	responsePacket.SetDestinationStreamType(packet.(nex.PRUDPPacketInterface).SourceStreamType())
-	responsePacket.SetDestinationPort(packet.(nex.PRUDPPacketInterface).SourcePort())
-	responsePacket.SetPayload(rmcResponseBytes)
-
-	commonTicketGrantingProtocol.server.Send(responsePacket)
-
-	return 0
+	return rmcResponse, 0
 }

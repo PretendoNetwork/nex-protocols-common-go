@@ -6,28 +6,28 @@ import (
 	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
 )
 
-func getSessionURLs(err error, packet nex.PacketInterface, callID uint32, gid uint32) uint32 {
+func getSessionURLs(err error, packet nex.PacketInterface, callID uint32, gid uint32) (*nex.RMCMessage, uint32) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.Core.InvalidArgument
+		return nil, nex.Errors.Core.InvalidArgument
 	}
-
-	client := packet.Sender().(*nex.PRUDPClient)
 
 	session, ok := common_globals.Sessions[gid]
 	if !ok {
-		return nex.Errors.RendezVous.SessionVoid
+		return nil, nex.Errors.RendezVous.SessionVoid
 	}
 
 	server := commonMatchMakingProtocol.server
 	hostPID := session.GameMatchmakeSession.Gathering.HostPID
-	host := server.FindClientByPID(uint64(hostPID))
+	host := server.FindClientByPID(hostPID.Value())
 	if host == nil {
-		common_globals.Logger.Warning("Host client not found, trying with owner client") // This popped up once during testing. Leaving it noted here in case it becomes a problem.
-		host = server.FindClientByPID(uint64(session.GameMatchmakeSession.Gathering.OwnerPID))
+		// * This popped up once during testing. Leaving it noted here in case it becomes a problem.
+		common_globals.Logger.Warning("Host client not found, trying with owner client")
+		host = server.FindClientByPID(session.GameMatchmakeSession.Gathering.OwnerPID.Value())
 		if host == nil {
-			common_globals.Logger.Error("Owner client not found") // This popped up once during testing. Leaving it noted here in case it becomes a problem.
-			return nex.Errors.Core.Exception
+			// * This popped up once during testing. Leaving it noted here in case it becomes a problem.
+			common_globals.Logger.Error("Owner client not found")
+			return nil, nex.Errors.Core.Exception
 		}
 	}
 
@@ -41,26 +41,5 @@ func getSessionURLs(err error, packet nex.PacketInterface, callID uint32, gid ui
 	rmcResponse.MethodID = match_making.MethodGetSessionURLs
 	rmcResponse.CallID = callID
 
-	rmcResponseBytes := rmcResponse.Bytes()
-
-	var responsePacket nex.PRUDPPacketInterface
-
-	if server.PRUDPVersion == 0 {
-		responsePacket, _ = nex.NewPRUDPPacketV0(client, nil)
-	} else {
-		responsePacket, _ = nex.NewPRUDPPacketV1(client, nil)
-	}
-
-	responsePacket.SetType(nex.DataPacket)
-	responsePacket.AddFlag(nex.FlagNeedsAck)
-	responsePacket.AddFlag(nex.FlagReliable)
-	responsePacket.SetSourceStreamType(packet.(nex.PRUDPPacketInterface).DestinationStreamType())
-	responsePacket.SetSourcePort(packet.(nex.PRUDPPacketInterface).DestinationPort())
-	responsePacket.SetDestinationStreamType(packet.(nex.PRUDPPacketInterface).SourceStreamType())
-	responsePacket.SetDestinationPort(packet.(nex.PRUDPPacketInterface).SourcePort())
-	responsePacket.SetPayload(rmcResponseBytes)
-
-	server.Send(responsePacket)
-
-	return 0
+	return rmcResponse, 0
 }

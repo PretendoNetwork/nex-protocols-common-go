@@ -44,9 +44,9 @@ func NewCommonTicketGrantingProtocol(server *nex.PRUDPServer) *CommonTicketGrant
 	}
 
 	commonTicketGrantingProtocol.DisableInsecureLogin() // * Disable insecure login by default
-	commonTicketGrantingProtocol.Login(login)
-	commonTicketGrantingProtocol.LoginEx(loginEx)
-	commonTicketGrantingProtocol.RequestTicket(requestTicket)
+	commonTicketGrantingProtocol.Login = login
+	commonTicketGrantingProtocol.LoginEx = loginEx
+	commonTicketGrantingProtocol.RequestTicket = requestTicket
 
 	return commonTicketGrantingProtocol
 }

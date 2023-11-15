@@ -8,36 +8,7 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
-/*
-func generateTicket(userPID uint32, targetPID uint32) []byte {
-	userKey := nex.DeriveKerberosKey(userPID, []byte("3QiwwjAmGJGluYFV"))
-	targetKey := nex.DeriveKerberosKey(targetPID, []byte("password"))
-	sessionKey := make([]byte, authServer.KerberosKeySize())
-
-	rand.Read(sessionKey)
-
-	ticketInternalData := nex.NewKerberosTicketInternalData()
-	serverTime := nex.NewDateTime(0)
-	serverTime.UTC()
-
-	ticketInternalData.Issued = serverTime
-	ticketInternalData.SourcePID = userPID
-	ticketInternalData.SessionKey = sessionKey
-
-	encryptedTicketInternalData, _ := ticketInternalData.Encrypt(targetKey, nex.NewStreamOut(authServer))
-
-	ticket := nex.NewKerberosTicket()
-	ticket.SessionKey = sessionKey
-	ticket.TargetPID = targetPID
-	ticket.InternalData = encryptedTicketInternalData
-
-	encryptedTicket, _ := ticket.Encrypt(userKey, nex.NewStreamOut(authServer))
-
-	return encryptedTicket
-}
-*/
-
-func generateTicket(userPID uint32, targetPID uint32) ([]byte, uint32) {
+func generateTicket(userPID *nex.PID, targetPID *nex.PID) ([]byte, uint32) {
 	passwordFromPIDHandler := commonTicketGrantingProtocol.server.PasswordFromPID
 	if passwordFromPIDHandler == nil {
 		common_globals.Logger.Warning("Server is missing PasswordFromPID handler!")
@@ -49,7 +20,7 @@ func generateTicket(userPID uint32, targetPID uint32) ([]byte, uint32) {
 	var errorCode uint32
 
 	// TODO - Maybe we should error out if the user PID is the server account?
-	switch userPID {
+	switch userPID.Value() {
 	case 2: // * "Quazal Rendez-Vous" (the server user) account. Used as the Kerberos target
 		userPassword = commonTicketGrantingProtocol.server.KerberosPassword()
 	case 100: // * Guest user account. Used when creating a new NEX account
@@ -64,7 +35,7 @@ func generateTicket(userPID uint32, targetPID uint32) ([]byte, uint32) {
 		return []byte{}, errorCode
 	}
 
-	switch targetPID {
+	switch targetPID.Value() {
 	case 2: // * "Quazal Rendez-Vous" (the server user) account. Used as the Kerberos target
 		targetPassword = commonTicketGrantingProtocol.server.KerberosPassword()
 	case 100: // * Guest user account. Used when creating a new NEX account
@@ -89,8 +60,7 @@ func generateTicket(userPID uint32, targetPID uint32) ([]byte, uint32) {
 	}
 
 	ticketInternalData := nex.NewKerberosTicketInternalData()
-	serverTime := nex.NewDateTime(0)
-	serverTime.UTC()
+	serverTime := nex.NewDateTime(0).Now()
 
 	ticketInternalData.Issued = serverTime
 	ticketInternalData.SourcePID = userPID

@@ -17,7 +17,7 @@ func NewCommonMatchMakingExtProtocol(server *nex.PRUDPServer) *CommonMatchMaking
 	MatchMakingExtProtocol := match_making_ext.NewProtocol(server)
 	commonMatchMakingExtProtocol = &CommonMatchMakingExtProtocol{Protocol: MatchMakingExtProtocol, server: server}
 
-	MatchMakingExtProtocol.EndParticipation(endParticipation)
+	MatchMakingExtProtocol.EndParticipation = endParticipation
 
 	return commonMatchMakingExtProtocol
 }

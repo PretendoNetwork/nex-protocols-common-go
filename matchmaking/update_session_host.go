@@ -8,10 +8,10 @@ import (
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/notifications/types"
 )
 
-func updateSessionHost(err error, packet nex.PacketInterface, callID uint32, gid uint32, isMigrateOwner bool) uint32 {
+func updateSessionHost(err error, packet nex.PacketInterface, callID uint32, gid uint32, isMigrateOwner bool) (*nex.RMCMessage, uint32) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.Core.InvalidArgument
+		return nil, nex.Errors.Core.InvalidArgument
 	}
 
 	client := packet.Sender().(*nex.PRUDPClient)
@@ -19,17 +19,17 @@ func updateSessionHost(err error, packet nex.PacketInterface, callID uint32, gid
 	var session *common_globals.CommonMatchmakeSession
 	var ok bool
 	if session, ok = common_globals.Sessions[gid]; !ok {
-		return nex.Errors.RendezVous.SessionVoid
+		return nil, nex.Errors.RendezVous.SessionVoid
 	}
 
 	if common_globals.FindClientSession(client.ConnectionID) != gid {
-		return nex.Errors.RendezVous.PermissionDenied
+		return nil, nex.Errors.RendezVous.PermissionDenied
 	}
 
 	server := commonMatchMakingProtocol.server
-	session.GameMatchmakeSession.Gathering.HostPID = client.PID().LegacyValue()
+	session.GameMatchmakeSession.Gathering.HostPID = client.PID()
 	if isMigrateOwner {
-		session.GameMatchmakeSession.Gathering.OwnerPID = client.PID().LegacyValue()
+		session.GameMatchmakeSession.Gathering.OwnerPID = client.PID()
 	}
 
 	rmcResponse := nex.NewRMCSuccess(nil)
@@ -37,44 +37,23 @@ func updateSessionHost(err error, packet nex.PacketInterface, callID uint32, gid
 	rmcResponse.MethodID = match_making.MethodUpdateSessionHost
 	rmcResponse.CallID = callID
 
-	rmcResponseBytes := rmcResponse.Bytes()
-
-	var responsePacket nex.PRUDPPacketInterface
-
-	if server.PRUDPVersion == 0 {
-		responsePacket, _ = nex.NewPRUDPPacketV0(client, nil)
-	} else {
-		responsePacket, _ = nex.NewPRUDPPacketV1(client, nil)
-	}
-
-	responsePacket.SetType(nex.DataPacket)
-	responsePacket.AddFlag(nex.FlagNeedsAck)
-	responsePacket.AddFlag(nex.FlagReliable)
-	responsePacket.SetSourceStreamType(packet.(nex.PRUDPPacketInterface).DestinationStreamType())
-	responsePacket.SetSourcePort(packet.(nex.PRUDPPacketInterface).DestinationPort())
-	responsePacket.SetDestinationStreamType(packet.(nex.PRUDPPacketInterface).SourceStreamType())
-	responsePacket.SetDestinationPort(packet.(nex.PRUDPPacketInterface).SourcePort())
-	responsePacket.SetPayload(rmcResponseBytes)
-
-	server.Send(responsePacket)
-
 	if !isMigrateOwner {
-		return 0
+		return nil, 0
 	}
 
 	category := notifications.NotificationCategories.OwnershipChanged
 	subtype := notifications.NotificationSubTypes.OwnershipChanged.None
 
 	oEvent := notifications_types.NewNotificationEvent()
-	oEvent.PIDSource = client.PID().LegacyValue()
+	oEvent.PIDSource = client.PID()
 	oEvent.Type = notifications.BuildNotificationType(category, subtype)
 	oEvent.Param1 = gid
-	oEvent.Param2 = client.PID().LegacyValue()
+	oEvent.Param2 = client.PID().LegacyValue() // TODO - This assumes a legacy client. Will not work on the Switch
 
 	// TODO - StrParam doesn't have this value on some servers
-	// https://github.com/kinnay/NintendoClients/issues/101
-	// unixTime := time.Now()
-	// oEvent.StrParam = strconv.FormatInt(unixTime.UnixMicro(), 10)
+	// * https://github.com/kinnay/NintendoClients/issues/101
+	// * unixTime := time.Now()
+	// * oEvent.StrParam = strconv.FormatInt(unixTime.UnixMicro(), 10)
 
 	stream := nex.NewStreamOut(server)
 	oEventBytes := oEvent.Bytes(stream)
@@ -113,5 +92,5 @@ func updateSessionHost(err error, packet nex.PacketInterface, callID uint32, gid
 		}
 	}
 
-	return 0
+	return rmcResponse, 0
 }

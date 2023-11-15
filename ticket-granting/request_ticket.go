@@ -7,19 +7,18 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
-func requestTicket(err error, packet nex.PacketInterface, callID uint32, userPID uint32, targetPID uint32) uint32 {
+func requestTicket(err error, packet nex.PacketInterface, callID uint32, userPID *nex.PID, targetPID *nex.PID) (*nex.RMCMessage, uint32) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.Core.InvalidArgument
+		return nil, nex.Errors.Core.InvalidArgument
 	}
-
-	client := packet.Sender().(*nex.PRUDPClient)
 
 	encryptedTicket, errorCode := generateTicket(userPID, targetPID)
 
-	// If the source or target pid is invalid, the %retval% field is set to Core::AccessDenied and the ticket is empty.
+	// * If the source or target pid is invalid,
+	// * the %retval% field is set to Core::AccessDenied and the ticket is empty.
 	if errorCode != 0 {
-		return errorCode
+		return nil, errorCode
 	}
 
 	rmcResponseStream := nex.NewStreamOut(commonTicketGrantingProtocol.server)
@@ -34,26 +33,5 @@ func requestTicket(err error, packet nex.PacketInterface, callID uint32, userPID
 	rmcResponse.MethodID = ticket_granting.MethodRequestTicket
 	rmcResponse.CallID = callID
 
-	rmcResponseBytes := rmcResponse.Bytes()
-
-	var responsePacket nex.PRUDPPacketInterface
-
-	if commonTicketGrantingProtocol.server.PRUDPVersion == 0 {
-		responsePacket, _ = nex.NewPRUDPPacketV0(client, nil)
-	} else {
-		responsePacket, _ = nex.NewPRUDPPacketV1(client, nil)
-	}
-
-	responsePacket.SetType(nex.DataPacket)
-	responsePacket.AddFlag(nex.FlagNeedsAck)
-	responsePacket.AddFlag(nex.FlagReliable)
-	responsePacket.SetSourceStreamType(packet.(nex.PRUDPPacketInterface).DestinationStreamType())
-	responsePacket.SetSourcePort(packet.(nex.PRUDPPacketInterface).DestinationPort())
-	responsePacket.SetDestinationStreamType(packet.(nex.PRUDPPacketInterface).SourceStreamType())
-	responsePacket.SetDestinationPort(packet.(nex.PRUDPPacketInterface).SourcePort())
-	responsePacket.SetPayload(rmcResponseBytes)
-
-	commonTicketGrantingProtocol.server.Send(responsePacket)
-
-	return 0
+	return rmcResponse, 0
 }

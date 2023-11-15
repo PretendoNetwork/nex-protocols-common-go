@@ -17,10 +17,11 @@ func NewCommonNATTraversalProtocol(server *nex.PRUDPServer) *CommonNATTraversalP
 	natTraversalProtocol := nat_traversal.NewNATTraversalProtocol(server)
 	commonNATTraversalProtocol = &CommonNATTraversalProtocol{Protocol: natTraversalProtocol, server: server}
 
-	commonNATTraversalProtocol.RequestProbeInitiationExt(requestProbeInitiationExt)
-	commonNATTraversalProtocol.ReportNATProperties(reportNATProperties)
-	commonNATTraversalProtocol.ReportNATTraversalResult(reportNATTraversalResult)
-	commonNATTraversalProtocol.GetRelaySignatureKey(getRelaySignatureKey)
-	commonNATTraversalProtocol.ReportNATTraversalResultDetail(reportNATTraversalResultDetail)
+	commonNATTraversalProtocol.RequestProbeInitiationExt = requestProbeInitiationExt
+	commonNATTraversalProtocol.ReportNATProperties = reportNATProperties
+	commonNATTraversalProtocol.ReportNATTraversalResult = reportNATTraversalResult
+	commonNATTraversalProtocol.GetRelaySignatureKey = getRelaySignatureKey
+	commonNATTraversalProtocol.ReportNATTraversalResultDetail = reportNATTraversalResultDetail
+
 	return commonNATTraversalProtocol
 }

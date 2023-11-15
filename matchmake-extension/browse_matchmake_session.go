@@ -7,10 +7,10 @@ import (
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension"
 )
 
-func browseMatchmakeSession(err error, packet nex.PacketInterface, callID uint32, searchCriteria *match_making_types.MatchmakeSessionSearchCriteria, resultRange *nex.ResultRange) uint32 {
+func browseMatchmakeSession(err error, packet nex.PacketInterface, callID uint32, searchCriteria *match_making_types.MatchmakeSessionSearchCriteria, resultRange *nex.ResultRange) (*nex.RMCMessage, uint32) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.Core.InvalidArgument
+		return nil, nex.Errors.Core.InvalidArgument
 	}
 
 	server := commonMatchmakeExtensionProtocol.server
@@ -18,10 +18,10 @@ func browseMatchmakeSession(err error, packet nex.PacketInterface, callID uint32
 
 	searchCriterias := []*match_making_types.MatchmakeSessionSearchCriteria{searchCriteria}
 
-	sessions := common_globals.FindSessionsByMatchmakeSessionSearchCriterias(client.PID().LegacyValue(), searchCriterias, commonMatchmakeExtensionProtocol.gameSpecificMatchmakeSessionSearchCriteriaChecksHandler)
+	sessions := common_globals.FindSessionsByMatchmakeSessionSearchCriterias(client.PID(), searchCriterias, commonMatchmakeExtensionProtocol.gameSpecificMatchmakeSessionSearchCriteriaChecksHandler)
 
 	if len(sessions) < int(resultRange.Offset) {
-		return nex.Errors.Core.InvalidIndex
+		return nil, nex.Errors.Core.InvalidIndex
 	}
 
 	sessions = sessions[resultRange.Offset:]
@@ -51,26 +51,5 @@ func browseMatchmakeSession(err error, packet nex.PacketInterface, callID uint32
 	rmcResponse.MethodID = matchmake_extension.MethodBrowseMatchmakeSession
 	rmcResponse.CallID = callID
 
-	rmcResponseBytes := rmcResponse.Bytes()
-
-	var responsePacket nex.PRUDPPacketInterface
-
-	if server.PRUDPVersion == 0 {
-		responsePacket, _ = nex.NewPRUDPPacketV0(client, nil)
-	} else {
-		responsePacket, _ = nex.NewPRUDPPacketV1(client, nil)
-	}
-
-	responsePacket.SetType(nex.DataPacket)
-	responsePacket.AddFlag(nex.FlagNeedsAck)
-	responsePacket.AddFlag(nex.FlagReliable)
-	responsePacket.SetSourceStreamType(packet.(nex.PRUDPPacketInterface).DestinationStreamType())
-	responsePacket.SetSourcePort(packet.(nex.PRUDPPacketInterface).DestinationPort())
-	responsePacket.SetDestinationStreamType(packet.(nex.PRUDPPacketInterface).SourceStreamType())
-	responsePacket.SetDestinationPort(packet.(nex.PRUDPPacketInterface).SourcePort())
-	responsePacket.SetPayload(rmcResponseBytes)
-
-	server.Send(responsePacket)
-
-	return 0
+	return rmcResponse, 0
 }

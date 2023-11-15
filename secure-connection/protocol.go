@@ -23,9 +23,9 @@ func NewCommonSecureConnectionProtocol(server *nex.PRUDPServer) *CommonSecureCon
 	secureConnectionProtocol := secure_connection.NewProtocol(server)
 	commonSecureConnectionProtocol = &CommonSecureConnectionProtocol{Protocol: secureConnectionProtocol, server: server}
 
-	commonSecureConnectionProtocol.Register(register)
-	commonSecureConnectionProtocol.ReplaceURL(replaceURL)
-	commonSecureConnectionProtocol.SendReport(sendReport)
+	commonSecureConnectionProtocol.Register = register
+	commonSecureConnectionProtocol.ReplaceURL = replaceURL
+	commonSecureConnectionProtocol.SendReport = sendReport
 
 	return commonSecureConnectionProtocol
 }

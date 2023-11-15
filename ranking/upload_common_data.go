@@ -7,24 +7,23 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
-func uploadCommonData(err error, packet nex.PacketInterface, callID uint32, commonData []byte, uniqueID uint64) uint32 {
+func uploadCommonData(err error, packet nex.PacketInterface, callID uint32, commonData []byte, uniqueID uint64) (*nex.RMCMessage, uint32) {
 	if commonRankingProtocol.uploadCommonDataHandler == nil {
 		common_globals.Logger.Warning("Ranking::UploadCommonData missing UploadCommonDataHandler!")
-		return nex.Errors.Core.NotImplemented
+		return nil, nex.Errors.Core.NotImplemented
 	}
 
 	client := packet.Sender().(*nex.PRUDPClient)
-	server := commonRankingProtocol.server
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.Ranking.InvalidArgument
+		return nil, nex.Errors.Ranking.InvalidArgument
 	}
 
 	err = commonRankingProtocol.uploadCommonDataHandler(client.PID().LegacyValue(), uniqueID, commonData)
 	if err != nil {
 		common_globals.Logger.Critical(err.Error())
-		return nex.Errors.Ranking.Unknown
+		return nil, nex.Errors.Ranking.Unknown
 	}
 
 	rmcResponse := nex.NewRMCSuccess(nil)
@@ -32,26 +31,5 @@ func uploadCommonData(err error, packet nex.PacketInterface, callID uint32, comm
 	rmcResponse.MethodID = ranking.MethodUploadCommonData
 	rmcResponse.CallID = callID
 
-	rmcResponseBytes := rmcResponse.Bytes()
-
-	var responsePacket nex.PRUDPPacketInterface
-
-	if server.PRUDPVersion == 0 {
-		responsePacket, _ = nex.NewPRUDPPacketV0(client, nil)
-	} else {
-		responsePacket, _ = nex.NewPRUDPPacketV1(client, nil)
-	}
-
-	responsePacket.SetType(nex.DataPacket)
-	responsePacket.AddFlag(nex.FlagNeedsAck)
-	responsePacket.AddFlag(nex.FlagReliable)
-	responsePacket.SetSourceStreamType(packet.(nex.PRUDPPacketInterface).DestinationStreamType())
-	responsePacket.SetSourcePort(packet.(nex.PRUDPPacketInterface).DestinationPort())
-	responsePacket.SetDestinationStreamType(packet.(nex.PRUDPPacketInterface).SourceStreamType())
-	responsePacket.SetDestinationPort(packet.(nex.PRUDPPacketInterface).SourcePort())
-	responsePacket.SetPayload(rmcResponseBytes)
-
-	server.Send(responsePacket)
-
-	return 0
+	return rmcResponse, 0
 }

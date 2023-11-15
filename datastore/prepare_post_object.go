@@ -10,25 +10,25 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
 )
 
-func preparePostObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStorePreparePostParam) uint32 {
+func preparePostObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStorePreparePostParam) (*nex.RMCMessage, uint32) {
 	if commonDataStoreProtocol.initializeObjectByPreparePostParamHandler == nil {
 		common_globals.Logger.Warning("InitializeObjectByPreparePostParam not defined")
-		return nex.Errors.Core.NotImplemented
+		return nil, nex.Errors.Core.NotImplemented
 	}
 
 	if commonDataStoreProtocol.initializeObjectRatingWithSlotHandler == nil {
 		common_globals.Logger.Warning("InitializeObjectRatingWithSlot not defined")
-		return nex.Errors.Core.NotImplemented
+		return nil, nex.Errors.Core.NotImplemented
 	}
 
 	if commonDataStoreProtocol.S3Presigner == nil {
 		common_globals.Logger.Warning("S3Presigner not defined")
-		return nex.Errors.Core.NotImplemented
+		return nil, nex.Errors.Core.NotImplemented
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.DataStore.Unknown
+		return nil, nex.Errors.DataStore.Unknown
 	}
 
 	client := packet.Sender().(*nex.PRUDPClient)
@@ -37,7 +37,7 @@ func preparePostObject(err error, packet nex.PacketInterface, callID uint32, par
 	dataID, errCode := commonDataStoreProtocol.initializeObjectByPreparePostParamHandler(client.PID().LegacyValue(), param)
 	if errCode != 0 {
 		common_globals.Logger.Errorf("Error code %d on object init", errCode)
-		return errCode
+		return nil, errCode
 	}
 
 	// TODO - Should this be moved to InitializeObjectByPreparePostParam?
@@ -45,7 +45,7 @@ func preparePostObject(err error, packet nex.PacketInterface, callID uint32, par
 		errCode = commonDataStoreProtocol.initializeObjectRatingWithSlotHandler(dataID, ratingInitParamWithSlot)
 		if errCode != 0 {
 			common_globals.Logger.Errorf("Error code %d on rating init", errCode)
-			return errCode
+			return nil, errCode
 		}
 	}
 
@@ -55,12 +55,12 @@ func preparePostObject(err error, packet nex.PacketInterface, callID uint32, par
 	URL, formData, err := commonDataStoreProtocol.S3Presigner.PostObject(bucket, key, time.Minute*15)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.DataStore.OperationNotAllowed
+		return nil, nex.Errors.DataStore.OperationNotAllowed
 	}
 
 	requestHeaders, errCode := commonDataStoreProtocol.s3PostRequestHeadersHandler()
 	if errCode != 0 {
-		return errCode
+		return nil, errCode
 	}
 
 	pReqPostInfo := datastore_types.NewDataStoreReqPostInfo()
@@ -90,26 +90,5 @@ func preparePostObject(err error, packet nex.PacketInterface, callID uint32, par
 	rmcResponse.MethodID = datastore.MethodPreparePostObject
 	rmcResponse.CallID = callID
 
-	rmcResponseBytes := rmcResponse.Bytes()
-
-	var responsePacket nex.PRUDPPacketInterface
-
-	if commonDataStoreProtocol.server.PRUDPVersion == 0 {
-		responsePacket, _ = nex.NewPRUDPPacketV0(client, nil)
-	} else {
-		responsePacket, _ = nex.NewPRUDPPacketV1(client, nil)
-	}
-
-	responsePacket.SetType(nex.DataPacket)
-	responsePacket.AddFlag(nex.FlagNeedsAck)
-	responsePacket.AddFlag(nex.FlagReliable)
-	responsePacket.SetSourceStreamType(packet.(nex.PRUDPPacketInterface).DestinationStreamType())
-	responsePacket.SetSourcePort(packet.(nex.PRUDPPacketInterface).DestinationPort())
-	responsePacket.SetDestinationStreamType(packet.(nex.PRUDPPacketInterface).SourceStreamType())
-	responsePacket.SetDestinationPort(packet.(nex.PRUDPPacketInterface).SourcePort())
-	responsePacket.SetPayload(rmcResponseBytes)
-
-	commonDataStoreProtocol.server.Send(responsePacket)
-
-	return 0
+	return rmcResponse, 0
 }
