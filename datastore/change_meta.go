@@ -41,7 +41,7 @@ func changeMeta(err error, packet nex.PacketInterface, callID uint32, param *dat
 	}
 
 	// TODO - Is this the right permission?
-	errCode = commonDataStoreProtocol.VerifyObjectPermission(metaInfo.OwnerID, client.PID().LegacyValue(), metaInfo.DelPermission)
+	errCode = commonDataStoreProtocol.VerifyObjectPermission(metaInfo.OwnerID, client.PID(), metaInfo.DelPermission)
 	if errCode != 0 {
 		return nil, errCode
 	}
