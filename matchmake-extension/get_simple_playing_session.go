@@ -82,7 +82,7 @@ func getSimplePlayingSession(err error, packet nex.PacketInterface, callID uint3
 
 	rmcResponseStream := nex.NewStreamOut(server)
 
-	rmcResponseStream.WriteListStructure(lstSimplePlayingSession)
+	nex.StreamWriteListStructure(rmcResponseStream, lstSimplePlayingSession)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 

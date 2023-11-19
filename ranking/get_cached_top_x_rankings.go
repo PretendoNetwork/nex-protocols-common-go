@@ -58,7 +58,7 @@ func getCachedTopXRankings(err error, packet nex.PacketInterface, callID uint32,
 	}
 
 	rmcResponseStream := nex.NewStreamOut(server)
-	rmcResponseStream.WriteListStructure(pResult)
+	nex.StreamWriteListStructure(rmcResponseStream, pResult)
 	rmcResponseBody := rmcResponseStream.Bytes()
 
 	rmcResponse := nex.NewRMCSuccess(rmcResponseBody)

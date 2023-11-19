@@ -55,7 +55,7 @@ func getMetas(err error, packet nex.PacketInterface, callID uint32, dataIDs []ui
 
 	rmcResponseStream := nex.NewStreamOut(commonDataStoreProtocol.server)
 
-	rmcResponseStream.WriteListStructure(pMetaInfo)
+	nex.StreamWriteListStructure(rmcResponseStream, pMetaInfo)
 	rmcResponseStream.WriteListResult(pResults)
 
 	rmcResponseBody := rmcResponseStream.Bytes()

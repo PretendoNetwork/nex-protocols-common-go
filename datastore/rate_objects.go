@@ -62,7 +62,7 @@ func rateObjects(err error, packet nex.PacketInterface, callID uint32, targets [
 
 	rmcResponseStream := nex.NewStreamOut(commonDataStoreProtocol.server)
 
-	rmcResponseStream.WriteListStructure(pRatings)
+	nex.StreamWriteListStructure(rmcResponseStream, pRatings)
 	rmcResponseStream.WriteListResult(pResults) // * pResults is ALWAYS empty in SMM?
 
 	rmcResponseBody := rmcResponseStream.Bytes()
