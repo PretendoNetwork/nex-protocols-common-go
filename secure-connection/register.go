@@ -2,6 +2,7 @@ package secureconnection
 
 import (
 	"net"
+	"strconv"
 
 	nex "github.com/PretendoNetwork/nex-go"
 	secure_connection "github.com/PretendoNetwork/nex-protocols-go/secure-connection"
@@ -26,27 +27,29 @@ func register(err error, packet nex.PacketInterface, callID uint32, stationUrls 
 	// * Check each URL for a public station
 	var publicStation *nex.StationURL
 	for _, stationURL := range stationUrls {
-		if stationURL.Type() == 3 {
-			publicStation = stationURL
-			break
+		if transportType, ok := stationURL.Fields.Get("type"); ok {
+			if transportType == "3" {
+				publicStation = stationURL
+				break
+			}
 		}
 	}
 
 	if publicStation == nil {
 		publicStation = localStation.Copy()
 
-		publicStation.SetAddress(client.Address().(*net.UDPAddr).IP.String())
-		publicStation.SetPort(uint32(client.Address().(*net.UDPAddr).Port))
-		publicStation.SetNatf(0)
-		publicStation.SetNatm(0)
-		publicStation.SetType(3)
+		publicStation.Fields.Set("address", client.Address().(*net.UDPAddr).IP.String())
+		publicStation.Fields.Set("port", strconv.Itoa(client.Address().(*net.UDPAddr).Port))
+		publicStation.Fields.Set("natf", "0")
+		publicStation.Fields.Set("natm", "0")
+		publicStation.Fields.Set("type", "3")
 	}
 
-	localStation.SetPID(client.PID())
-	publicStation.SetPID(client.PID())
+	localStation.Fields.Set("PID", strconv.Itoa(int(client.PID().Value())))
+	publicStation.Fields.Set("PID", strconv.Itoa(int(client.PID().Value())))
 
-	localStation.SetRVCID(client.ConnectionID)
-	publicStation.SetRVCID(client.ConnectionID)
+	localStation.Fields.Set("RVCID", strconv.Itoa(int(client.ConnectionID)))
+	publicStation.Fields.Set("RVCID", strconv.Itoa(int(client.ConnectionID)))
 
 	localStation.SetLocal()
 	publicStation.SetPublic()

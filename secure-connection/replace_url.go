@@ -1,6 +1,8 @@
 package secureconnection
 
 import (
+	"strconv"
+
 	nex "github.com/PretendoNetwork/nex-go"
 	secure_connection "github.com/PretendoNetwork/nex-protocols-go/secure-connection"
 
@@ -18,11 +20,19 @@ func replaceURL(err error, packet nex.PacketInterface, callID uint32, oldStation
 	stations := client.StationURLs
 	for i := 0; i < len(stations); i++ {
 		currentStation := stations[i]
-		if currentStation.Address() == oldStation.Address() && currentStation.Port() == oldStation.Port() {
-			// * This fixes Minecraft, but is obviously incorrect
-			// TODO - What are we really meant to do here?
-			newStation.SetPID(client.PID())
-			stations[i] = newStation
+
+		currentStationAddress, currentStationAddressOk := currentStation.Fields.Get("address")
+		currentStationPort, currentStationPortOk := currentStation.Fields.Get("port")
+		oldStationAddress, oldStationAddressOk := oldStation.Fields.Get("address")
+		oldStationPort, oldStationPortOk := oldStation.Fields.Get("port")
+
+		if currentStationAddressOk && currentStationPortOk && oldStationAddressOk && oldStationPortOk {
+			if currentStationAddress == oldStationAddress && currentStationPort == oldStationPort {
+				// * This fixes Minecraft, but is obviously incorrect
+				// TODO - What are we really meant to do here?
+				newStation.Fields.Set("PID", strconv.Itoa(int(client.PID().Value())))
+				stations[i] = newStation
+			}
 		}
 	}
 

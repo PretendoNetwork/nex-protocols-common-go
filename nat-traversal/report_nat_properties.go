@@ -1,6 +1,8 @@
 package nattraversal
 
 import (
+	"strconv"
+
 	nex "github.com/PretendoNetwork/nex-go"
 	nat_traversal "github.com/PretendoNetwork/nex-protocols-go/nat-traversal"
 
@@ -17,12 +19,12 @@ func reportNATProperties(err error, packet nex.PacketInterface, callID uint32, n
 
 	for _, station := range client.StationURLs {
 		if station.IsLocal() {
-			station.SetNatm(natm)
-			station.SetNatf(natf)
+			station.Fields.Set("natm", strconv.Itoa(int(natm)))
+			station.Fields.Set("natf", strconv.Itoa(int(natf)))
 		}
 
-		station.SetRVCID(client.ConnectionID)
-		station.SetPID(client.PID())
+		station.Fields.Set("RVCID", strconv.Itoa(int(client.ConnectionID)))
+		station.Fields.Set("PID", strconv.Itoa(int(client.PID().Value())))
 	}
 
 	rmcResponse := nex.NewRMCSuccess(nil)

@@ -1,6 +1,8 @@
 package nattraversal
 
 import (
+	"strconv"
+
 	nex "github.com/PretendoNetwork/nex-go"
 	nat_traversal "github.com/PretendoNetwork/nex-protocols-go/nat-traversal"
 
@@ -36,28 +38,36 @@ func requestProbeInitiationExt(err error, packet nex.PacketInterface, callID uin
 
 	for _, target := range targetList {
 		targetStation := nex.NewStationURL(target)
-		targetClient := server.FindClientByConnectionID(targetStation.RVCID())
-		if targetClient != nil {
-			var messagePacket nex.PRUDPPacketInterface
 
-			if server.PRUDPVersion == 0 {
-				messagePacket, _ = nex.NewPRUDPPacketV0(targetClient, nil)
-			} else {
-				messagePacket, _ = nex.NewPRUDPPacketV1(targetClient, nil)
+		if connectionIDString, ok := targetStation.Fields.Get("RVCID"); ok {
+			connectionID, err := strconv.Atoi(connectionIDString)
+			if err != nil {
+				common_globals.Logger.Error(err.Error())
 			}
 
-			messagePacket.SetType(nex.DataPacket)
-			messagePacket.AddFlag(nex.FlagNeedsAck)
-			messagePacket.AddFlag(nex.FlagReliable)
-			messagePacket.SetSourceStreamType(client.DestinationStreamType)
-			messagePacket.SetSourcePort(client.DestinationPort)
-			messagePacket.SetDestinationStreamType(client.SourceStreamType)
-			messagePacket.SetDestinationPort(client.SourcePort)
-			messagePacket.SetPayload(rmcRequestBytes)
+			targetClient := server.FindClientByConnectionID(uint32(connectionID))
+			if targetClient != nil {
+				var messagePacket nex.PRUDPPacketInterface
 
-			server.Send(messagePacket)
-		} else {
-			common_globals.Logger.Warning("Client not found")
+				if server.PRUDPVersion == 0 {
+					messagePacket, _ = nex.NewPRUDPPacketV0(targetClient, nil)
+				} else {
+					messagePacket, _ = nex.NewPRUDPPacketV1(targetClient, nil)
+				}
+
+				messagePacket.SetType(nex.DataPacket)
+				messagePacket.AddFlag(nex.FlagNeedsAck)
+				messagePacket.AddFlag(nex.FlagReliable)
+				messagePacket.SetSourceStreamType(client.DestinationStreamType)
+				messagePacket.SetSourcePort(client.DestinationPort)
+				messagePacket.SetDestinationStreamType(client.SourceStreamType)
+				messagePacket.SetDestinationPort(client.SourcePort)
+				messagePacket.SetPayload(rmcRequestBytes)
+
+				server.Send(messagePacket)
+			} else {
+				common_globals.Logger.Warning("Client not found")
+			}
 		}
 	}
 
