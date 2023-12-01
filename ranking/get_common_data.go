@@ -8,8 +8,8 @@ import (
 )
 
 func getCommonData(err error, packet nex.PacketInterface, callID uint32, uniqueID uint64) (*nex.RMCMessage, uint32) {
-	if commonRankingProtocol.getCommonDataHandler == nil {
-		common_globals.Logger.Warning("Ranking::GetCommonData missing GetCommonDataHandler!")
+	if commonRankingProtocol.GetCommonData == nil {
+		common_globals.Logger.Warning("Ranking::GetCommonData missing GetCommonData!")
 		return nil, nex.Errors.Core.NotImplemented
 	}
 
@@ -20,7 +20,7 @@ func getCommonData(err error, packet nex.PacketInterface, callID uint32, uniqueI
 		return nil, nex.Errors.Ranking.InvalidArgument
 	}
 
-	commonData, err := commonRankingProtocol.getCommonDataHandler(uniqueID)
+	commonData, err := commonRankingProtocol.GetCommonData(uniqueID)
 	if err != nil {
 		return nil, nex.Errors.Ranking.NotFound
 	}

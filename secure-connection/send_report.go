@@ -8,7 +8,7 @@ import (
 )
 
 func sendReport(err error, packet nex.PacketInterface, callID uint32, reportID uint32, reportData []byte) (*nex.RMCMessage, uint32) {
-	if commonSecureConnectionProtocol.createReportDBRecordHandler == nil {
+	if commonSecureConnectionProtocol.CreateReportDBRecord == nil {
 		common_globals.Logger.Warning("SecureConnection::SendReport missing CreateReportDBRecord!")
 		return nil, nex.Errors.Core.NotImplemented
 	}
@@ -20,7 +20,7 @@ func sendReport(err error, packet nex.PacketInterface, callID uint32, reportID u
 
 	client := packet.Sender().(*nex.PRUDPClient)
 
-	err = commonSecureConnectionProtocol.createReportDBRecordHandler(client.PID().LegacyValue(), reportID, reportData)
+	err = commonSecureConnectionProtocol.CreateReportDBRecord(client.PID().LegacyValue(), reportID, reportData)
 	if err != nil {
 		common_globals.Logger.Critical(err.Error())
 		return nil, nex.Errors.Core.Unknown

@@ -8,22 +8,22 @@ import (
 )
 
 func changeMeta(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreChangeMetaParam) (*nex.RMCMessage, uint32) {
-	if commonDataStoreProtocol.getObjectInfoByDataIDHandler == nil {
+	if commonDataStoreProtocol.GetObjectInfoByDataID == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataID not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
 
-	if commonDataStoreProtocol.updateObjectPeriodByDataIDWithPasswordHandler == nil {
+	if commonDataStoreProtocol.UpdateObjectPeriodByDataIDWithPassword == nil {
 		common_globals.Logger.Warning("UpdateObjectPeriodByDataIDWithPassword not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
 
-	if commonDataStoreProtocol.updateObjectMetaBinaryByDataIDWithPasswordHandler == nil {
+	if commonDataStoreProtocol.UpdateObjectMetaBinaryByDataIDWithPassword == nil {
 		common_globals.Logger.Warning("UpdateObjectMetaBinaryByDataIDWithPassword not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
 
-	if commonDataStoreProtocol.updateObjectDataTypeByDataIDWithPasswordHandler == nil {
+	if commonDataStoreProtocol.UpdateObjectDataTypeByDataIDWithPassword == nil {
 		common_globals.Logger.Warning("UpdateObjectDataTypeByDataIDWithPassword not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
@@ -35,7 +35,7 @@ func changeMeta(err error, packet nex.PacketInterface, callID uint32, param *dat
 
 	client := packet.Sender().(*nex.PRUDPClient)
 
-	metaInfo, errCode := commonDataStoreProtocol.getObjectInfoByDataIDHandler(param.DataID)
+	metaInfo, errCode := commonDataStoreProtocol.GetObjectInfoByDataID(param.DataID)
 	if errCode != 0 {
 		return nil, errCode
 	}
@@ -47,21 +47,21 @@ func changeMeta(err error, packet nex.PacketInterface, callID uint32, param *dat
 	}
 
 	if param.ModifiesFlag&0x08 != 0 {
-		errCode = commonDataStoreProtocol.updateObjectPeriodByDataIDWithPasswordHandler(param.DataID, param.Period, param.UpdatePassword)
+		errCode = commonDataStoreProtocol.UpdateObjectPeriodByDataIDWithPassword(param.DataID, param.Period, param.UpdatePassword)
 		if errCode != 0 {
 			return nil, errCode
 		}
 	}
 
 	if param.ModifiesFlag&0x10 != 0 {
-		errCode = commonDataStoreProtocol.updateObjectMetaBinaryByDataIDWithPasswordHandler(param.DataID, param.MetaBinary, param.UpdatePassword)
+		errCode = commonDataStoreProtocol.UpdateObjectMetaBinaryByDataIDWithPassword(param.DataID, param.MetaBinary, param.UpdatePassword)
 		if errCode != 0 {
 			return nil, errCode
 		}
 	}
 
 	if param.ModifiesFlag&0x80 != 0 {
-		errCode = commonDataStoreProtocol.updateObjectDataTypeByDataIDWithPasswordHandler(param.DataID, param.DataType, param.UpdatePassword)
+		errCode = commonDataStoreProtocol.UpdateObjectDataTypeByDataIDWithPassword(param.DataID, param.DataType, param.UpdatePassword)
 		if errCode != 0 {
 			return nil, errCode
 		}

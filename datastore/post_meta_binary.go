@@ -15,12 +15,12 @@ func postMetaBinary(err error, packet nex.PacketInterface, callID uint32, param 
 	// * unless those are just used to *update* a meta binary? Or maybe the DataID in
 	// * those methods is a pre-allocated DataID from the server? Needs more testing
 
-	if commonDataStoreProtocol.initializeObjectByPreparePostParamHandler == nil {
+	if commonDataStoreProtocol.InitializeObjectByPreparePostParam == nil {
 		common_globals.Logger.Warning("InitializeObjectByPreparePostParam not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
 
-	if commonDataStoreProtocol.initializeObjectRatingWithSlotHandler == nil {
+	if commonDataStoreProtocol.InitializeObjectRatingWithSlot == nil {
 		common_globals.Logger.Warning("InitializeObjectRatingWithSlot not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
@@ -33,7 +33,7 @@ func postMetaBinary(err error, packet nex.PacketInterface, callID uint32, param 
 	client := packet.Sender().(*nex.PRUDPClient)
 
 	// TODO - Need to verify what param.PersistenceInitParam.DeleteLastObject really means. It's often set to true even when it wouldn't make sense
-	dataID, errCode := commonDataStoreProtocol.initializeObjectByPreparePostParamHandler(client.PID().LegacyValue(), param)
+	dataID, errCode := commonDataStoreProtocol.InitializeObjectByPreparePostParam(client.PID().LegacyValue(), param)
 	if errCode != 0 {
 		common_globals.Logger.Errorf("Error code %d on object init", errCode)
 		return nil, errCode
@@ -41,7 +41,7 @@ func postMetaBinary(err error, packet nex.PacketInterface, callID uint32, param 
 
 	// TODO - Should this be moved to InitializeObjectByPreparePostParam?
 	for _, ratingInitParamWithSlot := range param.RatingInitParams {
-		errCode = commonDataStoreProtocol.initializeObjectRatingWithSlotHandler(dataID, ratingInitParamWithSlot)
+		errCode = commonDataStoreProtocol.InitializeObjectRatingWithSlot(dataID, ratingInitParamWithSlot)
 		if errCode != 0 {
 			common_globals.Logger.Errorf("Error code %d on rating init", errCode)
 			return nil, errCode

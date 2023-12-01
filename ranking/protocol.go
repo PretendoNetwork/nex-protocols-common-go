@@ -18,30 +18,10 @@ type CommonRankingProtocol struct {
 	DefaultProtocol    *ranking.Protocol
 	MarioKart8Protocol *ranking_mario_kart_8.Protocol
 
-	getCommonDataHandler                                     func(unique_id uint64) ([]byte, error)
-	uploadCommonDataHandler                                  func(pid uint32, uniqueID uint64, commonData []byte) error
-	insertRankingByPIDAndRankingScoreDataHandler             func(pid uint32, rankingScoreData *ranking_types.RankingScoreData, uniqueID uint64) error
-	getRankingsAndCountByCategoryAndRankingOrderParamHandler func(category uint32, rankingOrderParam *ranking_types.RankingOrderParam) ([]*ranking_types.RankingRankData, uint32, error)
-}
-
-// GetCommonData sets the GetCommonData handler function
-func (commonRankingProtocol *CommonRankingProtocol) GetCommonData(handler func(unique_id uint64) ([]byte, error)) {
-	commonRankingProtocol.getCommonDataHandler = handler
-}
-
-// UploadCommonData sets the UploadCommonData handler function
-func (commonRankingProtocol *CommonRankingProtocol) UploadCommonData(handler func(pid uint32, uniqueID uint64, commonData []byte) error) {
-	commonRankingProtocol.uploadCommonDataHandler = handler
-}
-
-// InsertRankingByPIDAndRankingScoreData sets the InsertRankingByPIDAndRankingScoreData handler function
-func (commonRankingProtocol *CommonRankingProtocol) InsertRankingByPIDAndRankingScoreData(handler func(pid uint32, rankingScoreData *ranking_types.RankingScoreData, uniqueID uint64) error) {
-	commonRankingProtocol.insertRankingByPIDAndRankingScoreDataHandler = handler
-}
-
-// GetRankingsAndCountByCategoryAndRankingOrderParam sets the GetRankingsAndCountByCategoryAndRankingOrderParam handler function
-func (commonRankingProtocol *CommonRankingProtocol) GetRankingsAndCountByCategoryAndRankingOrderParam(handler func(category uint32, rankingOrderParam *ranking_types.RankingOrderParam) ([]*ranking_types.RankingRankData, uint32, error)) {
-	commonRankingProtocol.getRankingsAndCountByCategoryAndRankingOrderParamHandler = handler
+	GetCommonData                                     func(unique_id uint64) ([]byte, error)
+	UploadCommonData                                  func(pid uint32, uniqueID uint64, commonData []byte) error
+	InsertRankingByPIDAndRankingScoreData             func(pid uint32, rankingScoreData *ranking_types.RankingScoreData, uniqueID uint64) error
+	GetRankingsAndCountByCategoryAndRankingOrderParam func(category uint32, rankingOrderParam *ranking_types.RankingOrderParam) ([]*ranking_types.RankingRankData, uint32, error)
 }
 
 func initDefault(c *CommonRankingProtocol) {

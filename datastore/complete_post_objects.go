@@ -14,12 +14,12 @@ func completePostObjects(err error, packet nex.PacketInterface, callID uint32, d
 		return nil, nex.Errors.Core.NotImplemented
 	}
 
-	if commonDataStoreProtocol.getObjectSizeByDataIDHandler == nil {
+	if commonDataStoreProtocol.GetObjectSizeByDataID == nil {
 		common_globals.Logger.Warning("GetObjectSizeByDataID not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
 
-	if commonDataStoreProtocol.updateObjectUploadCompletedByDataIDHandler == nil {
+	if commonDataStoreProtocol.UpdateObjectUploadCompletedByDataID == nil {
 		common_globals.Logger.Warning("UpdateObjectUploadCompletedByDataID not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
@@ -30,7 +30,7 @@ func completePostObjects(err error, packet nex.PacketInterface, callID uint32, d
 	}
 
 	for _, dataID := range dataIDs {
-		bucket := commonDataStoreProtocol.s3Bucket
+		bucket := commonDataStoreProtocol.S3Bucket
 		key := fmt.Sprintf("%s/%d.bin", commonDataStoreProtocol.s3DataKeyBase, dataID)
 
 		objectSizeS3, err := commonDataStoreProtocol.S3ObjectSize(bucket, key)
@@ -39,7 +39,7 @@ func completePostObjects(err error, packet nex.PacketInterface, callID uint32, d
 			return nil, nex.Errors.DataStore.NotFound
 		}
 
-		objectSizeDB, errCode := commonDataStoreProtocol.getObjectSizeByDataIDHandler(dataID)
+		objectSizeDB, errCode := commonDataStoreProtocol.GetObjectSizeByDataID(dataID)
 		if errCode != 0 {
 			return nil, errCode
 		}
@@ -50,7 +50,7 @@ func completePostObjects(err error, packet nex.PacketInterface, callID uint32, d
 			return nil, nex.Errors.DataStore.Unknown
 		}
 
-		errCode = commonDataStoreProtocol.updateObjectUploadCompletedByDataIDHandler(dataID, true)
+		errCode = commonDataStoreProtocol.UpdateObjectUploadCompletedByDataID(dataID, true)
 		if errCode != 0 {
 			return nil, errCode
 		}

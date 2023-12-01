@@ -11,7 +11,7 @@ import (
 )
 
 func prepareGetObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStorePrepareGetParam) (*nex.RMCMessage, uint32) {
-	if commonDataStoreProtocol.getObjectInfoByDataIDHandler == nil {
+	if commonDataStoreProtocol.GetObjectInfoByDataID == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataID not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
@@ -28,10 +28,10 @@ func prepareGetObject(err error, packet nex.PacketInterface, callID uint32, para
 
 	client := packet.Sender().(*nex.PRUDPClient)
 
-	bucket := commonDataStoreProtocol.s3Bucket
+	bucket := commonDataStoreProtocol.S3Bucket
 	key := fmt.Sprintf("%s/%d.bin", commonDataStoreProtocol.s3DataKeyBase, param.DataID)
 
-	objectInfo, errCode := commonDataStoreProtocol.getObjectInfoByDataIDHandler(param.DataID)
+	objectInfo, errCode := commonDataStoreProtocol.GetObjectInfoByDataID(param.DataID)
 	if errCode != 0 {
 		return nil, errCode
 	}
@@ -47,7 +47,7 @@ func prepareGetObject(err error, packet nex.PacketInterface, callID uint32, para
 		return nil, nex.Errors.DataStore.OperationNotAllowed
 	}
 
-	requestHeaders, errCode := commonDataStoreProtocol.s3GetRequestHeadersHandler()
+	requestHeaders, errCode := commonDataStoreProtocol.S3GetRequestHeaders()
 	if errCode != 0 {
 		return nil, errCode
 	}
@@ -57,7 +57,7 @@ func prepareGetObject(err error, packet nex.PacketInterface, callID uint32, para
 	pReqGetInfo.URL = url.String()
 	pReqGetInfo.RequestHeaders = requestHeaders
 	pReqGetInfo.Size = objectInfo.Size
-	pReqGetInfo.RootCACert = commonDataStoreProtocol.rootCACert
+	pReqGetInfo.RootCACert = commonDataStoreProtocol.RootCACert
 	pReqGetInfo.DataID = param.DataID
 
 	rmcResponseStream := nex.NewStreamOut(commonDataStoreProtocol.server)

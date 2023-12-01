@@ -18,18 +18,8 @@ type CommonMatchmakeExtensionProtocol struct {
 	DefaultProtocol    *matchmake_extension.Protocol
 	MarioKart8Protocol *matchmake_extension_mario_kart_8.Protocol
 
-	cleanupSearchMatchmakeSessionHandler                    func(matchmakeSession *match_making_types.MatchmakeSession)
-	gameSpecificMatchmakeSessionSearchCriteriaChecksHandler func(searchCriteria *match_making_types.MatchmakeSessionSearchCriteria, matchmakeSession *match_making_types.MatchmakeSession) bool
-}
-
-// CleanupSearchMatchmakeSession sets the CleanupSearchMatchmakeSession handler function
-func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) CleanupSearchMatchmakeSession(handler func(matchmakeSession *match_making_types.MatchmakeSession)) {
-	commonMatchmakeExtensionProtocol.cleanupSearchMatchmakeSessionHandler = handler
-}
-
-// GameSpecificMatchmakeSessionSearchCriteriaChecks sets the GameSpecificMatchmakeSessionSearchCriteriaChecks handler function
-func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) GameSpecificMatchmakeSessionSearchCriteriaChecks(handler func(searchCriteria *match_making_types.MatchmakeSessionSearchCriteria, matchmakeSession *match_making_types.MatchmakeSession) bool) {
-	commonMatchmakeExtensionProtocol.gameSpecificMatchmakeSessionSearchCriteriaChecksHandler = handler
+	CleanupSearchMatchmakeSession                    func(matchmakeSession *match_making_types.MatchmakeSession)
+	GameSpecificMatchmakeSessionSearchCriteriaChecks func(searchCriteria *match_making_types.MatchmakeSessionSearchCriteria, matchmakeSession *match_making_types.MatchmakeSession) bool
 }
 
 // GetUserFriendPIDs sets the GetUserFriendPIDs handler function

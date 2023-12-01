@@ -8,12 +8,12 @@ import (
 )
 
 func getMetasMultipleParam(err error, packet nex.PacketInterface, callID uint32, params []*datastore_types.DataStoreGetMetaParam) (*nex.RMCMessage, uint32) {
-	if commonDataStoreProtocol.getObjectInfoByPersistenceTargetWithPasswordHandler == nil {
+	if commonDataStoreProtocol.GetObjectInfoByPersistenceTargetWithPassword == nil {
 		common_globals.Logger.Warning("GetObjectInfoByPersistenceTargetWithPassword not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
 
-	if commonDataStoreProtocol.getObjectInfoByDataIDWithPasswordHandler == nil {
+	if commonDataStoreProtocol.GetObjectInfoByDataIDWithPassword == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataIDWithPassword not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
@@ -34,9 +34,9 @@ func getMetasMultipleParam(err error, packet nex.PacketInterface, callID uint32,
 
 		// * Real server ignores PersistenceTarget if DataID is set
 		if param.DataID == 0 {
-			objectInfo, errCode = commonDataStoreProtocol.getObjectInfoByPersistenceTargetWithPasswordHandler(param.PersistenceTarget, param.AccessPassword)
+			objectInfo, errCode = commonDataStoreProtocol.GetObjectInfoByPersistenceTargetWithPassword(param.PersistenceTarget, param.AccessPassword)
 		} else {
-			objectInfo, errCode = commonDataStoreProtocol.getObjectInfoByDataIDWithPasswordHandler(param.DataID, param.AccessPassword)
+			objectInfo, errCode = commonDataStoreProtocol.GetObjectInfoByDataIDWithPassword(param.DataID, param.AccessPassword)
 		}
 
 		if errCode != 0 {

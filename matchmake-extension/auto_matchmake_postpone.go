@@ -8,8 +8,8 @@ import (
 )
 
 func autoMatchmake_Postpone(err error, packet nex.PacketInterface, callID uint32, anyGathering *nex.DataHolder, message string) (*nex.RMCMessage, uint32) {
-	if commonMatchmakeExtensionProtocol.cleanupSearchMatchmakeSessionHandler == nil {
-		common_globals.Logger.Warning("MatchmakeExtension::AutoMatchmake_Postpone missing CleanupSearchMatchmakeSessionHandler!")
+	if commonMatchmakeExtensionProtocol.CleanupSearchMatchmakeSession == nil {
+		common_globals.Logger.Warning("MatchmakeExtension::AutoMatchmake_Postpone missing CleanupSearchMatchmakeSession!")
 		return nil, nex.Errors.Core.NotImplemented
 	}
 
@@ -36,7 +36,7 @@ func autoMatchmake_Postpone(err error, packet nex.PacketInterface, callID uint32
 	}
 
 	searchMatchmakeSession := matchmakeSession.Copy().(*match_making_types.MatchmakeSession)
-	commonMatchmakeExtensionProtocol.cleanupSearchMatchmakeSessionHandler(searchMatchmakeSession)
+	commonMatchmakeExtensionProtocol.CleanupSearchMatchmakeSession(searchMatchmakeSession)
 	sessionIndex := common_globals.FindSessionByMatchmakeSession(client.PID(), searchMatchmakeSession)
 	var session *common_globals.CommonMatchmakeSession
 

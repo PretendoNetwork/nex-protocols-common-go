@@ -8,7 +8,7 @@ import (
 )
 
 func getMetas(err error, packet nex.PacketInterface, callID uint32, dataIDs []uint64, param *datastore_types.DataStoreGetMetaParam) (*nex.RMCMessage, uint32) {
-	if commonDataStoreProtocol.getObjectInfoByDataIDHandler == nil {
+	if commonDataStoreProtocol.GetObjectInfoByDataID == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataID not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
@@ -31,7 +31,7 @@ func getMetas(err error, packet nex.PacketInterface, callID uint32, dataIDs []ui
 	// * it's unused until proven otherwise
 
 	for i := 0; i < len(dataIDs); i++ {
-		objectInfo, errCode := commonDataStoreProtocol.getObjectInfoByDataIDHandler(dataIDs[i])
+		objectInfo, errCode := commonDataStoreProtocol.GetObjectInfoByDataID(dataIDs[i])
 
 		if errCode != 0 {
 			objectInfo = datastore_types.NewDataStoreMetaInfo()

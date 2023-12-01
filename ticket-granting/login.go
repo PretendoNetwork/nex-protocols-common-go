@@ -69,7 +69,7 @@ func login(err error, packet nex.PacketInterface, callID uint32, username string
 		retval = nex.NewResultSuccess(nex.Errors.Core.Unknown)
 		pidPrincipal = userPID
 		pbufResponse = encryptedTicket
-		strReturnMsg = commonTicketGrantingProtocol.buildName
+		strReturnMsg = commonTicketGrantingProtocol.BuildName
 	}
 
 	rmcResponseStream := nex.NewStreamOut(commonTicketGrantingProtocol.server)

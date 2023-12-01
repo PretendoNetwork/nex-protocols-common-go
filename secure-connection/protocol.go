@@ -9,13 +9,8 @@ var commonSecureConnectionProtocol *CommonSecureConnectionProtocol
 
 type CommonSecureConnectionProtocol struct {
 	*secure_connection.Protocol
-	server                      *nex.PRUDPServer
-	createReportDBRecordHandler func(pid uint32, reportID uint32, reportData []byte) error
-}
-
-// CleanupSearchMatchmakeSession sets the CleanupSearchMatchmakeSession handler function
-func (commonSecureConnectionProtocol *CommonSecureConnectionProtocol) CreateReportDBRecord(handler func(pid uint32, reportID uint32, reportData []byte) error) {
-	commonSecureConnectionProtocol.createReportDBRecordHandler = handler
+	server               *nex.PRUDPServer
+	CreateReportDBRecord func(pid uint32, reportID uint32, reportData []byte) error
 }
 
 // NewCommonSecureConnectionProtocol returns a new CommonSecureConnectionProtocol

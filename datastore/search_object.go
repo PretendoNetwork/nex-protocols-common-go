@@ -8,7 +8,7 @@ import (
 )
 
 func searchObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreSearchParam) (*nex.RMCMessage, uint32) {
-	if commonDataStoreProtocol.getObjectInfosByDataStoreSearchParamHandler == nil {
+	if commonDataStoreProtocol.GetObjectInfosByDataStoreSearchParam == nil {
 		common_globals.Logger.Warning("GetObjectInfosByDataStoreSearchParam not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
@@ -27,7 +27,7 @@ func searchObject(err error, packet nex.PacketInterface, callID uint32, param *d
 	// * DataStoreSearchParam contains a ResultRange to limit the
 	// * returned results. TotalCount is the total matching objects
 	// * in the database, whereas objects is the limited results
-	objects, totalCount, errCode := commonDataStoreProtocol.getObjectInfosByDataStoreSearchParamHandler(param)
+	objects, totalCount, errCode := commonDataStoreProtocol.GetObjectInfosByDataStoreSearchParam(param)
 	if errCode != 0 {
 		return nil, errCode
 	}

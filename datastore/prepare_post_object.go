@@ -11,12 +11,12 @@ import (
 )
 
 func preparePostObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStorePreparePostParam) (*nex.RMCMessage, uint32) {
-	if commonDataStoreProtocol.initializeObjectByPreparePostParamHandler == nil {
+	if commonDataStoreProtocol.InitializeObjectByPreparePostParam == nil {
 		common_globals.Logger.Warning("InitializeObjectByPreparePostParam not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
 
-	if commonDataStoreProtocol.initializeObjectRatingWithSlotHandler == nil {
+	if commonDataStoreProtocol.InitializeObjectRatingWithSlot == nil {
 		common_globals.Logger.Warning("InitializeObjectRatingWithSlot not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
@@ -34,7 +34,7 @@ func preparePostObject(err error, packet nex.PacketInterface, callID uint32, par
 	client := packet.Sender().(*nex.PRUDPClient)
 
 	// TODO - Need to verify what param.PersistenceInitParam.DeleteLastObject really means. It's often set to true even when it wouldn't make sense
-	dataID, errCode := commonDataStoreProtocol.initializeObjectByPreparePostParamHandler(client.PID().LegacyValue(), param)
+	dataID, errCode := commonDataStoreProtocol.InitializeObjectByPreparePostParam(client.PID().LegacyValue(), param)
 	if errCode != 0 {
 		common_globals.Logger.Errorf("Error code %d on object init", errCode)
 		return nil, errCode
@@ -42,14 +42,14 @@ func preparePostObject(err error, packet nex.PacketInterface, callID uint32, par
 
 	// TODO - Should this be moved to InitializeObjectByPreparePostParam?
 	for _, ratingInitParamWithSlot := range param.RatingInitParams {
-		errCode = commonDataStoreProtocol.initializeObjectRatingWithSlotHandler(dataID, ratingInitParamWithSlot)
+		errCode = commonDataStoreProtocol.InitializeObjectRatingWithSlot(dataID, ratingInitParamWithSlot)
 		if errCode != 0 {
 			common_globals.Logger.Errorf("Error code %d on rating init", errCode)
 			return nil, errCode
 		}
 	}
 
-	bucket := commonDataStoreProtocol.s3Bucket
+	bucket := commonDataStoreProtocol.S3Bucket
 	key := fmt.Sprintf("%s/%d.bin", commonDataStoreProtocol.s3DataKeyBase, dataID)
 
 	URL, formData, err := commonDataStoreProtocol.S3Presigner.PostObject(bucket, key, time.Minute*15)
@@ -58,7 +58,7 @@ func preparePostObject(err error, packet nex.PacketInterface, callID uint32, par
 		return nil, nex.Errors.DataStore.OperationNotAllowed
 	}
 
-	requestHeaders, errCode := commonDataStoreProtocol.s3PostRequestHeadersHandler()
+	requestHeaders, errCode := commonDataStoreProtocol.S3PostRequestHeaders()
 	if errCode != 0 {
 		return nil, errCode
 	}
@@ -69,7 +69,7 @@ func preparePostObject(err error, packet nex.PacketInterface, callID uint32, par
 	pReqPostInfo.URL = URL.String()
 	pReqPostInfo.RequestHeaders = requestHeaders
 	pReqPostInfo.FormFields = make([]*datastore_types.DataStoreKeyValue, 0, len(formData))
-	pReqPostInfo.RootCACert = commonDataStoreProtocol.rootCACert
+	pReqPostInfo.RootCACert = commonDataStoreProtocol.RootCACert
 
 	for key, value := range formData {
 		field := datastore_types.NewDataStoreKeyValue()

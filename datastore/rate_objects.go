@@ -8,12 +8,12 @@ import (
 )
 
 func rateObjects(err error, packet nex.PacketInterface, callID uint32, targets []*datastore_types.DataStoreRatingTarget, params []*datastore_types.DataStoreRateObjectParam, transactional bool, fetchRatings bool) (*nex.RMCMessage, uint32) {
-	if commonDataStoreProtocol.getObjectInfoByDataIDWithPasswordHandler == nil {
+	if commonDataStoreProtocol.GetObjectInfoByDataIDWithPassword == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataIDWithPassword not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
 
-	if commonDataStoreProtocol.rateObjectWithPasswordHandler == nil {
+	if commonDataStoreProtocol.RateObjectWithPassword == nil {
 		common_globals.Logger.Warning("RateObjectWithPassword not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
@@ -40,7 +40,7 @@ func rateObjects(err error, packet nex.PacketInterface, callID uint32, targets [
 		target := targets[i]
 		param := params[i]
 
-		objectInfo, errCode := commonDataStoreProtocol.getObjectInfoByDataIDWithPasswordHandler(target.DataID, param.AccessPassword)
+		objectInfo, errCode := commonDataStoreProtocol.GetObjectInfoByDataIDWithPassword(target.DataID, param.AccessPassword)
 		if errCode != 0 {
 			return nil, errCode
 		}
@@ -50,7 +50,7 @@ func rateObjects(err error, packet nex.PacketInterface, callID uint32, targets [
 			return nil, errCode
 		}
 
-		rating, errCode := commonDataStoreProtocol.rateObjectWithPasswordHandler(target.DataID, target.Slot, param.RatingValue, param.AccessPassword)
+		rating, errCode := commonDataStoreProtocol.RateObjectWithPassword(target.DataID, target.Slot, param.RatingValue, param.AccessPassword)
 		if errCode != 0 {
 			return nil, errCode
 		}

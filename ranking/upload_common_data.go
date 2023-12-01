@@ -8,8 +8,8 @@ import (
 )
 
 func uploadCommonData(err error, packet nex.PacketInterface, callID uint32, commonData []byte, uniqueID uint64) (*nex.RMCMessage, uint32) {
-	if commonRankingProtocol.uploadCommonDataHandler == nil {
-		common_globals.Logger.Warning("Ranking::UploadCommonData missing UploadCommonDataHandler!")
+	if commonRankingProtocol.UploadCommonData == nil {
+		common_globals.Logger.Warning("Ranking::UploadCommonData missing UploadCommonData!")
 		return nil, nex.Errors.Core.NotImplemented
 	}
 
@@ -20,7 +20,7 @@ func uploadCommonData(err error, packet nex.PacketInterface, callID uint32, comm
 		return nil, nex.Errors.Ranking.InvalidArgument
 	}
 
-	err = commonRankingProtocol.uploadCommonDataHandler(client.PID().LegacyValue(), uniqueID, commonData)
+	err = commonRankingProtocol.UploadCommonData(client.PID().LegacyValue(), uniqueID, commonData)
 	if err != nil {
 		common_globals.Logger.Critical(err.Error())
 		return nil, nex.Errors.Ranking.Unknown

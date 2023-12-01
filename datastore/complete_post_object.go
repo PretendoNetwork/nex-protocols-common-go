@@ -15,27 +15,27 @@ func completePostObject(err error, packet nex.PacketInterface, callID uint32, pa
 		return nil, nex.Errors.Core.NotImplemented
 	}
 
-	if commonDataStoreProtocol.getObjectInfoByDataIDHandler == nil {
+	if commonDataStoreProtocol.GetObjectInfoByDataID == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataID not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
 
-	if commonDataStoreProtocol.getObjectOwnerByDataIDHandler == nil {
+	if commonDataStoreProtocol.GetObjectOwnerByDataID == nil {
 		common_globals.Logger.Warning("GetObjectOwnerByDataID not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
 
-	if commonDataStoreProtocol.getObjectSizeByDataIDHandler == nil {
+	if commonDataStoreProtocol.GetObjectSizeByDataID == nil {
 		common_globals.Logger.Warning("GetObjectSizeByDataID not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
 
-	if commonDataStoreProtocol.updateObjectUploadCompletedByDataIDHandler == nil {
+	if commonDataStoreProtocol.UpdateObjectUploadCompletedByDataID == nil {
 		common_globals.Logger.Warning("UpdateObjectUploadCompletedByDataID not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
 
-	if commonDataStoreProtocol.deleteObjectByDataIDHandler == nil {
+	if commonDataStoreProtocol.DeleteObjectByDataID == nil {
 		common_globals.Logger.Warning("DeleteObjectByDataID not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
@@ -50,13 +50,13 @@ func completePostObject(err error, packet nex.PacketInterface, callID uint32, pa
 	// * If GetObjectInfoByDataID returns data then that means
 	// * the object has already been marked as uploaded. So do
 	// * nothing
-	objectInfo, _ := commonDataStoreProtocol.getObjectInfoByDataIDHandler(param.DataID)
+	objectInfo, _ := commonDataStoreProtocol.GetObjectInfoByDataID(param.DataID)
 	if objectInfo != nil {
 		return nil, nex.Errors.DataStore.PermissionDenied
 	}
 
 	// * Only allow an objects owner to make this request
-	ownerPID, errCode := commonDataStoreProtocol.getObjectOwnerByDataIDHandler(param.DataID)
+	ownerPID, errCode := commonDataStoreProtocol.GetObjectOwnerByDataID(param.DataID)
 	if errCode != 0 {
 		return nil, errCode
 	}
@@ -65,7 +65,7 @@ func completePostObject(err error, packet nex.PacketInterface, callID uint32, pa
 		return nil, nex.Errors.DataStore.PermissionDenied
 	}
 
-	bucket := commonDataStoreProtocol.s3Bucket
+	bucket := commonDataStoreProtocol.S3Bucket
 	key := fmt.Sprintf("%s/%d.bin", commonDataStoreProtocol.s3DataKeyBase, param.DataID)
 
 	if param.IsSuccess {
@@ -75,7 +75,7 @@ func completePostObject(err error, packet nex.PacketInterface, callID uint32, pa
 			return nil, nex.Errors.DataStore.NotFound
 		}
 
-		objectSizeDB, errCode := commonDataStoreProtocol.getObjectSizeByDataIDHandler(param.DataID)
+		objectSizeDB, errCode := commonDataStoreProtocol.GetObjectSizeByDataID(param.DataID)
 		if errCode != 0 {
 			return nil, errCode
 		}
@@ -86,12 +86,12 @@ func completePostObject(err error, packet nex.PacketInterface, callID uint32, pa
 			return nil, nex.Errors.DataStore.Unknown
 		}
 
-		errCode = commonDataStoreProtocol.updateObjectUploadCompletedByDataIDHandler(param.DataID, true)
+		errCode = commonDataStoreProtocol.UpdateObjectUploadCompletedByDataID(param.DataID, true)
 		if errCode != 0 {
 			return nil, errCode
 		}
 	} else {
-		errCode := commonDataStoreProtocol.deleteObjectByDataIDHandler(param.DataID)
+		errCode := commonDataStoreProtocol.DeleteObjectByDataID(param.DataID)
 		if errCode != 0 {
 			return nil, errCode
 		}
