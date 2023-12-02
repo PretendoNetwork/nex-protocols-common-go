@@ -54,7 +54,7 @@ func login(err error, packet nex.PacketInterface, callID uint32, username string
 	var strReturnMsg string
 
 	pConnectionData = nex.NewRVConnectionData()
-	pConnectionData.SetStationURL(commonTicketGrantingProtocol.secureStationURL.EncodeToString())
+	pConnectionData.SetStationURL(commonTicketGrantingProtocol.SecureStationURL.EncodeToString())
 	pConnectionData.SetSpecialProtocols([]byte{})
 	pConnectionData.SetStationURLSpecialProtocols("")
 	pConnectionData.SetTime(nex.NewDateTime(0).Now())

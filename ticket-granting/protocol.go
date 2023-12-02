@@ -13,13 +13,9 @@ var commonTicketGrantingProtocol *CommonTicketGrantingProtocol
 type CommonTicketGrantingProtocol struct {
 	*ticket_granting.Protocol
 	server                   *nex.PRUDPServer
-	secureStationURL         *nex.StationURL
+	SecureStationURL         *nex.StationURL
 	BuildName                string
 	allowInsecureLoginMethod bool
-}
-
-func (commonTicketGrantingProtocol *CommonTicketGrantingProtocol) SetSecureStationURL(stationURL *nex.StationURL) {
-	commonTicketGrantingProtocol.secureStationURL = stationURL
 }
 
 func (commonTicketGrantingProtocol *CommonTicketGrantingProtocol) DisableInsecureLogin() {
