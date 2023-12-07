@@ -45,7 +45,7 @@ func completePostObject(err error, packet nex.PacketInterface, callID uint32, pa
 		return nil, nex.Errors.DataStore.Unknown
 	}
 
-	client := packet.Sender().(*nex.PRUDPClient)
+	client := packet.Sender()
 
 	// * If GetObjectInfoByDataID returns data then that means
 	// * the object has already been marked as uploaded. So do

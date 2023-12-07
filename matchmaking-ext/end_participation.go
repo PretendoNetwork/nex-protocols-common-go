@@ -15,7 +15,8 @@ func endParticipation(err error, packet nex.PacketInterface, callID uint32, idGa
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
-	server := commonMatchMakingExtProtocol.server
+	// TODO - Remove PRUDP casts once websockets are implemented
+	server := commonMatchMakingExtProtocol.server.(*nex.PRUDPServer)
 	client := packet.Sender().(*nex.PRUDPClient)
 
 	var session *common_globals.CommonMatchmakeSession

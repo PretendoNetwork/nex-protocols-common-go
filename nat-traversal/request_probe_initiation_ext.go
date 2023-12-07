@@ -15,8 +15,9 @@ func requestProbeInitiationExt(err error, packet nex.PacketInterface, callID uin
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
+	// TODO - Remove PRUDP casts once websockets are implemented
+	server := commonNATTraversalProtocol.server.(*nex.PRUDPServer)
 	client := packet.Sender().(*nex.PRUDPClient)
-	server := commonNATTraversalProtocol.server
 
 	rmcResponse := nex.NewRMCSuccess(nil)
 	rmcResponse.ProtocolID = nat_traversal.ProtocolID

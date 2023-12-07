@@ -16,7 +16,7 @@ import (
 var commonDataStoreProtocol *CommonDataStoreProtocol
 
 type CommonDataStoreProtocol struct {
-	server                  *nex.PRUDPServer
+	server                  nex.ServerInterface
 	DefaultProtocol         *datastore.Protocol
 	SuperMarioMakerProtocol *datastore_super_mario_maker.Protocol
 
@@ -263,7 +263,7 @@ func initSuperMarioMaker(c *CommonDataStoreProtocol) {
 }
 
 // NewCommonDataStoreProtocol returns a new CommonDataStoreProtocol
-func NewCommonDataStoreProtocol(server *nex.PRUDPServer) *CommonDataStoreProtocol {
+func NewCommonDataStoreProtocol(server nex.ServerInterface) *CommonDataStoreProtocol {
 	commonDataStoreProtocol = &CommonDataStoreProtocol{
 		server:     server,
 		rootCACert: []byte{},

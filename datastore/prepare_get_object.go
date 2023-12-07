@@ -26,7 +26,7 @@ func prepareGetObject(err error, packet nex.PacketInterface, callID uint32, para
 		return nil, nex.Errors.Core.Unknown
 	}
 
-	client := packet.Sender().(*nex.PRUDPClient)
+	client := packet.Sender()
 
 	bucket := commonDataStoreProtocol.s3Bucket
 	key := fmt.Sprintf("%s/%d.bin", commonDataStoreProtocol.s3DataKeyBase, param.DataID)

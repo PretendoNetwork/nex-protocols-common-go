@@ -23,7 +23,7 @@ func rateObjects(err error, packet nex.PacketInterface, callID uint32, targets [
 		return nil, nex.Errors.DataStore.Unknown
 	}
 
-	client := packet.Sender().(*nex.PRUDPClient)
+	client := packet.Sender()
 
 	pRatings := make([]*datastore_types.DataStoreRatingInfo, 0)
 	pResults := make([]*nex.Result, 0)

@@ -13,7 +13,9 @@ func createMatchmakeSessionWithParam(err error, packet nex.PacketInterface, call
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
+	// TODO - Remove cast to PRUDPClient once websockets are implemented
 	client := packet.Sender().(*nex.PRUDPClient)
+
 	server := commonMatchmakeExtensionProtocol.server
 
 	// * A client may disconnect from a session without leaving reliably,

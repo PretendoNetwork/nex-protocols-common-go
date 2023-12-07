@@ -13,7 +13,7 @@ func uploadCommonData(err error, packet nex.PacketInterface, callID uint32, comm
 		return nil, nex.Errors.Core.NotImplemented
 	}
 
-	client := packet.Sender().(*nex.PRUDPClient)
+	client := packet.Sender()
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())

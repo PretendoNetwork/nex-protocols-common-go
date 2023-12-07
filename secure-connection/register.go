@@ -17,6 +17,8 @@ func register(err error, packet nex.PacketInterface, callID uint32, stationUrls 
 	}
 
 	server := commonSecureConnectionProtocol.server
+
+	// TODO - Remove cast to PRUDPClient once websockets are implemented
 	client := packet.Sender().(*nex.PRUDPClient)
 
 	client.ConnectionID = server.ConnectionIDCounter().Next()

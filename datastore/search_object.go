@@ -18,7 +18,7 @@ func searchObject(err error, packet nex.PacketInterface, callID uint32, param *d
 		return nil, nex.Errors.DataStore.Unknown
 	}
 
-	client := packet.Sender().(*nex.PRUDPClient)
+	client := packet.Sender()
 
 	// * This is likely game-specific. Also developer note:
 	// * Please keep in mind that no results is allowed. errCode

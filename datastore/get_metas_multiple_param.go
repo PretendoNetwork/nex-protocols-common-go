@@ -23,7 +23,7 @@ func getMetasMultipleParam(err error, packet nex.PacketInterface, callID uint32,
 		return nil, nex.Errors.DataStore.Unknown
 	}
 
-	client := packet.Sender().(*nex.PRUDPClient)
+	client := packet.Sender()
 
 	pMetaInfo := make([]*datastore_types.DataStoreMetaInfo, 0, len(params))
 	pResults := make([]*nex.Result, 0, len(params))

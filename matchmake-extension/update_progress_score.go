@@ -12,7 +12,7 @@ func updateProgressScore(err error, packet nex.PacketInterface, callID uint32, g
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
-	client := packet.Sender().(*nex.PRUDPClient)
+	client := packet.Sender()
 
 	session := common_globals.Sessions[gid]
 	if session == nil {

@@ -9,11 +9,11 @@ var commonNATTraversalProtocol *CommonNATTraversalProtocol
 
 type CommonNATTraversalProtocol struct {
 	*nat_traversal.Protocol
-	server *nex.PRUDPServer
+	server nex.ServerInterface
 }
 
 // NewCommonNATTraversalProtocol returns a new CommonNATTraversalProtocol
-func NewCommonNATTraversalProtocol(server *nex.PRUDPServer) *CommonNATTraversalProtocol {
+func NewCommonNATTraversalProtocol(server nex.ServerInterface) *CommonNATTraversalProtocol {
 	natTraversalProtocol := nat_traversal.NewNATTraversalProtocol(server)
 	commonNATTraversalProtocol = &CommonNATTraversalProtocol{Protocol: natTraversalProtocol, server: server}
 

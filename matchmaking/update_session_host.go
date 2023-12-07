@@ -14,6 +14,7 @@ func updateSessionHost(err error, packet nex.PacketInterface, callID uint32, gid
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
+	// TODO - Remove cast to PRUDPClient once websockets are implemented
 	client := packet.Sender().(*nex.PRUDPClient)
 
 	var session *common_globals.CommonMatchmakeSession

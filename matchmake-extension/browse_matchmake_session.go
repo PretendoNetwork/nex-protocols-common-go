@@ -14,7 +14,7 @@ func browseMatchmakeSession(err error, packet nex.PacketInterface, callID uint32
 	}
 
 	server := commonMatchmakeExtensionProtocol.server
-	client := packet.Sender().(*nex.PRUDPClient)
+	client := packet.Sender()
 
 	searchCriterias := []*match_making_types.MatchmakeSessionSearchCriteria{searchCriteria}
 

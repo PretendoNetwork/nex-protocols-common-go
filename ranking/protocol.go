@@ -14,7 +14,7 @@ import (
 var commonRankingProtocol *CommonRankingProtocol
 
 type CommonRankingProtocol struct {
-	server             *nex.PRUDPServer
+	server             nex.ServerInterface
 	DefaultProtocol    *ranking.Protocol
 	MarioKart8Protocol *ranking_mario_kart_8.Protocol
 
@@ -67,7 +67,7 @@ func initMarioKart8(c *CommonRankingProtocol) {
 }
 
 // NewCommonRankingProtocol returns a new CommonRankingProtocol
-func NewCommonRankingProtocol(server *nex.PRUDPServer) *CommonRankingProtocol {
+func NewCommonRankingProtocol(server nex.ServerInterface) *CommonRankingProtocol {
 	commonRankingProtocol = &CommonRankingProtocol{server: server}
 
 	patch := server.MatchMakingProtocolVersion().GameSpecificPatch
