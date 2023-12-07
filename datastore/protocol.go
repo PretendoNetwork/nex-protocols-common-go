@@ -86,7 +86,7 @@ func (c *CommonDataStoreProtocol) VerifyObjectPermission(ownerPID, accessorPID *
 
 	// * Allow only users whose PIDs are defined in permission.RecipientIDs
 	if permission.Permission == 2 {
-		if !slices.Contains(permission.RecipientIDs, accessorPID) {
+		if !common_globals.ContainsPID(permission.RecipientIDs, accessorPID) {
 			return nex.Errors.DataStore.PermissionDenied
 		}
 	}
