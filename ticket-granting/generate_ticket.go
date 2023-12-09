@@ -12,7 +12,7 @@ func generateTicket(userPID *nex.PID, targetPID *nex.PID) ([]byte, uint32) {
 	// TODO - Remove cast to PRUDPServer once websockets are implemented
 	server := commonTicketGrantingProtocol.server.(*nex.PRUDPServer)
 
-	passwordFromPIDHandler := server.PasswordFromPID
+	passwordFromPIDHandler := server.PasswordFromPIDFunction()
 	if passwordFromPIDHandler == nil {
 		common_globals.Logger.Warning("Server is missing PasswordFromPID handler!")
 		return []byte{}, nex.Errors.Core.Unknown
