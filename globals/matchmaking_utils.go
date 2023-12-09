@@ -104,7 +104,7 @@ func RemoveClientFromAllSessions(client *nex.PRUDPClient) {
 
 			rmcRequestBytes := rmcRequest.Bytes()
 
-			targetClient := server.FindClientByPID(ownerPID.Value())
+			targetClient := server.FindClientByPID(client.DestinationPort, client.DestinationStreamType, ownerPID.Value())
 			if targetClient == nil {
 				Logger.Warning("Owner client not found")
 				gid = FindClientSession(client.ConnectionID)
@@ -353,7 +353,7 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 	server := initiatingClient.Server().(*nex.PRUDPServer)
 
 	for i := 0; i < len(session.ConnectionIDs); i++ {
-		target := server.FindClientByConnectionID(session.ConnectionIDs[i])
+		target := server.FindClientByConnectionID(initiatingClient.DestinationPort, initiatingClient.DestinationStreamType, session.ConnectionIDs[i])
 		if target == nil {
 			// TODO - Error here?
 			Logger.Warning("Player not found")
@@ -409,7 +409,7 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 	// TODO - Check other games both pre and post 3.10.0 and validate
 	if server.MatchMakingProtocolVersion().GreaterOrEqual("3.10.0") {
 		for i := 0; i < len(session.ConnectionIDs); i++ {
-			target := server.FindClientByConnectionID(session.ConnectionIDs[i])
+			target := server.FindClientByConnectionID(initiatingClient.DestinationPort, initiatingClient.DestinationStreamType, session.ConnectionIDs[i])
 			if target == nil {
 				// TODO - Error here?
 				Logger.Warning("Player not found")
@@ -501,7 +501,7 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 
 		server.Send(messagePacket)
 
-		target := server.FindClientByPID(session.GameMatchmakeSession.Gathering.OwnerPID.Value())
+		target := server.FindClientByPID(initiatingClient.DestinationPort, initiatingClient.DestinationStreamType, session.GameMatchmakeSession.Gathering.OwnerPID.Value())
 		if target == nil {
 			// TODO - Error here?
 			Logger.Warning("Player not found")
@@ -536,7 +536,7 @@ func ChangeSessionOwner(ownerClient *nex.PRUDPClient, gathering uint32) {
 
 	otherConnectionID := FindOtherConnectionID(ownerClient.ConnectionID, gathering)
 	if otherConnectionID != 0 {
-		otherClient = server.FindClientByConnectionID(otherConnectionID)
+		otherClient = server.FindClientByConnectionID(ownerClient.DestinationPort, ownerClient.DestinationStreamType, otherConnectionID)
 		if otherClient != nil {
 			Sessions[gathering].GameMatchmakeSession.Gathering.OwnerPID = otherClient.PID()
 		} else {
@@ -573,7 +573,7 @@ func ChangeSessionOwner(ownerClient *nex.PRUDPClient, gathering uint32) {
 	rmcRequestBytes := rmcRequest.Bytes()
 
 	for _, connectionID := range Sessions[gathering].ConnectionIDs {
-		targetClient := server.FindClientByConnectionID(connectionID)
+		targetClient := server.FindClientByConnectionID(ownerClient.DestinationPort, ownerClient.DestinationStreamType, connectionID)
 		if targetClient != nil {
 			var messagePacket nex.PRUDPPacketInterface
 

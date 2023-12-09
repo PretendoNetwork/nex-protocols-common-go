@@ -78,7 +78,7 @@ func endParticipation(err error, packet nex.PacketInterface, callID uint32, idGa
 
 	rmcRequestBytes := rmcRequest.Bytes()
 
-	targetClient := server.FindClientByPID(ownerPID.Value())
+	targetClient := server.FindClientByPID(client.DestinationPort, client.DestinationStreamType, ownerPID.Value())
 	if targetClient == nil {
 		common_globals.Logger.Warning("Owner client not found")
 		return nil, 0

@@ -68,7 +68,7 @@ func updateSessionHost(err error, packet nex.PacketInterface, callID uint32, gid
 	rmcRequestBytes := rmcRequest.Bytes()
 
 	for _, connectionID := range common_globals.Sessions[gid].ConnectionIDs {
-		targetClient := server.FindClientByConnectionID(connectionID)
+		targetClient := server.FindClientByConnectionID(client.DestinationPort, client.DestinationStreamType, connectionID)
 		if targetClient != nil {
 			var messagePacket nex.PRUDPPacketInterface
 

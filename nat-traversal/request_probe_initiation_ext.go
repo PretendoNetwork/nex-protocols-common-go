@@ -46,7 +46,7 @@ func requestProbeInitiationExt(err error, packet nex.PacketInterface, callID uin
 				common_globals.Logger.Error(err.Error())
 			}
 
-			targetClient := server.FindClientByConnectionID(uint32(connectionID))
+			targetClient := server.FindClientByConnectionID(client.DestinationPort, client.DestinationStreamType, uint32(connectionID))
 			if targetClient != nil {
 				var messagePacket nex.PRUDPPacketInterface
 

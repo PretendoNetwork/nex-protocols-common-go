@@ -63,7 +63,7 @@ func unregisterGathering(err error, packet nex.PacketInterface, callID uint32, i
 	rmcRequestBytes := rmcRequest.Bytes()
 
 	for _, connectionID := range gatheringPlayers {
-		targetClient := server.FindClientByConnectionID(connectionID)
+		targetClient := server.FindClientByConnectionID(client.DestinationPort, client.DestinationStreamType, connectionID)
 		if targetClient != nil {
 			var messagePacket nex.PRUDPPacketInterface
 
