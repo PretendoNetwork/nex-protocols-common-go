@@ -12,12 +12,6 @@ func generateTicket(userPID *nex.PID, targetPID *nex.PID) ([]byte, uint32) {
 	// TODO - Remove cast to PRUDPServer once websockets are implemented
 	server := commonTicketGrantingProtocol.server.(*nex.PRUDPServer)
 
-	passwordFromPIDHandler := server.PasswordFromPIDFunction()
-	if passwordFromPIDHandler == nil {
-		common_globals.Logger.Warning("Server is missing PasswordFromPID handler!")
-		return []byte{}, nex.Errors.Core.Unknown
-	}
-
 	var userPassword []byte
 	var targetPassword []byte
 	var errorCode uint32
@@ -29,7 +23,7 @@ func generateTicket(userPID *nex.PID, targetPID *nex.PID) ([]byte, uint32) {
 	case 100: // * Guest user account. Used when creating a new NEX account
 		userPassword = []byte("MMQea3n!fsik")
 	default:
-		password, err := passwordFromPIDHandler(userPID)
+		password, err := server.PasswordFromPID(userPID)
 		userPassword = []byte(password)
 		errorCode = err
 	}
@@ -44,7 +38,7 @@ func generateTicket(userPID *nex.PID, targetPID *nex.PID) ([]byte, uint32) {
 	case 100: // * Guest user account. Used when creating a new NEX account
 		targetPassword = []byte("MMQea3n!fsik")
 	default:
-		password, err := passwordFromPIDHandler(userPID)
+		password, err := server.PasswordFromPID(userPID)
 		targetPassword = []byte(password)
 		errorCode = err
 	}
