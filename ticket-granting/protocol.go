@@ -11,8 +11,8 @@ import (
 var commonTicketGrantingProtocol *CommonTicketGrantingProtocol
 
 type CommonTicketGrantingProtocol struct {
-	*ticket_granting.Protocol
 	server                   nex.ServerInterface
+	protocol                 ticket_granting.Interface
 	SecureStationURL         *nex.StationURL
 	BuildName                string
 	allowInsecureLoginMethod bool
@@ -28,17 +28,17 @@ func (commonTicketGrantingProtocol *CommonTicketGrantingProtocol) EnableInsecure
 }
 
 // NewCommonTicketGrantingProtocol returns a new CommonTicketGrantingProtocol
-func NewCommonTicketGrantingProtocol(server nex.ServerInterface) *CommonTicketGrantingProtocol {
-	ticketGrantingProtocol := ticket_granting.NewProtocol(server)
+func NewCommonTicketGrantingProtocol(protocol ticket_granting.Interface) *CommonTicketGrantingProtocol {
+	protocol.SetHandlerLogin(login)
+	protocol.SetHandlerLoginEx(loginEx)
+	protocol.SetHandlerRequestTicket(requestTicket)
+
 	commonTicketGrantingProtocol = &CommonTicketGrantingProtocol{
-		Protocol: ticketGrantingProtocol,
-		server:   server,
+		server:   protocol.Server(),
+		protocol: protocol,
 	}
 
 	commonTicketGrantingProtocol.DisableInsecureLogin() // * Disable insecure login by default
-	commonTicketGrantingProtocol.Login = login
-	commonTicketGrantingProtocol.LoginEx = loginEx
-	commonTicketGrantingProtocol.RequestTicket = requestTicket
 
 	return commonTicketGrantingProtocol
 }

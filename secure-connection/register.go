@@ -18,10 +18,15 @@ func register(err error, packet nex.PacketInterface, callID uint32, stationUrls 
 
 	server := commonSecureConnectionProtocol.server
 
+	if _, ok := server.(*nex.PRUDPServer); !ok {
+		// * Do nothing if not a PRUDP server
+		return nil, nex.Errors.Core.InvalidArgument
+	}
+
 	// TODO - Remove cast to PRUDPClient once websockets are implemented
 	client := packet.Sender().(*nex.PRUDPClient)
 
-	client.ConnectionID = server.ConnectionIDCounter().Next()
+	client.ConnectionID = server.(*nex.PRUDPServer).ConnectionIDCounter().Next()
 
 	localStation := stationUrls[0]
 

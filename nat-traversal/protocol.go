@@ -8,20 +8,22 @@ import (
 var commonNATTraversalProtocol *CommonNATTraversalProtocol
 
 type CommonNATTraversalProtocol struct {
-	*nat_traversal.Protocol
-	server nex.ServerInterface
+	server   nex.ServerInterface
+	protocol nat_traversal.Interface
 }
 
 // NewCommonNATTraversalProtocol returns a new CommonNATTraversalProtocol
-func NewCommonNATTraversalProtocol(server nex.ServerInterface) *CommonNATTraversalProtocol {
-	natTraversalProtocol := nat_traversal.NewNATTraversalProtocol(server)
-	commonNATTraversalProtocol = &CommonNATTraversalProtocol{Protocol: natTraversalProtocol, server: server}
+func NewCommonNATTraversalProtocol(protocol nat_traversal.Interface) *CommonNATTraversalProtocol {
+	protocol.SetHandlerRequestProbeInitiationExt(requestProbeInitiationExt)
+	protocol.SetHandlerReportNATProperties(reportNATProperties)
+	protocol.SetHandlerReportNATTraversalResult(reportNATTraversalResult)
+	protocol.SetHandlerGetRelaySignatureKey(getRelaySignatureKey)
+	protocol.SetHandlerReportNATTraversalResultDetail(reportNATTraversalResultDetail)
 
-	commonNATTraversalProtocol.RequestProbeInitiationExt = requestProbeInitiationExt
-	commonNATTraversalProtocol.ReportNATProperties = reportNATProperties
-	commonNATTraversalProtocol.ReportNATTraversalResult = reportNATTraversalResult
-	commonNATTraversalProtocol.GetRelaySignatureKey = getRelaySignatureKey
-	commonNATTraversalProtocol.ReportNATTraversalResultDetail = reportNATTraversalResultDetail
+	commonNATTraversalProtocol = &CommonNATTraversalProtocol{
+		server:   protocol.Server(),
+		protocol: protocol,
+	}
 
 	return commonNATTraversalProtocol
 }

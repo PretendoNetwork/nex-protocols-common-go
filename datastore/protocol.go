@@ -8,7 +8,6 @@ import (
 	nex "github.com/PretendoNetwork/nex-go"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 	datastore "github.com/PretendoNetwork/nex-protocols-go/datastore"
-	datastore_super_mario_maker "github.com/PretendoNetwork/nex-protocols-go/datastore/super-mario-maker"
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
 	"github.com/minio/minio-go/v7"
 )
@@ -16,10 +15,8 @@ import (
 var commonDataStoreProtocol *CommonDataStoreProtocol
 
 type CommonDataStoreProtocol struct {
-	server                  nex.ServerInterface
-	DefaultProtocol         *datastore.Protocol
-	SuperMarioMakerProtocol *datastore_super_mario_maker.Protocol
-
+	server                                       nex.ServerInterface
+	protocol                                     datastore.Interface
 	S3Bucket                                     string
 	s3DataKeyBase                                string
 	s3NotifyKeyBase                              string
@@ -123,44 +120,25 @@ func (c *CommonDataStoreProtocol) SetMinIOClient(client *minio.Client) {
 	c.S3Presigner = NewS3Presigner(c.minIOClient)
 }
 
-func initDefault(c *CommonDataStoreProtocol) {
-	c.DefaultProtocol = datastore.NewProtocol(c.server)
-	c.DefaultProtocol.DeleteObject = deleteObject
-	c.DefaultProtocol.GetMeta = getMeta
-	c.DefaultProtocol.GetMetas = getMetas
-	c.DefaultProtocol.SearchObject = searchObject
-	c.DefaultProtocol.RateObject = rateObject
-	c.DefaultProtocol.PostMetaBinary = postMetaBinary
-	c.DefaultProtocol.PreparePostObject = preparePostObject
-	c.DefaultProtocol.PrepareGetObject = prepareGetObject
-	c.DefaultProtocol.CompletePostObject = completePostObject
-	c.DefaultProtocol.GetMetasMultipleParam = getMetasMultipleParam
-	c.DefaultProtocol.CompletePostObjects = completePostObjects
-	c.DefaultProtocol.ChangeMeta = changeMeta
-	c.DefaultProtocol.RateObjects = rateObjects
-}
-
-func initSuperMarioMaker(c *CommonDataStoreProtocol) {
-	c.SuperMarioMakerProtocol = datastore_super_mario_maker.NewProtocol(c.server)
-	c.SuperMarioMakerProtocol.DeleteObject = deleteObject
-	c.SuperMarioMakerProtocol.GetMeta = getMeta
-	c.SuperMarioMakerProtocol.GetMetas = getMetas
-	c.SuperMarioMakerProtocol.SearchObject = searchObject
-	c.SuperMarioMakerProtocol.RateObject = rateObject
-	c.SuperMarioMakerProtocol.PostMetaBinary = postMetaBinary
-	c.SuperMarioMakerProtocol.PreparePostObject = preparePostObject
-	c.SuperMarioMakerProtocol.PrepareGetObject = prepareGetObject
-	c.SuperMarioMakerProtocol.CompletePostObject = completePostObject
-	c.SuperMarioMakerProtocol.GetMetasMultipleParam = getMetasMultipleParam
-	c.SuperMarioMakerProtocol.CompletePostObjects = completePostObjects
-	c.SuperMarioMakerProtocol.ChangeMeta = changeMeta
-	c.SuperMarioMakerProtocol.RateObjects = rateObjects
-}
-
 // NewCommonDataStoreProtocol returns a new CommonDataStoreProtocol
-func NewCommonDataStoreProtocol(server nex.ServerInterface) *CommonDataStoreProtocol {
+func NewCommonDataStoreProtocol(protocol datastore.Interface) *CommonDataStoreProtocol {
+	protocol.SetHandlerDeleteObject(deleteObject)
+	protocol.SetHandlerGetMeta(getMeta)
+	protocol.SetHandlerGetMetas(getMetas)
+	protocol.SetHandlerSearchObject(searchObject)
+	protocol.SetHandlerRateObject(rateObject)
+	protocol.SetHandlerPostMetaBinary(postMetaBinary)
+	protocol.SetHandlerPreparePostObject(preparePostObject)
+	protocol.SetHandlerPrepareGetObject(prepareGetObject)
+	protocol.SetHandlerCompletePostObject(completePostObject)
+	protocol.SetHandlerGetMetasMultipleParam(getMetasMultipleParam)
+	protocol.SetHandlerCompletePostObjects(completePostObjects)
+	protocol.SetHandlerChangeMeta(changeMeta)
+	protocol.SetHandlerRateObjects(rateObjects)
+
 	commonDataStoreProtocol = &CommonDataStoreProtocol{
-		server:     server,
+		server:     protocol.Server(),
+		protocol:   protocol,
 		RootCACert: []byte{},
 		S3GetRequestHeaders: func() ([]*datastore_types.DataStoreKeyValue, uint32) {
 			return []*datastore_types.DataStoreKeyValue{}, 0
@@ -169,20 +147,5 @@ func NewCommonDataStoreProtocol(server nex.ServerInterface) *CommonDataStoreProt
 			return []*datastore_types.DataStoreKeyValue{}, 0
 		},
 	}
-
-	patch := server.DataStoreProtocolVersion().GameSpecificPatch
-
-	if strings.EqualFold(patch, "AMAJ") {
-		common_globals.Logger.Info("Using Super Mario Maker DataStore protocol")
-		initSuperMarioMaker(commonDataStoreProtocol)
-	} else {
-		if patch != "" {
-			common_globals.Logger.Infof("DataStore version patch %q not recognized", patch)
-		}
-
-		common_globals.Logger.Info("Using default DataStore protocol")
-		initDefault(commonDataStoreProtocol)
-	}
-
 	return commonDataStoreProtocol
 }

@@ -8,18 +8,19 @@ import (
 var commonUtilityProtocol *CommonUtilityProtocol
 
 type CommonUtilityProtocol struct {
-	*utility.Protocol
 	server              nex.ServerInterface
+	protocol            utility.Interface
 	GenerateNEXUniqueID func() uint64
 }
 
 // NewCommonUtilityProtocol returns a new CommonUtilityProtocol
-func NewCommonUtilityProtocol(server nex.ServerInterface) *CommonUtilityProtocol {
-	utilityProtocol := utility.NewProtocol(server)
-	commonUtilityProtocol = &CommonUtilityProtocol{Protocol: utilityProtocol, server: server}
+func NewCommonUtilityProtocol(protocol utility.Interface) *CommonUtilityProtocol {
+	protocol.SetHandlerAcquireNexUniqueID(acquireNexUniqueID)
 
-	// TODO - Organize these by method ID
-	commonUtilityProtocol.AcquireNexUniqueID = acquireNexUniqueID
+	commonUtilityProtocol = &CommonUtilityProtocol{
+		server:   protocol.Server(),
+		protocol: protocol,
+	}
 
 	return commonUtilityProtocol
 }

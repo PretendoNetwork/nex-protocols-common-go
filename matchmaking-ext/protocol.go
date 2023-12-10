@@ -8,16 +8,18 @@ import (
 var commonMatchMakingExtProtocol *CommonMatchMakingExtProtocol
 
 type CommonMatchMakingExtProtocol struct {
-	*match_making_ext.Protocol
-	server nex.ServerInterface
+	server   nex.ServerInterface
+	protocol match_making_ext.Interface
 }
 
 // NewCommonMatchmakeExtensionProtocol returns a new CommonMatchmakeExtensionProtocol
-func NewCommonMatchMakingExtProtocol(server nex.ServerInterface) *CommonMatchMakingExtProtocol {
-	MatchMakingExtProtocol := match_making_ext.NewProtocol(server)
-	commonMatchMakingExtProtocol = &CommonMatchMakingExtProtocol{Protocol: MatchMakingExtProtocol, server: server}
+func NewCommonMatchMakingExtProtocol(protocol match_making_ext.Interface) *CommonMatchMakingExtProtocol {
+	protocol.SetHandlerEndParticipation(endParticipation)
 
-	MatchMakingExtProtocol.EndParticipation = endParticipation
+	commonMatchMakingExtProtocol = &CommonMatchMakingExtProtocol{
+		server:   protocol.Server(),
+		protocol: protocol,
+	}
 
 	return commonMatchMakingExtProtocol
 }
