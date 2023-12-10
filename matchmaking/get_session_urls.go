@@ -18,12 +18,16 @@ func getSessionURLs(err error, packet nex.PacketInterface, callID uint32, gid ui
 	}
 
 	server := commonMatchMakingProtocol.server
+
+	// TODO - Remove cast to PRUDPClient once websockets are implemented
+	client := packet.Sender().(*nex.PRUDPClient)
+
 	hostPID := session.GameMatchmakeSession.Gathering.HostPID
-	host := server.FindClientByPID(hostPID.Value())
+	host := server.FindClientByPID(client.DestinationPort, client.DestinationStreamType, hostPID.Value())
 	if host == nil {
 		// * This popped up once during testing. Leaving it noted here in case it becomes a problem.
 		common_globals.Logger.Warning("Host client not found, trying with owner client")
-		host = server.FindClientByPID(session.GameMatchmakeSession.Gathering.OwnerPID.Value())
+		host = server.FindClientByPID(client.DestinationPort, client.DestinationStreamType, session.GameMatchmakeSession.Gathering.OwnerPID.Value())
 		if host == nil {
 			// * This popped up once during testing. Leaving it noted here in case it becomes a problem.
 			common_globals.Logger.Error("Owner client not found")

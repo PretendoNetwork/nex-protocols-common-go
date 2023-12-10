@@ -23,7 +23,7 @@ func deleteObject(err error, packet nex.PacketInterface, callID uint32, param *d
 		return nil, nex.Errors.DataStore.Unknown
 	}
 
-	client := packet.Sender().(*nex.PRUDPClient)
+	client := packet.Sender()
 
 	metaInfo, errCode := commonDataStoreProtocol.GetObjectInfoByDataID(param.DataID)
 	if errCode != 0 {

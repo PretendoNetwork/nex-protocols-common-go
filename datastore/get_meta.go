@@ -23,7 +23,7 @@ func getMeta(err error, packet nex.PacketInterface, callID uint32, param *datast
 		return nil, nex.Errors.DataStore.Unknown
 	}
 
-	client := packet.Sender().(*nex.PRUDPClient)
+	client := packet.Sender()
 
 	var pMetaInfo *datastore_types.DataStoreMetaInfo
 	var errCode uint32

@@ -15,6 +15,8 @@ func unregisterGathering(err error, packet nex.PacketInterface, callID uint32, i
 	}
 
 	server := commonMatchMakingProtocol.server
+
+	// TODO - Remove cast to PRUDPClient once websockets are implemented
 	client := packet.Sender().(*nex.PRUDPClient)
 
 	var session *common_globals.CommonMatchmakeSession
@@ -61,7 +63,7 @@ func unregisterGathering(err error, packet nex.PacketInterface, callID uint32, i
 	rmcRequestBytes := rmcRequest.Bytes()
 
 	for _, connectionID := range gatheringPlayers {
-		targetClient := server.FindClientByConnectionID(connectionID)
+		targetClient := server.FindClientByConnectionID(client.DestinationPort, client.DestinationStreamType, connectionID)
 		if targetClient != nil {
 			var messagePacket nex.PRUDPPacketInterface
 

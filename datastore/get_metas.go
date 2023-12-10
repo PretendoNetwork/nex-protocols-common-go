@@ -18,7 +18,7 @@ func getMetas(err error, packet nex.PacketInterface, callID uint32, dataIDs []ui
 		return nil, nex.Errors.DataStore.Unknown
 	}
 
-	client := packet.Sender().(*nex.PRUDPClient)
+	client := packet.Sender()
 
 	// TODO - Verify if param.PersistenceTarget is respected? It wouldn't make sense here but who knows
 

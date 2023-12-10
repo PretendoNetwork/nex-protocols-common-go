@@ -31,7 +31,7 @@ func preparePostObject(err error, packet nex.PacketInterface, callID uint32, par
 		return nil, nex.Errors.DataStore.Unknown
 	}
 
-	client := packet.Sender().(*nex.PRUDPClient)
+	client := packet.Sender()
 
 	// TODO - Need to verify what param.PersistenceInitParam.DeleteLastObject really means. It's often set to true even when it wouldn't make sense
 	dataID, errCode := commonDataStoreProtocol.InitializeObjectByPreparePostParam(client.PID().LegacyValue(), param)

@@ -18,7 +18,7 @@ func sendReport(err error, packet nex.PacketInterface, callID uint32, reportID u
 		return nil, nex.Errors.Core.Unknown
 	}
 
-	client := packet.Sender().(*nex.PRUDPClient)
+	client := packet.Sender()
 
 	err = commonSecureConnectionProtocol.CreateReportDBRecord(client.PID().LegacyValue(), reportID, reportData)
 	if err != nil {

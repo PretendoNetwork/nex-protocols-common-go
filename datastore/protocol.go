@@ -16,7 +16,7 @@ import (
 var commonDataStoreProtocol *CommonDataStoreProtocol
 
 type CommonDataStoreProtocol struct {
-	server                  *nex.PRUDPServer
+	server                  nex.ServerInterface
 	DefaultProtocol         *datastore.Protocol
 	SuperMarioMakerProtocol *datastore_super_mario_maker.Protocol
 
@@ -86,7 +86,7 @@ func (c *CommonDataStoreProtocol) VerifyObjectPermission(ownerPID, accessorPID *
 
 	// * Allow only users whose PIDs are defined in permission.RecipientIDs
 	if permission.Permission == 2 {
-		if !slices.Contains(permission.RecipientIDs, accessorPID) {
+		if !common_globals.ContainsPID(permission.RecipientIDs, accessorPID) {
 			return nex.Errors.DataStore.PermissionDenied
 		}
 	}
@@ -158,7 +158,7 @@ func initSuperMarioMaker(c *CommonDataStoreProtocol) {
 }
 
 // NewCommonDataStoreProtocol returns a new CommonDataStoreProtocol
-func NewCommonDataStoreProtocol(server *nex.PRUDPServer) *CommonDataStoreProtocol {
+func NewCommonDataStoreProtocol(server nex.ServerInterface) *CommonDataStoreProtocol {
 	commonDataStoreProtocol = &CommonDataStoreProtocol{
 		server:     server,
 		RootCACert: []byte{},

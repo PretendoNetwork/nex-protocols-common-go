@@ -15,7 +15,8 @@ func endParticipation(err error, packet nex.PacketInterface, callID uint32, idGa
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
-	server := commonMatchMakingExtProtocol.server
+	// TODO - Remove PRUDP casts once websockets are implemented
+	server := commonMatchMakingExtProtocol.server.(*nex.PRUDPServer)
 	client := packet.Sender().(*nex.PRUDPClient)
 
 	var session *common_globals.CommonMatchmakeSession
@@ -77,7 +78,7 @@ func endParticipation(err error, packet nex.PacketInterface, callID uint32, idGa
 
 	rmcRequestBytes := rmcRequest.Bytes()
 
-	targetClient := server.FindClientByPID(ownerPID.Value())
+	targetClient := server.FindClientByPID(client.DestinationPort, client.DestinationStreamType, ownerPID.Value())
 	if targetClient == nil {
 		common_globals.Logger.Warning("Owner client not found")
 		return nil, 0

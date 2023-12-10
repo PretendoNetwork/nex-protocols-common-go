@@ -23,7 +23,7 @@ func rateObject(err error, packet nex.PacketInterface, callID uint32, target *da
 		return nil, nex.Errors.DataStore.Unknown
 	}
 
-	client := packet.Sender().(*nex.PRUDPClient)
+	client := packet.Sender()
 
 	objectInfo, errCode := commonDataStoreProtocol.GetObjectInfoByDataIDWithPassword(target.DataID, param.AccessPassword)
 	if errCode != 0 {

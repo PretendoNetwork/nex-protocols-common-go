@@ -12,7 +12,7 @@ func closeParticipation(err error, packet nex.PacketInterface, callID uint32, gi
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
-	client := packet.Sender().(*nex.PRUDPClient)
+	client := packet.Sender()
 
 	var session *common_globals.CommonMatchmakeSession
 	var ok bool

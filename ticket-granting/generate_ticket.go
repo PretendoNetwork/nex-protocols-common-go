@@ -9,7 +9,10 @@ import (
 )
 
 func generateTicket(userPID *nex.PID, targetPID *nex.PID) ([]byte, uint32) {
-	passwordFromPIDHandler := commonTicketGrantingProtocol.server.PasswordFromPID
+	// TODO - Remove cast to PRUDPServer once websockets are implemented
+	server := commonTicketGrantingProtocol.server.(*nex.PRUDPServer)
+
+	passwordFromPIDHandler := server.PasswordFromPIDFunction()
 	if passwordFromPIDHandler == nil {
 		common_globals.Logger.Warning("Server is missing PasswordFromPID handler!")
 		return []byte{}, nex.Errors.Core.Unknown
@@ -22,7 +25,7 @@ func generateTicket(userPID *nex.PID, targetPID *nex.PID) ([]byte, uint32) {
 	// TODO - Maybe we should error out if the user PID is the server account?
 	switch userPID.Value() {
 	case 2: // * "Quazal Rendez-Vous" (the server user) account. Used as the Kerberos target
-		userPassword = commonTicketGrantingProtocol.server.KerberosPassword()
+		userPassword = server.KerberosPassword()
 	case 100: // * Guest user account. Used when creating a new NEX account
 		userPassword = []byte("MMQea3n!fsik")
 	default:
@@ -37,7 +40,7 @@ func generateTicket(userPID *nex.PID, targetPID *nex.PID) ([]byte, uint32) {
 
 	switch targetPID.Value() {
 	case 2: // * "Quazal Rendez-Vous" (the server user) account. Used as the Kerberos target
-		targetPassword = commonTicketGrantingProtocol.server.KerberosPassword()
+		targetPassword = server.KerberosPassword()
 	case 100: // * Guest user account. Used when creating a new NEX account
 		targetPassword = []byte("MMQea3n!fsik")
 	default:
@@ -52,7 +55,7 @@ func generateTicket(userPID *nex.PID, targetPID *nex.PID) ([]byte, uint32) {
 
 	userKey := nex.DeriveKerberosKey(userPID, []byte(userPassword))
 	targetKey := nex.DeriveKerberosKey(targetPID, []byte(targetPassword))
-	sessionKey := make([]byte, commonTicketGrantingProtocol.server.KerberosKeySize())
+	sessionKey := make([]byte, server.KerberosKeySize())
 	_, err := rand.Read(sessionKey)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())

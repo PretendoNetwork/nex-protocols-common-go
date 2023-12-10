@@ -35,8 +35,9 @@ func getSimplePlayingSession(err error, packet nex.PacketInterface, callID uint3
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
+	// TODO - Remove PRUDP casts once websockets are implemented
+	server := commonMatchmakeExtensionProtocol.server.(*nex.PRUDPServer)
 	client := packet.Sender().(*nex.PRUDPClient)
-	server := commonMatchmakeExtensionProtocol.server
 
 	if includes(listPID, client.PID()) {
 		listPID = remove(listPID, client.PID())
@@ -54,7 +55,7 @@ func getSimplePlayingSession(err error, packet nex.PacketInterface, callID uint3
 			if simplePlayingSessions[key] == nil {
 				connectedPIDs := make([]uint64, 0)
 				for _, connectionID := range session.ConnectionIDs {
-					player := server.FindClientByConnectionID(connectionID)
+					player := server.FindClientByConnectionID(client.DestinationPort, client.DestinationStreamType, connectionID)
 					if player == nil {
 						common_globals.Logger.Warning("Player not found")
 						continue

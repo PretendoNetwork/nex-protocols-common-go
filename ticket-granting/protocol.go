@@ -12,7 +12,7 @@ var commonTicketGrantingProtocol *CommonTicketGrantingProtocol
 
 type CommonTicketGrantingProtocol struct {
 	*ticket_granting.Protocol
-	server                   *nex.PRUDPServer
+	server                   nex.ServerInterface
 	SecureStationURL         *nex.StationURL
 	BuildName                string
 	allowInsecureLoginMethod bool
@@ -28,7 +28,7 @@ func (commonTicketGrantingProtocol *CommonTicketGrantingProtocol) EnableInsecure
 }
 
 // NewCommonTicketGrantingProtocol returns a new CommonTicketGrantingProtocol
-func NewCommonTicketGrantingProtocol(server *nex.PRUDPServer) *CommonTicketGrantingProtocol {
+func NewCommonTicketGrantingProtocol(server nex.ServerInterface) *CommonTicketGrantingProtocol {
 	ticketGrantingProtocol := ticket_granting.NewProtocol(server)
 	commonTicketGrantingProtocol = &CommonTicketGrantingProtocol{
 		Protocol: ticketGrantingProtocol,

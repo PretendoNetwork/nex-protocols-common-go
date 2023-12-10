@@ -12,7 +12,7 @@ func modifyCurrentGameAttribute(err error, packet nex.PacketInterface, callID ui
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
-	client := packet.Sender().(*nex.PRUDPClient)
+	client := packet.Sender()
 
 	session, ok := common_globals.Sessions[gid]
 	if !ok {

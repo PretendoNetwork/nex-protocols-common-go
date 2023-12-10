@@ -31,6 +31,8 @@ func NewCommonMatchMakingProtocol(server *nex.PRUDPServer) *CommonMatchMakingPro
 	commonMatchMakingProtocol.UpdateSessionHost = updateSessionHost
 	commonMatchMakingProtocol.FindBySingleID = findBySingleID
 
+	// TODO - Once websockets are implemented, make an interface for PRUDP
+	// and websockets which implements this function
 	server.OnClientRemoved(func(client *nex.PRUDPClient) {
 		fmt.Println("Leaving")
 		common_globals.RemoveClientFromAllSessions(client)

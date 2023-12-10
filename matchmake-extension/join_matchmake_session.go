@@ -12,7 +12,9 @@ func joinMatchmakeSession(err error, packet nex.PacketInterface, callID uint32, 
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
+	// TODO - Remove cast to PRUDPClient once websockets are implemented
 	client := packet.Sender().(*nex.PRUDPClient)
+
 	server := commonMatchmakeExtensionProtocol.server
 
 	session, ok := common_globals.Sessions[gid]

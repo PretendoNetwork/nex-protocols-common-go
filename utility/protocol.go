@@ -9,12 +9,12 @@ var commonUtilityProtocol *CommonUtilityProtocol
 
 type CommonUtilityProtocol struct {
 	*utility.Protocol
-	server              *nex.PRUDPServer
+	server              nex.ServerInterface
 	GenerateNEXUniqueID func() uint64
 }
 
 // NewCommonUtilityProtocol returns a new CommonUtilityProtocol
-func NewCommonUtilityProtocol(server *nex.PRUDPServer) *CommonUtilityProtocol {
+func NewCommonUtilityProtocol(server nex.ServerInterface) *CommonUtilityProtocol {
 	utilityProtocol := utility.NewProtocol(server)
 	commonUtilityProtocol = &CommonUtilityProtocol{Protocol: utilityProtocol, server: server}
 
