@@ -12,24 +12,28 @@ import (
 var commonMatchMakingProtocol *CommonMatchMakingProtocol
 
 type CommonMatchMakingProtocol struct {
-	*match_making.Protocol
 	server *nex.PRUDPServer
+	protocol match_making.Interface
 }
 
 // NewCommonMatchMakingProtocol returns a new CommonMatchMakingProtocol
-func NewCommonMatchMakingProtocol(server *nex.PRUDPServer) *CommonMatchMakingProtocol {
-	matchMakingProtocol := match_making.NewProtocol(server)
-	commonMatchMakingProtocol = &CommonMatchMakingProtocol{Protocol: matchMakingProtocol, server: server}
+func NewCommonMatchMakingProtocol(protocol match_making.Interface) *CommonMatchMakingProtocol {
+	// TODO - Remove cast to PRUDPServer once websockets are implemented
+	server := protocol.Server().(*nex.PRUDPServer)
 
 	common_globals.Sessions = make(map[uint32]*common_globals.CommonMatchmakeSession)
 
-	// TODO - Organize these by method ID
-	commonMatchMakingProtocol.UpdateSessionURL = updateSessionURL
-	commonMatchMakingProtocol.GetSessionURLs = getSessionURLs
-	commonMatchMakingProtocol.UnregisterGathering = unregisterGathering
-	commonMatchMakingProtocol.UpdateSessionHostV1 = updateSessionHostV1
-	commonMatchMakingProtocol.UpdateSessionHost = updateSessionHost
-	commonMatchMakingProtocol.FindBySingleID = findBySingleID
+	protocol.SetHandlerUnregisterGathering(unregisterGathering)
+	protocol.SetHandlerFindBySingleID(findBySingleID)
+	protocol.SetHandlerUpdateSessionURL(updateSessionURL)
+	protocol.SetHandlerUpdateSessionHostV1(updateSessionHostV1)
+	protocol.SetHandlerGetSessionURLs(getSessionURLs)
+	protocol.SetHandlerUpdateSessionHost(updateSessionHost)
+
+	commonMatchMakingProtocol = &CommonMatchMakingProtocol{
+		server: server,
+		protocol: protocol,
+	}
 
 	// TODO - Once websockets are implemented, make an interface for PRUDP
 	// and websockets which implements this function
