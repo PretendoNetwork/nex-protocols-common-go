@@ -40,7 +40,7 @@ func NewCommonTicketGrantingProtocol(protocol ticket_granting.Interface) *Common
 		protocol:                   protocol,
 		SecureStationURL:           nex.NewStationURL("prudp:/"),
 		SpecialProtocols:           make([]uint8, 0),
-		StationURLSpecialProtocols: nex.NewStationURL("prudp:/"),
+		StationURLSpecialProtocols: nex.NewStationURL(""),
 	}
 
 	commonTicketGrantingProtocol.DisableInsecureLogin() // * Disable insecure login by default
