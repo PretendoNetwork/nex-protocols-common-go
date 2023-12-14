@@ -12,7 +12,7 @@ import (
 var commonMatchMakingProtocol *CommonMatchMakingProtocol
 
 type CommonMatchMakingProtocol struct {
-	server *nex.PRUDPServer
+	server   *nex.PRUDPServer
 	protocol match_making.Interface
 }
 
@@ -31,7 +31,7 @@ func NewCommonMatchMakingProtocol(protocol match_making.Interface) *CommonMatchM
 	protocol.SetHandlerUpdateSessionHost(updateSessionHost)
 
 	commonMatchMakingProtocol = &CommonMatchMakingProtocol{
-		server: server,
+		server:   server,
 		protocol: protocol,
 	}
 
