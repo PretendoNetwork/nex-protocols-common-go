@@ -27,7 +27,8 @@ import (
 	"os"
 
 	"github.com/PretendoNetwork/nex-go"
-	ticket_granting "github.com/PretendoNetwork/nex-protocols-common-go/ticket-granting"
+	ticket_granting "github.com/PretendoNetwork/nex-protocols-go/ticket-granting"
+	common_ticket_granting "github.com/PretendoNetwork/nex-protocols-common-go/ticket-granting"
 )
 
 var nexServer *nex.PRUDPServer
@@ -50,7 +51,8 @@ func main() {
 		fmt.Println("==================")
 	})
 
-	authenticationProtocol := ticket_granting.NewCommonTicketGrantingProtocol(nexServer)
+	ticketGrantingProtocol := ticket_granting.NewProtocol(nexServer)
+	commonTicketGrantingProtocol := common_ticket_granting.NewCommonTicketGrantingProtocol(ticketGrantingProtocol)
 
 	secureStationURL := nex.NewStationURL("")
 	secureStationURL.Scheme = "prudps"
@@ -62,9 +64,9 @@ func main() {
 	secureStationURL.Fields.Set("stream", "10")
 	secureStationURL.Fields.Set("type", "2")
 
-	authenticationProtocol.SetSecureStationURL(secureStationURL)
-	authenticationProtocol.SetBuildName("Pretendo Friends Auth")
-	nexServer.PasswordFromPID = passwordFromPID
+	commonTicketGrantingProtocol.SecureStationURL = secureStationURL
+	commonTicketGrantingProtocol.BuildName = "Pretendo Friends Auth"
+	nexServer.SetPasswordFromPIDFunction(passwordFromPID)
 
 	nexServer.Listen(60000)
 }
