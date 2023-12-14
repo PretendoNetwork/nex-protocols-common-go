@@ -13,7 +13,7 @@ func getRelaySignatureKey(err error, packet nex.PacketInterface, callID uint32) 
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
-	server := commonNATTraversalProtocol.server
+	server := commonProtocol.server
 
 	rmcResponseStream := nex.NewStreamOut(server)
 

@@ -8,12 +8,12 @@ import (
 )
 
 func getMeta(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreGetMetaParam) (*nex.RMCMessage, uint32) {
-	if commonDataStoreProtocol.GetObjectInfoByPersistenceTargetWithPassword == nil {
+	if commonProtocol.GetObjectInfoByPersistenceTargetWithPassword == nil {
 		common_globals.Logger.Warning("GetObjectInfoByPersistenceTargetWithPassword not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
 
-	if commonDataStoreProtocol.GetObjectInfoByDataIDWithPassword == nil {
+	if commonProtocol.GetObjectInfoByDataIDWithPassword == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataIDWithPassword not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
@@ -30,23 +30,23 @@ func getMeta(err error, packet nex.PacketInterface, callID uint32, param *datast
 
 	// * Real server ignores PersistenceTarget if DataID is set
 	if param.DataID == 0 {
-		pMetaInfo, errCode = commonDataStoreProtocol.GetObjectInfoByPersistenceTargetWithPassword(param.PersistenceTarget, param.AccessPassword)
+		pMetaInfo, errCode = commonProtocol.GetObjectInfoByPersistenceTargetWithPassword(param.PersistenceTarget, param.AccessPassword)
 	} else {
-		pMetaInfo, errCode = commonDataStoreProtocol.GetObjectInfoByDataIDWithPassword(param.DataID, param.AccessPassword)
+		pMetaInfo, errCode = commonProtocol.GetObjectInfoByDataIDWithPassword(param.DataID, param.AccessPassword)
 	}
 
 	if errCode != 0 {
 		return nil, errCode
 	}
 
-	errCode = commonDataStoreProtocol.VerifyObjectPermission(pMetaInfo.OwnerID, client.PID(), pMetaInfo.Permission)
+	errCode = commonProtocol.VerifyObjectPermission(pMetaInfo.OwnerID, client.PID(), pMetaInfo.Permission)
 	if errCode != 0 {
 		return nil, errCode
 	}
 
 	pMetaInfo.FilterPropertiesByResultOption(param.ResultOption)
 
-	rmcResponseStream := nex.NewStreamOut(commonDataStoreProtocol.server)
+	rmcResponseStream := nex.NewStreamOut(commonProtocol.server)
 	rmcResponseStream.WriteStructure(pMetaInfo)
 
 	rmcResponseBody := rmcResponseStream.Bytes()

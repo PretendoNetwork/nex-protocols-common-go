@@ -14,7 +14,7 @@ func unregisterGathering(err error, packet nex.PacketInterface, callID uint32, i
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
-	server := commonMatchMakingProtocol.server
+	server := commonProtocol.server
 
 	// TODO - Remove cast to PRUDPClient?
 	client := packet.Sender().(*nex.PRUDPClient)

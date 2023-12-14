@@ -11,12 +11,12 @@ import (
 )
 
 func prepareGetObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStorePrepareGetParam) (*nex.RMCMessage, uint32) {
-	if commonDataStoreProtocol.GetObjectInfoByDataID == nil {
+	if commonProtocol.GetObjectInfoByDataID == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataID not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
 
-	if commonDataStoreProtocol.S3Presigner == nil {
+	if commonProtocol.S3Presigner == nil {
 		common_globals.Logger.Warning("S3Presigner not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
@@ -28,26 +28,26 @@ func prepareGetObject(err error, packet nex.PacketInterface, callID uint32, para
 
 	client := packet.Sender()
 
-	bucket := commonDataStoreProtocol.S3Bucket
-	key := fmt.Sprintf("%s/%d.bin", commonDataStoreProtocol.s3DataKeyBase, param.DataID)
+	bucket := commonProtocol.S3Bucket
+	key := fmt.Sprintf("%s/%d.bin", commonProtocol.s3DataKeyBase, param.DataID)
 
-	objectInfo, errCode := commonDataStoreProtocol.GetObjectInfoByDataID(param.DataID)
+	objectInfo, errCode := commonProtocol.GetObjectInfoByDataID(param.DataID)
 	if errCode != 0 {
 		return nil, errCode
 	}
 
-	errCode = commonDataStoreProtocol.VerifyObjectPermission(objectInfo.OwnerID, client.PID(), objectInfo.Permission)
+	errCode = commonProtocol.VerifyObjectPermission(objectInfo.OwnerID, client.PID(), objectInfo.Permission)
 	if errCode != 0 {
 		return nil, errCode
 	}
 
-	url, err := commonDataStoreProtocol.S3Presigner.GetObject(bucket, key, time.Minute*15)
+	url, err := commonProtocol.S3Presigner.GetObject(bucket, key, time.Minute*15)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.Errors.DataStore.OperationNotAllowed
 	}
 
-	requestHeaders, errCode := commonDataStoreProtocol.S3GetRequestHeaders()
+	requestHeaders, errCode := commonProtocol.S3GetRequestHeaders()
 	if errCode != 0 {
 		return nil, errCode
 	}
@@ -57,10 +57,10 @@ func prepareGetObject(err error, packet nex.PacketInterface, callID uint32, para
 	pReqGetInfo.URL = url.String()
 	pReqGetInfo.RequestHeaders = requestHeaders
 	pReqGetInfo.Size = objectInfo.Size
-	pReqGetInfo.RootCACert = commonDataStoreProtocol.RootCACert
+	pReqGetInfo.RootCACert = commonProtocol.RootCACert
 	pReqGetInfo.DataID = param.DataID
 
-	rmcResponseStream := nex.NewStreamOut(commonDataStoreProtocol.server)
+	rmcResponseStream := nex.NewStreamOut(commonProtocol.server)
 
 	rmcResponseStream.WriteStructure(pReqGetInfo)
 

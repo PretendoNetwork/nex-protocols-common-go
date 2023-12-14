@@ -8,9 +8,9 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
-var commonTicketGrantingProtocol *CommonTicketGrantingProtocol
+var commonProtocol *CommonProtocol
 
-type CommonTicketGrantingProtocol struct {
+type CommonProtocol struct {
 	server                     nex.ServerInterface
 	protocol                   ticket_granting.Interface
 	SecureStationURL           *nex.StationURL
@@ -20,22 +20,22 @@ type CommonTicketGrantingProtocol struct {
 	allowInsecureLoginMethod   bool
 }
 
-func (commonTicketGrantingProtocol *CommonTicketGrantingProtocol) DisableInsecureLogin() {
-	commonTicketGrantingProtocol.allowInsecureLoginMethod = false
+func (commonProtocol *CommonProtocol) DisableInsecureLogin() {
+	commonProtocol.allowInsecureLoginMethod = false
 }
 
-func (commonTicketGrantingProtocol *CommonTicketGrantingProtocol) EnableInsecureLogin() {
+func (commonProtocol *CommonProtocol) EnableInsecureLogin() {
 	common_globals.Logger.Warning("INSECURE LOGIN HAS BEEN ENABLED. THIS ALLOWS THE USE OF CUSTOM CLIENTS TO BYPASS THE ACCOUNT SERVER AND CONNECT DIRECTLY TO THIS GAME SERVER, EVADING BANS! USE WITH CAUTION!")
-	commonTicketGrantingProtocol.allowInsecureLoginMethod = true
+	commonProtocol.allowInsecureLoginMethod = true
 }
 
-// NewCommonTicketGrantingProtocol returns a new CommonTicketGrantingProtocol
-func NewCommonTicketGrantingProtocol(protocol ticket_granting.Interface) *CommonTicketGrantingProtocol {
+// NewCommonProtocol returns a new CommonProtocol
+func NewCommonProtocol(protocol ticket_granting.Interface) *CommonProtocol {
 	protocol.SetHandlerLogin(login)
 	protocol.SetHandlerLoginEx(loginEx)
 	protocol.SetHandlerRequestTicket(requestTicket)
 
-	commonTicketGrantingProtocol = &CommonTicketGrantingProtocol{
+	commonProtocol = &CommonProtocol{
 		server:                     protocol.Server(),
 		protocol:                   protocol,
 		SecureStationURL:           nex.NewStationURL("prudp:/"),
@@ -43,7 +43,7 @@ func NewCommonTicketGrantingProtocol(protocol ticket_granting.Interface) *Common
 		StationURLSpecialProtocols: nex.NewStationURL(""),
 	}
 
-	commonTicketGrantingProtocol.DisableInsecureLogin() // * Disable insecure login by default
+	commonProtocol.DisableInsecureLogin() // * Disable insecure login by default
 
-	return commonTicketGrantingProtocol
+	return commonProtocol
 }

@@ -9,7 +9,7 @@ import (
 )
 
 func uploadScore(err error, packet nex.PacketInterface, callID uint32, scoreData *ranking_types.RankingScoreData, uniqueID uint64) (*nex.RMCMessage, uint32) {
-	if commonRankingProtocol.InsertRankingByPIDAndRankingScoreData == nil {
+	if commonProtocol.InsertRankingByPIDAndRankingScoreData == nil {
 		common_globals.Logger.Warning("Ranking::UploadScore missing InsertRankingByPIDAndRankingScoreData!")
 		return nil, nex.Errors.Core.NotImplemented
 	}
@@ -21,7 +21,7 @@ func uploadScore(err error, packet nex.PacketInterface, callID uint32, scoreData
 		return nil, nex.Errors.Ranking.InvalidArgument
 	}
 
-	err = commonRankingProtocol.InsertRankingByPIDAndRankingScoreData(client.PID().LegacyValue(), scoreData, uniqueID)
+	err = commonProtocol.InsertRankingByPIDAndRankingScoreData(client.PID().LegacyValue(), scoreData, uniqueID)
 	if err != nil {
 		common_globals.Logger.Critical(err.Error())
 		return nil, nex.Errors.Ranking.Unknown

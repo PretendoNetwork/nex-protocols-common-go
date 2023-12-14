@@ -9,15 +9,15 @@ import (
 	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
 )
 
-var commonMatchMakingProtocol *CommonMatchMakingProtocol
+var commonProtocol *CommonProtocol
 
-type CommonMatchMakingProtocol struct {
+type CommonProtocol struct {
 	server   *nex.PRUDPServer
 	protocol match_making.Interface
 }
 
-// NewCommonMatchMakingProtocol returns a new CommonMatchMakingProtocol
-func NewCommonMatchMakingProtocol(protocol match_making.Interface) *CommonMatchMakingProtocol {
+// NewCommonProtocol returns a new CommonProtocol
+func NewCommonProtocol(protocol match_making.Interface) *CommonProtocol {
 	// TODO - Remove cast to PRUDPServer?
 	server := protocol.Server().(*nex.PRUDPServer)
 
@@ -30,7 +30,7 @@ func NewCommonMatchMakingProtocol(protocol match_making.Interface) *CommonMatchM
 	protocol.SetHandlerGetSessionURLs(getSessionURLs)
 	protocol.SetHandlerUpdateSessionHost(updateSessionHost)
 
-	commonMatchMakingProtocol = &CommonMatchMakingProtocol{
+	commonProtocol = &CommonProtocol{
 		server:   server,
 		protocol: protocol,
 	}
@@ -40,5 +40,5 @@ func NewCommonMatchMakingProtocol(protocol match_making.Interface) *CommonMatchM
 		common_globals.RemoveClientFromAllSessions(client)
 	})
 
-	return commonMatchMakingProtocol
+	return commonProtocol
 }

@@ -5,21 +5,21 @@ import (
 	match_making_ext "github.com/PretendoNetwork/nex-protocols-go/match-making-ext"
 )
 
-var commonMatchMakingExtProtocol *CommonMatchMakingExtProtocol
+var commonProtocol *CommonProtocol
 
-type CommonMatchMakingExtProtocol struct {
+type CommonProtocol struct {
 	server   nex.ServerInterface
 	protocol match_making_ext.Interface
 }
 
-// NewCommonMatchmakeExtensionProtocol returns a new CommonMatchmakeExtensionProtocol
-func NewCommonMatchMakingExtProtocol(protocol match_making_ext.Interface) *CommonMatchMakingExtProtocol {
+// NewCommonProtocol returns a new CommonProtocol
+func NewCommonProtocol(protocol match_making_ext.Interface) *CommonProtocol {
 	protocol.SetHandlerEndParticipation(endParticipation)
 
-	commonMatchMakingExtProtocol = &CommonMatchMakingExtProtocol{
+	commonProtocol = &CommonProtocol{
 		server:   protocol.Server(),
 		protocol: protocol,
 	}
 
-	return commonMatchMakingExtProtocol
+	return commonProtocol
 }

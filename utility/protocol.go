@@ -5,22 +5,22 @@ import (
 	utility "github.com/PretendoNetwork/nex-protocols-go/utility"
 )
 
-var commonUtilityProtocol *CommonUtilityProtocol
+var commonProtocol *CommonProtocol
 
-type CommonUtilityProtocol struct {
+type CommonProtocol struct {
 	server              nex.ServerInterface
 	protocol            utility.Interface
 	GenerateNEXUniqueID func() uint64
 }
 
-// NewCommonUtilityProtocol returns a new CommonUtilityProtocol
-func NewCommonUtilityProtocol(protocol utility.Interface) *CommonUtilityProtocol {
+// NewCommonProtocol returns a new CommonProtocol
+func NewCommonProtocol(protocol utility.Interface) *CommonProtocol {
 	protocol.SetHandlerAcquireNexUniqueID(acquireNexUniqueID)
 
-	commonUtilityProtocol = &CommonUtilityProtocol{
+	commonProtocol = &CommonProtocol{
 		server:   protocol.Server(),
 		protocol: protocol,
 	}
 
-	return commonUtilityProtocol
+	return commonProtocol
 }

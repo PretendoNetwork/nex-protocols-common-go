@@ -8,7 +8,7 @@ import (
 )
 
 func getMetas(err error, packet nex.PacketInterface, callID uint32, dataIDs []uint64, param *datastore_types.DataStoreGetMetaParam) (*nex.RMCMessage, uint32) {
-	if commonDataStoreProtocol.GetObjectInfoByDataID == nil {
+	if commonProtocol.GetObjectInfoByDataID == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataID not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
@@ -31,14 +31,14 @@ func getMetas(err error, packet nex.PacketInterface, callID uint32, dataIDs []ui
 	// * it's unused until proven otherwise
 
 	for i := 0; i < len(dataIDs); i++ {
-		objectInfo, errCode := commonDataStoreProtocol.GetObjectInfoByDataID(dataIDs[i])
+		objectInfo, errCode := commonProtocol.GetObjectInfoByDataID(dataIDs[i])
 
 		if errCode != 0 {
 			objectInfo = datastore_types.NewDataStoreMetaInfo()
 
 			pResults = append(pResults, nex.NewResultError(errCode))
 		} else {
-			errCode = commonDataStoreProtocol.VerifyObjectPermission(objectInfo.OwnerID, client.PID(), objectInfo.Permission)
+			errCode = commonProtocol.VerifyObjectPermission(objectInfo.OwnerID, client.PID(), objectInfo.Permission)
 			if errCode != 0 {
 				objectInfo = datastore_types.NewDataStoreMetaInfo()
 
@@ -53,7 +53,7 @@ func getMetas(err error, packet nex.PacketInterface, callID uint32, dataIDs []ui
 		pMetaInfo = append(pMetaInfo, objectInfo)
 	}
 
-	rmcResponseStream := nex.NewStreamOut(commonDataStoreProtocol.server)
+	rmcResponseStream := nex.NewStreamOut(commonProtocol.server)
 
 	nex.StreamWriteListStructure(rmcResponseStream, pMetaInfo)
 	rmcResponseStream.WriteListResult(pResults)

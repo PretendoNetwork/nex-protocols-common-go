@@ -6,9 +6,9 @@ import (
 	ranking_types "github.com/PretendoNetwork/nex-protocols-go/ranking/types"
 )
 
-var commonRankingProtocol *CommonRankingProtocol
+var commonProtocol *CommonProtocol
 
-type CommonRankingProtocol struct {
+type CommonProtocol struct {
 	server                                            nex.ServerInterface
 	protocol                                          ranking.Interface
 	GetCommonData                                     func(unique_id uint64) ([]byte, error)
@@ -17,8 +17,8 @@ type CommonRankingProtocol struct {
 	GetRankingsAndCountByCategoryAndRankingOrderParam func(category uint32, rankingOrderParam *ranking_types.RankingOrderParam) ([]*ranking_types.RankingRankData, uint32, error)
 }
 
-// NewCommonRankingProtocol returns a new CommonRankingProtocol
-func NewCommonRankingProtocol(protocol ranking.Interface) *CommonRankingProtocol {
+// NewCommonProtocol returns a new CommonProtocol
+func NewCommonProtocol(protocol ranking.Interface) *CommonProtocol {
 	protocol.SetHandlerGetCachedTopXRanking(getCachedTopXRanking)
 	protocol.SetHandlerGetCachedTopXRankings(getCachedTopXRankings)
 	protocol.SetHandlerGetCommonData(getCommonData)
@@ -26,10 +26,10 @@ func NewCommonRankingProtocol(protocol ranking.Interface) *CommonRankingProtocol
 	protocol.SetHandlerUploadCommonData(uploadCommonData)
 	protocol.SetHandlerUploadScore(uploadScore)
 
-	commonRankingProtocol = &CommonRankingProtocol{
+	commonProtocol = &CommonProtocol{
 		server:   protocol.Server(),
 		protocol: protocol,
 	}
 
-	return commonRankingProtocol
+	return commonProtocol
 }

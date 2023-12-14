@@ -8,7 +8,7 @@ import (
 )
 
 func autoMatchmake_Postpone(err error, packet nex.PacketInterface, callID uint32, anyGathering *nex.DataHolder, message string) (*nex.RMCMessage, uint32) {
-	if commonMatchmakeExtensionProtocol.CleanupSearchMatchmakeSession == nil {
+	if commonProtocol.CleanupSearchMatchmakeSession == nil {
 		common_globals.Logger.Warning("MatchmakeExtension::AutoMatchmake_Postpone missing CleanupSearchMatchmakeSession!")
 		return nil, nex.Errors.Core.NotImplemented
 	}
@@ -18,7 +18,7 @@ func autoMatchmake_Postpone(err error, packet nex.PacketInterface, callID uint32
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
-	server := commonMatchmakeExtensionProtocol.server
+	server := commonProtocol.server
 
 	// TODO - Remove cast to PRUDPClient?
 	client := packet.Sender().(*nex.PRUDPClient)
@@ -38,7 +38,7 @@ func autoMatchmake_Postpone(err error, packet nex.PacketInterface, callID uint32
 	}
 
 	searchMatchmakeSession := matchmakeSession.Copy().(*match_making_types.MatchmakeSession)
-	commonMatchmakeExtensionProtocol.CleanupSearchMatchmakeSession(searchMatchmakeSession)
+	commonProtocol.CleanupSearchMatchmakeSession(searchMatchmakeSession)
 	sessionIndex := common_globals.FindSessionByMatchmakeSession(client.PID(), searchMatchmakeSession)
 	var session *common_globals.CommonMatchmakeSession
 

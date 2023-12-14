@@ -11,12 +11,12 @@ import (
 )
 
 func getCachedTopXRankings(err error, packet nex.PacketInterface, callID uint32, categories []uint32, orderParams []*ranking_types.RankingOrderParam) (*nex.RMCMessage, uint32) {
-	if commonRankingProtocol.GetRankingsAndCountByCategoryAndRankingOrderParam == nil {
+	if commonProtocol.GetRankingsAndCountByCategoryAndRankingOrderParam == nil {
 		common_globals.Logger.Warning("Ranking::GetCachedTopXRankings missing GetRankingsAndCountByCategoryAndRankingOrderParam!")
 		return nil, nex.Errors.Core.NotImplemented
 	}
 
-	server := commonRankingProtocol.server
+	server := commonProtocol.server
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
@@ -25,7 +25,7 @@ func getCachedTopXRankings(err error, packet nex.PacketInterface, callID uint32,
 
 	var pResult []*ranking_types.RankingCachedResult
 	for i := 0; i < len(categories); i++ {
-		rankDataList, totalCount, err := commonRankingProtocol.GetRankingsAndCountByCategoryAndRankingOrderParam(categories[i], orderParams[i])
+		rankDataList, totalCount, err := commonProtocol.GetRankingsAndCountByCategoryAndRankingOrderParam(categories[i], orderParams[i])
 		if err != nil {
 			common_globals.Logger.Critical(err.Error())
 			return nil, nex.Errors.Ranking.Unknown

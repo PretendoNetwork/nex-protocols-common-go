@@ -8,9 +8,9 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
-var commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol
+var commonProtocol *CommonProtocol
 
-type CommonMatchmakeExtensionProtocol struct {
+type CommonProtocol struct {
 	server                                           nex.ServerInterface
 	protocol                                         matchmake_extension.Interface
 	CleanupSearchMatchmakeSession                    func(matchmakeSession *match_making_types.MatchmakeSession)
@@ -18,12 +18,12 @@ type CommonMatchmakeExtensionProtocol struct {
 }
 
 // GetUserFriendPIDs sets the GetUserFriendPIDs handler function
-func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) GetUserFriendPIDs(handler func(pid uint32) []uint32) {
+func (commonProtocol *CommonProtocol) GetUserFriendPIDs(handler func(pid uint32) []uint32) {
 	common_globals.GetUserFriendPIDsHandler = handler
 }
 
-// NewCommonMatchmakeExtensionProtocol returns a new CommonMatchmakeExtensionProtocol
-func NewCommonMatchmakeExtensionProtocol(protocol matchmake_extension.Interface) *CommonMatchmakeExtensionProtocol {
+// NewCommonProtocol returns a new CommonProtocol
+func NewCommonProtocol(protocol matchmake_extension.Interface) *CommonProtocol {
 	protocol.SetHandlerOpenParticipation(openParticipation)
 	protocol.SetHandlerCloseParticipation(closeParticipation)
 	protocol.SetHandlerCreateMatchmakeSession(createMatchmakeSession)
@@ -39,10 +39,10 @@ func NewCommonMatchmakeExtensionProtocol(protocol matchmake_extension.Interface)
 	protocol.SetHandlerModifyCurrentGameAttribute(modifyCurrentGameAttribute)
 	protocol.SetHandlerBrowseMatchmakeSession(browseMatchmakeSession)
 
-	commonMatchmakeExtensionProtocol = &CommonMatchmakeExtensionProtocol{
+	commonProtocol = &CommonProtocol{
 		server:   protocol.Server(),
 		protocol: protocol,
 	}
 
-	return commonMatchmakeExtensionProtocol
+	return commonProtocol
 }

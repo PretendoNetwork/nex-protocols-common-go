@@ -13,14 +13,14 @@ func acquireNexUniqueID(err error, packet nex.PacketInterface, callID uint32) (*
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
-	if commonUtilityProtocol.GenerateNEXUniqueID == nil {
+	if commonProtocol.GenerateNEXUniqueID == nil {
 		common_globals.Logger.Warning("Utility::AcquireNexUniqueID missing GenerateNEXUniqueID!")
 		return nil, nex.Errors.Core.NotImplemented
 	}
 
-	pNexUniqueID := commonUtilityProtocol.GenerateNEXUniqueID()
+	pNexUniqueID := commonProtocol.GenerateNEXUniqueID()
 
-	server := commonUtilityProtocol.server
+	server := commonProtocol.server
 
 	rmcResponseStream := nex.NewStreamOut(server)
 

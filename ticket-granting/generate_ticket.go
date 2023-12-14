@@ -10,7 +10,7 @@ import (
 
 func generateTicket(userPID *nex.PID, targetPID *nex.PID) ([]byte, uint32) {
 	// TODO - Remove cast to PRUDPServer?
-	server := commonTicketGrantingProtocol.server.(*nex.PRUDPServer)
+	server := commonProtocol.server.(*nex.PRUDPServer)
 
 	var userPassword []byte
 	var targetPassword []byte
@@ -63,7 +63,7 @@ func generateTicket(userPID *nex.PID, targetPID *nex.PID) ([]byte, uint32) {
 	ticketInternalData.SourcePID = userPID
 	ticketInternalData.SessionKey = sessionKey
 
-	encryptedTicketInternalData, err := ticketInternalData.Encrypt(targetKey, nex.NewStreamOut(commonTicketGrantingProtocol.server))
+	encryptedTicketInternalData, err := ticketInternalData.Encrypt(targetKey, nex.NewStreamOut(commonProtocol.server))
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return []byte{}, nex.Errors.Authentication.Unknown
@@ -74,7 +74,7 @@ func generateTicket(userPID *nex.PID, targetPID *nex.PID) ([]byte, uint32) {
 	ticket.TargetPID = targetPID
 	ticket.InternalData = encryptedTicketInternalData
 
-	encryptedTicket, err := ticket.Encrypt(userKey, nex.NewStreamOut(commonTicketGrantingProtocol.server))
+	encryptedTicket, err := ticket.Encrypt(userKey, nex.NewStreamOut(commonProtocol.server))
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return []byte{}, nex.Errors.Authentication.Unknown

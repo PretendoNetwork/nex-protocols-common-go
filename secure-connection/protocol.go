@@ -5,24 +5,24 @@ import (
 	secure_connection "github.com/PretendoNetwork/nex-protocols-go/secure-connection"
 )
 
-var commonSecureConnectionProtocol *CommonSecureConnectionProtocol
+var commonProtocol *CommonProtocol
 
-type CommonSecureConnectionProtocol struct {
+type CommonProtocol struct {
 	server               nex.ServerInterface
 	protocol             secure_connection.Interface
 	CreateReportDBRecord func(pid uint32, reportID uint32, reportData []byte) error
 }
 
-// NewCommonSecureConnectionProtocol returns a new CommonSecureConnectionProtocol
-func NewCommonSecureConnectionProtocol(protocol secure_connection.Interface) *CommonSecureConnectionProtocol {
+// NewCommonProtocol returns a new CommonProtocol
+func NewCommonProtocol(protocol secure_connection.Interface) *CommonProtocol {
 	protocol.SetHandlerRegister(register)
 	protocol.SetHandlerReplaceURL(replaceURL)
 	protocol.SetHandlerSendReport(sendReport)
 
-	commonSecureConnectionProtocol = &CommonSecureConnectionProtocol{
+	commonProtocol = &CommonProtocol{
 		server:   protocol.Server(),
 		protocol: protocol,
 	}
 
-	return commonSecureConnectionProtocol
+	return commonProtocol
 }

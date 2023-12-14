@@ -16,7 +16,7 @@ func requestProbeInitiationExt(err error, packet nex.PacketInterface, callID uin
 	}
 
 	// TODO - Remove PRUDP casts?
-	server := commonNATTraversalProtocol.server.(*nex.PRUDPServer)
+	server := commonProtocol.server.(*nex.PRUDPServer)
 	client := packet.Sender().(*nex.PRUDPClient)
 
 	rmcResponse := nex.NewRMCSuccess(nil)

@@ -8,7 +8,7 @@ import (
 )
 
 func searchObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreSearchParam) (*nex.RMCMessage, uint32) {
-	if commonDataStoreProtocol.GetObjectInfosByDataStoreSearchParam == nil {
+	if commonProtocol.GetObjectInfosByDataStoreSearchParam == nil {
 		common_globals.Logger.Warning("GetObjectInfosByDataStoreSearchParam not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
@@ -27,7 +27,7 @@ func searchObject(err error, packet nex.PacketInterface, callID uint32, param *d
 	// * DataStoreSearchParam contains a ResultRange to limit the
 	// * returned results. TotalCount is the total matching objects
 	// * in the database, whereas objects is the limited results
-	objects, totalCount, errCode := commonDataStoreProtocol.GetObjectInfosByDataStoreSearchParam(param)
+	objects, totalCount, errCode := commonProtocol.GetObjectInfosByDataStoreSearchParam(param)
 	if errCode != 0 {
 		return nil, errCode
 	}
@@ -37,7 +37,7 @@ func searchObject(err error, packet nex.PacketInterface, callID uint32, param *d
 	pSearchResult.Result = make([]*datastore_types.DataStoreMetaInfo, 0, len(objects))
 
 	for _, object := range objects {
-		errCode = commonDataStoreProtocol.VerifyObjectPermission(object.OwnerID, client.PID(), object.Permission)
+		errCode = commonProtocol.VerifyObjectPermission(object.OwnerID, client.PID(), object.Permission)
 		if errCode != 0 {
 			// * Since we don't error here, should we also
 			// * "hide" these results by also decrementing
@@ -66,7 +66,7 @@ func searchObject(err error, packet nex.PacketInterface, callID uint32, param *d
 	// *
 	// * Only seen in struct revision 3 or
 	// * NEX 4.0+
-	if param.StructureVersion() >= 3 || commonDataStoreProtocol.server.DataStoreProtocolVersion().GreaterOrEqual("4.0.0") {
+	if param.StructureVersion() >= 3 || commonProtocol.server.DataStoreProtocolVersion().GreaterOrEqual("4.0.0") {
 		if !param.TotalCountEnabled {
 			totalCount = 0
 			totalCountType = 3
@@ -76,7 +76,7 @@ func searchObject(err error, packet nex.PacketInterface, callID uint32, param *d
 	pSearchResult.TotalCount = totalCount
 	pSearchResult.TotalCountType = totalCountType
 
-	rmcResponseStream := nex.NewStreamOut(commonDataStoreProtocol.server)
+	rmcResponseStream := nex.NewStreamOut(commonProtocol.server)
 
 	rmcResponseStream.WriteStructure(pSearchResult)
 

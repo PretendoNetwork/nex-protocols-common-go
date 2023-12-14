@@ -8,12 +8,12 @@ import (
 )
 
 func deleteObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreDeleteParam) (*nex.RMCMessage, uint32) {
-	if commonDataStoreProtocol.GetObjectInfoByDataID == nil {
+	if commonProtocol.GetObjectInfoByDataID == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataID not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
 
-	if commonDataStoreProtocol.DeleteObjectByDataIDWithPassword == nil {
+	if commonProtocol.DeleteObjectByDataIDWithPassword == nil {
 		common_globals.Logger.Warning("DeleteObjectByDataIDWithPassword not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
@@ -25,17 +25,17 @@ func deleteObject(err error, packet nex.PacketInterface, callID uint32, param *d
 
 	client := packet.Sender()
 
-	metaInfo, errCode := commonDataStoreProtocol.GetObjectInfoByDataID(param.DataID)
+	metaInfo, errCode := commonProtocol.GetObjectInfoByDataID(param.DataID)
 	if errCode != 0 {
 		return nil, errCode
 	}
 
-	errCode = commonDataStoreProtocol.VerifyObjectPermission(metaInfo.OwnerID, client.PID(), metaInfo.DelPermission)
+	errCode = commonProtocol.VerifyObjectPermission(metaInfo.OwnerID, client.PID(), metaInfo.DelPermission)
 	if errCode != 0 {
 		return nil, errCode
 	}
 
-	errCode = commonDataStoreProtocol.DeleteObjectByDataIDWithPassword(param.DataID, param.UpdatePassword)
+	errCode = commonProtocol.DeleteObjectByDataIDWithPassword(param.DataID, param.UpdatePassword)
 	if errCode != 0 {
 		return nil, errCode
 	}

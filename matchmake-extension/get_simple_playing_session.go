@@ -36,7 +36,7 @@ func getSimplePlayingSession(err error, packet nex.PacketInterface, callID uint3
 	}
 
 	// TODO - Remove PRUDP casts?
-	server := commonMatchmakeExtensionProtocol.server.(*nex.PRUDPServer)
+	server := commonProtocol.server.(*nex.PRUDPServer)
 	client := packet.Sender().(*nex.PRUDPClient)
 
 	if includes(listPID, client.PID()) {

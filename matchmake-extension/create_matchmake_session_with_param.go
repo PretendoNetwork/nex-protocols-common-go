@@ -16,7 +16,7 @@ func createMatchmakeSessionWithParam(err error, packet nex.PacketInterface, call
 	// TODO - Remove cast to PRUDPClient?
 	client := packet.Sender().(*nex.PRUDPClient)
 
-	server := commonMatchmakeExtensionProtocol.server
+	server := commonProtocol.server
 
 	// * A client may disconnect from a session without leaving reliably,
 	// * so let's make sure the client is removed from all sessions

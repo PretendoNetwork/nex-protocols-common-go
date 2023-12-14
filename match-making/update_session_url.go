@@ -17,7 +17,7 @@ func updateSessionURL(err error, packet nex.PacketInterface, callID uint32, idGa
 		return nil, nex.Errors.RendezVous.SessionVoid
 	}
 
-	server := commonMatchMakingProtocol.server
+	server := commonProtocol.server
 	client := packet.Sender()
 
 	// * Mario Kart 7 seems to set an empty strURL, so I assume this is what the method does?

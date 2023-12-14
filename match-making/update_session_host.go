@@ -27,7 +27,7 @@ func updateSessionHost(err error, packet nex.PacketInterface, callID uint32, gid
 		return nil, nex.Errors.RendezVous.PermissionDenied
 	}
 
-	server := commonMatchMakingProtocol.server
+	server := commonProtocol.server
 	session.GameMatchmakeSession.Gathering.HostPID = client.PID()
 	if isMigrateOwner {
 		session.GameMatchmakeSession.Gathering.OwnerPID = client.PID()

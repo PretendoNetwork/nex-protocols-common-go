@@ -17,7 +17,7 @@ func getSessionURLs(err error, packet nex.PacketInterface, callID uint32, gid ui
 		return nil, nex.Errors.RendezVous.SessionVoid
 	}
 
-	server := commonMatchMakingProtocol.server
+	server := commonProtocol.server
 
 	// TODO - Remove cast to PRUDPClient?
 	client := packet.Sender().(*nex.PRUDPClient)

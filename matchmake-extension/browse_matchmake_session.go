@@ -13,12 +13,12 @@ func browseMatchmakeSession(err error, packet nex.PacketInterface, callID uint32
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
-	server := commonMatchmakeExtensionProtocol.server
+	server := commonProtocol.server
 	client := packet.Sender()
 
 	searchCriterias := []*match_making_types.MatchmakeSessionSearchCriteria{searchCriteria}
 
-	sessions := common_globals.FindSessionsByMatchmakeSessionSearchCriterias(client.PID(), searchCriterias, commonMatchmakeExtensionProtocol.GameSpecificMatchmakeSessionSearchCriteriaChecks)
+	sessions := common_globals.FindSessionsByMatchmakeSessionSearchCriterias(client.PID(), searchCriterias, commonProtocol.GameSpecificMatchmakeSessionSearchCriteriaChecks)
 
 	if len(sessions) < int(resultRange.Offset) {
 		return nil, nex.Errors.Core.InvalidIndex

@@ -16,7 +16,7 @@ func endParticipation(err error, packet nex.PacketInterface, callID uint32, idGa
 	}
 
 	// TODO - Remove PRUDP casts?
-	server := commonMatchMakingExtProtocol.server.(*nex.PRUDPServer)
+	server := commonProtocol.server.(*nex.PRUDPServer)
 	client := packet.Sender().(*nex.PRUDPClient)
 
 	var session *common_globals.CommonMatchmakeSession

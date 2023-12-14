@@ -8,12 +8,12 @@ import (
 )
 
 func rateObjects(err error, packet nex.PacketInterface, callID uint32, targets []*datastore_types.DataStoreRatingTarget, params []*datastore_types.DataStoreRateObjectParam, transactional bool, fetchRatings bool) (*nex.RMCMessage, uint32) {
-	if commonDataStoreProtocol.GetObjectInfoByDataIDWithPassword == nil {
+	if commonProtocol.GetObjectInfoByDataIDWithPassword == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataIDWithPassword not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
 
-	if commonDataStoreProtocol.RateObjectWithPassword == nil {
+	if commonProtocol.RateObjectWithPassword == nil {
 		common_globals.Logger.Warning("RateObjectWithPassword not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
@@ -40,17 +40,17 @@ func rateObjects(err error, packet nex.PacketInterface, callID uint32, targets [
 		target := targets[i]
 		param := params[i]
 
-		objectInfo, errCode := commonDataStoreProtocol.GetObjectInfoByDataIDWithPassword(target.DataID, param.AccessPassword)
+		objectInfo, errCode := commonProtocol.GetObjectInfoByDataIDWithPassword(target.DataID, param.AccessPassword)
 		if errCode != 0 {
 			return nil, errCode
 		}
 
-		errCode = commonDataStoreProtocol.VerifyObjectPermission(objectInfo.OwnerID, client.PID(), objectInfo.Permission)
+		errCode = commonProtocol.VerifyObjectPermission(objectInfo.OwnerID, client.PID(), objectInfo.Permission)
 		if errCode != 0 {
 			return nil, errCode
 		}
 
-		rating, errCode := commonDataStoreProtocol.RateObjectWithPassword(target.DataID, target.Slot, param.RatingValue, param.AccessPassword)
+		rating, errCode := commonProtocol.RateObjectWithPassword(target.DataID, target.Slot, param.RatingValue, param.AccessPassword)
 		if errCode != 0 {
 			return nil, errCode
 		}
@@ -60,7 +60,7 @@ func rateObjects(err error, packet nex.PacketInterface, callID uint32, targets [
 		}
 	}
 
-	rmcResponseStream := nex.NewStreamOut(commonDataStoreProtocol.server)
+	rmcResponseStream := nex.NewStreamOut(commonProtocol.server)
 
 	nex.StreamWriteListStructure(rmcResponseStream, pRatings)
 	rmcResponseStream.WriteListResult(pResults) // * pResults is ALWAYS empty in SMM?

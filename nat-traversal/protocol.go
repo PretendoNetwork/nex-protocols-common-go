@@ -5,25 +5,25 @@ import (
 	nat_traversal "github.com/PretendoNetwork/nex-protocols-go/nat-traversal"
 )
 
-var commonNATTraversalProtocol *CommonNATTraversalProtocol
+var commonProtocol *CommonProtocol
 
-type CommonNATTraversalProtocol struct {
+type CommonProtocol struct {
 	server   nex.ServerInterface
 	protocol nat_traversal.Interface
 }
 
-// NewCommonNATTraversalProtocol returns a new CommonNATTraversalProtocol
-func NewCommonNATTraversalProtocol(protocol nat_traversal.Interface) *CommonNATTraversalProtocol {
+// NewCommonProtocol returns a new CommonProtocol
+func NewCommonProtocol(protocol nat_traversal.Interface) *CommonProtocol {
 	protocol.SetHandlerRequestProbeInitiationExt(requestProbeInitiationExt)
 	protocol.SetHandlerReportNATProperties(reportNATProperties)
 	protocol.SetHandlerReportNATTraversalResult(reportNATTraversalResult)
 	protocol.SetHandlerGetRelaySignatureKey(getRelaySignatureKey)
 	protocol.SetHandlerReportNATTraversalResultDetail(reportNATTraversalResultDetail)
 
-	commonNATTraversalProtocol = &CommonNATTraversalProtocol{
+	commonProtocol = &CommonProtocol{
 		server:   protocol.Server(),
 		protocol: protocol,
 	}
 
-	return commonNATTraversalProtocol
+	return commonProtocol
 }

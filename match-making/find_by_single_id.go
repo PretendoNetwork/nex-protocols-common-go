@@ -12,7 +12,7 @@ func findBySingleID(err error, packet nex.PacketInterface, callID uint32, id uin
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
-	server := commonMatchMakingProtocol.server
+	server := commonProtocol.server
 
 	session, ok := common_globals.Sessions[id]
 	if !ok {

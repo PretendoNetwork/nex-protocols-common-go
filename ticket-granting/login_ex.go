@@ -27,7 +27,7 @@ func loginEx(err error, packet nex.PacketInterface, callID uint32, username stri
 			panic(err)
 		}
 
-		if commonTicketGrantingProtocol.server.LibraryVersion().GreaterOrEqual("4.0.0") {
+		if commonProtocol.server.LibraryVersion().GreaterOrEqual("4.0.0") {
 			userPID = nex.NewPID[uint64](uint64(converted))
 		} else {
 			userPID = nex.NewPID[uint32](uint32(converted))
@@ -49,9 +49,9 @@ func loginEx(err error, packet nex.PacketInterface, callID uint32, username stri
 	var strReturnMsg string
 
 	pConnectionData = nex.NewRVConnectionData()
-	pConnectionData.StationURL = commonTicketGrantingProtocol.SecureStationURL
-	pConnectionData.SpecialProtocols = commonTicketGrantingProtocol.SpecialProtocols
-	pConnectionData.StationURLSpecialProtocols = commonTicketGrantingProtocol.StationURLSpecialProtocols
+	pConnectionData.StationURL = commonProtocol.SecureStationURL
+	pConnectionData.SpecialProtocols = commonProtocol.SpecialProtocols
+	pConnectionData.StationURLSpecialProtocols = commonProtocol.StationURLSpecialProtocols
 	pConnectionData.Time = nex.NewDateTime(0).Now()
 
 	// * From the wiki:
@@ -64,10 +64,10 @@ func loginEx(err error, packet nex.PacketInterface, callID uint32, username stri
 		retval = nex.NewResultSuccess(nex.Errors.Core.Unknown)
 		pidPrincipal = userPID
 		pbufResponse = encryptedTicket
-		strReturnMsg = commonTicketGrantingProtocol.BuildName
+		strReturnMsg = commonProtocol.BuildName
 	}
 
-	rmcResponseStream := nex.NewStreamOut(commonTicketGrantingProtocol.server)
+	rmcResponseStream := nex.NewStreamOut(commonProtocol.server)
 
 	rmcResponseStream.WriteResult(retval)
 	rmcResponseStream.WritePID(pidPrincipal)

@@ -15,7 +15,7 @@ func joinMatchmakeSession(err error, packet nex.PacketInterface, callID uint32, 
 	// TODO - Remove cast to PRUDPClient?
 	client := packet.Sender().(*nex.PRUDPClient)
 
-	server := commonMatchmakeExtensionProtocol.server
+	server := commonProtocol.server
 
 	session, ok := common_globals.Sessions[gid]
 	if !ok {

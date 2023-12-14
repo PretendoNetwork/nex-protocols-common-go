@@ -9,17 +9,17 @@ import (
 )
 
 func completePostObjects(err error, packet nex.PacketInterface, callID uint32, dataIDs []uint64) (*nex.RMCMessage, uint32) {
-	if commonDataStoreProtocol.minIOClient == nil {
+	if commonProtocol.minIOClient == nil {
 		common_globals.Logger.Warning("MinIOClient not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
 
-	if commonDataStoreProtocol.GetObjectSizeByDataID == nil {
+	if commonProtocol.GetObjectSizeByDataID == nil {
 		common_globals.Logger.Warning("GetObjectSizeByDataID not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
 
-	if commonDataStoreProtocol.UpdateObjectUploadCompletedByDataID == nil {
+	if commonProtocol.UpdateObjectUploadCompletedByDataID == nil {
 		common_globals.Logger.Warning("UpdateObjectUploadCompletedByDataID not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
@@ -30,16 +30,16 @@ func completePostObjects(err error, packet nex.PacketInterface, callID uint32, d
 	}
 
 	for _, dataID := range dataIDs {
-		bucket := commonDataStoreProtocol.S3Bucket
-		key := fmt.Sprintf("%s/%d.bin", commonDataStoreProtocol.s3DataKeyBase, dataID)
+		bucket := commonProtocol.S3Bucket
+		key := fmt.Sprintf("%s/%d.bin", commonProtocol.s3DataKeyBase, dataID)
 
-		objectSizeS3, err := commonDataStoreProtocol.S3ObjectSize(bucket, key)
+		objectSizeS3, err := commonProtocol.S3ObjectSize(bucket, key)
 		if err != nil {
 			common_globals.Logger.Error(err.Error())
 			return nil, nex.Errors.DataStore.NotFound
 		}
 
-		objectSizeDB, errCode := commonDataStoreProtocol.GetObjectSizeByDataID(dataID)
+		objectSizeDB, errCode := commonProtocol.GetObjectSizeByDataID(dataID)
 		if errCode != 0 {
 			return nil, errCode
 		}
@@ -50,7 +50,7 @@ func completePostObjects(err error, packet nex.PacketInterface, callID uint32, d
 			return nil, nex.Errors.DataStore.Unknown
 		}
 
-		errCode = commonDataStoreProtocol.UpdateObjectUploadCompletedByDataID(dataID, true)
+		errCode = commonProtocol.UpdateObjectUploadCompletedByDataID(dataID, true)
 		if errCode != 0 {
 			return nil, errCode
 		}

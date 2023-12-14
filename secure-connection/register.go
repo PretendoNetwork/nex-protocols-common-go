@@ -16,7 +16,7 @@ func register(err error, packet nex.PacketInterface, callID uint32, stationUrls 
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
-	server := commonSecureConnectionProtocol.server
+	server := commonProtocol.server
 
 	if _, ok := server.(*nex.PRUDPServer); !ok {
 		// * Do nothing if not a PRUDP server

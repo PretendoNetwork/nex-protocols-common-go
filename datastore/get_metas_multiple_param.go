@@ -8,12 +8,12 @@ import (
 )
 
 func getMetasMultipleParam(err error, packet nex.PacketInterface, callID uint32, params []*datastore_types.DataStoreGetMetaParam) (*nex.RMCMessage, uint32) {
-	if commonDataStoreProtocol.GetObjectInfoByPersistenceTargetWithPassword == nil {
+	if commonProtocol.GetObjectInfoByPersistenceTargetWithPassword == nil {
 		common_globals.Logger.Warning("GetObjectInfoByPersistenceTargetWithPassword not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
 
-	if commonDataStoreProtocol.GetObjectInfoByDataIDWithPassword == nil {
+	if commonProtocol.GetObjectInfoByDataIDWithPassword == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataIDWithPassword not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
@@ -34,9 +34,9 @@ func getMetasMultipleParam(err error, packet nex.PacketInterface, callID uint32,
 
 		// * Real server ignores PersistenceTarget if DataID is set
 		if param.DataID == 0 {
-			objectInfo, errCode = commonDataStoreProtocol.GetObjectInfoByPersistenceTargetWithPassword(param.PersistenceTarget, param.AccessPassword)
+			objectInfo, errCode = commonProtocol.GetObjectInfoByPersistenceTargetWithPassword(param.PersistenceTarget, param.AccessPassword)
 		} else {
-			objectInfo, errCode = commonDataStoreProtocol.GetObjectInfoByDataIDWithPassword(param.DataID, param.AccessPassword)
+			objectInfo, errCode = commonProtocol.GetObjectInfoByDataIDWithPassword(param.DataID, param.AccessPassword)
 		}
 
 		if errCode != 0 {
@@ -44,7 +44,7 @@ func getMetasMultipleParam(err error, packet nex.PacketInterface, callID uint32,
 
 			pResults = append(pResults, nex.NewResultError(errCode))
 		} else {
-			errCode = commonDataStoreProtocol.VerifyObjectPermission(objectInfo.OwnerID, client.PID(), objectInfo.Permission)
+			errCode = commonProtocol.VerifyObjectPermission(objectInfo.OwnerID, client.PID(), objectInfo.Permission)
 			if errCode != 0 {
 				objectInfo = datastore_types.NewDataStoreMetaInfo()
 
@@ -59,7 +59,7 @@ func getMetasMultipleParam(err error, packet nex.PacketInterface, callID uint32,
 		pMetaInfo = append(pMetaInfo, objectInfo)
 	}
 
-	rmcResponseStream := nex.NewStreamOut(commonDataStoreProtocol.server)
+	rmcResponseStream := nex.NewStreamOut(commonProtocol.server)
 
 	nex.StreamWriteListStructure(rmcResponseStream, pMetaInfo)
 	rmcResponseStream.WriteListResult(pResults)

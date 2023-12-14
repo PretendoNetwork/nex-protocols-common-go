@@ -13,7 +13,7 @@ func autoMatchmakeWithParam_Postpone(err error, packet nex.PacketInterface, call
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
-	server := commonMatchmakeExtensionProtocol.server
+	server := commonProtocol.server
 
 	// TODO - Remove cast to PRUDPClient?
 	client := packet.Sender().(*nex.PRUDPClient)
@@ -25,7 +25,7 @@ func autoMatchmakeWithParam_Postpone(err error, packet nex.PacketInterface, call
 	var matchmakeSession *match_making_types.MatchmakeSession
 	matchmakeSession = autoMatchmakeParam.SourceMatchmakeSession
 
-	sessions := common_globals.FindSessionsByMatchmakeSessionSearchCriterias(client.PID(), autoMatchmakeParam.LstSearchCriteria, commonMatchmakeExtensionProtocol.GameSpecificMatchmakeSessionSearchCriteriaChecks)
+	sessions := common_globals.FindSessionsByMatchmakeSessionSearchCriterias(client.PID(), autoMatchmakeParam.LstSearchCriteria, commonProtocol.GameSpecificMatchmakeSessionSearchCriteriaChecks)
 	var session *common_globals.CommonMatchmakeSession
 
 	if len(sessions) == 0 {

@@ -21,7 +21,7 @@ func requestTicket(err error, packet nex.PacketInterface, callID uint32, userPID
 		return nil, errorCode
 	}
 
-	rmcResponseStream := nex.NewStreamOut(commonTicketGrantingProtocol.server)
+	rmcResponseStream := nex.NewStreamOut(commonProtocol.server)
 
 	rmcResponseStream.WriteResult(nex.NewResultSuccess(nex.Errors.Core.Unknown))
 	rmcResponseStream.WriteBuffer(encryptedTicket)

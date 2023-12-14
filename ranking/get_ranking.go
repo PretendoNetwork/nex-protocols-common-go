@@ -9,19 +9,19 @@ import (
 )
 
 func getRanking(err error, packet nex.PacketInterface, callID uint32, rankingMode uint8, category uint32, orderParam *ranking_types.RankingOrderParam, uniqueID uint64, principalID *nex.PID) (*nex.RMCMessage, uint32) {
-	if commonRankingProtocol.GetRankingsAndCountByCategoryAndRankingOrderParam == nil {
+	if commonProtocol.GetRankingsAndCountByCategoryAndRankingOrderParam == nil {
 		common_globals.Logger.Warning("Ranking::GetRanking missing GetRankingsAndCountByCategoryAndRankingOrderParam!")
 		return nil, nex.Errors.Core.NotImplemented
 	}
 
-	server := commonRankingProtocol.server
+	server := commonProtocol.server
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.Errors.Ranking.InvalidArgument
 	}
 
-	rankDataList, totalCount, err := commonRankingProtocol.GetRankingsAndCountByCategoryAndRankingOrderParam(category, orderParam)
+	rankDataList, totalCount, err := commonProtocol.GetRankingsAndCountByCategoryAndRankingOrderParam(category, orderParam)
 	if err != nil {
 		common_globals.Logger.Critical(err.Error())
 		return nil, nex.Errors.Ranking.Unknown

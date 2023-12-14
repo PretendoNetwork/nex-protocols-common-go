@@ -8,12 +8,12 @@ import (
 )
 
 func rateObject(err error, packet nex.PacketInterface, callID uint32, target *datastore_types.DataStoreRatingTarget, param *datastore_types.DataStoreRateObjectParam, fetchRatings bool) (*nex.RMCMessage, uint32) {
-	if commonDataStoreProtocol.GetObjectInfoByDataIDWithPassword == nil {
+	if commonProtocol.GetObjectInfoByDataIDWithPassword == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataIDWithPassword not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
 
-	if commonDataStoreProtocol.RateObjectWithPassword == nil {
+	if commonProtocol.RateObjectWithPassword == nil {
 		common_globals.Logger.Warning("RateObjectWithPassword not defined")
 		return nil, nex.Errors.Core.NotImplemented
 	}
@@ -25,17 +25,17 @@ func rateObject(err error, packet nex.PacketInterface, callID uint32, target *da
 
 	client := packet.Sender()
 
-	objectInfo, errCode := commonDataStoreProtocol.GetObjectInfoByDataIDWithPassword(target.DataID, param.AccessPassword)
+	objectInfo, errCode := commonProtocol.GetObjectInfoByDataIDWithPassword(target.DataID, param.AccessPassword)
 	if errCode != 0 {
 		return nil, errCode
 	}
 
-	errCode = commonDataStoreProtocol.VerifyObjectPermission(objectInfo.OwnerID, client.PID(), objectInfo.Permission)
+	errCode = commonProtocol.VerifyObjectPermission(objectInfo.OwnerID, client.PID(), objectInfo.Permission)
 	if errCode != 0 {
 		return nil, errCode
 	}
 
-	pRating, errCode := commonDataStoreProtocol.RateObjectWithPassword(target.DataID, target.Slot, param.RatingValue, param.AccessPassword)
+	pRating, errCode := commonProtocol.RateObjectWithPassword(target.DataID, target.Slot, param.RatingValue, param.AccessPassword)
 	if errCode != 0 {
 		return nil, errCode
 	}
@@ -48,7 +48,7 @@ func rateObject(err error, packet nex.PacketInterface, callID uint32, target *da
 		pRating = datastore_types.NewDataStoreRatingInfo()
 	}
 
-	rmcResponseStream := nex.NewStreamOut(commonDataStoreProtocol.server)
+	rmcResponseStream := nex.NewStreamOut(commonProtocol.server)
 
 	rmcResponseStream.WriteStructure(pRating)
 

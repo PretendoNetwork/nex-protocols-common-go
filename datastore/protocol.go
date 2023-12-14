@@ -12,9 +12,9 @@ import (
 	"github.com/minio/minio-go/v7"
 )
 
-var commonDataStoreProtocol *CommonDataStoreProtocol
+var commonProtocol *CommonProtocol
 
-type CommonDataStoreProtocol struct {
+type CommonProtocol struct {
 	server                                       nex.ServerInterface
 	protocol                                     datastore.Interface
 	S3Bucket                                     string
@@ -43,11 +43,11 @@ type CommonDataStoreProtocol struct {
 	GetObjectOwnerByDataID                       func(dataID uint64) (uint32, uint32)
 }
 
-func (c *CommonDataStoreProtocol) S3StatObject(bucket, key string) (minio.ObjectInfo, error) {
+func (c *CommonProtocol) S3StatObject(bucket, key string) (minio.ObjectInfo, error) {
 	return c.minIOClient.StatObject(context.TODO(), bucket, key, minio.StatObjectOptions{})
 }
 
-func (c *CommonDataStoreProtocol) S3ObjectSize(bucket, key string) (uint64, error) {
+func (c *CommonProtocol) S3ObjectSize(bucket, key string) (uint64, error) {
 	info, err := c.S3StatObject(bucket, key)
 	if err != nil {
 		return 0, err
@@ -56,7 +56,7 @@ func (c *CommonDataStoreProtocol) S3ObjectSize(bucket, key string) (uint64, erro
 	return uint64(info.Size), nil
 }
 
-func (c *CommonDataStoreProtocol) VerifyObjectPermission(ownerPID, accessorPID *nex.PID, permission *datastore_types.DataStorePermission) uint32 {
+func (c *CommonProtocol) VerifyObjectPermission(ownerPID, accessorPID *nex.PID, permission *datastore_types.DataStorePermission) uint32 {
 	if permission.Permission > 3 {
 		return nex.Errors.DataStore.InvalidArgument
 	}
@@ -99,7 +99,7 @@ func (c *CommonDataStoreProtocol) VerifyObjectPermission(ownerPID, accessorPID *
 }
 
 // SetDataKeyBase sets the base for the key to be used when uploading standard DataStore objects
-func (c *CommonDataStoreProtocol) SetDataKeyBase(base string) {
+func (c *CommonProtocol) SetDataKeyBase(base string) {
 	// * Just in case someone passes a badly formatted key
 	base = strings.TrimPrefix(base, "/")
 	base = strings.TrimSuffix(base, "/")
@@ -107,7 +107,7 @@ func (c *CommonDataStoreProtocol) SetDataKeyBase(base string) {
 }
 
 // SetNotifyKeyBase sets the base for the key to be used when uploading DataStore notification data
-func (c *CommonDataStoreProtocol) SetNotifyKeyBase(base string) {
+func (c *CommonProtocol) SetNotifyKeyBase(base string) {
 	// * Just in case someone passes a badly formatted key
 	base = strings.TrimPrefix(base, "/")
 	base = strings.TrimSuffix(base, "/")
@@ -115,13 +115,13 @@ func (c *CommonDataStoreProtocol) SetNotifyKeyBase(base string) {
 }
 
 // SetMinIOClient sets the MinIO S3 client
-func (c *CommonDataStoreProtocol) SetMinIOClient(client *minio.Client) {
+func (c *CommonProtocol) SetMinIOClient(client *minio.Client) {
 	c.minIOClient = client
 	c.S3Presigner = NewS3Presigner(c.minIOClient)
 }
 
-// NewCommonDataStoreProtocol returns a new CommonDataStoreProtocol
-func NewCommonDataStoreProtocol(protocol datastore.Interface) *CommonDataStoreProtocol {
+// NewCommonProtocol returns a new CommonProtocol
+func NewCommonProtocol(protocol datastore.Interface) *CommonProtocol {
 	protocol.SetHandlerDeleteObject(deleteObject)
 	protocol.SetHandlerGetMeta(getMeta)
 	protocol.SetHandlerGetMetas(getMetas)
@@ -136,7 +136,7 @@ func NewCommonDataStoreProtocol(protocol datastore.Interface) *CommonDataStorePr
 	protocol.SetHandlerChangeMeta(changeMeta)
 	protocol.SetHandlerRateObjects(rateObjects)
 
-	commonDataStoreProtocol = &CommonDataStoreProtocol{
+	commonProtocol = &CommonProtocol{
 		server:     protocol.Server(),
 		protocol:   protocol,
 		RootCACert: []byte{},
@@ -147,5 +147,5 @@ func NewCommonDataStoreProtocol(protocol datastore.Interface) *CommonDataStorePr
 			return []*datastore_types.DataStoreKeyValue{}, 0
 		},
 	}
-	return commonDataStoreProtocol
+	return commonProtocol
 }
