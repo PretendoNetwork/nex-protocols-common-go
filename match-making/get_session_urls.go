@@ -19,7 +19,7 @@ func getSessionURLs(err error, packet nex.PacketInterface, callID uint32, gid ui
 
 	server := commonMatchMakingProtocol.server
 
-	// TODO - Remove cast to PRUDPClient once websockets are implemented
+	// TODO - Remove cast to PRUDPClient?
 	client := packet.Sender().(*nex.PRUDPClient)
 
 	hostPID := session.GameMatchmakeSession.Gathering.HostPID

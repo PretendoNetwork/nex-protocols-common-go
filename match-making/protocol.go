@@ -18,7 +18,7 @@ type CommonMatchMakingProtocol struct {
 
 // NewCommonMatchMakingProtocol returns a new CommonMatchMakingProtocol
 func NewCommonMatchMakingProtocol(protocol match_making.Interface) *CommonMatchMakingProtocol {
-	// TODO - Remove cast to PRUDPServer once websockets are implemented
+	// TODO - Remove cast to PRUDPServer?
 	server := protocol.Server().(*nex.PRUDPServer)
 
 	common_globals.Sessions = make(map[uint32]*common_globals.CommonMatchmakeSession)
@@ -35,8 +35,6 @@ func NewCommonMatchMakingProtocol(protocol match_making.Interface) *CommonMatchM
 		protocol: protocol,
 	}
 
-	// TODO - Once websockets are implemented, make an interface for PRUDP
-	// and websockets which implements this function
 	server.OnClientRemoved(func(client *nex.PRUDPClient) {
 		fmt.Println("Leaving")
 		common_globals.RemoveClientFromAllSessions(client)

@@ -23,7 +23,7 @@ func register(err error, packet nex.PacketInterface, callID uint32, stationUrls 
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
-	// TODO - Remove cast to PRUDPClient once websockets are implemented
+	// TODO - Remove cast to PRUDPClient?
 	client := packet.Sender().(*nex.PRUDPClient)
 
 	client.ConnectionID = server.(*nex.PRUDPServer).ConnectionIDCounter().Next()
@@ -45,8 +45,16 @@ func register(err error, packet nex.PacketInterface, callID uint32, stationUrls 
 	if publicStation == nil {
 		publicStation = localStation.Copy()
 
-		publicStation.Fields.Set("address", client.Address().(*net.UDPAddr).IP.String())
-		publicStation.Fields.Set("port", strconv.Itoa(client.Address().(*net.UDPAddr).Port))
+		var address, port string
+		switch clientAddress := client.Address().(type) {
+		case *net.UDPAddr:
+		case *net.TCPAddr:
+			address = clientAddress.IP.String()
+			port = strconv.Itoa(clientAddress.Port)
+		}
+
+		publicStation.Fields.Set("address", address)
+		publicStation.Fields.Set("port", port)
 		publicStation.Fields.Set("natf", "0")
 		publicStation.Fields.Set("natm", "0")
 		publicStation.Fields.Set("type", "3")

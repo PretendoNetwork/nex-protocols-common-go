@@ -35,7 +35,7 @@ func getSimplePlayingSession(err error, packet nex.PacketInterface, callID uint3
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
-	// TODO - Remove PRUDP casts once websockets are implemented
+	// TODO - Remove PRUDP casts?
 	server := commonMatchmakeExtensionProtocol.server.(*nex.PRUDPServer)
 	client := packet.Sender().(*nex.PRUDPClient)
 

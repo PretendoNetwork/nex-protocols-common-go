@@ -15,7 +15,7 @@ func autoMatchmakeWithSearchCriteria_Postpone(err error, packet nex.PacketInterf
 
 	server := commonMatchmakeExtensionProtocol.server
 
-	// TODO - Remove cast to PRUDPClient once websockets are implemented
+	// TODO - Remove cast to PRUDPClient?
 	client := packet.Sender().(*nex.PRUDPClient)
 
 	// * A client may disconnect from a session without leaving reliably,

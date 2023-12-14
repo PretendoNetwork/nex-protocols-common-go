@@ -15,7 +15,7 @@ func replaceURL(err error, packet nex.PacketInterface, callID uint32, oldStation
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
-	// TODO - Remove cast to PRUDPClient once websockets are implemented
+	// TODO - Remove cast to PRUDPClient?
 	client := packet.Sender().(*nex.PRUDPClient)
 
 	stations := client.StationURLs

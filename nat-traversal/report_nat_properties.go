@@ -15,7 +15,7 @@ func reportNATProperties(err error, packet nex.PacketInterface, callID uint32, n
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
-	// TODO - Remove cast to PRUDPClient once websockets are implemented
+	// TODO - Remove cast to PRUDPClient?
 	client := packet.Sender().(*nex.PRUDPClient)
 
 	for _, station := range client.StationURLs {

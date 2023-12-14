@@ -9,7 +9,7 @@ import (
 )
 
 func generateTicket(userPID *nex.PID, targetPID *nex.PID) ([]byte, uint32) {
-	// TODO - Remove cast to PRUDPServer once websockets are implemented
+	// TODO - Remove cast to PRUDPServer?
 	server := commonTicketGrantingProtocol.server.(*nex.PRUDPServer)
 
 	var userPassword []byte

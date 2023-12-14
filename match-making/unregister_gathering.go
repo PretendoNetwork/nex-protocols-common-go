@@ -16,7 +16,7 @@ func unregisterGathering(err error, packet nex.PacketInterface, callID uint32, i
 
 	server := commonMatchMakingProtocol.server
 
-	// TODO - Remove cast to PRUDPClient once websockets are implemented
+	// TODO - Remove cast to PRUDPClient?
 	client := packet.Sender().(*nex.PRUDPClient)
 
 	var session *common_globals.CommonMatchmakeSession
