@@ -16,7 +16,7 @@ func loginEx(err error, packet nex.PacketInterface, callID uint32, username stri
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
-	userPID := nex.NewPID[uint64](0)
+	var userPID *nex.PID
 
 	// TODO - This needs to change to support QRV clients, who may not send PIDs as usernames
 	if username == "guest" {
