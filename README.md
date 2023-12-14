@@ -52,7 +52,7 @@ func main() {
 	})
 
 	ticketGrantingProtocol := ticket_granting.NewProtocol(nexServer)
-	commonProtocol := common_ticket_granting.NewCommonProtocol(ticketGrantingProtocol)
+	commonTicketGrantingProtocol := common_ticket_granting.NewCommonProtocol(ticketGrantingProtocol)
 
 	secureStationURL := nex.NewStationURL("")
 	secureStationURL.Scheme = "prudps"
@@ -64,8 +64,8 @@ func main() {
 	secureStationURL.Fields.Set("stream", "10")
 	secureStationURL.Fields.Set("type", "2")
 
-	commonProtocol.SecureStationURL = secureStationURL
-	commonProtocol.BuildName = "Pretendo Friends Auth"
+	commonTicketGrantingProtocol.SecureStationURL = secureStationURL
+	commonTicketGrantingProtocol.BuildName = "Pretendo Friends Auth"
 	nexServer.SetPasswordFromPIDFunction(passwordFromPID)
 
 	nexServer.Listen(60000)
