@@ -11,11 +11,13 @@ import (
 var commonTicketGrantingProtocol *CommonTicketGrantingProtocol
 
 type CommonTicketGrantingProtocol struct {
-	server                   nex.ServerInterface
-	protocol                 ticket_granting.Interface
-	SecureStationURL         *nex.StationURL
-	BuildName                string
-	allowInsecureLoginMethod bool
+	server                     nex.ServerInterface
+	protocol                   ticket_granting.Interface
+	SecureStationURL           *nex.StationURL
+	SpecialProtocols           []uint8
+	StationURLSpecialProtocols *nex.StationURL
+	BuildName                  string
+	allowInsecureLoginMethod   bool
 }
 
 func (commonTicketGrantingProtocol *CommonTicketGrantingProtocol) DisableInsecureLogin() {
@@ -34,8 +36,11 @@ func NewCommonTicketGrantingProtocol(protocol ticket_granting.Interface) *Common
 	protocol.SetHandlerRequestTicket(requestTicket)
 
 	commonTicketGrantingProtocol = &CommonTicketGrantingProtocol{
-		server:   protocol.Server(),
-		protocol: protocol,
+		server:                     protocol.Server(),
+		protocol:                   protocol,
+		SecureStationURL:           nex.NewStationURL("prudp:/"),
+		SpecialProtocols:           make([]uint8, 0),
+		StationURLSpecialProtocols: nex.NewStationURL("prudp:/"),
 	}
 
 	commonTicketGrantingProtocol.DisableInsecureLogin() // * Disable insecure login by default

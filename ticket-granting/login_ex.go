@@ -50,8 +50,8 @@ func loginEx(err error, packet nex.PacketInterface, callID uint32, username stri
 
 	pConnectionData = nex.NewRVConnectionData()
 	pConnectionData.StationURL = commonTicketGrantingProtocol.SecureStationURL
-	pConnectionData.SpecialProtocols = []byte{}
-	pConnectionData.StationURLSpecialProtocols = nex.NewStationURL("")
+	pConnectionData.SpecialProtocols = commonTicketGrantingProtocol.SpecialProtocols
+	pConnectionData.StationURLSpecialProtocols = commonTicketGrantingProtocol.StationURLSpecialProtocols
 	pConnectionData.Time = nex.NewDateTime(0).Now()
 
 	// * From the wiki:
