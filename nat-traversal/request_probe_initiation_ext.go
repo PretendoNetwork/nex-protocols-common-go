@@ -19,7 +19,7 @@ func requestProbeInitiationExt(err error, packet nex.PacketInterface, callID uin
 	server := commonProtocol.server.(*nex.PRUDPServer)
 	client := packet.Sender().(*nex.PRUDPClient)
 
-	rmcResponse := nex.NewRMCSuccess(nil)
+	rmcResponse := nex.NewRMCSuccess(server, nil)
 	rmcResponse.ProtocolID = nat_traversal.ProtocolID
 	rmcResponse.MethodID = nat_traversal.MethodRequestProbeInitiationExt
 	rmcResponse.CallID = callID
@@ -29,7 +29,7 @@ func requestProbeInitiationExt(err error, packet nex.PacketInterface, callID uin
 
 	rmcRequestBody := rmcRequestStream.Bytes()
 
-	rmcRequest := nex.NewRMCRequest()
+	rmcRequest := nex.NewRMCRequest(server)
 	rmcRequest.ProtocolID = nat_traversal.ProtocolID
 	rmcRequest.CallID = 0xffff0000 + callID
 	rmcRequest.MethodID = nat_traversal.MethodInitiateProbe

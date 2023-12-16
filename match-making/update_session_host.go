@@ -33,7 +33,7 @@ func updateSessionHost(err error, packet nex.PacketInterface, callID uint32, gid
 		session.GameMatchmakeSession.Gathering.OwnerPID = client.PID()
 	}
 
-	rmcResponse := nex.NewRMCSuccess(nil)
+	rmcResponse := nex.NewRMCSuccess(server, nil)
 	rmcResponse.ProtocolID = match_making.ProtocolID
 	rmcResponse.MethodID = match_making.MethodUpdateSessionHost
 	rmcResponse.CallID = callID
@@ -59,7 +59,7 @@ func updateSessionHost(err error, packet nex.PacketInterface, callID uint32, gid
 	stream := nex.NewStreamOut(server)
 	oEventBytes := oEvent.Bytes(stream)
 
-	rmcRequest := nex.NewRMCRequest()
+	rmcRequest := nex.NewRMCRequest(server)
 	rmcRequest.ProtocolID = notifications.ProtocolID
 	rmcRequest.CallID = common_globals.CurrentMatchmakingCallID.Next()
 	rmcRequest.MethodID = notifications.MethodProcessNotificationEvent

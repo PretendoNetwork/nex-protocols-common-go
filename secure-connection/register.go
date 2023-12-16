@@ -82,7 +82,7 @@ func register(err error, packet nex.PacketInterface, callID uint32, stationUrls 
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
 	rmcResponse.ProtocolID = secure_connection.ProtocolID
 	rmcResponse.MethodID = secure_connection.MethodRegister
 	rmcResponse.CallID = callID

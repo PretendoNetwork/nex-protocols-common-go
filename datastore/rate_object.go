@@ -23,6 +23,7 @@ func rateObject(err error, packet nex.PacketInterface, callID uint32, target *da
 		return nil, nex.Errors.DataStore.Unknown
 	}
 
+	server := commonProtocol.server
 	client := packet.Sender()
 
 	objectInfo, errCode := commonProtocol.GetObjectInfoByDataIDWithPassword(target.DataID, param.AccessPassword)
@@ -54,7 +55,7 @@ func rateObject(err error, packet nex.PacketInterface, callID uint32, target *da
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
 	rmcResponse.ProtocolID = datastore.ProtocolID
 	rmcResponse.MethodID = datastore.MethodRateObject
 	rmcResponse.CallID = callID

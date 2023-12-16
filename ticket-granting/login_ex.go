@@ -16,6 +16,8 @@ func loginEx(err error, packet nex.PacketInterface, callID uint32, username stri
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
+	server := commonProtocol.server
+
 	var userPID *nex.PID
 
 	// TODO - This needs to change to support QRV clients, who may not send PIDs as usernames
@@ -77,7 +79,7 @@ func loginEx(err error, packet nex.PacketInterface, callID uint32, username stri
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
 	rmcResponse.ProtocolID = ticket_granting.ProtocolID
 	rmcResponse.MethodID = ticket_granting.MethodLoginEx
 	rmcResponse.CallID = callID

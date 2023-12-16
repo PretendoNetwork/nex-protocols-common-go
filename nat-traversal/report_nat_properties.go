@@ -15,6 +15,8 @@ func reportNATProperties(err error, packet nex.PacketInterface, callID uint32, n
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
+	server := commonProtocol.server
+
 	// TODO - Remove cast to PRUDPClient?
 	client := packet.Sender().(*nex.PRUDPClient)
 
@@ -28,7 +30,7 @@ func reportNATProperties(err error, packet nex.PacketInterface, callID uint32, n
 		station.Fields.Set("PID", strconv.Itoa(int(client.PID().Value())))
 	}
 
-	rmcResponse := nex.NewRMCSuccess(nil)
+	rmcResponse := nex.NewRMCSuccess(server, nil)
 	rmcResponse.ProtocolID = nat_traversal.ProtocolID
 	rmcResponse.MethodID = nat_traversal.MethodReportNATProperties
 	rmcResponse.CallID = callID

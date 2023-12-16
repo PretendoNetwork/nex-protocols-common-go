@@ -12,6 +12,8 @@ func updateSessionHostV1(err error, packet nex.PacketInterface, callID uint32, g
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
+	server := commonProtocol.server
+
 	// TODO - Remove cast to PRUDPClient?
 	client := packet.Sender().(*nex.PRUDPClient)
 
@@ -30,7 +32,7 @@ func updateSessionHostV1(err error, packet nex.PacketInterface, callID uint32, g
 		session.GameMatchmakeSession.Gathering.OwnerPID = client.PID()
 	}
 
-	rmcResponse := nex.NewRMCSuccess(nil)
+	rmcResponse := nex.NewRMCSuccess(server, nil)
 	rmcResponse.ProtocolID = match_making.ProtocolID
 	rmcResponse.MethodID = match_making.MethodUpdateSessionHostV1
 	rmcResponse.CallID = callID

@@ -37,7 +37,7 @@ func joinMatchmakeSessionWithParam(err error, packet nex.PacketInterface, callID
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
 	rmcResponse.ProtocolID = matchmake_extension.ProtocolID
 	rmcResponse.MethodID = matchmake_extension.MethodJoinMatchmakeSessionWithParam
 	rmcResponse.CallID = callID

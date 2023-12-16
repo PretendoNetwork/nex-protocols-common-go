@@ -40,7 +40,7 @@ func getSessionURLs(err error, packet nex.PacketInterface, callID uint32, gid ui
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
 	rmcResponse.ProtocolID = match_making.ProtocolID
 	rmcResponse.MethodID = match_making.MethodGetSessionURLs
 	rmcResponse.CallID = callID

@@ -33,6 +33,7 @@ func changeMeta(err error, packet nex.PacketInterface, callID uint32, param *dat
 		return nil, nex.Errors.DataStore.Unknown
 	}
 
+	server := commonProtocol.server
 	client := packet.Sender()
 
 	metaInfo, errCode := commonProtocol.GetObjectInfoByDataID(param.DataID)
@@ -67,7 +68,7 @@ func changeMeta(err error, packet nex.PacketInterface, callID uint32, param *dat
 		}
 	}
 
-	rmcResponse := nex.NewRMCSuccess(nil)
+	rmcResponse := nex.NewRMCSuccess(server, nil)
 	rmcResponse.ProtocolID = datastore.ProtocolID
 	rmcResponse.MethodID = datastore.MethodChangeMeta
 	rmcResponse.CallID = callID

@@ -87,7 +87,7 @@ func getSimplePlayingSession(err error, packet nex.PacketInterface, callID uint3
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
 	rmcResponse.ProtocolID = matchmake_extension.ProtocolID
 	rmcResponse.MethodID = matchmake_extension.MethodGetSimplePlayingSession
 	rmcResponse.CallID = callID

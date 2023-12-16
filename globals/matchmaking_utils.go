@@ -96,7 +96,7 @@ func RemoveClientFromAllSessions(client *nex.PRUDPClient) {
 			stream := nex.NewStreamOut(server)
 			stream.WriteStructure(oEvent)
 
-			rmcRequest := nex.NewRMCRequest()
+			rmcRequest := nex.NewRMCRequest(server)
 			rmcRequest.ProtocolID = notifications.ProtocolID
 			rmcRequest.CallID = CurrentMatchmakingCallID.Next()
 			rmcRequest.MethodID = notifications.MethodProcessNotificationEvent
@@ -375,7 +375,7 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 
 		notificationStream.WriteStructure(oEvent)
 
-		notificationRequest := nex.NewRMCRequest()
+		notificationRequest := nex.NewRMCRequest(server)
 		notificationRequest.ProtocolID = notifications.ProtocolID
 		notificationRequest.CallID = CurrentMatchmakingCallID.Next()
 		notificationRequest.MethodID = notifications.MethodProcessNotificationEvent
@@ -431,7 +431,7 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 
 			notificationStream.WriteStructure(oEvent)
 
-			notificationRequest := nex.NewRMCRequest()
+			notificationRequest := nex.NewRMCRequest(server)
 			notificationRequest.ProtocolID = notifications.ProtocolID
 			notificationRequest.CallID = CurrentMatchmakingCallID.Next()
 			notificationRequest.MethodID = notifications.MethodProcessNotificationEvent
@@ -474,7 +474,7 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 
 		notificationStream.WriteStructure(oEvent)
 
-		notificationRequest := nex.NewRMCRequest()
+		notificationRequest := nex.NewRMCRequest(server)
 		notificationRequest.ProtocolID = notifications.ProtocolID
 		notificationRequest.CallID = CurrentMatchmakingCallID.Next()
 		notificationRequest.MethodID = notifications.MethodProcessNotificationEvent
@@ -564,7 +564,7 @@ func ChangeSessionOwner(ownerClient *nex.PRUDPClient, gathering uint32) {
 	stream := nex.NewStreamOut(server)
 	stream.WriteStructure(oEvent)
 
-	rmcRequest := nex.NewRMCRequest()
+	rmcRequest := nex.NewRMCRequest(server)
 	rmcRequest.ProtocolID = notifications.ProtocolID
 	rmcRequest.CallID = CurrentMatchmakingCallID.Next()
 	rmcRequest.MethodID = notifications.MethodProcessNotificationEvent

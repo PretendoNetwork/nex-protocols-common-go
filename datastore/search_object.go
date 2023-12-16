@@ -18,6 +18,7 @@ func searchObject(err error, packet nex.PacketInterface, callID uint32, param *d
 		return nil, nex.Errors.DataStore.Unknown
 	}
 
+	server := commonProtocol.server
 	client := packet.Sender()
 
 	// * This is likely game-specific. Also developer note:
@@ -82,7 +83,7 @@ func searchObject(err error, packet nex.PacketInterface, callID uint32, param *d
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
 	rmcResponse.ProtocolID = datastore.ProtocolID
 	rmcResponse.MethodID = datastore.MethodSearchObject
 	rmcResponse.CallID = callID

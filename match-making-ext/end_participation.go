@@ -52,7 +52,7 @@ func endParticipation(err error, packet nex.PacketInterface, callID uint32, idGa
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
 	rmcResponse.ProtocolID = match_making_ext.ProtocolID
 	rmcResponse.MethodID = match_making_ext.MethodEndParticipation
 	rmcResponse.CallID = callID
@@ -70,7 +70,7 @@ func endParticipation(err error, packet nex.PacketInterface, callID uint32, idGa
 	stream := nex.NewStreamOut(server)
 	oEventBytes := oEvent.Bytes(stream)
 
-	rmcRequest := nex.NewRMCRequest()
+	rmcRequest := nex.NewRMCRequest(server)
 	rmcRequest.ProtocolID = notifications.ProtocolID
 	rmcRequest.MethodID = notifications.MethodProcessNotificationEvent
 	rmcRequest.CallID = common_globals.CurrentMatchmakingCallID.Next()

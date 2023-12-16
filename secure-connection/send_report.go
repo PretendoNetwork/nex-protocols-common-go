@@ -18,6 +18,7 @@ func sendReport(err error, packet nex.PacketInterface, callID uint32, reportID u
 		return nil, nex.Errors.Core.Unknown
 	}
 
+	server := commonProtocol.server
 	client := packet.Sender()
 
 	err = commonProtocol.CreateReportDBRecord(client.PID().LegacyValue(), reportID, reportData)
@@ -26,7 +27,7 @@ func sendReport(err error, packet nex.PacketInterface, callID uint32, reportID u
 		return nil, nex.Errors.Core.Unknown
 	}
 
-	rmcResponse := nex.NewRMCSuccess(nil)
+	rmcResponse := nex.NewRMCSuccess(server, nil)
 	rmcResponse.ProtocolID = secure_connection.ProtocolID
 	rmcResponse.MethodID = secure_connection.MethodSendReport
 	rmcResponse.CallID = callID

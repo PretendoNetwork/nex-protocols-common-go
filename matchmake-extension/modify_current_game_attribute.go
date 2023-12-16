@@ -12,6 +12,7 @@ func modifyCurrentGameAttribute(err error, packet nex.PacketInterface, callID ui
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
+	server := commonProtocol.server
 	client := packet.Sender()
 
 	session, ok := common_globals.Sessions[gid]
@@ -29,7 +30,7 @@ func modifyCurrentGameAttribute(err error, packet nex.PacketInterface, callID ui
 
 	session.GameMatchmakeSession.Attributes[attribIndex] = newValue
 
-	rmcResponse := nex.NewRMCSuccess(nil)
+	rmcResponse := nex.NewRMCSuccess(server, nil)
 	rmcResponse.ProtocolID = matchmake_extension.ProtocolID
 	rmcResponse.MethodID = matchmake_extension.MethodModifyCurrentGameAttribute
 	rmcResponse.CallID = callID

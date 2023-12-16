@@ -23,6 +23,7 @@ func rateObjects(err error, packet nex.PacketInterface, callID uint32, targets [
 		return nil, nex.Errors.DataStore.Unknown
 	}
 
+	server := commonProtocol.server
 	client := packet.Sender()
 
 	pRatings := make([]*datastore_types.DataStoreRatingInfo, 0)
@@ -67,7 +68,7 @@ func rateObjects(err error, packet nex.PacketInterface, callID uint32, targets [
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
 	rmcResponse.ProtocolID = datastore.ProtocolID
 	rmcResponse.MethodID = datastore.MethodRateObjects
 	rmcResponse.CallID = callID

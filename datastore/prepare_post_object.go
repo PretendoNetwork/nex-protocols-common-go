@@ -31,6 +31,7 @@ func preparePostObject(err error, packet nex.PacketInterface, callID uint32, par
 		return nil, nex.Errors.DataStore.Unknown
 	}
 
+	server := commonProtocol.server
 	client := packet.Sender()
 
 	// TODO - Need to verify what param.PersistenceInitParam.DeleteLastObject really means. It's often set to true even when it wouldn't make sense
@@ -85,7 +86,7 @@ func preparePostObject(err error, packet nex.PacketInterface, callID uint32, par
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
 	rmcResponse.ProtocolID = datastore.ProtocolID
 	rmcResponse.MethodID = datastore.MethodPreparePostObject
 	rmcResponse.CallID = callID

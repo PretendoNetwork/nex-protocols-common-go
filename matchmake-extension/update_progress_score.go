@@ -12,6 +12,7 @@ func updateProgressScore(err error, packet nex.PacketInterface, callID uint32, g
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
+	server := commonProtocol.server
 	client := packet.Sender()
 
 	session := common_globals.Sessions[gid]
@@ -29,7 +30,7 @@ func updateProgressScore(err error, packet nex.PacketInterface, callID uint32, g
 
 	session.GameMatchmakeSession.ProgressScore += progressScore
 
-	rmcResponse := nex.NewRMCSuccess(nil)
+	rmcResponse := nex.NewRMCSuccess(server, nil)
 	rmcResponse.ProtocolID = matchmake_extension.ProtocolID
 	rmcResponse.MethodID = matchmake_extension.MethodUpdateProgressScore
 	rmcResponse.CallID = callID

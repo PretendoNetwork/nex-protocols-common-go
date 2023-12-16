@@ -23,6 +23,7 @@ func getMetasMultipleParam(err error, packet nex.PacketInterface, callID uint32,
 		return nil, nex.Errors.DataStore.Unknown
 	}
 
+	server := commonProtocol.server
 	client := packet.Sender()
 
 	pMetaInfo := make([]*datastore_types.DataStoreMetaInfo, 0, len(params))
@@ -66,7 +67,7 @@ func getMetasMultipleParam(err error, packet nex.PacketInterface, callID uint32,
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
 	rmcResponse.ProtocolID = datastore.ProtocolID
 	rmcResponse.MethodID = datastore.MethodGetMetasMultipleParam
 	rmcResponse.CallID = callID

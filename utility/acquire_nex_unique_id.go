@@ -28,7 +28,7 @@ func acquireNexUniqueID(err error, packet nex.PacketInterface, callID uint32) (*
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
 	rmcResponse.ProtocolID = utility.ProtocolID
 	rmcResponse.MethodID = utility.MethodAcquireNexUniqueID
 	rmcResponse.CallID = callID

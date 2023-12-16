@@ -53,7 +53,7 @@ func autoMatchmakeWithParam_Postpone(err error, packet nex.PacketInterface, call
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
 	rmcResponse.ProtocolID = matchmake_extension.ProtocolID
 	rmcResponse.MethodID = matchmake_extension.MethodAutoMatchmakeWithParamPostpone
 	rmcResponse.CallID = callID

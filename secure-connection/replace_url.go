@@ -15,6 +15,8 @@ func replaceURL(err error, packet nex.PacketInterface, callID uint32, oldStation
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
+	server := commonProtocol.server
+
 	// TODO - Remove cast to PRUDPClient?
 	client := packet.Sender().(*nex.PRUDPClient)
 
@@ -37,7 +39,7 @@ func replaceURL(err error, packet nex.PacketInterface, callID uint32, oldStation
 		}
 	}
 
-	rmcResponse := nex.NewRMCSuccess(nil)
+	rmcResponse := nex.NewRMCSuccess(server, nil)
 	rmcResponse.ProtocolID = secure_connection.ProtocolID
 	rmcResponse.MethodID = secure_connection.MethodReplaceURL
 	rmcResponse.CallID = callID

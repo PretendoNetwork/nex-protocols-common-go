@@ -29,6 +29,8 @@ func completePostObjects(err error, packet nex.PacketInterface, callID uint32, d
 		return nil, nex.Errors.DataStore.Unknown
 	}
 
+	server := commonProtocol.server
+
 	for _, dataID := range dataIDs {
 		bucket := commonProtocol.S3Bucket
 		key := fmt.Sprintf("%s/%d.bin", commonProtocol.s3DataKeyBase, dataID)
@@ -56,7 +58,7 @@ func completePostObjects(err error, packet nex.PacketInterface, callID uint32, d
 		}
 	}
 
-	rmcResponse := nex.NewRMCSuccess(nil)
+	rmcResponse := nex.NewRMCSuccess(server, nil)
 	rmcResponse.ProtocolID = datastore.ProtocolID
 	rmcResponse.MethodID = datastore.MethodCompletePostObjects
 	rmcResponse.CallID = callID

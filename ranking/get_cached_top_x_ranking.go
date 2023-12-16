@@ -58,7 +58,7 @@ func getCachedTopXRanking(err error, packet nex.PacketInterface, callID uint32, 
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
 	rmcResponse.ProtocolID = ranking.ProtocolID
 	rmcResponse.MethodID = ranking.MethodGetCachedTopXRanking
 	rmcResponse.CallID = callID

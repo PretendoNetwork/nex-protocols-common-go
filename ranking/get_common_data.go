@@ -29,7 +29,7 @@ func getCommonData(err error, packet nex.PacketInterface, callID uint32, uniqueI
 	rmcResponseStream.WriteBuffer(commonData)
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
 	rmcResponse.ProtocolID = ranking.ProtocolID
 	rmcResponse.MethodID = ranking.MethodGetCommonData
 	rmcResponse.CallID = callID

@@ -43,7 +43,7 @@ func getRanking(err error, packet nex.PacketInterface, callID uint32, rankingMod
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
 	rmcResponse.ProtocolID = ranking.ProtocolID
 	rmcResponse.MethodID = ranking.MethodGetRanking
 	rmcResponse.CallID = callID

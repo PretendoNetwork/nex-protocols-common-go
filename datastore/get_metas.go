@@ -18,6 +18,7 @@ func getMetas(err error, packet nex.PacketInterface, callID uint32, dataIDs []ui
 		return nil, nex.Errors.DataStore.Unknown
 	}
 
+	server := commonProtocol.server
 	client := packet.Sender()
 
 	// TODO - Verify if param.PersistenceTarget is respected? It wouldn't make sense here but who knows
@@ -60,7 +61,7 @@ func getMetas(err error, packet nex.PacketInterface, callID uint32, dataIDs []ui
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
 	rmcResponse.ProtocolID = datastore.ProtocolID
 	rmcResponse.MethodID = datastore.MethodGetMetas
 	rmcResponse.CallID = callID

@@ -45,6 +45,7 @@ func completePostObject(err error, packet nex.PacketInterface, callID uint32, pa
 		return nil, nex.Errors.DataStore.Unknown
 	}
 
+	server := commonProtocol.server
 	client := packet.Sender()
 
 	// * If GetObjectInfoByDataID returns data then that means
@@ -97,7 +98,7 @@ func completePostObject(err error, packet nex.PacketInterface, callID uint32, pa
 		}
 	}
 
-	rmcResponse := nex.NewRMCSuccess(nil)
+	rmcResponse := nex.NewRMCSuccess(server, nil)
 	rmcResponse.ProtocolID = datastore.ProtocolID
 	rmcResponse.MethodID = datastore.MethodCompletePostObject
 	rmcResponse.CallID = callID

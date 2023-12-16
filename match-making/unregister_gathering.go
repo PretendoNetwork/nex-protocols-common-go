@@ -38,7 +38,7 @@ func unregisterGathering(err error, packet nex.PacketInterface, callID uint32, i
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
 	rmcResponse.ProtocolID = match_making.ProtocolID
 	rmcResponse.MethodID = match_making.MethodUnregisterGathering
 	rmcResponse.CallID = callID
@@ -54,7 +54,7 @@ func unregisterGathering(err error, packet nex.PacketInterface, callID uint32, i
 	stream := nex.NewStreamOut(server)
 	oEventBytes := oEvent.Bytes(stream)
 
-	rmcRequest := nex.NewRMCRequest()
+	rmcRequest := nex.NewRMCRequest(server)
 	rmcRequest.ProtocolID = notifications.ProtocolID
 	rmcRequest.CallID = common_globals.CurrentMatchmakingCallID.Next()
 	rmcRequest.MethodID = notifications.MethodProcessNotificationEvent

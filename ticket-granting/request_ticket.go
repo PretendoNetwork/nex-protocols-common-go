@@ -13,6 +13,8 @@ func requestTicket(err error, packet nex.PacketInterface, callID uint32, userPID
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
+	server := commonProtocol.server
+
 	encryptedTicket, errorCode := generateTicket(userPID, targetPID)
 
 	// * If the source or target pid is invalid,
@@ -28,7 +30,7 @@ func requestTicket(err error, packet nex.PacketInterface, callID uint32, userPID
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
 	rmcResponse.ProtocolID = ticket_granting.ProtocolID
 	rmcResponse.MethodID = ticket_granting.MethodRequestTicket
 	rmcResponse.CallID = callID

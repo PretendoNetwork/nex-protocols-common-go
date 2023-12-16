@@ -26,6 +26,7 @@ func prepareGetObject(err error, packet nex.PacketInterface, callID uint32, para
 		return nil, nex.Errors.Core.Unknown
 	}
 
+	server := commonProtocol.server
 	client := packet.Sender()
 
 	bucket := commonProtocol.S3Bucket
@@ -66,7 +67,7 @@ func prepareGetObject(err error, packet nex.PacketInterface, callID uint32, para
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
 	rmcResponse.ProtocolID = datastore.ProtocolID
 	rmcResponse.MethodID = datastore.MethodPrepareGetObject
 	rmcResponse.CallID = callID

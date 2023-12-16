@@ -12,6 +12,7 @@ func openParticipation(err error, packet nex.PacketInterface, callID uint32, gid
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
+	server := commonProtocol.server
 	client := packet.Sender()
 
 	var session *common_globals.CommonMatchmakeSession
@@ -26,7 +27,7 @@ func openParticipation(err error, packet nex.PacketInterface, callID uint32, gid
 
 	session.GameMatchmakeSession.OpenParticipation = true
 
-	rmcResponse := nex.NewRMCSuccess(nil)
+	rmcResponse := nex.NewRMCSuccess(server, nil)
 	rmcResponse.ProtocolID = matchmake_extension.ProtocolID
 	rmcResponse.MethodID = matchmake_extension.MethodOpenParticipation
 	rmcResponse.CallID = callID

@@ -12,6 +12,8 @@ func updateApplicationBuffer(err error, packet nex.PacketInterface, callID uint3
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
+	server := commonProtocol.server
+
 	session, ok := common_globals.Sessions[gid]
 	if !ok {
 		return nil, nex.Errors.RendezVous.SessionVoid
@@ -21,7 +23,7 @@ func updateApplicationBuffer(err error, packet nex.PacketInterface, callID uint3
 
 	session.GameMatchmakeSession.ApplicationData = applicationBuffer
 
-	rmcResponse := nex.NewRMCSuccess(nil)
+	rmcResponse := nex.NewRMCSuccess(server, nil)
 	rmcResponse.ProtocolID = matchmake_extension.ProtocolID
 	rmcResponse.MethodID = matchmake_extension.MethodUpdateApplicationBuffer
 	rmcResponse.CallID = callID

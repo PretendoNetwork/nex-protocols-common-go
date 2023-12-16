@@ -23,6 +23,7 @@ func getMeta(err error, packet nex.PacketInterface, callID uint32, param *datast
 		return nil, nex.Errors.DataStore.Unknown
 	}
 
+	server := commonProtocol.server
 	client := packet.Sender()
 
 	var pMetaInfo *datastore_types.DataStoreMetaInfo
@@ -51,7 +52,7 @@ func getMeta(err error, packet nex.PacketInterface, callID uint32, param *datast
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
 	rmcResponse.ProtocolID = datastore.ProtocolID
 	rmcResponse.MethodID = datastore.MethodGetMeta
 	rmcResponse.CallID = callID

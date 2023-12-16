@@ -13,7 +13,9 @@ func reportNATTraversalResultDetail(err error, packet nex.PacketInterface, callI
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
-	rmcResponse := nex.NewRMCSuccess(nil)
+	server := commonProtocol.server
+
+	rmcResponse := nex.NewRMCSuccess(server, nil)
 	rmcResponse.ProtocolID = nat_traversal.ProtocolID
 	rmcResponse.MethodID = nat_traversal.MethodReportNATTraversalResult
 	rmcResponse.CallID = callID

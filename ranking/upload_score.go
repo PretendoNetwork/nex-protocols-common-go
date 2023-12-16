@@ -14,6 +14,7 @@ func uploadScore(err error, packet nex.PacketInterface, callID uint32, scoreData
 		return nil, nex.Errors.Core.NotImplemented
 	}
 
+	server := commonProtocol.server
 	client := packet.Sender()
 
 	if err != nil {
@@ -27,7 +28,7 @@ func uploadScore(err error, packet nex.PacketInterface, callID uint32, scoreData
 		return nil, nex.Errors.Ranking.Unknown
 	}
 
-	rmcResponse := nex.NewRMCSuccess(nil)
+	rmcResponse := nex.NewRMCSuccess(server, nil)
 	rmcResponse.ProtocolID = ranking.ProtocolID
 	rmcResponse.MethodID = ranking.MethodUploadScore
 	rmcResponse.CallID = callID
