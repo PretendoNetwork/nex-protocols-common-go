@@ -4,19 +4,22 @@ import (
 	"time"
 
 	"github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go/types"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 	ranking "github.com/PretendoNetwork/nex-protocols-go/ranking"
 	ranking_types "github.com/PretendoNetwork/nex-protocols-go/ranking/types"
-
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
-func getCachedTopXRanking(err error, packet nex.PacketInterface, callID uint32, category uint32, orderParam *ranking_types.RankingOrderParam) (*nex.RMCMessage, uint32) {
+func getCachedTopXRanking(err error, packet nex.PacketInterface, callID uint32, category *types.PrimitiveU32, orderParam *ranking_types.RankingOrderParam) (*nex.RMCMessage, uint32) {
 	if commonProtocol.GetRankingsAndCountByCategoryAndRankingOrderParam == nil {
 		common_globals.Logger.Warning("Ranking::GetCachedTopXRanking missing GetRankingsAndCountByCategoryAndRankingOrderParam!")
 		return nil, nex.Errors.Core.NotImplemented
 	}
 
-	server := commonProtocol.server
+	// TODO - This assumes a PRUDP connection. Refactor to support HPP
+	connection := packet.Sender().(*nex.PRUDPConnection)
+	endpoint := connection.Endpoint
+	server := endpoint.Server
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
@@ -29,32 +32,29 @@ func getCachedTopXRanking(err error, packet nex.PacketInterface, callID uint32, 
 		return nil, nex.Errors.Ranking.Unknown
 	}
 
-	if totalCount == 0 || len(rankDataList) == 0 {
+	if totalCount == 0 || rankDataList.Length() == 0 {
 		return nil, nex.Errors.Ranking.NotFound
 	}
 
-	rankingResult := ranking_types.NewRankingResult()
-
-	rankingResult.RankDataList = rankDataList
-	rankingResult.TotalCount = totalCount
-	rankingResult.SinceTime = nex.NewDateTime(0x1F40420000) // * 2000-01-01T00:00:00.000Z, this is what the real server sends back
-
 	pResult := ranking_types.NewRankingCachedResult()
 
-	pResult.SetParentType(rankingResult)
-	pResult.CreatedTime = nex.NewDateTime(0).Now()
+	pResult.RankingResult.RankDataList = rankDataList
+	pResult.RankingResult.TotalCount = types.NewPrimitiveU32(totalCount)
+	pResult.RankingResult.SinceTime = types.NewDateTime(0x1F40420000) // * 2000-01-01T00:00:00.000Z, this is what the real server sends back
+
+	pResult.CreatedTime = types.NewDateTime(0).Now()
 	// * The real server sends the "CreatedTime" + 5 minutes.
 	// * It doesn't change, even on subsequent requests, until after the
 	// * ExpiredTime has passed (seemingly what the "cached" means).
 	// * Whether we need to replicate this idk, but in case, here's a note.
-	pResult.ExpiredTime = nex.NewDateTime(0).FromTimestamp(time.Now().UTC().Add(time.Minute * time.Duration(5)))
+	pResult.ExpiredTime = types.NewDateTime(0).FromTimestamp(time.Now().UTC().Add(time.Minute * time.Duration(5)))
 	// * This is the length Ultimate NES Remix uses
 	// TODO - Does this matter? and are other games different?
-	pResult.MaxLength = 10
+	pResult.MaxLength = types.NewPrimitiveU8(10)
 
-	rmcResponseStream := nex.NewStreamOut(server)
+	rmcResponseStream := nex.NewByteStreamOut(server)
 
-	rmcResponseStream.WriteStructure(pResult)
+	pResult.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 

@@ -3,7 +3,7 @@ package datastore
 import (
 	"fmt"
 
-	nex "github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 	datastore "github.com/PretendoNetwork/nex-protocols-go/datastore"
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
@@ -45,8 +45,10 @@ func completePostObject(err error, packet nex.PacketInterface, callID uint32, pa
 		return nil, nex.Errors.DataStore.Unknown
 	}
 
-	server := commonProtocol.server
-	client := packet.Sender()
+	// TODO - This assumes a PRUDP connection. Refactor to support HPP
+	connection := packet.Sender().(*nex.PRUDPConnection)
+	endpoint := connection.Endpoint
+	server := endpoint.Server
 
 	// * If GetObjectInfoByDataID returns data then that means
 	// * the object has already been marked as uploaded. So do
@@ -62,14 +64,14 @@ func completePostObject(err error, packet nex.PacketInterface, callID uint32, pa
 		return nil, errCode
 	}
 
-	if ownerPID != client.PID().LegacyValue() {
+	if ownerPID != connection.PID().LegacyValue() {
 		return nil, nex.Errors.DataStore.PermissionDenied
 	}
 
 	bucket := commonProtocol.S3Bucket
 	key := fmt.Sprintf("%s/%d.bin", commonProtocol.s3DataKeyBase, param.DataID)
 
-	if param.IsSuccess {
+	if param.IsSuccess.Value {
 		objectSizeS3, err := commonProtocol.S3ObjectSize(bucket, key)
 		if err != nil {
 			common_globals.Logger.Error(err.Error())

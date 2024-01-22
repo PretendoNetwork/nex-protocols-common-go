@@ -1,33 +1,34 @@
 package matchmaking
 
 import (
-	nex "github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
 )
 
-func getSessionURLs(err error, packet nex.PacketInterface, callID uint32, gid uint32) (*nex.RMCMessage, uint32) {
+func getSessionURLs(err error, packet nex.PacketInterface, callID uint32, gid *types.PrimitiveU32) (*nex.RMCMessage, uint32) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
-	session, ok := common_globals.Sessions[gid]
+	session, ok := common_globals.Sessions[gid.Value]
 	if !ok {
 		return nil, nex.Errors.RendezVous.SessionVoid
 	}
 
-	server := commonProtocol.server
-
-	// TODO - Remove cast to PRUDPClient?
-	client := packet.Sender().(*nex.PRUDPClient)
+	// TODO - This assumes a PRUDP connection. Refactor to support HPP
+	connection := packet.Sender().(*nex.PRUDPConnection)
+	endpoint := connection.Endpoint
+	server := endpoint.Server
 
 	hostPID := session.GameMatchmakeSession.Gathering.HostPID
-	host := server.FindClientByPID(client.DestinationPort, client.DestinationStreamType, hostPID.Value())
+	host := endpoint.FindConnectionByPID(hostPID.Value())
 	if host == nil {
 		// * This popped up once during testing. Leaving it noted here in case it becomes a problem.
 		common_globals.Logger.Warning("Host client not found, trying with owner client")
-		host = server.FindClientByPID(client.DestinationPort, client.DestinationStreamType, session.GameMatchmakeSession.Gathering.OwnerPID.Value())
+		host = endpoint.FindConnectionByPID(session.GameMatchmakeSession.Gathering.OwnerPID.Value())
 		if host == nil {
 			// * This popped up once during testing. Leaving it noted here in case it becomes a problem.
 			common_globals.Logger.Error("Owner client not found")
@@ -35,8 +36,9 @@ func getSessionURLs(err error, packet nex.PacketInterface, callID uint32, gid ui
 		}
 	}
 
-	rmcResponseStream := nex.NewStreamOut(server)
-	rmcResponseStream.WriteListStationURL(host.StationURLs)
+	rmcResponseStream := nex.NewByteStreamOut(server)
+
+	host.StationURLs.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 

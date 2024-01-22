@@ -2,12 +2,13 @@ package datastore
 
 import (
 	"github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 	datastore "github.com/PretendoNetwork/nex-protocols-go/datastore"
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
 )
 
-func rateObject(err error, packet nex.PacketInterface, callID uint32, target *datastore_types.DataStoreRatingTarget, param *datastore_types.DataStoreRateObjectParam, fetchRatings bool) (*nex.RMCMessage, uint32) {
+func rateObject(err error, packet nex.PacketInterface, callID uint32, target *datastore_types.DataStoreRatingTarget, param *datastore_types.DataStoreRateObjectParam, fetchRatings *types.PrimitiveBool) (*nex.RMCMessage, uint32) {
 	if commonProtocol.GetObjectInfoByDataIDWithPassword == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataIDWithPassword not defined")
 		return nil, nex.Errors.Core.NotImplemented
@@ -23,15 +24,17 @@ func rateObject(err error, packet nex.PacketInterface, callID uint32, target *da
 		return nil, nex.Errors.DataStore.Unknown
 	}
 
-	server := commonProtocol.server
-	client := packet.Sender()
+	// TODO - This assumes a PRUDP connection. Refactor to support HPP
+	connection := packet.Sender().(*nex.PRUDPConnection)
+	endpoint := connection.Endpoint
+	server := endpoint.Server
 
 	objectInfo, errCode := commonProtocol.GetObjectInfoByDataIDWithPassword(target.DataID, param.AccessPassword)
 	if errCode != 0 {
 		return nil, errCode
 	}
 
-	errCode = commonProtocol.VerifyObjectPermission(objectInfo.OwnerID, client.PID(), objectInfo.Permission)
+	errCode = commonProtocol.VerifyObjectPermission(objectInfo.OwnerID, connection.PID(), objectInfo.Permission)
 	if errCode != 0 {
 		return nil, errCode
 	}
@@ -45,13 +48,13 @@ func rateObject(err error, packet nex.PacketInterface, callID uint32, target *da
 	// * the rating by default, so we check if
 	// * the client DOESN'T want it and then just
 	// * zero it out
-	if !fetchRatings {
+	if !fetchRatings.Value {
 		pRating = datastore_types.NewDataStoreRatingInfo()
 	}
 
-	rmcResponseStream := nex.NewStreamOut(commonProtocol.server)
+	rmcResponseStream := nex.NewByteStreamOut(server)
 
-	rmcResponseStream.WriteStructure(pRating)
+	pRating.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 

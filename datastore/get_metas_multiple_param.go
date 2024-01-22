@@ -1,13 +1,14 @@
 package datastore
 
 import (
-	nex "github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 	datastore "github.com/PretendoNetwork/nex-protocols-go/datastore"
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
 )
 
-func getMetasMultipleParam(err error, packet nex.PacketInterface, callID uint32, params []*datastore_types.DataStoreGetMetaParam) (*nex.RMCMessage, uint32) {
+func getMetasMultipleParam(err error, packet nex.PacketInterface, callID uint32, params *types.List[*datastore_types.DataStoreGetMetaParam]) (*nex.RMCMessage, uint32) {
 	if commonProtocol.GetObjectInfoByPersistenceTargetWithPassword == nil {
 		common_globals.Logger.Warning("GetObjectInfoByPersistenceTargetWithPassword not defined")
 		return nil, nex.Errors.Core.NotImplemented
@@ -23,18 +24,23 @@ func getMetasMultipleParam(err error, packet nex.PacketInterface, callID uint32,
 		return nil, nex.Errors.DataStore.Unknown
 	}
 
-	server := commonProtocol.server
-	client := packet.Sender()
+	// TODO - This assumes a PRUDP connection. Refactor to support HPP
+	connection := packet.Sender().(*nex.PRUDPConnection)
+	endpoint := connection.Endpoint
+	server := endpoint.Server
 
-	pMetaInfo := make([]*datastore_types.DataStoreMetaInfo, 0, len(params))
-	pResults := make([]*nex.Result, 0, len(params))
+	pMetaInfo := types.NewList[*datastore_types.DataStoreMetaInfo]()
+	pResults := types.NewList[*types.QResult]()
 
-	for _, param := range params {
+	pMetaInfo.Type = datastore_types.NewDataStoreMetaInfo()
+	pResults.Type = types.NewQResult(0)
+
+	params.Each(func(_ int, param *datastore_types.DataStoreGetMetaParam) bool {
 		var objectInfo *datastore_types.DataStoreMetaInfo
 		var errCode uint32
 
 		// * Real server ignores PersistenceTarget if DataID is set
-		if param.DataID == 0 {
+		if param.DataID.Value == 0 {
 			objectInfo, errCode = commonProtocol.GetObjectInfoByPersistenceTargetWithPassword(param.PersistenceTarget, param.AccessPassword)
 		} else {
 			objectInfo, errCode = commonProtocol.GetObjectInfoByDataIDWithPassword(param.DataID, param.AccessPassword)
@@ -43,27 +49,29 @@ func getMetasMultipleParam(err error, packet nex.PacketInterface, callID uint32,
 		if errCode != 0 {
 			objectInfo = datastore_types.NewDataStoreMetaInfo()
 
-			pResults = append(pResults, nex.NewResultError(errCode))
+			pResults.Append(types.NewQResultError(errCode))
 		} else {
-			errCode = commonProtocol.VerifyObjectPermission(objectInfo.OwnerID, client.PID(), objectInfo.Permission)
+			errCode = commonProtocol.VerifyObjectPermission(objectInfo.OwnerID, connection.PID(), objectInfo.Permission)
 			if errCode != 0 {
 				objectInfo = datastore_types.NewDataStoreMetaInfo()
 
-				pResults = append(pResults, nex.NewResultError(errCode))
+				pResults.Append(types.NewQResultError(errCode))
 			} else {
-				pResults = append(pResults, nex.NewResultSuccess(nex.Errors.DataStore.Unknown))
+				pResults.Append(types.NewQResultSuccess(nex.Errors.DataStore.Unknown))
 			}
 
 			objectInfo.FilterPropertiesByResultOption(param.ResultOption)
 		}
 
-		pMetaInfo = append(pMetaInfo, objectInfo)
-	}
+		pMetaInfo.Append(objectInfo)
 
-	rmcResponseStream := nex.NewStreamOut(commonProtocol.server)
+		return false
+	})
 
-	nex.StreamWriteListStructure(rmcResponseStream, pMetaInfo)
-	rmcResponseStream.WriteListResult(pResults)
+	rmcResponseStream := nex.NewByteStreamOut(server)
+
+	pMetaInfo.WriteTo(rmcResponseStream)
+	pResults.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 

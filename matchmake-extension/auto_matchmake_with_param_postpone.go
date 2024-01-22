@@ -1,7 +1,8 @@
 package matchmake_extension
 
 import (
-	nex "github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 	match_making_types "github.com/PretendoNetwork/nex-protocols-go/match-making/types"
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension"
@@ -13,24 +14,23 @@ func autoMatchmakeWithParam_Postpone(err error, packet nex.PacketInterface, call
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
-	server := commonProtocol.server
-
-	// TODO - Remove cast to PRUDPClient?
-	client := packet.Sender().(*nex.PRUDPClient)
+	// TODO - This assumes a PRUDP connection. Refactor to support HPP
+	connection := packet.Sender().(*nex.PRUDPConnection)
+	endpoint := connection.Endpoint
+	server := endpoint.Server
 
 	// * A client may disconnect from a session without leaving reliably,
 	// * so let's make sure the client is removed from the session
-	common_globals.RemoveClientFromAllSessions(client)
+	common_globals.RemoveConnectionFromAllSessions(connection)
 
-	var matchmakeSession *match_making_types.MatchmakeSession
-	matchmakeSession = autoMatchmakeParam.SourceMatchmakeSession
+	matchmakeSession := autoMatchmakeParam.SourceMatchmakeSession
 
-	sessions := common_globals.FindSessionsByMatchmakeSessionSearchCriterias(client.PID(), autoMatchmakeParam.LstSearchCriteria, commonProtocol.GameSpecificMatchmakeSessionSearchCriteriaChecks)
+	sessions := common_globals.FindSessionsByMatchmakeSessionSearchCriterias(connection.PID(), autoMatchmakeParam.LstSearchCriteria.Slice(), commonProtocol.GameSpecificMatchmakeSessionSearchCriteriaChecks)
 	var session *common_globals.CommonMatchmakeSession
 
 	if len(sessions) == 0 {
 		var errCode uint32
-		session, err, errCode = common_globals.CreateSessionByMatchmakeSession(matchmakeSession, nil, client.PID())
+		session, err, errCode = common_globals.CreateSessionByMatchmakeSession(matchmakeSession, nil, connection.PID())
 		if err != nil {
 			common_globals.Logger.Error(err.Error())
 			return nil, errCode
@@ -39,17 +39,20 @@ func autoMatchmakeWithParam_Postpone(err error, packet nex.PacketInterface, call
 		session = sessions[0]
 	}
 
-	err, errCode := common_globals.AddPlayersToSession(session, []uint32{client.ConnectionID}, client, "")
+	err, errCode := common_globals.AddPlayersToSession(session, []uint32{connection.ID}, connection, "")
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, errCode
 	}
 
-	rmcResponseStream := nex.NewStreamOut(server)
-	matchmakeDataHolder := nex.NewDataHolder()
-	matchmakeDataHolder.SetTypeName("MatchmakeSession")
-	matchmakeDataHolder.SetObjectData(session.GameMatchmakeSession)
-	rmcResponseStream.WriteStructure(session.GameMatchmakeSession)
+	matchmakeDataHolder := types.NewAnyDataHolder()
+
+	matchmakeDataHolder.TypeName = types.NewString("MatchmakeSession")
+	matchmakeDataHolder.ObjectData = session.GameMatchmakeSession.Copy()
+
+	rmcResponseStream := nex.NewByteStreamOut(server)
+
+	session.GameMatchmakeSession.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 

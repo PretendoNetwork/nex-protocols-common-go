@@ -3,31 +3,31 @@ package nattraversal
 import (
 	"strconv"
 
-	nex "github.com/PretendoNetwork/nex-go"
-	nat_traversal "github.com/PretendoNetwork/nex-protocols-go/nat-traversal"
-
+	"github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
+	nat_traversal "github.com/PretendoNetwork/nex-protocols-go/nat-traversal"
 )
 
-func reportNATProperties(err error, packet nex.PacketInterface, callID uint32, natm uint32, natf uint32, rtt uint32) (*nex.RMCMessage, uint32) {
+func reportNATProperties(err error, packet nex.PacketInterface, callID uint32, natmapping *types.PrimitiveU32, natfiltering *types.PrimitiveU32, rtt *types.PrimitiveU32) (*nex.RMCMessage, uint32) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
-	server := commonProtocol.server
+	// TODO - This assumes a PRUDP connection. Refactor to support HPP
+	connection := packet.Sender().(*nex.PRUDPConnection)
+	endpoint := connection.Endpoint
+	server := endpoint.Server
 
-	// TODO - Remove cast to PRUDPClient?
-	client := packet.Sender().(*nex.PRUDPClient)
-
-	for _, station := range client.StationURLs {
+	for _, station := range connection.StationURLs.Slice() {
 		if station.IsLocal() {
-			station.Fields.Set("natm", strconv.Itoa(int(natm)))
-			station.Fields.Set("natf", strconv.Itoa(int(natf)))
+			station.Fields["natm"] = strconv.Itoa(int(natmapping.Value))
+			station.Fields["natf"] = strconv.Itoa(int(natfiltering.Value))
 		}
 
-		station.Fields.Set("RVCID", strconv.Itoa(int(client.ConnectionID)))
-		station.Fields.Set("PID", strconv.Itoa(int(client.PID().Value())))
+		station.Fields["RVCID"] = strconv.Itoa(int(connection.ID))
+		station.Fields["PID"] = strconv.Itoa(int(connection.PID().Value()))
 	}
 
 	rmcResponse := nex.NewRMCSuccess(server, nil)

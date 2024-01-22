@@ -4,78 +4,85 @@ import (
 	"strconv"
 	"strings"
 
-	nex "github.com/PretendoNetwork/nex-go"
-	ticket_granting "github.com/PretendoNetwork/nex-protocols-go/ticket-granting"
-
+	"github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
+	ticket_granting "github.com/PretendoNetwork/nex-protocols-go/ticket-granting"
 )
 
-func loginEx(err error, packet nex.PacketInterface, callID uint32, username string, oExtraData *nex.DataHolder) (*nex.RMCMessage, uint32) {
+func loginEx(err error, packet nex.PacketInterface, callID uint32, strUserName *types.String, oExtraData *types.AnyDataHolder) (*nex.RMCMessage, uint32) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
-	server := commonProtocol.server
+	// TODO - VALIDATE oExtraData!
 
-	var userPID *nex.PID
+	// TODO - This assumes a PRUDP connection. Refactor to support HPP
+	connection := packet.Sender().(*nex.PRUDPConnection)
+	endpoint := connection.Endpoint
+	server := endpoint.Server
+	username := strUserName.Value
+	var userPID *types.PID
 
 	// TODO - This needs to change to support QRV clients, who may not send PIDs as usernames
 	if username == "guest" {
-		userPID = nex.NewPID[uint64](100)
+		userPID = types.NewPID(100)
 	} else {
 		converted, err := strconv.Atoi(strings.TrimRight(username, "\x00"))
 		if err != nil {
 			panic(err)
 		}
 
-		if commonProtocol.server.LibraryVersion().GreaterOrEqual("4.0.0") {
-			userPID = nex.NewPID[uint64](uint64(converted))
-		} else {
-			userPID = nex.NewPID[uint32](uint32(converted))
-		}
+		userPID = types.NewPID(uint64(converted))
 	}
 
-	targetPID := nex.NewPID[uint64](2) // * "Quazal Rendez-Vous" (the server user) account PID
+	// TODO - This is not the right PID for Switch servers
+	targetPID := types.NewPID(2) // * "Quazal Rendez-Vous" (the server user) account PID
 
 	encryptedTicket, errorCode := generateTicket(userPID, targetPID)
 
 	if errorCode != 0 && errorCode != nex.Errors.RendezVous.InvalidUsername {
+		// * Some other error happened
 		return nil, errorCode
 	}
 
-	var retval *nex.Result
-	pidPrincipal := nex.NewPID[uint64](0)
-	var pbufResponse []byte
-	var pConnectionData *nex.RVConnectionData
-	var strReturnMsg string
-
-	pConnectionData = nex.NewRVConnectionData()
-	pConnectionData.StationURL = commonProtocol.SecureStationURL
-	pConnectionData.SpecialProtocols = commonProtocol.SpecialProtocols
-	pConnectionData.StationURLSpecialProtocols = commonProtocol.StationURLSpecialProtocols
-	pConnectionData.Time = nex.NewDateTime(0).Now()
+	var retval *types.QResult
+	pidPrincipal := types.NewPID(0)
+	pbufResponse := types.NewBuffer([]byte{})
+	pConnectionData := types.NewRVConnectionData()
+	strReturnMsg := types.NewString("")
 
 	// * From the wiki:
 	// *
 	// * "If the username does not exist, the %retval% field is set to
 	// * RendezVous::InvalidUsername and the other fields are left blank."
 	if errorCode == nex.Errors.RendezVous.InvalidUsername {
-		retval = nex.NewResultError(errorCode)
+		retval = types.NewQResultError(errorCode)
 	} else {
-		retval = nex.NewResultSuccess(nex.Errors.Core.Unknown)
+		retval = types.NewQResultSuccess(nex.Errors.Core.Unknown)
 		pidPrincipal = userPID
-		pbufResponse = encryptedTicket
-		strReturnMsg = commonProtocol.BuildName
+		pbufResponse = types.NewBuffer(encryptedTicket)
+		strReturnMsg = commonProtocol.BuildName.Copy().(*types.String)
+
+		specialProtocols := types.NewList[*types.PrimitiveU8]()
+
+		specialProtocols.Type = types.NewPrimitiveU8(0)
+		specialProtocols.SetFromData(commonProtocol.SpecialProtocols)
+
+		pConnectionData.StationURL = commonProtocol.SecureStationURL
+		pConnectionData.SpecialProtocols = specialProtocols
+		pConnectionData.StationURLSpecialProtocols = commonProtocol.StationURLSpecialProtocols
+		pConnectionData.Time = types.NewDateTime(0).Now()
 	}
 
-	rmcResponseStream := nex.NewStreamOut(commonProtocol.server)
+	rmcResponseStream := nex.NewByteStreamOut(server)
 
-	rmcResponseStream.WriteResult(retval)
-	rmcResponseStream.WritePID(pidPrincipal)
-	rmcResponseStream.WriteBuffer(pbufResponse)
-	rmcResponseStream.WriteStructure(pConnectionData)
-	rmcResponseStream.WriteString(strReturnMsg)
+	retval.WriteTo(rmcResponseStream)
+	pidPrincipal.WriteTo(rmcResponseStream)
+	pbufResponse.WriteTo(rmcResponseStream)
+	pConnectionData.WriteTo(rmcResponseStream)
+	strReturnMsg.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 

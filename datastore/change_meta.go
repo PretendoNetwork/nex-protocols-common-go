@@ -1,7 +1,7 @@
 package datastore
 
 import (
-	nex "github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 	datastore "github.com/PretendoNetwork/nex-protocols-go/datastore"
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
@@ -33,8 +33,10 @@ func changeMeta(err error, packet nex.PacketInterface, callID uint32, param *dat
 		return nil, nex.Errors.DataStore.Unknown
 	}
 
-	server := commonProtocol.server
-	client := packet.Sender()
+	// TODO - This assumes a PRUDP connection. Refactor to support HPP
+	connection := packet.Sender().(*nex.PRUDPConnection)
+	endpoint := connection.Endpoint
+	server := endpoint.Server
 
 	metaInfo, errCode := commonProtocol.GetObjectInfoByDataID(param.DataID)
 	if errCode != 0 {
@@ -42,26 +44,26 @@ func changeMeta(err error, packet nex.PacketInterface, callID uint32, param *dat
 	}
 
 	// TODO - Is this the right permission?
-	errCode = commonProtocol.VerifyObjectPermission(metaInfo.OwnerID, client.PID(), metaInfo.DelPermission)
+	errCode = commonProtocol.VerifyObjectPermission(metaInfo.OwnerID, connection.PID(), metaInfo.DelPermission)
 	if errCode != 0 {
 		return nil, errCode
 	}
 
-	if param.ModifiesFlag&0x08 != 0 {
+	if param.ModifiesFlag.PAND(0x08) != 0 {
 		errCode = commonProtocol.UpdateObjectPeriodByDataIDWithPassword(param.DataID, param.Period, param.UpdatePassword)
 		if errCode != 0 {
 			return nil, errCode
 		}
 	}
 
-	if param.ModifiesFlag&0x10 != 0 {
+	if param.ModifiesFlag.PAND(0x10) != 0 {
 		errCode = commonProtocol.UpdateObjectMetaBinaryByDataIDWithPassword(param.DataID, param.MetaBinary, param.UpdatePassword)
 		if errCode != 0 {
 			return nil, errCode
 		}
 	}
 
-	if param.ModifiesFlag&0x80 != 0 {
+	if param.ModifiesFlag.PAND(0x80) != 0 {
 		errCode = commonProtocol.UpdateObjectDataTypeByDataIDWithPassword(param.DataID, param.DataType, param.UpdatePassword)
 		if errCode != 0 {
 			return nil, errCode

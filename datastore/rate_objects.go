@@ -1,13 +1,14 @@
 package datastore
 
 import (
-	nex "github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 	datastore "github.com/PretendoNetwork/nex-protocols-go/datastore"
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
 )
 
-func rateObjects(err error, packet nex.PacketInterface, callID uint32, targets []*datastore_types.DataStoreRatingTarget, params []*datastore_types.DataStoreRateObjectParam, transactional bool, fetchRatings bool) (*nex.RMCMessage, uint32) {
+func rateObjects(err error, packet nex.PacketInterface, callID uint32, targets *types.List[*datastore_types.DataStoreRatingTarget], params *types.List[*datastore_types.DataStoreRateObjectParam], transactional *types.PrimitiveBool, fetchRatings *types.PrimitiveBool) (*nex.RMCMessage, uint32) {
 	if commonProtocol.GetObjectInfoByDataIDWithPassword == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataIDWithPassword not defined")
 		return nil, nex.Errors.Core.NotImplemented
@@ -23,48 +24,67 @@ func rateObjects(err error, packet nex.PacketInterface, callID uint32, targets [
 		return nil, nex.Errors.DataStore.Unknown
 	}
 
-	server := commonProtocol.server
-	client := packet.Sender()
+	// TODO - This assumes a PRUDP connection. Refactor to support HPP
+	connection := packet.Sender().(*nex.PRUDPConnection)
+	endpoint := connection.Endpoint
+	server := endpoint.Server
 
-	pRatings := make([]*datastore_types.DataStoreRatingInfo, 0)
-	pResults := make([]*nex.Result, 0)
+	pRatings := types.NewList[*datastore_types.DataStoreRatingInfo]()
+	pResults := types.NewList[*types.QResult]()
+
+	pRatings.Type = datastore_types.NewDataStoreRatingInfo()
+	pResults.Type = types.NewQResult(0)
 
 	// * Real DataStore does not actually check this.
 	// * I just didn't feel like working out the
 	// * logic for differing sized lists. So force
 	// * them to always be the same
-	if len(targets) != len(params) {
+	if targets.Length() != params.Length() {
 		return nil, nex.Errors.DataStore.InvalidArgument
 	}
 
-	for i := 0; i < len(targets); i++ {
-		target := targets[i]
-		param := params[i]
+	var errorCode uint32
+
+	targets.Each(func(i int, target *datastore_types.DataStoreRatingTarget) bool {
+		param, err := params.Get(i)
+		if err != nil {
+			errorCode = nex.Errors.DataStore.InvalidArgument
+			return true
+		}
 
 		objectInfo, errCode := commonProtocol.GetObjectInfoByDataIDWithPassword(target.DataID, param.AccessPassword)
 		if errCode != 0 {
-			return nil, errCode
+			errorCode = errCode
+			return true
 		}
 
-		errCode = commonProtocol.VerifyObjectPermission(objectInfo.OwnerID, client.PID(), objectInfo.Permission)
+		errCode = commonProtocol.VerifyObjectPermission(objectInfo.OwnerID, connection.PID(), objectInfo.Permission)
 		if errCode != 0 {
-			return nil, errCode
+			errorCode = errCode
+			return true
 		}
 
 		rating, errCode := commonProtocol.RateObjectWithPassword(target.DataID, target.Slot, param.RatingValue, param.AccessPassword)
 		if errCode != 0 {
-			return nil, errCode
+			errorCode = errCode
+			return true
 		}
 
-		if fetchRatings {
-			pRatings = append(pRatings, rating)
+		if fetchRatings.Value {
+			pRatings.Append(rating)
 		}
+
+		return false
+	})
+
+	if errorCode != 0 {
+		return nil, errorCode
 	}
 
-	rmcResponseStream := nex.NewStreamOut(commonProtocol.server)
+	rmcResponseStream := nex.NewByteStreamOut(server)
 
-	nex.StreamWriteListStructure(rmcResponseStream, pRatings)
-	rmcResponseStream.WriteListResult(pResults) // * pResults is ALWAYS empty in SMM?
+	pRatings.WriteTo(rmcResponseStream)
+	pResults.WriteTo(rmcResponseStream) // * pResults is ALWAYS empty in SMM?
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 

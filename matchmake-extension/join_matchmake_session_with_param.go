@@ -1,7 +1,7 @@
 package matchmake_extension
 
 import (
-	nex "github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 	match_making_types "github.com/PretendoNetwork/nex-protocols-go/match-making/types"
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension"
@@ -13,27 +13,26 @@ func joinMatchmakeSessionWithParam(err error, packet nex.PacketInterface, callID
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
-	// TODO - Remove cast to PRUDPClient?
-	client := packet.Sender().(*nex.PRUDPClient)
-	server := commonProtocol.server
-
-	session, ok := common_globals.Sessions[joinMatchmakeSessionParam.GID]
+	session, ok := common_globals.Sessions[joinMatchmakeSessionParam.GID.Value]
 	if !ok {
 		return nil, nex.Errors.RendezVous.SessionVoid
 	}
 
+	// TODO - This assumes a PRUDP connection. Refactor to support HPP
+	connection := packet.Sender().(*nex.PRUDPConnection)
+	endpoint := connection.Endpoint
+	server := endpoint.Server
+
 	// TODO - More checks here
-	err, errCode := common_globals.AddPlayersToSession(session, []uint32{client.ConnectionID}, client, joinMatchmakeSessionParam.JoinMessage)
+	err, errCode := common_globals.AddPlayersToSession(session, []uint32{connection.ID}, connection, joinMatchmakeSessionParam.JoinMessage.Value)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, errCode
 	}
 
-	joinedMatchmakeSession := session.GameMatchmakeSession
+	rmcResponseStream := nex.NewByteStreamOut(server)
 
-	rmcResponseStream := nex.NewStreamOut(server)
-
-	rmcResponseStream.WriteStructure(joinedMatchmakeSession)
+	session.GameMatchmakeSession.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 

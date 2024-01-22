@@ -1,10 +1,10 @@
 package utility
 
 import (
-	nex "github.com/PretendoNetwork/nex-go"
-	utility "github.com/PretendoNetwork/nex-protocols-go/utility"
-
+	"github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
+	utility "github.com/PretendoNetwork/nex-protocols-go/utility"
 )
 
 func acquireNexUniqueID(err error, packet nex.PacketInterface, callID uint32) (*nex.RMCMessage, uint32) {
@@ -18,13 +18,16 @@ func acquireNexUniqueID(err error, packet nex.PacketInterface, callID uint32) (*
 		return nil, nex.Errors.Core.NotImplemented
 	}
 
-	pNexUniqueID := commonProtocol.GenerateNEXUniqueID()
+	// TODO - This assumes a PRUDP connection. Refactor to support HPP
+	connection := packet.Sender().(*nex.PRUDPConnection)
+	endpoint := connection.Endpoint
+	server := endpoint.Server
 
-	server := commonProtocol.server
+	pNexUniqueID := types.NewPrimitiveU64(commonProtocol.GenerateNEXUniqueID())
 
-	rmcResponseStream := nex.NewStreamOut(server)
+	rmcResponseStream := nex.NewByteStreamOut(server)
 
-	rmcResponseStream.WriteUInt64LE(pNexUniqueID)
+	pNexUniqueID.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 

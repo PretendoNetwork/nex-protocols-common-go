@@ -1,13 +1,14 @@
 package secureconnection
 
 import (
-	nex "github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go/types"
 	secure_connection "github.com/PretendoNetwork/nex-protocols-go/secure-connection"
 
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
-func sendReport(err error, packet nex.PacketInterface, callID uint32, reportID uint32, reportData []byte) (*nex.RMCMessage, uint32) {
+func sendReport(err error, packet nex.PacketInterface, callID uint32, reportID *types.PrimitiveU32, reportData *types.Buffer) (*nex.RMCMessage, uint32) {
 	if commonProtocol.CreateReportDBRecord == nil {
 		common_globals.Logger.Warning("SecureConnection::SendReport missing CreateReportDBRecord!")
 		return nil, nex.Errors.Core.NotImplemented
@@ -18,10 +19,12 @@ func sendReport(err error, packet nex.PacketInterface, callID uint32, reportID u
 		return nil, nex.Errors.Core.Unknown
 	}
 
-	server := commonProtocol.server
-	client := packet.Sender()
+	// TODO - This assumes a PRUDP connection. Refactor to support HPP
+	connection := packet.Sender().(*nex.PRUDPConnection)
+	endpoint := connection.Endpoint
+	server := endpoint.Server
 
-	err = commonProtocol.CreateReportDBRecord(client.PID().LegacyValue(), reportID, reportData)
+	err = commonProtocol.CreateReportDBRecord(connection.PID(), reportID, reportData)
 	if err != nil {
 		common_globals.Logger.Critical(err.Error())
 		return nil, nex.Errors.Core.Unknown

@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	nex "github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 	datastore "github.com/PretendoNetwork/nex-protocols-go/datastore"
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
@@ -31,23 +32,32 @@ func preparePostObject(err error, packet nex.PacketInterface, callID uint32, par
 		return nil, nex.Errors.DataStore.Unknown
 	}
 
-	server := commonProtocol.server
-	client := packet.Sender()
+	// TODO - This assumes a PRUDP connection. Refactor to support HPP
+	connection := packet.Sender().(*nex.PRUDPConnection)
+	endpoint := connection.Endpoint
+	server := endpoint.Server
 
 	// TODO - Need to verify what param.PersistenceInitParam.DeleteLastObject really means. It's often set to true even when it wouldn't make sense
-	dataID, errCode := commonProtocol.InitializeObjectByPreparePostParam(client.PID().LegacyValue(), param)
+	dataID, errCode := commonProtocol.InitializeObjectByPreparePostParam(connection.PID(), param)
 	if errCode != 0 {
 		common_globals.Logger.Errorf("Error code %d on object init", errCode)
 		return nil, errCode
 	}
 
 	// TODO - Should this be moved to InitializeObjectByPreparePostParam?
-	for _, ratingInitParamWithSlot := range param.RatingInitParams {
+	param.RatingInitParams.Each(func(_ int, ratingInitParamWithSlot *datastore_types.DataStoreRatingInitParamWithSlot) bool {
 		errCode = commonProtocol.InitializeObjectRatingWithSlot(dataID, ratingInitParamWithSlot)
 		if errCode != 0 {
 			common_globals.Logger.Errorf("Error code %d on rating init", errCode)
-			return nil, errCode
+
+			return true
 		}
+
+		return false
+	})
+
+	if errCode != 0 {
+		return nil, errCode
 	}
 
 	bucket := commonProtocol.S3Bucket
@@ -66,23 +76,28 @@ func preparePostObject(err error, packet nex.PacketInterface, callID uint32, par
 
 	pReqPostInfo := datastore_types.NewDataStoreReqPostInfo()
 
-	pReqPostInfo.DataID = dataID
-	pReqPostInfo.URL = URL.String()
-	pReqPostInfo.RequestHeaders = requestHeaders
-	pReqPostInfo.FormFields = make([]*datastore_types.DataStoreKeyValue, 0, len(formData))
-	pReqPostInfo.RootCACert = commonProtocol.RootCACert
+	pReqPostInfo.DataID = types.NewPrimitiveU64(dataID)
+	pReqPostInfo.URL = types.NewString(URL.String())
+	pReqPostInfo.RequestHeaders = types.NewList[*datastore_types.DataStoreKeyValue]()
+	pReqPostInfo.FormFields = types.NewList[*datastore_types.DataStoreKeyValue]()
+	pReqPostInfo.RootCACert = types.NewBuffer(commonProtocol.RootCACert)
+
+	pReqPostInfo.RequestHeaders.Type = datastore_types.NewDataStoreKeyValue()
+	pReqPostInfo.RequestHeaders.SetFromData(requestHeaders)
+
+	pReqPostInfo.FormFields.Type = datastore_types.NewDataStoreKeyValue()
 
 	for key, value := range formData {
 		field := datastore_types.NewDataStoreKeyValue()
-		field.Key = key
-		field.Value = value
+		field.Key = types.NewString(key)
+		field.Value = types.NewString(value)
 
-		pReqPostInfo.FormFields = append(pReqPostInfo.FormFields, field)
+		pReqPostInfo.FormFields.Append(field)
 	}
 
-	rmcResponseStream := nex.NewStreamOut(commonProtocol.server)
+	rmcResponseStream := nex.NewByteStreamOut(server)
 
-	rmcResponseStream.WriteStructure(pReqPostInfo)
+	pReqPostInfo.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 

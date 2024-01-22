@@ -1,9 +1,7 @@
 package matchmaking
 
 import (
-	"fmt"
-
-	nex "github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 	_ "github.com/PretendoNetwork/nex-protocols-go"
 	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
@@ -35,10 +33,11 @@ func NewCommonProtocol(protocol match_making.Interface) *CommonProtocol {
 		protocol: protocol,
 	}
 
-	server.OnClientRemoved(func(client *nex.PRUDPClient) {
-		fmt.Println("Leaving")
-		common_globals.RemoveClientFromAllSessions(client)
-	})
+	// TODO - This needs to be added back somehow to work with the PRUDPEndPoint type
+	//server.OnClientRemoved(func(client *nex.PRUDPClient) {
+	//	fmt.Println("Leaving")
+	//	common_globals.RemoveClientFromAllSessions(client)
+	//})
 
 	return commonProtocol
 }

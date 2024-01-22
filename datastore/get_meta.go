@@ -1,7 +1,7 @@
 package datastore
 
 import (
-	nex "github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 	datastore "github.com/PretendoNetwork/nex-protocols-go/datastore"
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
@@ -23,14 +23,16 @@ func getMeta(err error, packet nex.PacketInterface, callID uint32, param *datast
 		return nil, nex.Errors.DataStore.Unknown
 	}
 
-	server := commonProtocol.server
-	client := packet.Sender()
+	// TODO - This assumes a PRUDP connection. Refactor to support HPP
+	connection := packet.Sender().(*nex.PRUDPConnection)
+	endpoint := connection.Endpoint
+	server := endpoint.Server
 
 	var pMetaInfo *datastore_types.DataStoreMetaInfo
 	var errCode uint32
 
 	// * Real server ignores PersistenceTarget if DataID is set
-	if param.DataID == 0 {
+	if param.DataID.Value == 0 {
 		pMetaInfo, errCode = commonProtocol.GetObjectInfoByPersistenceTargetWithPassword(param.PersistenceTarget, param.AccessPassword)
 	} else {
 		pMetaInfo, errCode = commonProtocol.GetObjectInfoByDataIDWithPassword(param.DataID, param.AccessPassword)
@@ -40,15 +42,16 @@ func getMeta(err error, packet nex.PacketInterface, callID uint32, param *datast
 		return nil, errCode
 	}
 
-	errCode = commonProtocol.VerifyObjectPermission(pMetaInfo.OwnerID, client.PID(), pMetaInfo.Permission)
+	errCode = commonProtocol.VerifyObjectPermission(pMetaInfo.OwnerID, connection.PID(), pMetaInfo.Permission)
 	if errCode != 0 {
 		return nil, errCode
 	}
 
 	pMetaInfo.FilterPropertiesByResultOption(param.ResultOption)
 
-	rmcResponseStream := nex.NewStreamOut(commonProtocol.server)
-	rmcResponseStream.WriteStructure(pMetaInfo)
+	rmcResponseStream := nex.NewByteStreamOut(server)
+
+	pMetaInfo.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 

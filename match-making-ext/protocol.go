@@ -1,7 +1,7 @@
 package match_making_ext
 
 import (
-	nex "github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go"
 	match_making_ext "github.com/PretendoNetwork/nex-protocols-go/match-making-ext"
 )
 

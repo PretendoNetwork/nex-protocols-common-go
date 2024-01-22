@@ -1,34 +1,39 @@
 package matchmake_extension
 
 import (
-	nex "github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension"
 )
 
-func modifyCurrentGameAttribute(err error, packet nex.PacketInterface, callID uint32, gid uint32, attribIndex uint32, newValue uint32) (*nex.RMCMessage, uint32) {
+func modifyCurrentGameAttribute(err error, packet nex.PacketInterface, callID uint32, gid *types.PrimitiveU32, attribIndex *types.PrimitiveU32, newValue *types.PrimitiveU32) (*nex.RMCMessage, uint32) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
-	server := commonProtocol.server
-	client := packet.Sender()
+	// TODO - This assumes a PRUDP connection. Refactor to support HPP
+	connection := packet.Sender().(*nex.PRUDPConnection)
+	endpoint := connection.Endpoint
+	server := endpoint.Server
 
-	session, ok := common_globals.Sessions[gid]
+	session, ok := common_globals.Sessions[gid.Value]
 	if !ok {
 		return nil, nex.Errors.RendezVous.SessionVoid
 	}
 
-	if session.GameMatchmakeSession.Gathering.OwnerPID.Equals(client.PID()) {
+	if session.GameMatchmakeSession.Gathering.OwnerPID.Equals(connection.PID()) {
 		return nil, nex.Errors.RendezVous.PermissionDenied
 	}
 
-	if int(attribIndex) > len(session.GameMatchmakeSession.Attributes) {
+	index := int(attribIndex.Value)
+
+	if index > session.GameMatchmakeSession.Attributes.Length() {
 		return nil, nex.Errors.Core.InvalidIndex
 	}
 
-	session.GameMatchmakeSession.Attributes[attribIndex] = newValue
+	session.GameMatchmakeSession.Attributes.SetIndex(index, newValue.Copy().(*types.PrimitiveU32))
 
 	rmcResponse := nex.NewRMCSuccess(server, nil)
 	rmcResponse.ProtocolID = matchmake_extension.ProtocolID

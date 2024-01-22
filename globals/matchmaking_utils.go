@@ -6,7 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	nex "github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go/types"
 	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
 	match_making_types "github.com/PretendoNetwork/nex-protocols-go/match-making/types"
 	notifications "github.com/PretendoNetwork/nex-protocols-go/notifications"
@@ -32,10 +33,10 @@ func FindOtherConnectionID(excludedConnectionID uint32, gatheringID uint32) uint
 	return 0
 }
 
-// RemoveConnectionIDFromSession removes a client from the session
-func RemoveConnectionIDFromSession(clientConnectionID uint32, gathering uint32) {
+// RemoveConnectionIDFromSession removes a PRUDP connection from the session
+func RemoveConnectionIDFromSession(id uint32, gathering uint32) {
 	for index, connectionID := range Sessions[gathering].ConnectionIDs {
-		if connectionID == clientConnectionID {
+		if connectionID == id {
 			Sessions[gathering].ConnectionIDs = DeleteIndex(Sessions[gathering].ConnectionIDs, index)
 		}
 	}
@@ -45,10 +46,10 @@ func RemoveConnectionIDFromSession(clientConnectionID uint32, gathering uint32) 
 	}
 }
 
-// FindClientSession searches for session the given connection ID is connected to
-func FindClientSession(connectionID uint32) uint32 {
+// FindConnectionSession searches for session the given connection ID is connected to
+func FindConnectionSession(id uint32) uint32 {
 	for gatheringID := range Sessions {
-		if slices.Contains(Sessions[gatheringID].ConnectionIDs, connectionID) {
+		if slices.Contains(Sessions[gatheringID].ConnectionIDs, id) {
 			return gatheringID
 		}
 	}
@@ -56,45 +57,47 @@ func FindClientSession(connectionID uint32) uint32 {
 	return 0
 }
 
-// RemoveClientFromAllSessions removes a client from every session
-func RemoveClientFromAllSessions(client *nex.PRUDPClient) {
+// RemoveConnectionFromAllSessions removes a connection from every session
+func RemoveConnectionFromAllSessions(connection *nex.PRUDPConnection) {
 	// * Keep checking until no session is found
-	for gid := FindClientSession(client.ConnectionID); gid != 0; {
+	for gid := FindConnectionSession(connection.ID); gid != 0; {
 		session := Sessions[gid]
 		lenParticipants := len(session.ConnectionIDs)
 
-		RemoveConnectionIDFromSession(client.ConnectionID, gid)
+		RemoveConnectionIDFromSession(connection.ID, gid)
 
 		if lenParticipants <= 1 {
-			gid = FindClientSession(client.ConnectionID)
+			gid = FindConnectionSession(connection.ID)
 			continue
 		}
 
 		ownerPID := session.GameMatchmakeSession.Gathering.OwnerPID
 
-		if ownerPID.Equals(client.PID()) {
+		if ownerPID.Equals(connection.PID()) {
 			// * This flag tells the server to change the matchmake session owner if they disconnect
 			// * If the flag is not set, delete the session
 			// * More info: https://nintendo-wiki.pretendo.network/docs/nex/protocols/match-making/types#flags
-			if session.GameMatchmakeSession.Gathering.Flags&match_making.GatheringFlags.DisconnectChangeOwner == 0 {
+			if session.GameMatchmakeSession.Gathering.Flags.PAND(match_making.GatheringFlags.DisconnectChangeOwner) == 0 {
 				delete(Sessions, gid)
 			} else {
-				ChangeSessionOwner(client, gid)
+				ChangeSessionOwner(connection, gid)
 			}
 		} else {
-			server := client.Server().(*nex.PRUDPServer)
+			endpoint := connection.Endpoint
+			server := endpoint.Server
 
 			category := notifications.NotificationCategories.Participation
 			subtype := notifications.NotificationSubTypes.Participation.Disconnected
 
 			oEvent := notifications_types.NewNotificationEvent()
-			oEvent.PIDSource = client.PID()
-			oEvent.Type = notifications.BuildNotificationType(category, subtype)
-			oEvent.Param1 = gid
-			oEvent.Param2 = client.PID().LegacyValue() // TODO - This assumes a legacy client. This won't work on the Switch
+			oEvent.PIDSource = connection.PID()
+			oEvent.Type = types.NewPrimitiveU32(notifications.BuildNotificationType(category, subtype))
+			oEvent.Param1 = types.NewPrimitiveU32(gid)
+			oEvent.Param2 = types.NewPrimitiveU32(connection.PID().LegacyValue()) // TODO - This assumes a legacy client. This won't work on the Switch
 
-			stream := nex.NewStreamOut(server)
-			stream.WriteStructure(oEvent)
+			stream := nex.NewByteStreamOut(server)
+
+			oEvent.WriteTo(stream)
 
 			rmcRequest := nex.NewRMCRequest(server)
 			rmcRequest.ProtocolID = notifications.ProtocolID
@@ -104,39 +107,39 @@ func RemoveClientFromAllSessions(client *nex.PRUDPClient) {
 
 			rmcRequestBytes := rmcRequest.Bytes()
 
-			targetClient := server.FindClientByPID(client.DestinationPort, client.DestinationStreamType, ownerPID.Value())
-			if targetClient == nil {
-				Logger.Warning("Owner client not found")
-				gid = FindClientSession(client.ConnectionID)
+			target := endpoint.FindConnectionByPID(ownerPID.Value())
+			if target == nil {
+				Logger.Warning("Target connection not found")
+				gid = FindConnectionSession(connection.ID)
 				continue
 			}
 
 			var messagePacket nex.PRUDPPacketInterface
 
-			if server.PRUDPVersion == 0 {
-				messagePacket, _ = nex.NewPRUDPPacketV0(targetClient, nil)
+			if connection.DefaultPRUDPVersion == 0 {
+				messagePacket, _ = nex.NewPRUDPPacketV0(target, nil)
 			} else {
-				messagePacket, _ = nex.NewPRUDPPacketV1(targetClient, nil)
+				messagePacket, _ = nex.NewPRUDPPacketV1(target, nil)
 			}
 
 			messagePacket.SetType(nex.DataPacket)
 			messagePacket.AddFlag(nex.FlagNeedsAck)
 			messagePacket.AddFlag(nex.FlagReliable)
-			messagePacket.SetSourceStreamType(client.DestinationStreamType)
-			messagePacket.SetSourcePort(client.DestinationPort)
-			messagePacket.SetDestinationStreamType(client.SourceStreamType)
-			messagePacket.SetDestinationPort(client.SourcePort)
+			messagePacket.SetSourceVirtualPortStreamType(connection.StreamType)
+			messagePacket.SetSourceVirtualPortStreamID(connection.Endpoint.StreamID)
+			messagePacket.SetDestinationVirtualPortStreamType(connection.StreamType)
+			messagePacket.SetDestinationVirtualPortStreamID(connection.StreamID)
 			messagePacket.SetPayload(rmcRequestBytes)
 
 			server.Send(messagePacket)
 		}
 
-		gid = FindClientSession(client.ConnectionID)
+		gid = FindConnectionSession(connection.ID)
 	}
 }
 
 // CreateSessionByMatchmakeSession creates a gathering from a MatchmakeSession
-func CreateSessionByMatchmakeSession(matchmakeSession *match_making_types.MatchmakeSession, searchMatchmakeSession *match_making_types.MatchmakeSession, hostPID *nex.PID) (*CommonMatchmakeSession, error, uint32) {
+func CreateSessionByMatchmakeSession(matchmakeSession *match_making_types.MatchmakeSession, searchMatchmakeSession *match_making_types.MatchmakeSession, hostPID *types.PID) (*CommonMatchmakeSession, error, uint32) {
 	sessionIndex := GetAvailableGatheringID()
 	if sessionIndex == 0 {
 		sessionIndex = GetAvailableGatheringID() // * Skip to index 1
@@ -147,29 +150,35 @@ func CreateSessionByMatchmakeSession(matchmakeSession *match_making_types.Matchm
 		GameMatchmakeSession:   matchmakeSession,
 	}
 
-	session.GameMatchmakeSession.Gathering.ID = sessionIndex
+	session.GameMatchmakeSession.Gathering.ID = types.NewPrimitiveU32(sessionIndex)
 	session.GameMatchmakeSession.Gathering.OwnerPID = hostPID
 	session.GameMatchmakeSession.Gathering.HostPID = hostPID
 
-	session.GameMatchmakeSession.StartedTime = nex.NewDateTime(0).Now()
-	session.GameMatchmakeSession.SessionKey = make([]byte, 32)
-	rand.Read(session.GameMatchmakeSession.SessionKey)
+	session.GameMatchmakeSession.StartedTime = types.NewDateTime(0).Now()
+	session.GameMatchmakeSession.SessionKey = types.NewBuffer(make([]byte, 32))
+
+	rand.Read(session.GameMatchmakeSession.SessionKey.Value)
 
 	if session.GameMatchmakeSession.MatchmakeParam == nil {
 		session.GameMatchmakeSession.MatchmakeParam = match_making_types.NewMatchmakeParam()
 	}
 
-	if session.GameMatchmakeSession.MatchmakeParam.Parameters == nil {
-		session.GameMatchmakeSession.MatchmakeParam.Parameters = make(map[string]*nex.Variant)
+	if session.GameMatchmakeSession.MatchmakeParam.Params == nil {
+		session.GameMatchmakeSession.MatchmakeParam.Params = types.NewMap[*types.String, *types.Variant]()
+		session.GameMatchmakeSession.MatchmakeParam.Params.KeyType = types.NewString("")
+		session.GameMatchmakeSession.MatchmakeParam.Params.ValueType = types.NewVariant()
 	}
 
-	session.GameMatchmakeSession.MatchmakeParam.Parameters["@SR"] = nex.NewVariant()
-	session.GameMatchmakeSession.MatchmakeParam.Parameters["@SR"].TypeID = 3
-	session.GameMatchmakeSession.MatchmakeParam.Parameters["@SR"].Bool = true
+	SR := types.NewVariant()
+	SR.TypeID = types.NewPrimitiveU8(3)
+	SR.Type = types.NewPrimitiveBool(true)
 
-	session.GameMatchmakeSession.MatchmakeParam.Parameters["@GIR"] = nex.NewVariant()
-	session.GameMatchmakeSession.MatchmakeParam.Parameters["@GIR"].TypeID = 1
-	session.GameMatchmakeSession.MatchmakeParam.Parameters["@GIR"].Int64 = 3
+	GIR := types.NewVariant()
+	GIR.TypeID = types.NewPrimitiveU8(1)
+	GIR.Type = types.NewPrimitiveS64(3)
+
+	session.GameMatchmakeSession.MatchmakeParam.Params.Set(types.NewString("@SR"), SR)
+	session.GameMatchmakeSession.MatchmakeParam.Params.Set(types.NewString("@GIR"), GIR)
 
 	Sessions[sessionIndex] = &session
 
@@ -177,7 +186,7 @@ func CreateSessionByMatchmakeSession(matchmakeSession *match_making_types.Matchm
 }
 
 // FindSessionByMatchmakeSession finds a gathering that matches with a MatchmakeSession
-func FindSessionByMatchmakeSession(pid *nex.PID, searchMatchmakeSession *match_making_types.MatchmakeSession) uint32 {
+func FindSessionByMatchmakeSession(pid *types.PID, searchMatchmakeSession *match_making_types.MatchmakeSession) uint32 {
 	// * This portion finds any sessions that match the search session
 	// * It does not care about anything beyond that, such as if the match is already full
 	// * This is handled below
@@ -192,17 +201,17 @@ func FindSessionByMatchmakeSession(pid *nex.PID, searchMatchmakeSession *match_m
 	var friendList []uint32
 	for _, sessionIndex := range candidateSessionIndexes {
 		sessionToCheck := Sessions[sessionIndex]
-		if len(sessionToCheck.ConnectionIDs) >= int(sessionToCheck.GameMatchmakeSession.MaximumParticipants) {
+		if len(sessionToCheck.ConnectionIDs) >= int(sessionToCheck.GameMatchmakeSession.MaximumParticipants.Value) {
 			continue
 		}
 
-		if !sessionToCheck.GameMatchmakeSession.OpenParticipation {
+		if !sessionToCheck.GameMatchmakeSession.OpenParticipation.Value {
 			continue
 		}
 
 		// * If the session only allows friends, check if the owner is in the friend list of the PID
 		// TODO - Is this a flag or a constant?
-		if sessionToCheck.GameMatchmakeSession.ParticipationPolicy == 98 {
+		if sessionToCheck.GameMatchmakeSession.ParticipationPolicy.Value == 98 {
 			if GetUserFriendPIDsHandler == nil {
 				Logger.Warning("Missing GetUserFriendPIDsHandler!")
 				continue
@@ -224,47 +233,47 @@ func FindSessionByMatchmakeSession(pid *nex.PID, searchMatchmakeSession *match_m
 }
 
 // FindSessionsByMatchmakeSessionSearchCriterias finds a gathering that matches with the given search criteria
-func FindSessionsByMatchmakeSessionSearchCriterias(pid *nex.PID, lstSearchCriteria []*match_making_types.MatchmakeSessionSearchCriteria, gameSpecificChecks func(searchCriteria *match_making_types.MatchmakeSessionSearchCriteria, matchmakeSession *match_making_types.MatchmakeSession) bool) []*CommonMatchmakeSession {
+func FindSessionsByMatchmakeSessionSearchCriterias(pid *types.PID, searchCriterias []*match_making_types.MatchmakeSessionSearchCriteria, gameSpecificChecks func(searchCriteria *match_making_types.MatchmakeSessionSearchCriteria, matchmakeSession *match_making_types.MatchmakeSession) bool) []*CommonMatchmakeSession {
 	candidateSessions := make([]*CommonMatchmakeSession, 0, len(Sessions))
 
 	// TODO - This whole section assumes legacy clients. None of it will work on the Switch
 	var friendList []uint32
 	for _, session := range Sessions {
-		for _, searchCriteria := range lstSearchCriteria {
+		for _, criteria := range searchCriterias {
 			// * Check things like game specific attributes
 			if gameSpecificChecks != nil {
-				if !gameSpecificChecks(searchCriteria, session.GameMatchmakeSession) {
+				if !gameSpecificChecks(criteria, session.GameMatchmakeSession) {
 					continue
 				}
 			} else {
-				if !compareAttributesSearchCriteria(session.GameMatchmakeSession.Attributes, searchCriteria.Attribs) {
+				if !compareAttributesSearchCriteria(session.GameMatchmakeSession.Attributes.Slice(), criteria.Attribs.Slice()) {
 					continue
 				}
 			}
 
-			if !compareSearchCriteria(session.GameMatchmakeSession.MaximumParticipants, searchCriteria.MaxParticipants) {
+			if !compareSearchCriteria(session.GameMatchmakeSession.MaximumParticipants.Value, criteria.MaxParticipants.Value) {
 				continue
 			}
 
-			if !compareSearchCriteria(session.GameMatchmakeSession.MinimumParticipants, searchCriteria.MinParticipants) {
+			if !compareSearchCriteria(session.GameMatchmakeSession.MinimumParticipants.Value, criteria.MinParticipants.Value) {
 				continue
 			}
 
-			if !compareSearchCriteria(session.GameMatchmakeSession.GameMode, searchCriteria.GameMode) {
+			if !compareSearchCriteria(session.GameMatchmakeSession.GameMode.Value, criteria.GameMode.Value) {
 				continue
 			}
 
-			if len(session.ConnectionIDs) >= int(session.GameMatchmakeSession.MaximumParticipants) {
+			if len(session.ConnectionIDs) >= int(session.GameMatchmakeSession.MaximumParticipants.Value) {
 				continue
 			}
 
-			if !session.GameMatchmakeSession.OpenParticipation {
+			if !session.GameMatchmakeSession.OpenParticipation.Value {
 				continue
 			}
 
 			// * If the session only allows friends, check if the owner is in the friend list of the PID
 			// TODO - Is this a flag or a constant?
-			if session.GameMatchmakeSession.ParticipationPolicy == 98 {
+			if session.GameMatchmakeSession.ParticipationPolicy.Value == 98 {
 				if GetUserFriendPIDsHandler == nil {
 					Logger.Warning("Missing GetUserFriendPIDsHandler!")
 					continue
@@ -289,7 +298,7 @@ func FindSessionsByMatchmakeSessionSearchCriterias(pid *nex.PID, lstSearchCriter
 	return candidateSessions
 }
 
-func compareAttributesSearchCriteria(original []uint32, search []string) bool {
+func compareAttributesSearchCriteria(original []*types.PrimitiveU32, search []*types.String) bool {
 	if len(original) != len(search) {
 		return false
 	}
@@ -297,7 +306,7 @@ func compareAttributesSearchCriteria(original []uint32, search []string) bool {
 	for index, originalAttribute := range original {
 		searchAttribute := search[index]
 
-		if !compareSearchCriteria(originalAttribute, searchAttribute) {
+		if !compareSearchCriteria(originalAttribute.Value, searchAttribute.Value) {
 			return false
 		}
 	}
@@ -335,8 +344,8 @@ func compareSearchCriteria[T ~uint16 | ~uint32](original T, search string) bool 
 
 // AddPlayersToSession updates the given sessions state to include the provided connection IDs
 // Returns a NEX error code if failed
-func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32, initiatingClient *nex.PRUDPClient, joinMessage string) (error, uint32) {
-	if (len(session.ConnectionIDs) + len(connectionIDs)) > int(session.GameMatchmakeSession.Gathering.MaximumParticipants) {
+func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32, initiatingConnection *nex.PRUDPConnection, joinMessage string) (error, uint32) {
+	if (len(session.ConnectionIDs) + len(connectionIDs)) > int(session.GameMatchmakeSession.Gathering.MaximumParticipants.Value) {
 		return fmt.Errorf("Gathering %d is full", session.GameMatchmakeSession.Gathering.ID), nex.Errors.RendezVous.SessionFull
 	}
 
@@ -347,13 +356,14 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 
 		session.ConnectionIDs = append(session.ConnectionIDs, connectedID)
 
-		session.GameMatchmakeSession.ParticipationCount += 1
+		session.GameMatchmakeSession.ParticipationCount.Value += 1
 	}
 
-	server := initiatingClient.Server().(*nex.PRUDPServer)
+	endpoint := initiatingConnection.Endpoint
+	server := endpoint.Server
 
 	for i := 0; i < len(session.ConnectionIDs); i++ {
-		target := server.FindClientByConnectionID(initiatingClient.DestinationPort, initiatingClient.DestinationStreamType, session.ConnectionIDs[i])
+		target := endpoint.FindConnectionByID(session.ConnectionIDs[i])
 		if target == nil {
 			// TODO - Error here?
 			Logger.Warning("Player not found")
@@ -364,16 +374,16 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 		notificationSubtype := notifications.NotificationSubTypes.Participation.NewParticipant
 
 		oEvent := notifications_types.NewNotificationEvent()
-		oEvent.PIDSource = initiatingClient.PID()
-		oEvent.Type = notifications.BuildNotificationType(notificationCategory, notificationSubtype)
-		oEvent.Param1 = session.GameMatchmakeSession.ID
-		oEvent.Param2 = target.PID().LegacyValue() // TODO - This assumes a legacy client. Will not work on the Switch
-		oEvent.StrParam = joinMessage
-		oEvent.Param3 = uint32(len(connectionIDs))
+		oEvent.PIDSource = initiatingConnection.PID()
+		oEvent.Type = types.NewPrimitiveU32(notifications.BuildNotificationType(notificationCategory, notificationSubtype))
+		oEvent.Param1 = session.GameMatchmakeSession.ID.Copy().(*types.PrimitiveU32)
+		oEvent.Param2 = types.NewPrimitiveU32(target.PID().LegacyValue()) // TODO - This assumes a legacy client. Will not work on the Switch
+		oEvent.StrParam = types.NewString(joinMessage)
+		oEvent.Param3 = types.NewPrimitiveU32(uint32(len(connectionIDs)))
 
-		notificationStream := nex.NewStreamOut(server)
+		notificationStream := nex.NewByteStreamOut(server)
 
-		notificationStream.WriteStructure(oEvent)
+		oEvent.WriteTo(notificationStream)
 
 		notificationRequest := nex.NewRMCRequest(server)
 		notificationRequest.ProtocolID = notifications.ProtocolID
@@ -385,7 +395,7 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 
 		var messagePacket nex.PRUDPPacketInterface
 
-		if server.PRUDPVersion == 0 {
+		if target.DefaultPRUDPVersion == 0 {
 			messagePacket, _ = nex.NewPRUDPPacketV0(target, nil)
 		} else {
 			messagePacket, _ = nex.NewPRUDPPacketV1(target, nil)
@@ -394,10 +404,10 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 		messagePacket.SetType(nex.DataPacket)
 		messagePacket.AddFlag(nex.FlagNeedsAck)
 		messagePacket.AddFlag(nex.FlagReliable)
-		messagePacket.SetSourceStreamType(target.DestinationStreamType)
-		messagePacket.SetSourcePort(target.DestinationPort)
-		messagePacket.SetDestinationStreamType(target.SourceStreamType)
-		messagePacket.SetDestinationPort(target.SourcePort)
+		messagePacket.SetSourceVirtualPortStreamType(target.StreamType)
+		messagePacket.SetSourceVirtualPortStreamID(target.Endpoint.StreamID)
+		messagePacket.SetDestinationVirtualPortStreamType(target.StreamType)
+		messagePacket.SetDestinationVirtualPortStreamID(target.StreamID)
 		messagePacket.SetPayload(notificationRequestBytes)
 
 		server.Send(messagePacket)
@@ -409,7 +419,7 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 	// TODO - Check other games both pre and post 3.10.0 and validate
 	if server.MatchMakingProtocolVersion().GreaterOrEqual("3.10.0") {
 		for i := 0; i < len(session.ConnectionIDs); i++ {
-			target := server.FindClientByConnectionID(initiatingClient.DestinationPort, initiatingClient.DestinationStreamType, session.ConnectionIDs[i])
+			target := endpoint.FindConnectionByID(session.ConnectionIDs[i])
 			if target == nil {
 				// TODO - Error here?
 				Logger.Warning("Player not found")
@@ -420,16 +430,16 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 			notificationSubtype := notifications.NotificationSubTypes.Participation.NewParticipant
 
 			oEvent := notifications_types.NewNotificationEvent()
-			oEvent.PIDSource = initiatingClient.PID()
-			oEvent.Type = notifications.BuildNotificationType(notificationCategory, notificationSubtype)
-			oEvent.Param1 = session.GameMatchmakeSession.ID
-			oEvent.Param2 = target.PID().LegacyValue() // TODO - This assumes a legacy client. Will not work on the Switch
-			oEvent.StrParam = joinMessage
-			oEvent.Param3 = uint32(len(connectionIDs))
+			oEvent.PIDSource = initiatingConnection.PID()
+			oEvent.Type = types.NewPrimitiveU32(notifications.BuildNotificationType(notificationCategory, notificationSubtype))
+			oEvent.Param1 = session.GameMatchmakeSession.ID.Copy().(*types.PrimitiveU32)
+			oEvent.Param2 = types.NewPrimitiveU32(target.PID().LegacyValue()) // TODO - This assumes a legacy client. Will not work on the Switch
+			oEvent.StrParam = types.NewString(joinMessage)
+			oEvent.Param3 = types.NewPrimitiveU32(uint32(len(connectionIDs)))
 
-			notificationStream := nex.NewStreamOut(server)
+			notificationStream := nex.NewByteStreamOut(server)
 
-			notificationStream.WriteStructure(oEvent)
+			oEvent.WriteTo(notificationStream)
 
 			notificationRequest := nex.NewRMCRequest(server)
 			notificationRequest.ProtocolID = notifications.ProtocolID
@@ -441,19 +451,19 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 
 			var messagePacket nex.PRUDPPacketInterface
 
-			if server.PRUDPVersion == 0 {
-				messagePacket, _ = nex.NewPRUDPPacketV0(initiatingClient, nil)
+			if target.DefaultPRUDPVersion == 0 {
+				messagePacket, _ = nex.NewPRUDPPacketV0(initiatingConnection, nil)
 			} else {
-				messagePacket, _ = nex.NewPRUDPPacketV1(initiatingClient, nil)
+				messagePacket, _ = nex.NewPRUDPPacketV1(initiatingConnection, nil)
 			}
 
 			messagePacket.SetType(nex.DataPacket)
 			messagePacket.AddFlag(nex.FlagNeedsAck)
 			messagePacket.AddFlag(nex.FlagReliable)
-			messagePacket.SetSourceStreamType(target.DestinationStreamType)
-			messagePacket.SetSourcePort(target.DestinationPort)
-			messagePacket.SetDestinationStreamType(target.SourceStreamType)
-			messagePacket.SetDestinationPort(target.SourcePort)
+			messagePacket.SetSourceVirtualPortStreamType(target.StreamType)
+			messagePacket.SetSourceVirtualPortStreamID(target.Endpoint.StreamID)
+			messagePacket.SetDestinationVirtualPortStreamType(target.StreamType)
+			messagePacket.SetDestinationVirtualPortStreamID(target.StreamID)
 			messagePacket.SetPayload(notificationRequestBytes)
 
 			server.Send(messagePacket)
@@ -463,16 +473,16 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 		notificationSubtype := notifications.NotificationSubTypes.Participation.NewParticipant
 
 		oEvent := notifications_types.NewNotificationEvent()
-		oEvent.PIDSource = initiatingClient.PID()
-		oEvent.Type = notifications.BuildNotificationType(notificationCategory, notificationSubtype)
+		oEvent.PIDSource = initiatingConnection.PID()
+		oEvent.Type = types.NewPrimitiveU32(notifications.BuildNotificationType(notificationCategory, notificationSubtype))
 		oEvent.Param1 = session.GameMatchmakeSession.ID
-		oEvent.Param2 = initiatingClient.PID().LegacyValue() // TODO - This assumes a legacy client. Will not work on the Switch
-		oEvent.StrParam = joinMessage
-		oEvent.Param3 = uint32(len(connectionIDs))
+		oEvent.Param2 = types.NewPrimitiveU32(initiatingConnection.PID().LegacyValue()) // TODO - This assumes a legacy client. Will not work on the Switch
+		oEvent.StrParam = types.NewString(joinMessage)
+		oEvent.Param3 = types.NewPrimitiveU32(uint32(len(connectionIDs)))
 
-		notificationStream := nex.NewStreamOut(server)
+		notificationStream := nex.NewByteStreamOut(server)
 
-		notificationStream.WriteStructure(oEvent)
+		oEvent.WriteTo(notificationStream)
 
 		notificationRequest := nex.NewRMCRequest(server)
 		notificationRequest.ProtocolID = notifications.ProtocolID
@@ -484,31 +494,31 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 
 		var messagePacket nex.PRUDPPacketInterface
 
-		if server.PRUDPVersion == 0 {
-			messagePacket, _ = nex.NewPRUDPPacketV0(initiatingClient, nil)
+		if initiatingConnection.DefaultPRUDPVersion == 0 {
+			messagePacket, _ = nex.NewPRUDPPacketV0(initiatingConnection, nil)
 		} else {
-			messagePacket, _ = nex.NewPRUDPPacketV1(initiatingClient, nil)
+			messagePacket, _ = nex.NewPRUDPPacketV1(initiatingConnection, nil)
 		}
 
 		messagePacket.SetType(nex.DataPacket)
 		messagePacket.AddFlag(nex.FlagNeedsAck)
 		messagePacket.AddFlag(nex.FlagReliable)
-		messagePacket.SetSourceStreamType(initiatingClient.DestinationStreamType)
-		messagePacket.SetSourcePort(initiatingClient.DestinationPort)
-		messagePacket.SetDestinationStreamType(initiatingClient.SourceStreamType)
-		messagePacket.SetDestinationPort(initiatingClient.SourcePort)
+		messagePacket.SetSourceVirtualPortStreamType(initiatingConnection.StreamType)
+		messagePacket.SetSourceVirtualPortStreamID(initiatingConnection.Endpoint.StreamID)
+		messagePacket.SetDestinationVirtualPortStreamType(initiatingConnection.StreamType)
+		messagePacket.SetDestinationVirtualPortStreamID(initiatingConnection.StreamID)
 		messagePacket.SetPayload(notificationRequestBytes)
 
 		server.Send(messagePacket)
 
-		target := server.FindClientByPID(initiatingClient.DestinationPort, initiatingClient.DestinationStreamType, session.GameMatchmakeSession.Gathering.OwnerPID.Value())
+		target := endpoint.FindConnectionByPID(session.GameMatchmakeSession.Gathering.OwnerPID.Value())
 		if target == nil {
 			// TODO - Error here?
 			Logger.Warning("Player not found")
 			return nil, 0
 		}
 
-		if server.PRUDPVersion == 0 {
+		if target.DefaultPRUDPVersion == 0 {
 			messagePacket, _ = nex.NewPRUDPPacketV0(target, nil)
 		} else {
 			messagePacket, _ = nex.NewPRUDPPacketV1(target, nil)
@@ -517,10 +527,10 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 		messagePacket.SetType(nex.DataPacket)
 		messagePacket.AddFlag(nex.FlagNeedsAck)
 		messagePacket.AddFlag(nex.FlagReliable)
-		messagePacket.SetSourceStreamType(target.DestinationStreamType)
-		messagePacket.SetSourcePort(target.DestinationPort)
-		messagePacket.SetDestinationStreamType(target.SourceStreamType)
-		messagePacket.SetDestinationPort(target.SourcePort)
+		messagePacket.SetSourceVirtualPortStreamType(target.StreamType)
+		messagePacket.SetSourceVirtualPortStreamID(target.Endpoint.StreamID)
+		messagePacket.SetDestinationVirtualPortStreamType(target.StreamType)
+		messagePacket.SetDestinationVirtualPortStreamID(target.StreamID)
 		messagePacket.SetPayload(notificationRequestBytes)
 
 		server.Send(messagePacket)
@@ -529,20 +539,22 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 	return nil, 0
 }
 
-// ChangeSessionOwner changes the session owner to a different client
-func ChangeSessionOwner(ownerClient *nex.PRUDPClient, gathering uint32) {
-	server := ownerClient.Server().(*nex.PRUDPServer)
-	var otherClient *nex.PRUDPClient
+// ChangeSessionOwner changes the session owner to a different connection
+func ChangeSessionOwner(currentOwner *nex.PRUDPConnection, gathering uint32) {
+	endpoint := currentOwner.Endpoint
+	server := endpoint.Server
 
-	otherConnectionID := FindOtherConnectionID(ownerClient.ConnectionID, gathering)
-	if otherConnectionID != 0 {
-		otherClient = server.FindClientByConnectionID(ownerClient.DestinationPort, ownerClient.DestinationStreamType, otherConnectionID)
-		if otherClient != nil {
-			Sessions[gathering].GameMatchmakeSession.Gathering.OwnerPID = otherClient.PID()
-		} else {
-			Logger.Warning("Other client not found")
+	var newOwner *nex.PRUDPConnection
+
+	newOwnerConnectionID := FindOtherConnectionID(currentOwner.ID, gathering)
+	if newOwnerConnectionID != 0 {
+		newOwner = endpoint.FindConnectionByID(newOwnerConnectionID)
+		if newOwner == nil {
+			Logger.Warning("Other connection not found")
 			return
 		}
+
+		Sessions[gathering].GameMatchmakeSession.Gathering.OwnerPID = newOwner.PID()
 	} else {
 		return
 	}
@@ -551,18 +563,19 @@ func ChangeSessionOwner(ownerClient *nex.PRUDPClient, gathering uint32) {
 	subtype := notifications.NotificationSubTypes.OwnershipChanged.None
 
 	oEvent := notifications_types.NewNotificationEvent()
-	oEvent.PIDSource = otherClient.PID()
-	oEvent.Type = notifications.BuildNotificationType(category, subtype)
-	oEvent.Param1 = gathering
-	oEvent.Param2 = otherClient.PID().LegacyValue() // TODO - This assumes a legacy client. Will not work on the Switch
+	oEvent.PIDSource = newOwner.PID()
+	oEvent.Type = types.NewPrimitiveU32(notifications.BuildNotificationType(category, subtype))
+	oEvent.Param1 = types.NewPrimitiveU32(gathering)
+	oEvent.Param2 = types.NewPrimitiveU32(newOwner.PID().LegacyValue()) // TODO - This assumes a legacy client. Will not work on the Switch
 
 	// TODO - StrParam doesn't have this value on some servers
 	// * https://github.com/kinnay/NintendoClients/issues/101
 	// * unixTime := time.Now()
 	// * oEvent.StrParam = strconv.FormatInt(unixTime.UnixMicro(), 10)
 
-	stream := nex.NewStreamOut(server)
-	stream.WriteStructure(oEvent)
+	stream := nex.NewByteStreamOut(server)
+
+	oEvent.WriteTo(stream)
 
 	rmcRequest := nex.NewRMCRequest(server)
 	rmcRequest.ProtocolID = notifications.ProtocolID
@@ -573,28 +586,29 @@ func ChangeSessionOwner(ownerClient *nex.PRUDPClient, gathering uint32) {
 	rmcRequestBytes := rmcRequest.Bytes()
 
 	for _, connectionID := range Sessions[gathering].ConnectionIDs {
-		targetClient := server.FindClientByConnectionID(ownerClient.DestinationPort, ownerClient.DestinationStreamType, connectionID)
-		if targetClient != nil {
-			var messagePacket nex.PRUDPPacketInterface
-
-			if server.PRUDPVersion == 0 {
-				messagePacket, _ = nex.NewPRUDPPacketV0(targetClient, nil)
-			} else {
-				messagePacket, _ = nex.NewPRUDPPacketV1(targetClient, nil)
-			}
-
-			messagePacket.SetType(nex.DataPacket)
-			messagePacket.AddFlag(nex.FlagNeedsAck)
-			messagePacket.AddFlag(nex.FlagReliable)
-			messagePacket.SetSourceStreamType(targetClient.DestinationStreamType)
-			messagePacket.SetSourcePort(targetClient.DestinationPort)
-			messagePacket.SetDestinationStreamType(targetClient.SourceStreamType)
-			messagePacket.SetDestinationPort(targetClient.SourcePort)
-			messagePacket.SetPayload(rmcRequestBytes)
-
-			server.Send(messagePacket)
-		} else {
-			Logger.Warning("Client not found")
+		target := endpoint.FindConnectionByID(connectionID)
+		if target == nil {
+			Logger.Warning("Connection not found")
+			continue
 		}
+
+		var messagePacket nex.PRUDPPacketInterface
+
+		if target.DefaultPRUDPVersion == 0 {
+			messagePacket, _ = nex.NewPRUDPPacketV0(target, nil)
+		} else {
+			messagePacket, _ = nex.NewPRUDPPacketV1(target, nil)
+		}
+
+		messagePacket.SetType(nex.DataPacket)
+		messagePacket.AddFlag(nex.FlagNeedsAck)
+		messagePacket.AddFlag(nex.FlagReliable)
+		messagePacket.SetSourceVirtualPortStreamType(target.StreamType)
+		messagePacket.SetSourceVirtualPortStreamID(target.Endpoint.StreamID)
+		messagePacket.SetDestinationVirtualPortStreamType(target.StreamType)
+		messagePacket.SetDestinationVirtualPortStreamID(target.StreamID)
+		messagePacket.SetPayload(rmcRequestBytes)
+
+		server.Send(messagePacket)
 	}
 }

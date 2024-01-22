@@ -2,6 +2,7 @@ package ticket_granting
 
 import (
 	"github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go/types"
 	_ "github.com/PretendoNetwork/nex-protocols-go"
 	ticket_granting "github.com/PretendoNetwork/nex-protocols-go/ticket-granting"
 
@@ -13,10 +14,10 @@ var commonProtocol *CommonProtocol
 type CommonProtocol struct {
 	server                     nex.ServerInterface
 	protocol                   ticket_granting.Interface
-	SecureStationURL           *nex.StationURL
-	SpecialProtocols           []uint8
-	StationURLSpecialProtocols *nex.StationURL
-	BuildName                  string
+	SecureStationURL           *types.StationURL
+	SpecialProtocols           []*types.PrimitiveU8
+	StationURLSpecialProtocols *types.StationURL
+	BuildName                  *types.String
 	allowInsecureLoginMethod   bool
 }
 
@@ -38,9 +39,10 @@ func NewCommonProtocol(protocol ticket_granting.Interface) *CommonProtocol {
 	commonProtocol = &CommonProtocol{
 		server:                     protocol.Server(),
 		protocol:                   protocol,
-		SecureStationURL:           nex.NewStationURL("prudp:/"),
-		SpecialProtocols:           make([]uint8, 0),
-		StationURLSpecialProtocols: nex.NewStationURL(""),
+		SecureStationURL:           types.NewStationURL("prudp:/"),
+		SpecialProtocols:           make([]*types.PrimitiveU8, 0),
+		StationURLSpecialProtocols: types.NewStationURL(""),
+		BuildName:                  types.NewString(""),
 	}
 
 	commonProtocol.DisableInsecureLogin() // * Disable insecure login by default

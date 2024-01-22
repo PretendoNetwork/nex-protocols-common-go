@@ -1,35 +1,35 @@
 package matchmaking
 
 import (
-	nex "github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
 )
 
-func updateSessionHostV1(err error, packet nex.PacketInterface, callID uint32, gid uint32) (*nex.RMCMessage, uint32) {
+func updateSessionHostV1(err error, packet nex.PacketInterface, callID uint32, gid *types.PrimitiveU32) (*nex.RMCMessage, uint32) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
-	server := commonProtocol.server
-
-	// TODO - Remove cast to PRUDPClient?
-	client := packet.Sender().(*nex.PRUDPClient)
-
-	var session *common_globals.CommonMatchmakeSession
-	var ok bool
-	if session, ok = common_globals.Sessions[gid]; !ok {
+	session, ok := common_globals.Sessions[gid.Value]
+	if !ok {
 		return nil, nex.Errors.RendezVous.SessionVoid
 	}
 
-	if common_globals.FindClientSession(client.ConnectionID) != gid {
+	// TODO - This assumes a PRUDP connection. Refactor to support HPP
+	connection := packet.Sender().(*nex.PRUDPConnection)
+	endpoint := connection.Endpoint
+	server := endpoint.Server
+
+	if common_globals.FindConnectionSession(connection.ID) != gid.Value {
 		return nil, nex.Errors.RendezVous.PermissionDenied
 	}
 
-	session.GameMatchmakeSession.Gathering.HostPID = client.PID()
-	if session.GameMatchmakeSession.Gathering.Flags&match_making.GatheringFlags.DisconnectChangeOwner != 0 {
-		session.GameMatchmakeSession.Gathering.OwnerPID = client.PID()
+	session.GameMatchmakeSession.Gathering.HostPID = connection.PID()
+	if session.GameMatchmakeSession.Gathering.Flags.PAND(match_making.GatheringFlags.DisconnectChangeOwner) != 0 {
+		session.GameMatchmakeSession.Gathering.OwnerPID = connection.PID()
 	}
 
 	rmcResponse := nex.NewRMCSuccess(server, nil)

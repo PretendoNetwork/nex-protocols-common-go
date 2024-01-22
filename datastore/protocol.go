@@ -5,8 +5,8 @@ import (
 	"slices"
 	"strings"
 
-	nex "github.com/PretendoNetwork/nex-go"
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
+	"github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go/types"
 	datastore "github.com/PretendoNetwork/nex-protocols-go/datastore"
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
 	"github.com/minio/minio-go/v7"
@@ -24,23 +24,23 @@ type CommonProtocol struct {
 	minIOClient                                  *minio.Client
 	S3Presigner                                  S3PresignerInterface
 	GetUserFriendPIDs                            func(pid uint32) []uint32
-	GetObjectInfoByDataID                        func(dataID uint64) (*datastore_types.DataStoreMetaInfo, uint32)
-	UpdateObjectPeriodByDataIDWithPassword       func(dataID uint64, dataType uint16, password uint64) uint32
-	UpdateObjectMetaBinaryByDataIDWithPassword   func(dataID uint64, metaBinary []byte, password uint64) uint32
-	UpdateObjectDataTypeByDataIDWithPassword     func(dataID uint64, period uint16, password uint64) uint32
-	GetObjectSizeByDataID                        func(dataID uint64) (uint32, uint32)
-	UpdateObjectUploadCompletedByDataID          func(dataID uint64, uploadCompleted bool) uint32
-	GetObjectInfoByPersistenceTargetWithPassword func(persistenceTarget *datastore_types.DataStorePersistenceTarget, password uint64) (*datastore_types.DataStoreMetaInfo, uint32)
-	GetObjectInfoByDataIDWithPassword            func(dataID uint64, password uint64) (*datastore_types.DataStoreMetaInfo, uint32)
+	GetObjectInfoByDataID                        func(dataID *types.PrimitiveU64) (*datastore_types.DataStoreMetaInfo, uint32)
+	UpdateObjectPeriodByDataIDWithPassword       func(dataID *types.PrimitiveU64, dataType *types.PrimitiveU16, password *types.PrimitiveU64) uint32
+	UpdateObjectMetaBinaryByDataIDWithPassword   func(dataID *types.PrimitiveU64, metaBinary *types.QBuffer, password *types.PrimitiveU64) uint32
+	UpdateObjectDataTypeByDataIDWithPassword     func(dataID *types.PrimitiveU64, period *types.PrimitiveU16, password *types.PrimitiveU64) uint32
+	GetObjectSizeByDataID                        func(dataID *types.PrimitiveU64) (uint32, uint32)
+	UpdateObjectUploadCompletedByDataID          func(dataID *types.PrimitiveU64, uploadCompleted bool) uint32
+	GetObjectInfoByPersistenceTargetWithPassword func(persistenceTarget *datastore_types.DataStorePersistenceTarget, password *types.PrimitiveU64) (*datastore_types.DataStoreMetaInfo, uint32)
+	GetObjectInfoByDataIDWithPassword            func(dataID *types.PrimitiveU64, password *types.PrimitiveU64) (*datastore_types.DataStoreMetaInfo, uint32)
 	S3GetRequestHeaders                          func() ([]*datastore_types.DataStoreKeyValue, uint32)
 	S3PostRequestHeaders                         func() ([]*datastore_types.DataStoreKeyValue, uint32)
-	InitializeObjectByPreparePostParam           func(ownerPID uint32, param *datastore_types.DataStorePreparePostParam) (uint64, uint32)
+	InitializeObjectByPreparePostParam           func(ownerPID *types.PID, param *datastore_types.DataStorePreparePostParam) (uint64, uint32)
 	InitializeObjectRatingWithSlot               func(dataID uint64, param *datastore_types.DataStoreRatingInitParamWithSlot) uint32
-	RateObjectWithPassword                       func(dataID uint64, slot uint8, ratingValue int32, accessPassword uint64) (*datastore_types.DataStoreRatingInfo, uint32)
-	DeleteObjectByDataIDWithPassword             func(dataID uint64, password uint64) uint32
-	DeleteObjectByDataID                         func(dataID uint64) uint32
+	RateObjectWithPassword                       func(dataID *types.PrimitiveU64, slot *types.PrimitiveU8, ratingValue *types.PrimitiveS32, accessPassword *types.PrimitiveU64) (*datastore_types.DataStoreRatingInfo, uint32)
+	DeleteObjectByDataIDWithPassword             func(dataID *types.PrimitiveU64, password *types.PrimitiveU64) uint32
+	DeleteObjectByDataID                         func(dataID *types.PrimitiveU64) uint32
 	GetObjectInfosByDataStoreSearchParam         func(param *datastore_types.DataStoreSearchParam) ([]*datastore_types.DataStoreMetaInfo, uint32, uint32)
-	GetObjectOwnerByDataID                       func(dataID uint64) (uint32, uint32)
+	GetObjectOwnerByDataID                       func(dataID *types.PrimitiveU64) (uint32, uint32)
 }
 
 func (c *CommonProtocol) S3StatObject(bucket, key string) (minio.ObjectInfo, error) {
@@ -56,8 +56,8 @@ func (c *CommonProtocol) S3ObjectSize(bucket, key string) (uint64, error) {
 	return uint64(info.Size), nil
 }
 
-func (c *CommonProtocol) VerifyObjectPermission(ownerPID, accessorPID *nex.PID, permission *datastore_types.DataStorePermission) uint32 {
-	if permission.Permission > 3 {
+func (c *CommonProtocol) VerifyObjectPermission(ownerPID, accessorPID *types.PID, permission *datastore_types.DataStorePermission) uint32 {
+	if permission.Permission.Value > 3 {
 		return nex.Errors.DataStore.InvalidArgument
 	}
 
@@ -67,12 +67,12 @@ func (c *CommonProtocol) VerifyObjectPermission(ownerPID, accessorPID *nex.PID, 
 	}
 
 	// * Allow anyone
-	if permission.Permission == 0 {
+	if permission.Permission.Value == 0 {
 		return 0
 	}
 
 	// * Allow only friends of the owner
-	if permission.Permission == 1 {
+	if permission.Permission.Value == 1 {
 		// TODO - This assumes a legacy client. Will not work on the Switch
 		friendsList := c.GetUserFriendPIDs(ownerPID.LegacyValue())
 
@@ -82,14 +82,14 @@ func (c *CommonProtocol) VerifyObjectPermission(ownerPID, accessorPID *nex.PID, 
 	}
 
 	// * Allow only users whose PIDs are defined in permission.RecipientIDs
-	if permission.Permission == 2 {
-		if !common_globals.ContainsPID(permission.RecipientIDs, accessorPID) {
+	if permission.Permission.Value == 2 {
+		if !permission.RecipientIDs.Contains(accessorPID) {
 			return nex.Errors.DataStore.PermissionDenied
 		}
 	}
 
 	// * Allow only the owner
-	if permission.Permission == 3 {
+	if permission.Permission.Value == 3 {
 		if !ownerPID.Equals(accessorPID) {
 			return nex.Errors.DataStore.PermissionDenied
 		}

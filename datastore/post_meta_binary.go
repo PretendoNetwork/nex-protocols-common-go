@@ -30,28 +30,36 @@ func postMetaBinary(err error, packet nex.PacketInterface, callID uint32, param 
 		return nil, nex.Errors.DataStore.Unknown
 	}
 
-	server := commonProtocol.server
-	client := packet.Sender()
+	// TODO - This assumes a PRUDP connection. Refactor to support HPP
+	connection := packet.Sender().(*nex.PRUDPConnection)
+	endpoint := connection.Endpoint
+	server := endpoint.Server
 
 	// TODO - Need to verify what param.PersistenceInitParam.DeleteLastObject really means. It's often set to true even when it wouldn't make sense
-	dataID, errCode := commonProtocol.InitializeObjectByPreparePostParam(client.PID().LegacyValue(), param)
+	dataID, errCode := commonProtocol.InitializeObjectByPreparePostParam(connection.PID(), param)
 	if errCode != 0 {
 		common_globals.Logger.Errorf("Error code %d on object init", errCode)
 		return nil, errCode
 	}
 
 	// TODO - Should this be moved to InitializeObjectByPreparePostParam?
-	for _, ratingInitParamWithSlot := range param.RatingInitParams {
+	param.RatingInitParams.Each(func(_ int, ratingInitParamWithSlot *datastore_types.DataStoreRatingInitParamWithSlot) bool {
 		errCode = commonProtocol.InitializeObjectRatingWithSlot(dataID, ratingInitParamWithSlot)
 		if errCode != 0 {
 			common_globals.Logger.Errorf("Error code %d on rating init", errCode)
-			return nil, errCode
+			return true
 		}
+
+		return false
+	})
+
+	if errCode != 0 {
+		return nil, errCode
 	}
 
-	rmcResponseStream := nex.NewStreamOut(commonProtocol.server)
+	rmcResponseStream := nex.NewByteStreamOut(server)
 
-	rmcResponseStream.WriteUInt64LE(uint64(dataID))
+	rmcResponseStream.WritePrimitiveUInt64LE(dataID)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 

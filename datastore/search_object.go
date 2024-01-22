@@ -2,6 +2,7 @@ package datastore
 
 import (
 	"github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 	datastore "github.com/PretendoNetwork/nex-protocols-go/datastore"
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
@@ -18,8 +19,10 @@ func searchObject(err error, packet nex.PacketInterface, callID uint32, param *d
 		return nil, nex.Errors.DataStore.Unknown
 	}
 
-	server := commonProtocol.server
-	client := packet.Sender()
+	// TODO - This assumes a PRUDP connection. Refactor to support HPP
+	connection := packet.Sender().(*nex.PRUDPConnection)
+	endpoint := connection.Endpoint
+	server := endpoint.Server
 
 	// * This is likely game-specific. Also developer note:
 	// * Please keep in mind that no results is allowed. errCode
@@ -35,10 +38,11 @@ func searchObject(err error, packet nex.PacketInterface, callID uint32, param *d
 
 	pSearchResult := datastore_types.NewDataStoreSearchResult()
 
-	pSearchResult.Result = make([]*datastore_types.DataStoreMetaInfo, 0, len(objects))
+	pSearchResult.Result = types.NewList[*datastore_types.DataStoreMetaInfo]()
+	pSearchResult.Result.Type = datastore_types.NewDataStoreMetaInfo()
 
 	for _, object := range objects {
-		errCode = commonProtocol.VerifyObjectPermission(object.OwnerID, client.PID(), object.Permission)
+		errCode = commonProtocol.VerifyObjectPermission(object.OwnerID, connection.PID(), object.Permission)
 		if errCode != 0 {
 			// * Since we don't error here, should we also
 			// * "hide" these results by also decrementing
@@ -48,7 +52,7 @@ func searchObject(err error, packet nex.PacketInterface, callID uint32, param *d
 
 		object.FilterPropertiesByResultOption(param.ResultOption)
 
-		pSearchResult.Result = append(pSearchResult.Result, object)
+		pSearchResult.Result.Append(object)
 	}
 
 	var totalCountType uint8
@@ -57,7 +61,7 @@ func searchObject(err error, packet nex.PacketInterface, callID uint32, param *d
 	// * the permissions checks in the
 	// * previous loop will mutate the data
 	// * returned from the database
-	if totalCount == uint32(len(pSearchResult.Result)) {
+	if totalCount == uint32(pSearchResult.Result.Length()) {
 		totalCountType = 0 // * Has no more data. All possible results were returned
 	} else {
 		totalCountType = 1 // * Has more data. Not all possible results were returned
@@ -67,19 +71,19 @@ func searchObject(err error, packet nex.PacketInterface, callID uint32, param *d
 	// *
 	// * Only seen in struct revision 3 or
 	// * NEX 4.0+
-	if param.StructureVersion() >= 3 || commonProtocol.server.DataStoreProtocolVersion().GreaterOrEqual("4.0.0") {
-		if !param.TotalCountEnabled {
+	if param.StructureVersion >= 3 || server.DataStoreProtocolVersion().GreaterOrEqual("4.0.0") {
+		if !param.TotalCountEnabled.Value {
 			totalCount = 0
 			totalCountType = 3
 		}
 	}
 
-	pSearchResult.TotalCount = totalCount
-	pSearchResult.TotalCountType = totalCountType
+	pSearchResult.TotalCount = types.NewPrimitiveU32(totalCount)
+	pSearchResult.TotalCountType = types.NewPrimitiveU8(totalCountType)
 
-	rmcResponseStream := nex.NewStreamOut(commonProtocol.server)
+	rmcResponseStream := nex.NewByteStreamOut(server)
 
-	rmcResponseStream.WriteStructure(pSearchResult)
+	pSearchResult.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 

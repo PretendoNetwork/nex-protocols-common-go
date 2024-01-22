@@ -4,12 +4,12 @@ import (
 	"crypto/rand"
 
 	"github.com/PretendoNetwork/nex-go"
-
+	"github.com/PretendoNetwork/nex-go/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
-func generateTicket(userPID *nex.PID, targetPID *nex.PID) ([]byte, uint32) {
-	// TODO - Remove cast to PRUDPServer?
+func generateTicket(userPID *types.PID, targetPID *types.PID) ([]byte, uint32) {
+	// TODO - I would like to remove this use of commonProtocol, if possible
 	server := commonProtocol.server.(*nex.PRUDPServer)
 
 	var userPassword []byte
@@ -21,7 +21,7 @@ func generateTicket(userPID *nex.PID, targetPID *nex.PID) ([]byte, uint32) {
 	case 2: // * "Quazal Rendez-Vous" (the server user) account. Used as the Kerberos target
 		userPassword = server.KerberosPassword()
 	case 100: // * Guest user account. Used when creating a new NEX account
-		userPassword = []byte("MMQea3n!fsik")
+		userPassword = []byte("MMQea3n!fsik") // TODO - Configure this
 	default:
 		password, err := server.PasswordFromPID(userPID)
 		userPassword = []byte(password)
@@ -57,13 +57,13 @@ func generateTicket(userPID *nex.PID, targetPID *nex.PID) ([]byte, uint32) {
 	}
 
 	ticketInternalData := nex.NewKerberosTicketInternalData()
-	serverTime := nex.NewDateTime(0).Now()
+	serverTime := types.NewDateTime(0).Now()
 
 	ticketInternalData.Issued = serverTime
 	ticketInternalData.SourcePID = userPID
 	ticketInternalData.SessionKey = sessionKey
 
-	encryptedTicketInternalData, err := ticketInternalData.Encrypt(targetKey, nex.NewStreamOut(commonProtocol.server))
+	encryptedTicketInternalData, err := ticketInternalData.Encrypt(targetKey, nex.NewByteStreamOut(server))
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return []byte{}, nex.Errors.Authentication.Unknown
@@ -72,9 +72,9 @@ func generateTicket(userPID *nex.PID, targetPID *nex.PID) ([]byte, uint32) {
 	ticket := nex.NewKerberosTicket()
 	ticket.SessionKey = sessionKey
 	ticket.TargetPID = targetPID
-	ticket.InternalData = encryptedTicketInternalData
+	ticket.InternalData = types.NewBuffer(encryptedTicketInternalData)
 
-	encryptedTicket, err := ticket.Encrypt(userKey, nex.NewStreamOut(commonProtocol.server))
+	encryptedTicket, err := ticket.Encrypt(userKey, nex.NewByteStreamOut(server))
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return []byte{}, nex.Errors.Authentication.Unknown

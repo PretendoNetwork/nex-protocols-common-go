@@ -1,19 +1,22 @@
 package nattraversal
 
 import (
-	nex "github.com/PretendoNetwork/nex-go"
-	nat_traversal "github.com/PretendoNetwork/nex-protocols-go/nat-traversal"
-
+	"github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
+	nat_traversal "github.com/PretendoNetwork/nex-protocols-go/nat-traversal"
 )
 
-func reportNATTraversalResultDetail(err error, packet nex.PacketInterface, callID uint32, cid uint32, result bool, detail int32, rtt uint32) (*nex.RMCMessage, uint32) {
+func reportNATTraversalResultDetail(err error, packet nex.PacketInterface, callID uint32, cid *types.PrimitiveU32, result *types.PrimitiveBool, detail *types.PrimitiveS32, rtt *types.PrimitiveU32) (*nex.RMCMessage, uint32) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
-	server := commonProtocol.server
+	// TODO - This assumes a PRUDP connection. Refactor to support HPP
+	connection := packet.Sender().(*nex.PRUDPConnection)
+	endpoint := connection.Endpoint
+	server := endpoint.Server
 
 	rmcResponse := nex.NewRMCSuccess(server, nil)
 	rmcResponse.ProtocolID = nat_traversal.ProtocolID

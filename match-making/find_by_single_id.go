@@ -1,33 +1,38 @@
 package matchmaking
 
 import (
-	nex "github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
 )
 
-func findBySingleID(err error, packet nex.PacketInterface, callID uint32, id uint32) (*nex.RMCMessage, uint32) {
+func findBySingleID(err error, packet nex.PacketInterface, callID uint32, id *types.PrimitiveU32) (*nex.RMCMessage, uint32) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
-	server := commonProtocol.server
-
-	session, ok := common_globals.Sessions[id]
+	session, ok := common_globals.Sessions[id.Value]
 	if !ok {
 		return nil, nex.Errors.RendezVous.SessionVoid
 	}
 
-	bResult := true
-	pGathering := nex.NewDataHolder()
-	pGathering.SetTypeName("MatchmakeSession")
-	pGathering.SetObjectData(session.GameMatchmakeSession)
+	// TODO - This assumes a PRUDP connection. Refactor to support HPP
+	connection := packet.Sender().(*nex.PRUDPConnection)
+	endpoint := connection.Endpoint
+	server := endpoint.Server
 
-	rmcResponseStream := nex.NewStreamOut(server)
+	bResult := types.NewPrimitiveBool(true)
+	pGathering := types.NewAnyDataHolder()
 
-	rmcResponseStream.WriteBool(bResult)
-	rmcResponseStream.WriteDataHolder(pGathering)
+	pGathering.TypeName = types.NewString("MatchmakeSession")
+	pGathering.ObjectData = session.GameMatchmakeSession.Copy()
+
+	rmcResponseStream := nex.NewByteStreamOut(server)
+
+	bResult.WriteTo(rmcResponseStream)
+	pGathering.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 

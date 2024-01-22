@@ -3,59 +3,41 @@ package matchmake_extension
 import (
 	"fmt"
 
-	nex "github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 	match_making_types "github.com/PretendoNetwork/nex-protocols-go/match-making/types"
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension"
 	"golang.org/x/exp/slices"
 )
 
-func remove(l []*nex.PID, p *nex.PID) []*nex.PID {
-	for i, other := range l {
-		if other.Value() == p.Value() {
-			return append(l[:i], l[i+1:]...)
-		}
-	}
-	return l
-}
-
-func includes(l []*nex.PID, p *nex.PID) bool {
-	for _, other := range l {
-		if other.Value() == p.Value() {
-			return true
-		}
-	}
-
-	return false
-}
-
-func getSimplePlayingSession(err error, packet nex.PacketInterface, callID uint32, listPID []*nex.PID, includeLoginUser bool) (*nex.RMCMessage, uint32) {
+func getSimplePlayingSession(err error, packet nex.PacketInterface, callID uint32, listPID *types.List[*types.PID], includeLoginUser *types.PrimitiveBool) (*nex.RMCMessage, uint32) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
-	// TODO - Remove PRUDP casts?
-	server := commonProtocol.server.(*nex.PRUDPServer)
-	client := packet.Sender().(*nex.PRUDPClient)
+	// TODO - This assumes a PRUDP connection. Refactor to support HPP
+	connection := packet.Sender().(*nex.PRUDPConnection)
+	endpoint := connection.Endpoint
+	server := endpoint.Server
 
-	if includes(listPID, client.PID()) {
-		listPID = remove(listPID, client.PID())
-	}
+	// * Does nothing if element is not present in the List
+	listPID.Remove(connection.PID())
 
-	if includeLoginUser && !includes(listPID, client.PID()) {
-		listPID = append(listPID, client.PID())
+	if includeLoginUser.Value && !listPID.Contains(connection.PID()) {
+		listPID.Append(connection.PID().Copy().(*types.PID))
 	}
 
 	simplePlayingSessions := make(map[string]*match_making_types.SimplePlayingSession)
 
 	for gatheringID, session := range common_globals.Sessions {
-		for _, pid := range listPID {
+		for _, pid := range listPID.Slice() {
 			key := fmt.Sprintf("%d-%d", gatheringID, pid.Value())
 			if simplePlayingSessions[key] == nil {
 				connectedPIDs := make([]uint64, 0)
 				for _, connectionID := range session.ConnectionIDs {
-					player := server.FindClientByConnectionID(client.DestinationPort, client.DestinationStreamType, connectionID)
+					player := endpoint.FindConnectionByID(connectionID)
 					if player == nil {
 						common_globals.Logger.Warning("Player not found")
 						continue
@@ -65,25 +47,31 @@ func getSimplePlayingSession(err error, packet nex.PacketInterface, callID uint3
 				}
 
 				if slices.Contains(connectedPIDs, pid.Value()) {
+					attribute0, err := session.GameMatchmakeSession.Attributes.Get(0)
+					if err != nil {
+						common_globals.Logger.Error(err.Error())
+						return nil, nex.Errors.Core.InvalidArgument
+					}
+
 					simplePlayingSessions[key] = match_making_types.NewSimplePlayingSession()
-					simplePlayingSessions[key].PrincipalID = pid
-					simplePlayingSessions[key].GatheringID = gatheringID
-					simplePlayingSessions[key].GameMode = session.GameMatchmakeSession.GameMode
-					simplePlayingSessions[key].Attribute0 = session.GameMatchmakeSession.Attributes[0]
+					simplePlayingSessions[key].PrincipalID = pid.Copy().(*types.PID)
+					simplePlayingSessions[key].GatheringID = types.NewPrimitiveU32(gatheringID)
+					simplePlayingSessions[key].GameMode = session.GameMatchmakeSession.GameMode.Copy().(*types.PrimitiveU32)
+					simplePlayingSessions[key].Attribute0 = attribute0.Copy().(*types.PrimitiveU32)
 				}
 			}
 		}
 	}
 
-	lstSimplePlayingSession := make([]*match_making_types.SimplePlayingSession, 0)
+	lstSimplePlayingSession := types.NewList[*match_making_types.SimplePlayingSession]()
 
 	for _, simplePlayingSession := range simplePlayingSessions {
-		lstSimplePlayingSession = append(lstSimplePlayingSession, simplePlayingSession)
+		lstSimplePlayingSession.Append(simplePlayingSession)
 	}
 
-	rmcResponseStream := nex.NewStreamOut(server)
+	rmcResponseStream := nex.NewByteStreamOut(server)
 
-	nex.StreamWriteListStructure(rmcResponseStream, lstSimplePlayingSession)
+	lstSimplePlayingSession.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 

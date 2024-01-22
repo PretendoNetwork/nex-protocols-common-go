@@ -1,7 +1,7 @@
 package utility
 
 import (
-	nex "github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go"
 	utility "github.com/PretendoNetwork/nex-protocols-go/utility"
 )
 

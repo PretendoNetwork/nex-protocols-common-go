@@ -3,41 +3,44 @@ package secureconnection
 import (
 	"strconv"
 
-	nex "github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go/types"
 	secure_connection "github.com/PretendoNetwork/nex-protocols-go/secure-connection"
 
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
-func replaceURL(err error, packet nex.PacketInterface, callID uint32, oldStation *nex.StationURL, newStation *nex.StationURL) (*nex.RMCMessage, uint32) {
+func replaceURL(err error, packet nex.PacketInterface, callID uint32, target *types.StationURL, url *types.StationURL) (*nex.RMCMessage, uint32) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
-	server := commonProtocol.server
+	// TODO - This assumes a PRUDP connection. Refactor to support HPP
+	connection := packet.Sender().(*nex.PRUDPConnection)
+	endpoint := connection.Endpoint
+	server := endpoint.Server
 
-	// TODO - Remove cast to PRUDPClient?
-	client := packet.Sender().(*nex.PRUDPClient)
-
-	stations := client.StationURLs
-	for i := 0; i < len(stations); i++ {
-		currentStation := stations[i]
-
-		currentStationAddress, currentStationAddressOk := currentStation.Fields.Get("address")
-		currentStationPort, currentStationPortOk := currentStation.Fields.Get("port")
-		oldStationAddress, oldStationAddressOk := oldStation.Fields.Get("address")
-		oldStationPort, oldStationPortOk := oldStation.Fields.Get("port")
+	connection.StationURLs.Each(func(i int, station *types.StationURL) bool {
+		currentStationAddress, currentStationAddressOk := station.Fields["address"]
+		currentStationPort, currentStationPortOk := station.Fields["port"]
+		oldStationAddress, oldStationAddressOk := target.Fields["address"]
+		oldStationPort, oldStationPortOk := target.Fields["port"]
 
 		if currentStationAddressOk && currentStationPortOk && oldStationAddressOk && oldStationPortOk {
 			if currentStationAddress == oldStationAddress && currentStationPort == oldStationPort {
 				// * This fixes Minecraft, but is obviously incorrect
 				// TODO - What are we really meant to do here?
-				newStation.Fields.Set("PID", strconv.Itoa(int(client.PID().Value())))
-				stations[i] = newStation
+				newStation := url.Copy().(*types.StationURL)
+
+				newStation.Fields["PID"] = strconv.Itoa(int(connection.PID().Value()))
+
+				connection.StationURLs.SetIndex(i, newStation)
 			}
 		}
-	}
+
+		return false
+	})
 
 	rmcResponse := nex.NewRMCSuccess(server, nil)
 	rmcResponse.ProtocolID = secure_connection.ProtocolID

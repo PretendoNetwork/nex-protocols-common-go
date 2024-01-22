@@ -5,6 +5,7 @@ import (
 	"time"
 
 	nex "github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 	datastore "github.com/PretendoNetwork/nex-protocols-go/datastore"
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
@@ -26,8 +27,10 @@ func prepareGetObject(err error, packet nex.PacketInterface, callID uint32, para
 		return nil, nex.Errors.Core.Unknown
 	}
 
-	server := commonProtocol.server
-	client := packet.Sender()
+	// TODO - This assumes a PRUDP connection. Refactor to support HPP
+	connection := packet.Sender().(*nex.PRUDPConnection)
+	endpoint := connection.Endpoint
+	server := endpoint.Server
 
 	bucket := commonProtocol.S3Bucket
 	key := fmt.Sprintf("%s/%d.bin", commonProtocol.s3DataKeyBase, param.DataID)
@@ -37,7 +40,7 @@ func prepareGetObject(err error, packet nex.PacketInterface, callID uint32, para
 		return nil, errCode
 	}
 
-	errCode = commonProtocol.VerifyObjectPermission(objectInfo.OwnerID, client.PID(), objectInfo.Permission)
+	errCode = commonProtocol.VerifyObjectPermission(objectInfo.OwnerID, connection.PID(), objectInfo.Permission)
 	if errCode != 0 {
 		return nil, errCode
 	}
@@ -55,15 +58,18 @@ func prepareGetObject(err error, packet nex.PacketInterface, callID uint32, para
 
 	pReqGetInfo := datastore_types.NewDataStoreReqGetInfo()
 
-	pReqGetInfo.URL = url.String()
-	pReqGetInfo.RequestHeaders = requestHeaders
-	pReqGetInfo.Size = objectInfo.Size
-	pReqGetInfo.RootCACert = commonProtocol.RootCACert
+	pReqGetInfo.URL = types.NewString(url.String())
+	pReqGetInfo.RequestHeaders = types.NewList[*datastore_types.DataStoreKeyValue]()
+	pReqGetInfo.Size = objectInfo.Size.Copy().(*types.PrimitiveU32)
+	pReqGetInfo.RootCACert = types.NewBuffer(commonProtocol.RootCACert)
 	pReqGetInfo.DataID = param.DataID
 
-	rmcResponseStream := nex.NewStreamOut(commonProtocol.server)
+	pReqGetInfo.RequestHeaders.Type = datastore_types.NewDataStoreKeyValue()
+	pReqGetInfo.RequestHeaders.SetFromData(requestHeaders)
 
-	rmcResponseStream.WriteStructure(pReqGetInfo)
+	rmcResponseStream := nex.NewByteStreamOut(server)
+
+	pReqGetInfo.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 

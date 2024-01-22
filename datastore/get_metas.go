@@ -2,12 +2,13 @@ package datastore
 
 import (
 	"github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 	datastore "github.com/PretendoNetwork/nex-protocols-go/datastore"
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
 )
 
-func getMetas(err error, packet nex.PacketInterface, callID uint32, dataIDs []uint64, param *datastore_types.DataStoreGetMetaParam) (*nex.RMCMessage, uint32) {
+func getMetas(err error, packet nex.PacketInterface, callID uint32, dataIDs *types.List[*types.PrimitiveU64], param *datastore_types.DataStoreGetMetaParam) (*nex.RMCMessage, uint32) {
 	if commonProtocol.GetObjectInfoByDataID == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataID not defined")
 		return nil, nex.Errors.Core.NotImplemented
@@ -18,46 +19,53 @@ func getMetas(err error, packet nex.PacketInterface, callID uint32, dataIDs []ui
 		return nil, nex.Errors.DataStore.Unknown
 	}
 
-	server := commonProtocol.server
-	client := packet.Sender()
+	// TODO - This assumes a PRUDP connection. Refactor to support HPP
+	connection := packet.Sender().(*nex.PRUDPConnection)
+	endpoint := connection.Endpoint
+	server := endpoint.Server
 
 	// TODO - Verify if param.PersistenceTarget is respected? It wouldn't make sense here but who knows
 
-	pMetaInfo := make([]*datastore_types.DataStoreMetaInfo, 0, len(dataIDs))
-	pResults := make([]*nex.Result, 0, len(dataIDs))
+	pMetaInfo := types.NewList[*datastore_types.DataStoreMetaInfo]()
+	pResults := types.NewList[*types.QResult]()
+
+	pMetaInfo.Type = datastore_types.NewDataStoreMetaInfo()
+	pResults.Type = types.NewQResult(0)
 
 	// * param has an AccessPassword, but it goes unchecked here.
 	// * The password would need to be the same for every object
 	// * in the input array, which doesn't make any sense. Assuming
 	// * it's unused until proven otherwise
 
-	for i := 0; i < len(dataIDs); i++ {
-		objectInfo, errCode := commonProtocol.GetObjectInfoByDataID(dataIDs[i])
+	dataIDs.Each(func(_ int, dataID *types.PrimitiveU64) bool {
+		objectInfo, errCode := commonProtocol.GetObjectInfoByDataID(dataID)
 
 		if errCode != 0 {
 			objectInfo = datastore_types.NewDataStoreMetaInfo()
 
-			pResults = append(pResults, nex.NewResultError(errCode))
+			pResults.Append(types.NewQResultError(errCode))
 		} else {
-			errCode = commonProtocol.VerifyObjectPermission(objectInfo.OwnerID, client.PID(), objectInfo.Permission)
+			errCode = commonProtocol.VerifyObjectPermission(objectInfo.OwnerID, connection.PID(), objectInfo.Permission)
 			if errCode != 0 {
 				objectInfo = datastore_types.NewDataStoreMetaInfo()
 
-				pResults = append(pResults, nex.NewResultError(errCode))
+				pResults.Append(types.NewQResultError(errCode))
 			} else {
-				pResults = append(pResults, nex.NewResultSuccess(nex.Errors.DataStore.Unknown))
+				pResults.Append(types.NewQResultSuccess(nex.Errors.DataStore.Unknown))
 			}
 
 			objectInfo.FilterPropertiesByResultOption(param.ResultOption)
 		}
 
-		pMetaInfo = append(pMetaInfo, objectInfo)
-	}
+		pMetaInfo.Append(objectInfo)
 
-	rmcResponseStream := nex.NewStreamOut(commonProtocol.server)
+		return false
+	})
 
-	nex.StreamWriteListStructure(rmcResponseStream, pMetaInfo)
-	rmcResponseStream.WriteListResult(pResults)
+	rmcResponseStream := nex.NewByteStreamOut(server)
+
+	pMetaInfo.WriteTo(rmcResponseStream)
+	pResults.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 

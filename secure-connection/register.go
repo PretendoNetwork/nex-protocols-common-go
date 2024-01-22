@@ -4,81 +4,87 @@ import (
 	"net"
 	"strconv"
 
-	nex "github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go/types"
 	secure_connection "github.com/PretendoNetwork/nex-protocols-go/secure-connection"
 
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
-func register(err error, packet nex.PacketInterface, callID uint32, stationUrls []*nex.StationURL) (*nex.RMCMessage, uint32) {
+func register(err error, packet nex.PacketInterface, callID uint32, vecMyURLs *types.List[*types.StationURL]) (*nex.RMCMessage, uint32) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.Errors.Core.InvalidArgument
 	}
 
-	server := commonProtocol.server
+	// TODO - This assumes a PRUDP connection. Refactor to support HPP
+	connection := packet.Sender().(*nex.PRUDPConnection)
+	endpoint := connection.Endpoint
+	server := endpoint.Server
 
-	if _, ok := server.(*nex.PRUDPServer); !ok {
-		// * Do nothing if not a PRUDP server
-		return nil, nex.Errors.Core.InvalidArgument
-	}
+	// * vecMyURLs may contain multiple StationURLs. Search them all
+	var localStation *types.StationURL
+	var publicStation *types.StationURL
 
-	// TODO - Remove cast to PRUDPClient?
-	client := packet.Sender().(*nex.PRUDPClient)
+	for _, stationURL := range vecMyURLs.Slice() {
+		natf := stationURL.Fields["natf"]
+		natm := stationURL.Fields["natf"]
+		pmp := stationURL.Fields["natf"]
+		transportType := stationURL.Fields["type"]
 
-	client.ConnectionID = server.(*nex.PRUDPServer).ConnectionIDCounter().Next()
+		if natf == "0" && natm == "0" && pmp == "" && transportType == "" && localStation == nil {
+			stationURL.SetLocal()
+			localStation = stationURL.Copy().(*types.StationURL)
+		}
 
-	localStation := stationUrls[0]
-
-	// * A NEX client can set the public station URL by setting two URLs on the array
-	// * Check each URL for a public station
-	var publicStation *nex.StationURL
-	for _, stationURL := range stationUrls {
-		if transportType, ok := stationURL.Fields.Get("type"); ok {
-			if transportType == "3" {
-				publicStation = stationURL
-				break
-			}
+		if transportType == "3" && publicStation == nil {
+			stationURL.SetPublic()
+			publicStation = stationURL.Copy().(*types.StationURL)
 		}
 	}
 
+	if localStation == nil {
+		common_globals.Logger.Error("Failed to find local station")
+		return nil, nex.Errors.Core.InvalidArgument
+	}
+
 	if publicStation == nil {
-		publicStation = localStation.Copy()
+		publicStation = localStation.Copy().(*types.StationURL)
 
 		var address, port string
-		switch clientAddress := client.Address().(type) {
+
+		switch clientAddress := connection.Address().(type) {
 		case *net.UDPAddr:
 		case *net.TCPAddr:
 			address = clientAddress.IP.String()
 			port = strconv.Itoa(clientAddress.Port)
 		}
 
-		publicStation.Fields.Set("address", address)
-		publicStation.Fields.Set("port", port)
-		publicStation.Fields.Set("natf", "0")
-		publicStation.Fields.Set("natm", "0")
-		publicStation.Fields.Set("type", "3")
+		publicStation.Fields["address"] = address
+		publicStation.Fields["port"] = port
+		publicStation.Fields["natf"] = "0"
+		publicStation.Fields["natm"] = "0"
+		publicStation.Fields["type"] = "3"
 	}
 
-	localStation.Fields.Set("PID", strconv.Itoa(int(client.PID().Value())))
-	publicStation.Fields.Set("PID", strconv.Itoa(int(client.PID().Value())))
+	localStation.Fields["PID"] = strconv.Itoa(int(connection.PID().Value()))
+	publicStation.Fields["PID"] = strconv.Itoa(int(connection.PID().Value()))
 
-	localStation.Fields.Set("RVCID", strconv.Itoa(int(client.ConnectionID)))
-	publicStation.Fields.Set("RVCID", strconv.Itoa(int(client.ConnectionID)))
+	localStation.Fields["RVCID"] = strconv.Itoa(int(connection.ID))
+	publicStation.Fields["RVCID"] = strconv.Itoa(int(connection.ID))
 
-	localStation.SetLocal()
-	publicStation.SetPublic()
+	connection.StationURLs.Append(localStation)
+	connection.StationURLs.Append(publicStation)
 
-	client.StationURLs = append(client.StationURLs, localStation)
-	client.StationURLs = append(client.StationURLs, publicStation)
+	retval := types.NewQResultSuccess(nex.Errors.Core.Unknown)
+	pidConnectionID := types.NewPrimitiveU32(connection.ID)
+	urlPublic := types.NewString(publicStation.EncodeToString())
 
-	retval := nex.NewResultSuccess(nex.Errors.Core.Unknown)
+	rmcResponseStream := nex.NewByteStreamOut(server)
 
-	rmcResponseStream := nex.NewStreamOut(server)
-
-	rmcResponseStream.WriteResult(retval)
-	rmcResponseStream.WriteUInt32LE(client.ConnectionID)
-	rmcResponseStream.WriteString(publicStation.EncodeToString())
+	retval.WriteTo(rmcResponseStream)
+	pidConnectionID.WriteTo(rmcResponseStream)
+	urlPublic.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
