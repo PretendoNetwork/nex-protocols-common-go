@@ -10,27 +10,27 @@ import (
 func changeMeta(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreChangeMetaParam) (*nex.RMCMessage, uint32) {
 	if commonProtocol.GetObjectInfoByDataID == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataID not defined")
-		return nil, nex.Errors.Core.NotImplemented
+		return nil, nex.ResultCodesCore.NotImplemented
 	}
 
 	if commonProtocol.UpdateObjectPeriodByDataIDWithPassword == nil {
 		common_globals.Logger.Warning("UpdateObjectPeriodByDataIDWithPassword not defined")
-		return nil, nex.Errors.Core.NotImplemented
+		return nil, nex.ResultCodesCore.NotImplemented
 	}
 
 	if commonProtocol.UpdateObjectMetaBinaryByDataIDWithPassword == nil {
 		common_globals.Logger.Warning("UpdateObjectMetaBinaryByDataIDWithPassword not defined")
-		return nil, nex.Errors.Core.NotImplemented
+		return nil, nex.ResultCodesCore.NotImplemented
 	}
 
 	if commonProtocol.UpdateObjectDataTypeByDataIDWithPassword == nil {
 		common_globals.Logger.Warning("UpdateObjectDataTypeByDataIDWithPassword not defined")
-		return nil, nex.Errors.Core.NotImplemented
+		return nil, nex.ResultCodesCore.NotImplemented
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.Errors.DataStore.Unknown
+		return nil, nex.ResultCodesDataStore.Unknown
 	}
 
 	// TODO - This assumes a PRUDP connection. Refactor to support HPP

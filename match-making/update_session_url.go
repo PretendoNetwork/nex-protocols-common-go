@@ -10,12 +10,12 @@ import (
 func updateSessionURL(err error, packet nex.PacketInterface, callID uint32, idGathering *types.PrimitiveU32, strURL *types.String) (*nex.RMCMessage, uint32) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.Errors.Core.InvalidArgument
+		return nil, nex.ResultCodesCore.InvalidArgument
 	}
 
 	session, ok := common_globals.Sessions[idGathering.Value]
 	if !ok {
-		return nil, nex.Errors.RendezVous.SessionVoid
+		return nil, nex.ResultCodesRendezVous.SessionVoid
 	}
 
 	// TODO - This assumes a PRUDP connection. Refactor to support HPP

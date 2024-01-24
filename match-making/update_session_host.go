@@ -12,12 +12,12 @@ import (
 func updateSessionHost(err error, packet nex.PacketInterface, callID uint32, gid *types.PrimitiveU32, isMigrateOwner *types.PrimitiveBool) (*nex.RMCMessage, uint32) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.Errors.Core.InvalidArgument
+		return nil, nex.ResultCodesCore.InvalidArgument
 	}
 
 	session, ok := common_globals.Sessions[gid.Value]
 	if !ok {
-		return nil, nex.Errors.RendezVous.SessionVoid
+		return nil, nex.ResultCodesRendezVous.SessionVoid
 	}
 
 	// TODO - This assumes a PRUDP connection. Refactor to support HPP
@@ -26,7 +26,7 @@ func updateSessionHost(err error, packet nex.PacketInterface, callID uint32, gid
 	server := endpoint.Server
 
 	if common_globals.FindConnectionSession(connection.ID) != gid.Value {
-		return nil, nex.Errors.RendezVous.PermissionDenied
+		return nil, nex.ResultCodesRendezVous.PermissionDenied
 	}
 
 	session.GameMatchmakeSession.Gathering.HostPID = connection.PID().Copy().(*types.PID)

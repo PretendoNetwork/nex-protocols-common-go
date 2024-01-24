@@ -58,7 +58,7 @@ func (c *CommonProtocol) S3ObjectSize(bucket, key string) (uint64, error) {
 
 func (c *CommonProtocol) VerifyObjectPermission(ownerPID, accessorPID *types.PID, permission *datastore_types.DataStorePermission) uint32 {
 	if permission.Permission.Value > 3 {
-		return nex.Errors.DataStore.InvalidArgument
+		return nex.ResultCodesDataStore.InvalidArgument
 	}
 
 	// * Owner can always access their own objects
@@ -77,21 +77,21 @@ func (c *CommonProtocol) VerifyObjectPermission(ownerPID, accessorPID *types.PID
 		friendsList := c.GetUserFriendPIDs(ownerPID.LegacyValue())
 
 		if !slices.Contains(friendsList, accessorPID.LegacyValue()) {
-			return nex.Errors.DataStore.PermissionDenied
+			return nex.ResultCodesDataStore.PermissionDenied
 		}
 	}
 
 	// * Allow only users whose PIDs are defined in permission.RecipientIDs
 	if permission.Permission.Value == 2 {
 		if !permission.RecipientIDs.Contains(accessorPID) {
-			return nex.Errors.DataStore.PermissionDenied
+			return nex.ResultCodesDataStore.PermissionDenied
 		}
 	}
 
 	// * Allow only the owner
 	if permission.Permission.Value == 3 {
 		if !ownerPID.Equals(accessorPID) {
-			return nex.Errors.DataStore.PermissionDenied
+			return nex.ResultCodesDataStore.PermissionDenied
 		}
 	}
 

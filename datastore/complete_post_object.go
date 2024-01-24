@@ -12,37 +12,37 @@ import (
 func completePostObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreCompletePostParam) (*nex.RMCMessage, uint32) {
 	if commonProtocol.minIOClient == nil {
 		common_globals.Logger.Warning("MinIOClient not defined")
-		return nil, nex.Errors.Core.NotImplemented
+		return nil, nex.ResultCodesCore.NotImplemented
 	}
 
 	if commonProtocol.GetObjectInfoByDataID == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataID not defined")
-		return nil, nex.Errors.Core.NotImplemented
+		return nil, nex.ResultCodesCore.NotImplemented
 	}
 
 	if commonProtocol.GetObjectOwnerByDataID == nil {
 		common_globals.Logger.Warning("GetObjectOwnerByDataID not defined")
-		return nil, nex.Errors.Core.NotImplemented
+		return nil, nex.ResultCodesCore.NotImplemented
 	}
 
 	if commonProtocol.GetObjectSizeByDataID == nil {
 		common_globals.Logger.Warning("GetObjectSizeByDataID not defined")
-		return nil, nex.Errors.Core.NotImplemented
+		return nil, nex.ResultCodesCore.NotImplemented
 	}
 
 	if commonProtocol.UpdateObjectUploadCompletedByDataID == nil {
 		common_globals.Logger.Warning("UpdateObjectUploadCompletedByDataID not defined")
-		return nil, nex.Errors.Core.NotImplemented
+		return nil, nex.ResultCodesCore.NotImplemented
 	}
 
 	if commonProtocol.DeleteObjectByDataID == nil {
 		common_globals.Logger.Warning("DeleteObjectByDataID not defined")
-		return nil, nex.Errors.Core.NotImplemented
+		return nil, nex.ResultCodesCore.NotImplemented
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.Errors.DataStore.Unknown
+		return nil, nex.ResultCodesDataStore.Unknown
 	}
 
 	// TODO - This assumes a PRUDP connection. Refactor to support HPP
@@ -55,7 +55,7 @@ func completePostObject(err error, packet nex.PacketInterface, callID uint32, pa
 	// * nothing
 	objectInfo, _ := commonProtocol.GetObjectInfoByDataID(param.DataID)
 	if objectInfo != nil {
-		return nil, nex.Errors.DataStore.PermissionDenied
+		return nil, nex.ResultCodesDataStore.PermissionDenied
 	}
 
 	// * Only allow an objects owner to make this request
@@ -65,7 +65,7 @@ func completePostObject(err error, packet nex.PacketInterface, callID uint32, pa
 	}
 
 	if ownerPID != connection.PID().LegacyValue() {
-		return nil, nex.Errors.DataStore.PermissionDenied
+		return nil, nex.ResultCodesDataStore.PermissionDenied
 	}
 
 	bucket := commonProtocol.S3Bucket
@@ -75,7 +75,7 @@ func completePostObject(err error, packet nex.PacketInterface, callID uint32, pa
 		objectSizeS3, err := commonProtocol.S3ObjectSize(bucket, key)
 		if err != nil {
 			common_globals.Logger.Error(err.Error())
-			return nil, nex.Errors.DataStore.NotFound
+			return nil, nex.ResultCodesDataStore.NotFound
 		}
 
 		objectSizeDB, errCode := commonProtocol.GetObjectSizeByDataID(param.DataID)
@@ -86,7 +86,7 @@ func completePostObject(err error, packet nex.PacketInterface, callID uint32, pa
 		if objectSizeS3 != uint64(objectSizeDB) {
 			common_globals.Logger.Errorf("Object with DataID %d did not upload correctly! Mismatched sizes", param.DataID)
 			// TODO - Is this a good error?
-			return nil, nex.Errors.DataStore.Unknown
+			return nil, nex.ResultCodesDataStore.Unknown
 		}
 
 		errCode = commonProtocol.UpdateObjectUploadCompletedByDataID(param.DataID, true)

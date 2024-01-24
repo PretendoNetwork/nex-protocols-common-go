@@ -346,12 +346,12 @@ func compareSearchCriteria[T ~uint16 | ~uint32](original T, search string) bool 
 // Returns a NEX error code if failed
 func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32, initiatingConnection *nex.PRUDPConnection, joinMessage string) (error, uint32) {
 	if (len(session.ConnectionIDs) + len(connectionIDs)) > int(session.GameMatchmakeSession.Gathering.MaximumParticipants.Value) {
-		return fmt.Errorf("Gathering %d is full", session.GameMatchmakeSession.Gathering.ID), nex.Errors.RendezVous.SessionFull
+		return fmt.Errorf("Gathering %d is full", session.GameMatchmakeSession.Gathering.ID), nex.ResultCodesRendezVous.SessionFull
 	}
 
 	for _, connectedID := range connectionIDs {
 		if slices.Contains(session.ConnectionIDs, connectedID) {
-			return fmt.Errorf("Connection ID %d is already in gathering %d", connectedID, session.GameMatchmakeSession.Gathering.ID), nex.Errors.RendezVous.AlreadyParticipatedGathering
+			return fmt.Errorf("Connection ID %d is already in gathering %d", connectedID, session.GameMatchmakeSession.Gathering.ID), nex.ResultCodesRendezVous.AlreadyParticipatedGathering
 		}
 
 		session.ConnectionIDs = append(session.ConnectionIDs, connectedID)

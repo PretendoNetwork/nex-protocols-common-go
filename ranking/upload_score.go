@@ -11,12 +11,12 @@ import (
 func uploadScore(err error, packet nex.PacketInterface, callID uint32, scoreData *ranking_types.RankingScoreData, uniqueID *types.PrimitiveU64) (*nex.RMCMessage, uint32) {
 	if commonProtocol.InsertRankingByPIDAndRankingScoreData == nil {
 		common_globals.Logger.Warning("Ranking::UploadScore missing InsertRankingByPIDAndRankingScoreData!")
-		return nil, nex.Errors.Core.NotImplemented
+		return nil, nex.ResultCodesCore.NotImplemented
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.Errors.Ranking.InvalidArgument
+		return nil, nex.ResultCodesRanking.InvalidArgument
 	}
 
 	// TODO - This assumes a PRUDP connection. Refactor to support HPP
@@ -27,7 +27,7 @@ func uploadScore(err error, packet nex.PacketInterface, callID uint32, scoreData
 	err = commonProtocol.InsertRankingByPIDAndRankingScoreData(connection.PID(), scoreData, uniqueID)
 	if err != nil {
 		common_globals.Logger.Critical(err.Error())
-		return nil, nex.Errors.Ranking.Unknown
+		return nil, nex.ResultCodesRanking.Unknown
 	}
 
 	rmcResponse := nex.NewRMCSuccess(server, nil)

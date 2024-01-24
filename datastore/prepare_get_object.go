@@ -14,17 +14,17 @@ import (
 func prepareGetObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStorePrepareGetParam) (*nex.RMCMessage, uint32) {
 	if commonProtocol.GetObjectInfoByDataID == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataID not defined")
-		return nil, nex.Errors.Core.NotImplemented
+		return nil, nex.ResultCodesCore.NotImplemented
 	}
 
 	if commonProtocol.S3Presigner == nil {
 		common_globals.Logger.Warning("S3Presigner not defined")
-		return nil, nex.Errors.Core.NotImplemented
+		return nil, nex.ResultCodesCore.NotImplemented
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.Errors.Core.Unknown
+		return nil, nex.ResultCodesCore.Unknown
 	}
 
 	// TODO - This assumes a PRUDP connection. Refactor to support HPP
@@ -48,7 +48,7 @@ func prepareGetObject(err error, packet nex.PacketInterface, callID uint32, para
 	url, err := commonProtocol.S3Presigner.GetObject(bucket, key, time.Minute*15)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.Errors.DataStore.OperationNotAllowed
+		return nil, nex.ResultCodesDataStore.OperationNotAllowed
 	}
 
 	requestHeaders, errCode := commonProtocol.S3GetRequestHeaders()

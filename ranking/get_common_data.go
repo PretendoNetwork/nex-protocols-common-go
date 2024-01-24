@@ -10,12 +10,12 @@ import (
 func getCommonData(err error, packet nex.PacketInterface, callID uint32, uniqueID *types.PrimitiveU64) (*nex.RMCMessage, uint32) {
 	if commonProtocol.GetCommonData == nil {
 		common_globals.Logger.Warning("Ranking::GetCommonData missing GetCommonData!")
-		return nil, nex.Errors.Core.NotImplemented
+		return nil, nex.ResultCodesCore.NotImplemented
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.Errors.Ranking.InvalidArgument
+		return nil, nex.ResultCodesRanking.InvalidArgument
 	}
 
 	// TODO - This assumes a PRUDP connection. Refactor to support HPP
@@ -25,7 +25,7 @@ func getCommonData(err error, packet nex.PacketInterface, callID uint32, uniqueI
 
 	commonData, err := commonProtocol.GetCommonData(uniqueID)
 	if err != nil {
-		return nil, nex.Errors.Ranking.NotFound
+		return nil, nex.ResultCodesRanking.NotFound
 	}
 
 	rmcResponseStream := nex.NewByteStreamOut(server)

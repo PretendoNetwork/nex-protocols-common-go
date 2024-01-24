@@ -11,12 +11,12 @@ import (
 func getMetas(err error, packet nex.PacketInterface, callID uint32, dataIDs *types.List[*types.PrimitiveU64], param *datastore_types.DataStoreGetMetaParam) (*nex.RMCMessage, uint32) {
 	if commonProtocol.GetObjectInfoByDataID == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataID not defined")
-		return nil, nex.Errors.Core.NotImplemented
+		return nil, nex.ResultCodesCore.NotImplemented
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.Errors.DataStore.Unknown
+		return nil, nex.ResultCodesDataStore.Unknown
 	}
 
 	// TODO - This assumes a PRUDP connection. Refactor to support HPP
@@ -51,7 +51,7 @@ func getMetas(err error, packet nex.PacketInterface, callID uint32, dataIDs *typ
 
 				pResults.Append(types.NewQResultError(errCode))
 			} else {
-				pResults.Append(types.NewQResultSuccess(nex.Errors.DataStore.Unknown))
+				pResults.Append(types.NewQResultSuccess(nex.ResultCodesDataStore.Unknown))
 			}
 
 			objectInfo.FilterPropertiesByResultOption(param.ResultOption)

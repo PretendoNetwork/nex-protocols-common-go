@@ -9,12 +9,12 @@ import (
 
 func login(err error, packet nex.PacketInterface, callID uint32, strUserName *types.String) (*nex.RMCMessage, uint32) {
 	if !commonProtocol.allowInsecureLoginMethod {
-		return nil, nex.Errors.Authentication.ValidationFailed
+		return nil, nex.ResultCodes.Authentication.ValidationFailed
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.Errors.Core.InvalidArgument
+		return nil, nex.ResultCodes.Core.InvalidArgument
 	}
 
 	// TODO - This assumes a PRUDP connection. Refactor to support HPP
@@ -23,20 +23,20 @@ func login(err error, packet nex.PacketInterface, callID uint32, strUserName *ty
 	server := endpoint.Server
 
 	sourceAccount, errorCode := commonProtocol.AccountDetailsByUsername(strUserName.Value)
-	if errorCode != 0 && errorCode != nex.Errors.RendezVous.InvalidUsername {
+	if errorCode != 0 && errorCode != nex.ResultCodes.RendezVous.InvalidUsername {
 		// * Some other error happened
 		return nil, errorCode
 	}
 
 	targetAccount, errorCode := commonProtocol.AccountDetailsByUsername(commonProtocol.SecureServerAccount.Username)
-	if errorCode != 0 && errorCode != nex.Errors.RendezVous.InvalidUsername {
+	if errorCode != 0 && errorCode != nex.ResultCodes.RendezVous.InvalidUsername {
 		// * Some other error happened
 		return nil, errorCode
 	}
 
 	encryptedTicket, errorCode := generateTicket(sourceAccount, targetAccount, commonProtocol.SessionKeyLength, server)
 
-	if errorCode != 0 && errorCode != nex.Errors.RendezVous.InvalidUsername {
+	if errorCode != 0 && errorCode != nex.ResultCodes.RendezVous.InvalidUsername {
 		// * Some other error happened
 		return nil, errorCode
 	}
@@ -51,10 +51,10 @@ func login(err error, packet nex.PacketInterface, callID uint32, strUserName *ty
 	// *
 	// * "If the username does not exist, the %retval% field is set to
 	// * RendezVous::InvalidUsername and the other fields are left blank."
-	if errorCode == nex.Errors.RendezVous.InvalidUsername {
+	if errorCode == nex.ResultCodes.RendezVous.InvalidUsername {
 		retval = types.NewQResultError(errorCode)
 	} else {
-		retval = types.NewQResultSuccess(nex.Errors.Core.Unknown)
+		retval = types.NewQResultSuccess(nex.ResultCodes.Core.Unknown)
 		pidPrincipal = sourceAccount.PID
 		pbufResponse = types.NewBuffer(encryptedTicket)
 		strReturnMsg = commonProtocol.BuildName.Copy().(*types.String)

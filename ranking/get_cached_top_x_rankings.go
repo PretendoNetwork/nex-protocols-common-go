@@ -13,17 +13,17 @@ import (
 func getCachedTopXRankings(err error, packet nex.PacketInterface, callID uint32, categories *types.List[*types.PrimitiveU32], orderParams *types.List[*ranking_types.RankingOrderParam]) (*nex.RMCMessage, uint32) {
 	if commonProtocol.GetRankingsAndCountByCategoryAndRankingOrderParam == nil {
 		common_globals.Logger.Warning("Ranking::GetCachedTopXRankings missing GetRankingsAndCountByCategoryAndRankingOrderParam!")
-		return nil, nex.Errors.Core.NotImplemented
+		return nil, nex.ResultCodesCore.NotImplemented
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.Errors.Ranking.InvalidArgument
+		return nil, nex.ResultCodesRanking.InvalidArgument
 	}
 
 	// TODO - Is this true?
 	if categories.Length() != orderParams.Length() {
-		return nil, nex.Errors.Ranking.InvalidArgument
+		return nil, nex.ResultCodesRanking.InvalidArgument
 	}
 
 	// TODO - This assumes a PRUDP connection. Refactor to support HPP
@@ -39,17 +39,17 @@ func getCachedTopXRankings(err error, packet nex.PacketInterface, callID uint32,
 		orderParam, err := orderParams.Get(i)
 		if err != nil {
 			common_globals.Logger.Error(err.Error())
-			return nil, nex.Errors.Ranking.InvalidArgument
+			return nil, nex.ResultCodesRanking.InvalidArgument
 		}
 
 		rankDataList, totalCount, err := commonProtocol.GetRankingsAndCountByCategoryAndRankingOrderParam(category, orderParam)
 		if err != nil {
 			common_globals.Logger.Critical(err.Error())
-			return nil, nex.Errors.Ranking.Unknown
+			return nil, nex.ResultCodesRanking.Unknown
 		}
 
 		if totalCount == 0 || rankDataList.Length() == 0 {
-			return nil, nex.Errors.Ranking.NotFound
+			return nil, nex.ResultCodesRanking.NotFound
 		}
 
 		result := ranking_types.NewRankingCachedResult()

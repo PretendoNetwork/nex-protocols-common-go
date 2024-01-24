@@ -11,7 +11,7 @@ import (
 func autoMatchmakeWithSearchCriteria_Postpone(err error, packet nex.PacketInterface, callID uint32, lstSearchCriteria *types.List[*match_making_types.MatchmakeSessionSearchCriteria], anyGathering *types.AnyDataHolder, strMessage *types.String) (*nex.RMCMessage, uint32) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.Errors.Core.InvalidArgument
+		return nil, nex.ResultCodesCore.InvalidArgument
 	}
 
 	// TODO - This assumes a PRUDP connection. Refactor to support HPP
@@ -29,7 +29,7 @@ func autoMatchmakeWithSearchCriteria_Postpone(err error, packet nex.PacketInterf
 		matchmakeSession = anyGathering.ObjectData.(*match_making_types.MatchmakeSession)
 	} else {
 		common_globals.Logger.Critical("Non-MatchmakeSession DataType?!")
-		return nil, nex.Errors.Core.InvalidArgument
+		return nil, nex.ResultCodesCore.InvalidArgument
 	}
 
 	sessions := common_globals.FindSessionsByMatchmakeSessionSearchCriterias(connection.PID(), lstSearchCriteria.Slice(), commonProtocol.GameSpecificMatchmakeSessionSearchCriteriaChecks)

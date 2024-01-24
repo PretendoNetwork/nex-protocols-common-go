@@ -10,12 +10,12 @@ import (
 func uploadCommonData(err error, packet nex.PacketInterface, callID uint32, commonData *types.Buffer, uniqueID *types.PrimitiveU64) (*nex.RMCMessage, uint32) {
 	if commonProtocol.UploadCommonData == nil {
 		common_globals.Logger.Warning("Ranking::UploadCommonData missing UploadCommonData!")
-		return nil, nex.Errors.Core.NotImplemented
+		return nil, nex.ResultCodesCore.NotImplemented
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.Errors.Ranking.InvalidArgument
+		return nil, nex.ResultCodesRanking.InvalidArgument
 	}
 
 	// TODO - This assumes a PRUDP connection. Refactor to support HPP
@@ -26,7 +26,7 @@ func uploadCommonData(err error, packet nex.PacketInterface, callID uint32, comm
 	err = commonProtocol.UploadCommonData(connection.PID(), uniqueID, commonData)
 	if err != nil {
 		common_globals.Logger.Critical(err.Error())
-		return nil, nex.Errors.Ranking.Unknown
+		return nil, nex.ResultCodesRanking.Unknown
 	}
 
 	rmcResponse := nex.NewRMCSuccess(server, nil)

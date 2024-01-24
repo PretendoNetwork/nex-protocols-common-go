@@ -10,12 +10,12 @@ import (
 func joinMatchmakeSessionWithParam(err error, packet nex.PacketInterface, callID uint32, joinMatchmakeSessionParam *match_making_types.JoinMatchmakeSessionParam) (*nex.RMCMessage, uint32) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.Errors.Core.InvalidArgument
+		return nil, nex.ResultCodesCore.InvalidArgument
 	}
 
 	session, ok := common_globals.Sessions[joinMatchmakeSessionParam.GID.Value]
 	if !ok {
-		return nil, nex.Errors.RendezVous.SessionVoid
+		return nil, nex.ResultCodesRendezVous.SessionVoid
 	}
 
 	// TODO - This assumes a PRUDP connection. Refactor to support HPP

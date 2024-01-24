@@ -10,7 +10,7 @@ import (
 func loginEx(err error, packet nex.PacketInterface, callID uint32, strUserName *types.String, oExtraData *types.AnyDataHolder) (*nex.RMCMessage, uint32) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.Errors.Core.InvalidArgument
+		return nil, nex.ResultCodes.Core.InvalidArgument
 	}
 
 	// TODO - VALIDATE oExtraData!
@@ -21,20 +21,20 @@ func loginEx(err error, packet nex.PacketInterface, callID uint32, strUserName *
 	server := endpoint.Server
 
 	sourceAccount, errorCode := commonProtocol.AccountDetailsByUsername(strUserName.Value)
-	if errorCode != 0 && errorCode != nex.Errors.RendezVous.InvalidUsername {
+	if errorCode != 0 && errorCode != nex.ResultCodes.RendezVous.InvalidUsername {
 		// * Some other error happened
 		return nil, errorCode
 	}
 
 	targetAccount, errorCode := commonProtocol.AccountDetailsByUsername(commonProtocol.SecureServerAccount.Username)
-	if errorCode != 0 && errorCode != nex.Errors.RendezVous.InvalidUsername {
+	if errorCode != 0 && errorCode != nex.ResultCodes.RendezVous.InvalidUsername {
 		// * Some other error happened
 		return nil, errorCode
 	}
 
 	encryptedTicket, errorCode := generateTicket(sourceAccount, targetAccount, commonProtocol.SessionKeyLength, server)
 
-	if errorCode != 0 && errorCode != nex.Errors.RendezVous.InvalidUsername {
+	if errorCode != 0 && errorCode != nex.ResultCodes.RendezVous.InvalidUsername {
 		// * Some other error happened
 		return nil, errorCode
 	}
@@ -49,10 +49,10 @@ func loginEx(err error, packet nex.PacketInterface, callID uint32, strUserName *
 	// *
 	// * "If the username does not exist, the %retval% field is set to
 	// * RendezVous::InvalidUsername and the other fields are left blank."
-	if errorCode == nex.Errors.RendezVous.InvalidUsername {
+	if errorCode == nex.ResultCodes.RendezVous.InvalidUsername {
 		retval = types.NewQResultError(errorCode)
 	} else {
-		retval = types.NewQResultSuccess(nex.Errors.Core.Unknown)
+		retval = types.NewQResultSuccess(nex.ResultCodes.Core.Unknown)
 		pidPrincipal = sourceAccount.PID
 		pbufResponse = types.NewBuffer(encryptedTicket)
 		strReturnMsg = commonProtocol.BuildName.Copy().(*types.String)

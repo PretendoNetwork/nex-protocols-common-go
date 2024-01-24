@@ -10,7 +10,7 @@ import (
 func requestTicket(err error, packet nex.PacketInterface, callID uint32, idSource *types.PID, idTarget *types.PID) (*nex.RMCMessage, uint32) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.Errors.Core.InvalidArgument
+		return nil, nex.ResultCodes.Core.InvalidArgument
 	}
 
 	// TODO - This assumes a PRUDP connection. Refactor to support HPP
@@ -19,28 +19,28 @@ func requestTicket(err error, packet nex.PacketInterface, callID uint32, idSourc
 	server := endpoint.Server
 
 	sourceAccount, errorCode := commonProtocol.AccountDetailsByPID(idSource)
-	if errorCode != 0 && errorCode != nex.Errors.Core.AccessDenied {
+	if errorCode != 0 && errorCode != nex.ResultCodes.Core.AccessDenied {
 		return nil, errorCode
 	}
 
 	targetAccount, errorCode := commonProtocol.AccountDetailsByPID(idTarget)
-	if errorCode != 0 && errorCode != nex.Errors.Core.AccessDenied {
+	if errorCode != 0 && errorCode != nex.ResultCodes.Core.AccessDenied {
 		return nil, errorCode
 	}
 
 	encryptedTicket, errorCode := generateTicket(sourceAccount, targetAccount, commonProtocol.SessionKeyLength, server)
-	if errorCode != 0 && errorCode != nex.Errors.Core.AccessDenied {
+	if errorCode != 0 && errorCode != nex.ResultCodes.Core.AccessDenied {
 		return nil, errorCode
 	}
 
 	// * From the wiki:
 	// *
 	// * "If the source or target pid is invalid, the %retval% field is set to Core::AccessDenied and the ticket is empty."
-	retval := types.NewQResultSuccess(nex.Errors.Core.Unknown)
+	retval := types.NewQResultSuccess(nex.ResultCodes.Core.Unknown)
 	bufResponse := types.NewBuffer(encryptedTicket)
 
 	if errorCode != 0 {
-		retval = types.NewQResultError(nex.Errors.Core.AccessDenied)
+		retval = types.NewQResultError(nex.ResultCodes.Core.AccessDenied)
 		bufResponse = types.NewBuffer([]byte{})
 	}
 

@@ -10,12 +10,12 @@ import (
 func getSessionURLs(err error, packet nex.PacketInterface, callID uint32, gid *types.PrimitiveU32) (*nex.RMCMessage, uint32) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.Errors.Core.InvalidArgument
+		return nil, nex.ResultCodesCore.InvalidArgument
 	}
 
 	session, ok := common_globals.Sessions[gid.Value]
 	if !ok {
-		return nil, nex.Errors.RendezVous.SessionVoid
+		return nil, nex.ResultCodesRendezVous.SessionVoid
 	}
 
 	// TODO - This assumes a PRUDP connection. Refactor to support HPP
@@ -32,7 +32,7 @@ func getSessionURLs(err error, packet nex.PacketInterface, callID uint32, gid *t
 		if host == nil {
 			// * This popped up once during testing. Leaving it noted here in case it becomes a problem.
 			common_globals.Logger.Error("Owner client not found")
-			return nil, nex.Errors.Core.Exception
+			return nil, nex.ResultCodesCore.Exception
 		}
 	}
 

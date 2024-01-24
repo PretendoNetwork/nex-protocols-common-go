@@ -10,7 +10,7 @@ import (
 func openParticipation(err error, packet nex.PacketInterface, callID uint32, gid *types.PrimitiveU32) (*nex.RMCMessage, uint32) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.Errors.Core.InvalidArgument
+		return nil, nex.ResultCodesCore.InvalidArgument
 	}
 
 	// TODO - This assumes a PRUDP connection. Refactor to support HPP
@@ -20,11 +20,11 @@ func openParticipation(err error, packet nex.PacketInterface, callID uint32, gid
 
 	session, ok := common_globals.Sessions[gid.Value]
 	if !ok {
-		return nil, nex.Errors.RendezVous.SessionVoid
+		return nil, nex.ResultCodesRendezVous.SessionVoid
 	}
 
 	if session.GameMatchmakeSession.Gathering.OwnerPID.Equals(connection.PID()) {
-		return nil, nex.Errors.RendezVous.PermissionDenied
+		return nil, nex.ResultCodesRendezVous.PermissionDenied
 	}
 
 	session.GameMatchmakeSession.OpenParticipation = types.NewPrimitiveBool(true)

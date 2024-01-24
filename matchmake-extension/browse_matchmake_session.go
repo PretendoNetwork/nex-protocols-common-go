@@ -11,7 +11,7 @@ import (
 func browseMatchmakeSession(err error, packet nex.PacketInterface, callID uint32, searchCriteria *match_making_types.MatchmakeSessionSearchCriteria, resultRange *types.ResultRange) (*nex.RMCMessage, uint32) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.Errors.Core.InvalidArgument
+		return nil, nex.ResultCodesCore.InvalidArgument
 	}
 
 	// TODO - This assumes a PRUDP connection. Refactor to support HPP
@@ -24,7 +24,7 @@ func browseMatchmakeSession(err error, packet nex.PacketInterface, callID uint32
 	sessions := common_globals.FindSessionsByMatchmakeSessionSearchCriterias(connection.PID(), searchCriterias, commonProtocol.GameSpecificMatchmakeSessionSearchCriteriaChecks)
 
 	if len(sessions) < int(resultRange.Offset.Value) {
-		return nil, nex.Errors.Core.InvalidIndex
+		return nil, nex.ResultCodesCore.InvalidIndex
 	}
 
 	sessions = sessions[resultRange.Offset.Value:]

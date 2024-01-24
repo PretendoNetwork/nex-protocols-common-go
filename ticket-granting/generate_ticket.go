@@ -10,7 +10,7 @@ import (
 
 func generateTicket(source, target *nex.Account, sessionKeyLength int, server nex.ServerInterface) ([]byte, uint32) {
 	if source == nil || target == nil {
-		return []byte{}, nex.Errors.Authentication.Unknown
+		return []byte{}, nex.ResultCodes.Authentication.Unknown
 	}
 
 	sourceKey := nex.DeriveKerberosKey(source.PID, []byte(source.Password))
@@ -20,7 +20,7 @@ func generateTicket(source, target *nex.Account, sessionKeyLength int, server ne
 	_, err := rand.Read(sessionKey)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return []byte{}, nex.Errors.Authentication.Unknown
+		return []byte{}, nex.ResultCodes.Authentication.Unknown
 	}
 
 	ticketInternalData := nex.NewKerberosTicketInternalData()
@@ -33,7 +33,7 @@ func generateTicket(source, target *nex.Account, sessionKeyLength int, server ne
 	encryptedTicketInternalData, err := ticketInternalData.Encrypt(targetKey, nex.NewByteStreamOut(server))
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return []byte{}, nex.Errors.Authentication.Unknown
+		return []byte{}, nex.ResultCodes.Authentication.Unknown
 	}
 
 	ticket := nex.NewKerberosTicket()
@@ -44,7 +44,7 @@ func generateTicket(source, target *nex.Account, sessionKeyLength int, server ne
 	encryptedTicket, err := ticket.Encrypt(sourceKey, nex.NewByteStreamOut(server))
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return []byte{}, nex.Errors.Authentication.Unknown
+		return []byte{}, nex.ResultCodes.Authentication.Unknown
 	}
 
 	return encryptedTicket, 0

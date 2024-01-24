@@ -14,7 +14,7 @@ import (
 func register(err error, packet nex.PacketInterface, callID uint32, vecMyURLs *types.List[*types.StationURL]) (*nex.RMCMessage, uint32) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.Errors.Core.InvalidArgument
+		return nil, nex.ResultCodesCore.InvalidArgument
 	}
 
 	// TODO - This assumes a PRUDP connection. Refactor to support HPP
@@ -45,7 +45,7 @@ func register(err error, packet nex.PacketInterface, callID uint32, vecMyURLs *t
 
 	if localStation == nil {
 		common_globals.Logger.Error("Failed to find local station")
-		return nil, nex.Errors.Core.InvalidArgument
+		return nil, nex.ResultCodesCore.InvalidArgument
 	}
 
 	if publicStation == nil {
@@ -76,7 +76,7 @@ func register(err error, packet nex.PacketInterface, callID uint32, vecMyURLs *t
 	connection.StationURLs.Append(localStation)
 	connection.StationURLs.Append(publicStation)
 
-	retval := types.NewQResultSuccess(nex.Errors.Core.Unknown)
+	retval := types.NewQResultSuccess(nex.ResultCodesCore.Unknown)
 	pidConnectionID := types.NewPrimitiveU32(connection.ID)
 	urlPublic := types.NewString(publicStation.EncodeToString())
 
