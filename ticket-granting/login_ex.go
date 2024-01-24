@@ -1,9 +1,6 @@
 package ticket_granting
 
 import (
-	"strconv"
-	"strings"
-
 	"github.com/PretendoNetwork/nex-go"
 	"github.com/PretendoNetwork/nex-go/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
@@ -22,25 +19,20 @@ func loginEx(err error, packet nex.PacketInterface, callID uint32, strUserName *
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint
 	server := endpoint.Server
-	username := strUserName.Value
-	var userPID *types.PID
 
-	// TODO - This needs to change to support QRV clients, who may not send PIDs as usernames
-	if username == "guest" {
-		userPID = types.NewPID(100)
-	} else {
-		converted, err := strconv.Atoi(strings.TrimRight(username, "\x00"))
-		if err != nil {
-			panic(err)
-		}
-
-		userPID = types.NewPID(uint64(converted))
+	sourceAccount, errorCode := commonProtocol.AccountDetailsByUsername(strUserName.Value)
+	if errorCode != 0 && errorCode != nex.Errors.RendezVous.InvalidUsername {
+		// * Some other error happened
+		return nil, errorCode
 	}
 
-	// TODO - This is not the right PID for Switch servers
-	targetPID := types.NewPID(2) // * "Quazal Rendez-Vous" (the server user) account PID
+	targetAccount, errorCode := commonProtocol.AccountDetailsByUsername(commonProtocol.SecureServerAccount.Username)
+	if errorCode != 0 && errorCode != nex.Errors.RendezVous.InvalidUsername {
+		// * Some other error happened
+		return nil, errorCode
+	}
 
-	encryptedTicket, errorCode := generateTicket(userPID, targetPID)
+	encryptedTicket, errorCode := generateTicket(sourceAccount, targetAccount, commonProtocol.SessionKeyLength, server)
 
 	if errorCode != 0 && errorCode != nex.Errors.RendezVous.InvalidUsername {
 		// * Some other error happened
@@ -61,7 +53,7 @@ func loginEx(err error, packet nex.PacketInterface, callID uint32, strUserName *
 		retval = types.NewQResultError(errorCode)
 	} else {
 		retval = types.NewQResultSuccess(nex.Errors.Core.Unknown)
-		pidPrincipal = userPID
+		pidPrincipal = sourceAccount.PID
 		pbufResponse = types.NewBuffer(encryptedTicket)
 		strReturnMsg = commonProtocol.BuildName.Copy().(*types.String)
 

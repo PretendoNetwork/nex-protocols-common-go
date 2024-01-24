@@ -18,8 +18,17 @@ func requestTicket(err error, packet nex.PacketInterface, callID uint32, idSourc
 	endpoint := connection.Endpoint
 	server := endpoint.Server
 
-	encryptedTicket, errorCode := generateTicket(idSource, idTarget)
+	sourceAccount, errorCode := commonProtocol.AccountDetailsByPID(idSource)
+	if errorCode != 0 && errorCode != nex.Errors.Core.AccessDenied {
+		return nil, errorCode
+	}
 
+	targetAccount, errorCode := commonProtocol.AccountDetailsByPID(idTarget)
+	if errorCode != 0 && errorCode != nex.Errors.Core.AccessDenied {
+		return nil, errorCode
+	}
+
+	encryptedTicket, errorCode := generateTicket(sourceAccount, targetAccount, commonProtocol.SessionKeyLength, server)
 	if errorCode != 0 && errorCode != nex.Errors.Core.AccessDenied {
 		return nil, errorCode
 	}

@@ -12,13 +12,16 @@ import (
 var commonProtocol *CommonProtocol
 
 type CommonProtocol struct {
-	server                     nex.ServerInterface
 	protocol                   ticket_granting.Interface
 	SecureStationURL           *types.StationURL
 	SpecialProtocols           []*types.PrimitiveU8
 	StationURLSpecialProtocols *types.StationURL
 	BuildName                  *types.String
 	allowInsecureLoginMethod   bool
+	SessionKeyLength           int
+	AccountDetailsByPID        func(pid *types.PID) (*nex.Account, uint32)
+	AccountDetailsByUsername   func(username string) (*nex.Account, uint32)
+	SecureServerAccount        *nex.Account
 }
 
 func (commonProtocol *CommonProtocol) DisableInsecureLogin() {
@@ -37,12 +40,13 @@ func NewCommonProtocol(protocol ticket_granting.Interface) *CommonProtocol {
 	protocol.SetHandlerRequestTicket(requestTicket)
 
 	commonProtocol = &CommonProtocol{
-		server:                     protocol.Server(),
 		protocol:                   protocol,
 		SecureStationURL:           types.NewStationURL("prudp:/"),
 		SpecialProtocols:           make([]*types.PrimitiveU8, 0),
 		StationURLSpecialProtocols: types.NewStationURL(""),
 		BuildName:                  types.NewString(""),
+		allowInsecureLoginMethod:   false,
+		SessionKeyLength:           32,
 	}
 
 	commonProtocol.DisableInsecureLogin() // * Disable insecure login by default
