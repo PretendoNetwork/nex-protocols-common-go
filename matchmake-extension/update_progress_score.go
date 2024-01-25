@@ -10,16 +10,16 @@ import (
 func updateProgressScore(err error, packet nex.PacketInterface, callID uint32, gid *types.PrimitiveU32, progressScore *types.PrimitiveU8) (*nex.RMCMessage, uint32) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.ResultCodesCore.InvalidArgument
+		return nil, nex.ResultCodes.Core.InvalidArgument
 	}
 
 	session := common_globals.Sessions[gid.Value]
 	if session == nil {
-		return nil, nex.ResultCodesRendezVous.SessionVoid
+		return nil, nex.ResultCodes.RendezVous.SessionVoid
 	}
 
 	if progressScore.Value > 100 {
-		return nil, nex.ResultCodesCore.InvalidArgument
+		return nil, nex.ResultCodes.Core.InvalidArgument
 	}
 
 	// TODO - This assumes a PRUDP connection. Refactor to support HPP
@@ -28,7 +28,7 @@ func updateProgressScore(err error, packet nex.PacketInterface, callID uint32, g
 	server := endpoint.Server
 
 	if session.GameMatchmakeSession.Gathering.OwnerPID.Equals(connection.PID()) {
-		return nil, nex.ResultCodesRendezVous.PermissionDenied
+		return nil, nex.ResultCodes.RendezVous.PermissionDenied
 	}
 
 	session.GameMatchmakeSession.ProgressScore.Value += progressScore.Value

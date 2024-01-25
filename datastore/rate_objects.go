@@ -11,17 +11,17 @@ import (
 func rateObjects(err error, packet nex.PacketInterface, callID uint32, targets *types.List[*datastore_types.DataStoreRatingTarget], params *types.List[*datastore_types.DataStoreRateObjectParam], transactional *types.PrimitiveBool, fetchRatings *types.PrimitiveBool) (*nex.RMCMessage, uint32) {
 	if commonProtocol.GetObjectInfoByDataIDWithPassword == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataIDWithPassword not defined")
-		return nil, nex.ResultCodesCore.NotImplemented
+		return nil, nex.ResultCodes.Core.NotImplemented
 	}
 
 	if commonProtocol.RateObjectWithPassword == nil {
 		common_globals.Logger.Warning("RateObjectWithPassword not defined")
-		return nil, nex.ResultCodesCore.NotImplemented
+		return nil, nex.ResultCodes.Core.NotImplemented
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.ResultCodesDataStore.Unknown
+		return nil, nex.ResultCodes.DataStore.Unknown
 	}
 
 	// TODO - This assumes a PRUDP connection. Refactor to support HPP
@@ -40,7 +40,7 @@ func rateObjects(err error, packet nex.PacketInterface, callID uint32, targets *
 	// * logic for differing sized lists. So force
 	// * them to always be the same
 	if targets.Length() != params.Length() {
-		return nil, nex.ResultCodesDataStore.InvalidArgument
+		return nil, nex.ResultCodes.DataStore.InvalidArgument
 	}
 
 	var errorCode uint32
@@ -48,7 +48,7 @@ func rateObjects(err error, packet nex.PacketInterface, callID uint32, targets *
 	targets.Each(func(i int, target *datastore_types.DataStoreRatingTarget) bool {
 		param, err := params.Get(i)
 		if err != nil {
-			errorCode = nex.ResultCodesDataStore.InvalidArgument
+			errorCode = nex.ResultCodes.DataStore.InvalidArgument
 			return true
 		}
 

@@ -13,7 +13,7 @@ import (
 func replaceURL(err error, packet nex.PacketInterface, callID uint32, target *types.StationURL, url *types.StationURL) (*nex.RMCMessage, uint32) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.ResultCodesCore.InvalidArgument
+		return nil, nex.ResultCodes.Core.InvalidArgument
 	}
 
 	// TODO - This assumes a PRUDP connection. Refactor to support HPP

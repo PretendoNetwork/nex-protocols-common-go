@@ -14,7 +14,7 @@ import (
 func register(err error, packet nex.PacketInterface, callID uint32, vecMyURLs *types.List[*types.StationURL]) (*nex.RMCMessage, uint32) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.ResultCodesCore.InvalidArgument
+		return nil, nex.ResultCodes.Core.InvalidArgument
 	}
 
 	// TODO - This assumes a PRUDP connection. Refactor to support HPP
@@ -28,11 +28,11 @@ func register(err error, packet nex.PacketInterface, callID uint32, vecMyURLs *t
 
 	for _, stationURL := range vecMyURLs.Slice() {
 		natf := stationURL.Fields["natf"]
-		natm := stationURL.Fields["natf"]
-		pmp := stationURL.Fields["natf"]
+		natm := stationURL.Fields["natm"]
+		pmp := stationURL.Fields["pmp"]
 		transportType := stationURL.Fields["type"]
 
-		if natf == "0" && natm == "0" && pmp == "" && transportType == "" && localStation == nil {
+		if natf == "0" && natm == "0" && pmp == "0" && transportType == "" && localStation == nil {
 			stationURL.SetLocal()
 			localStation = stationURL.Copy().(*types.StationURL)
 		}
@@ -45,7 +45,7 @@ func register(err error, packet nex.PacketInterface, callID uint32, vecMyURLs *t
 
 	if localStation == nil {
 		common_globals.Logger.Error("Failed to find local station")
-		return nil, nex.ResultCodesCore.InvalidArgument
+		return nil, nex.ResultCodes.Core.InvalidArgument
 	}
 
 	if publicStation == nil {
@@ -76,7 +76,7 @@ func register(err error, packet nex.PacketInterface, callID uint32, vecMyURLs *t
 	connection.StationURLs.Append(localStation)
 	connection.StationURLs.Append(publicStation)
 
-	retval := types.NewQResultSuccess(nex.ResultCodesCore.Unknown)
+	retval := types.NewQResultSuccess(nex.ResultCodes.Core.Unknown)
 	pidConnectionID := types.NewPrimitiveU32(connection.ID)
 	urlPublic := types.NewString(publicStation.EncodeToString())
 

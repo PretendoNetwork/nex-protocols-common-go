@@ -11,7 +11,7 @@ import (
 func createMatchmakeSession(err error, packet nex.PacketInterface, callID uint32, anyGathering *types.AnyDataHolder, message *types.String, participationCount *types.PrimitiveU16) (*nex.RMCMessage, uint32) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.ResultCodesCore.InvalidArgument
+		return nil, nex.ResultCodes.Core.InvalidArgument
 	}
 
 	// TODO - This assumes a PRUDP connection. Refactor to support HPP
@@ -29,7 +29,7 @@ func createMatchmakeSession(err error, packet nex.PacketInterface, callID uint32
 		matchmakeSession = anyGathering.ObjectData.(*match_making_types.MatchmakeSession)
 	} else {
 		common_globals.Logger.Critical("Non-MatchmakeSession DataType?!")
-		return nil, nex.ResultCodesCore.InvalidArgument
+		return nil, nex.ResultCodes.Core.InvalidArgument
 	}
 
 	session, err, errCode := common_globals.CreateSessionByMatchmakeSession(matchmakeSession, nil, connection.PID())

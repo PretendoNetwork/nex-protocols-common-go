@@ -11,12 +11,12 @@ import (
 func getRanking(err error, packet nex.PacketInterface, callID uint32, rankingMode *types.PrimitiveU8, category *types.PrimitiveU32, orderParam *ranking_types.RankingOrderParam, uniqueID *types.PrimitiveU64, principalID *types.PID) (*nex.RMCMessage, uint32) {
 	if commonProtocol.GetRankingsAndCountByCategoryAndRankingOrderParam == nil {
 		common_globals.Logger.Warning("Ranking::GetRanking missing GetRankingsAndCountByCategoryAndRankingOrderParam!")
-		return nil, nex.ResultCodesCore.NotImplemented
+		return nil, nex.ResultCodes.Core.NotImplemented
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.ResultCodesRanking.InvalidArgument
+		return nil, nex.ResultCodes.Ranking.InvalidArgument
 	}
 
 	// TODO - This assumes a PRUDP connection. Refactor to support HPP
@@ -27,11 +27,11 @@ func getRanking(err error, packet nex.PacketInterface, callID uint32, rankingMod
 	rankDataList, totalCount, err := commonProtocol.GetRankingsAndCountByCategoryAndRankingOrderParam(category, orderParam)
 	if err != nil {
 		common_globals.Logger.Critical(err.Error())
-		return nil, nex.ResultCodesRanking.Unknown
+		return nil, nex.ResultCodes.Ranking.Unknown
 	}
 
 	if totalCount == 0 || rankDataList.Length() == 0 {
-		return nil, nex.ResultCodesRanking.NotFound
+		return nil, nex.ResultCodes.Ranking.NotFound
 	}
 
 	pResult := ranking_types.NewRankingResult()

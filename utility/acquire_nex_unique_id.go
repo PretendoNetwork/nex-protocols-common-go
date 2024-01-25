@@ -10,12 +10,12 @@ import (
 func acquireNexUniqueID(err error, packet nex.PacketInterface, callID uint32) (*nex.RMCMessage, uint32) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.ResultCodesCore.InvalidArgument
+		return nil, nex.ResultCodes.Core.InvalidArgument
 	}
 
 	if commonProtocol.GenerateNEXUniqueID == nil {
 		common_globals.Logger.Warning("Utility::AcquireNexUniqueID missing GenerateNEXUniqueID!")
-		return nil, nex.ResultCodesCore.NotImplemented
+		return nil, nex.ResultCodes.Core.NotImplemented
 	}
 
 	// TODO - This assumes a PRUDP connection. Refactor to support HPP

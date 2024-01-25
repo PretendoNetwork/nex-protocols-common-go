@@ -12,12 +12,12 @@ import (
 func unregisterGathering(err error, packet nex.PacketInterface, callID uint32, idGathering *types.PrimitiveU32) (*nex.RMCMessage, uint32) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.ResultCodesCore.InvalidArgument
+		return nil, nex.ResultCodes.Core.InvalidArgument
 	}
 
 	session, ok := common_globals.Sessions[idGathering.Value]
 	if !ok {
-		return nil, nex.ResultCodesRendezVous.SessionVoid
+		return nil, nex.ResultCodes.RendezVous.SessionVoid
 	}
 
 	// TODO - This assumes a PRUDP connection. Refactor to support HPP
@@ -26,7 +26,7 @@ func unregisterGathering(err error, packet nex.PacketInterface, callID uint32, i
 	server := endpoint.Server
 
 	if session.GameMatchmakeSession.Gathering.OwnerPID.Equals(connection.PID()) {
-		return nil, nex.ResultCodesRendezVous.PermissionDenied
+		return nil, nex.ResultCodes.RendezVous.PermissionDenied
 	}
 
 	gatheringPlayers := session.ConnectionIDs

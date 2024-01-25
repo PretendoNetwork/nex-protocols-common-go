@@ -19,8 +19,6 @@ type CommonProtocol struct {
 	BuildName                  *types.String
 	allowInsecureLoginMethod   bool
 	SessionKeyLength           int
-	AccountDetailsByPID        func(pid *types.PID) (*nex.Account, uint32)
-	AccountDetailsByUsername   func(username string) (*nex.Account, uint32)
 	SecureServerAccount        *nex.Account
 }
 

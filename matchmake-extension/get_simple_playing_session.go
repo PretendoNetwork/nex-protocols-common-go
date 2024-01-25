@@ -14,7 +14,7 @@ import (
 func getSimplePlayingSession(err error, packet nex.PacketInterface, callID uint32, listPID *types.List[*types.PID], includeLoginUser *types.PrimitiveBool) (*nex.RMCMessage, uint32) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.ResultCodesCore.InvalidArgument
+		return nil, nex.ResultCodes.Core.InvalidArgument
 	}
 
 	// TODO - This assumes a PRUDP connection. Refactor to support HPP
@@ -50,7 +50,7 @@ func getSimplePlayingSession(err error, packet nex.PacketInterface, callID uint3
 					attribute0, err := session.GameMatchmakeSession.Attributes.Get(0)
 					if err != nil {
 						common_globals.Logger.Error(err.Error())
-						return nil, nex.ResultCodesCore.InvalidArgument
+						return nil, nex.ResultCodes.Core.InvalidArgument
 					}
 
 					simplePlayingSessions[key] = match_making_types.NewSimplePlayingSession()

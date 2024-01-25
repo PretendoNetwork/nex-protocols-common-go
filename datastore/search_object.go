@@ -11,12 +11,12 @@ import (
 func searchObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreSearchParam) (*nex.RMCMessage, uint32) {
 	if commonProtocol.GetObjectInfosByDataStoreSearchParam == nil {
 		common_globals.Logger.Warning("GetObjectInfosByDataStoreSearchParam not defined")
-		return nil, nex.ResultCodesCore.NotImplemented
+		return nil, nex.ResultCodes.Core.NotImplemented
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.ResultCodesDataStore.Unknown
+		return nil, nex.ResultCodes.DataStore.Unknown
 	}
 
 	// TODO - This assumes a PRUDP connection. Refactor to support HPP

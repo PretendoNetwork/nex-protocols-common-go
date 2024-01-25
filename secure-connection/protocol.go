@@ -11,7 +11,7 @@ var commonProtocol *CommonProtocol
 type CommonProtocol struct {
 	server               nex.ServerInterface
 	protocol             secure_connection.Interface
-	CreateReportDBRecord func(pid *types.PID, reportID *types.PrimitiveU32, reportData *types.Buffer) error
+	CreateReportDBRecord func(pid *types.PID, reportID *types.PrimitiveU32, reportData *types.QBuffer) error
 }
 
 // NewCommonProtocol returns a new CommonProtocol

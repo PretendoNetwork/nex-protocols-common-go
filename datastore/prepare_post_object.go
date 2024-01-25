@@ -14,22 +14,22 @@ import (
 func preparePostObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStorePreparePostParam) (*nex.RMCMessage, uint32) {
 	if commonProtocol.InitializeObjectByPreparePostParam == nil {
 		common_globals.Logger.Warning("InitializeObjectByPreparePostParam not defined")
-		return nil, nex.ResultCodesCore.NotImplemented
+		return nil, nex.ResultCodes.Core.NotImplemented
 	}
 
 	if commonProtocol.InitializeObjectRatingWithSlot == nil {
 		common_globals.Logger.Warning("InitializeObjectRatingWithSlot not defined")
-		return nil, nex.ResultCodesCore.NotImplemented
+		return nil, nex.ResultCodes.Core.NotImplemented
 	}
 
 	if commonProtocol.S3Presigner == nil {
 		common_globals.Logger.Warning("S3Presigner not defined")
-		return nil, nex.ResultCodesCore.NotImplemented
+		return nil, nex.ResultCodes.Core.NotImplemented
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.ResultCodesDataStore.Unknown
+		return nil, nex.ResultCodes.DataStore.Unknown
 	}
 
 	// TODO - This assumes a PRUDP connection. Refactor to support HPP
@@ -66,7 +66,7 @@ func preparePostObject(err error, packet nex.PacketInterface, callID uint32, par
 	URL, formData, err := commonProtocol.S3Presigner.PostObject(bucket, key, time.Minute*15)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.ResultCodesDataStore.OperationNotAllowed
+		return nil, nex.ResultCodes.DataStore.OperationNotAllowed
 	}
 
 	requestHeaders, errCode := commonProtocol.S3PostRequestHeaders()

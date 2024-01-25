@@ -11,17 +11,17 @@ import (
 func getMetasMultipleParam(err error, packet nex.PacketInterface, callID uint32, params *types.List[*datastore_types.DataStoreGetMetaParam]) (*nex.RMCMessage, uint32) {
 	if commonProtocol.GetObjectInfoByPersistenceTargetWithPassword == nil {
 		common_globals.Logger.Warning("GetObjectInfoByPersistenceTargetWithPassword not defined")
-		return nil, nex.ResultCodesCore.NotImplemented
+		return nil, nex.ResultCodes.Core.NotImplemented
 	}
 
 	if commonProtocol.GetObjectInfoByDataIDWithPassword == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataIDWithPassword not defined")
-		return nil, nex.ResultCodesCore.NotImplemented
+		return nil, nex.ResultCodes.Core.NotImplemented
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.ResultCodesDataStore.Unknown
+		return nil, nex.ResultCodes.DataStore.Unknown
 	}
 
 	// TODO - This assumes a PRUDP connection. Refactor to support HPP
@@ -57,7 +57,7 @@ func getMetasMultipleParam(err error, packet nex.PacketInterface, callID uint32,
 
 				pResults.Append(types.NewQResultError(errCode))
 			} else {
-				pResults.Append(types.NewQResultSuccess(nex.ResultCodesDataStore.Unknown))
+				pResults.Append(types.NewQResultSuccess(nex.ResultCodes.DataStore.Unknown))
 			}
 
 			objectInfo.FilterPropertiesByResultOption(param.ResultOption)

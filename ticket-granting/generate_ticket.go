@@ -8,9 +8,9 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
-func generateTicket(source, target *nex.Account, sessionKeyLength int, server nex.ServerInterface) ([]byte, uint32) {
+func generateTicket(source, target *nex.Account, sessionKeyLength int, server nex.ServerInterface) ([]byte, *nex.Error) {
 	if source == nil || target == nil {
-		return []byte{}, nex.ResultCodes.Authentication.Unknown
+		return []byte{}, nex.NewError(nex.ResultCodes.Authentication.Unknown, "Source or target account is nil")
 	}
 
 	sourceKey := nex.DeriveKerberosKey(source.PID, []byte(source.Password))
@@ -20,7 +20,7 @@ func generateTicket(source, target *nex.Account, sessionKeyLength int, server ne
 	_, err := rand.Read(sessionKey)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return []byte{}, nex.ResultCodes.Authentication.Unknown
+		return []byte{}, nex.NewError(nex.ResultCodes.Authentication.Unknown, "Failed to generate session key")
 	}
 
 	ticketInternalData := nex.NewKerberosTicketInternalData()
@@ -33,7 +33,7 @@ func generateTicket(source, target *nex.Account, sessionKeyLength int, server ne
 	encryptedTicketInternalData, err := ticketInternalData.Encrypt(targetKey, nex.NewByteStreamOut(server))
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return []byte{}, nex.ResultCodes.Authentication.Unknown
+		return []byte{}, nex.NewError(nex.ResultCodes.Authentication.Unknown, "Failed to encrypt Ticket Internal Data")
 	}
 
 	ticket := nex.NewKerberosTicket()
@@ -44,8 +44,8 @@ func generateTicket(source, target *nex.Account, sessionKeyLength int, server ne
 	encryptedTicket, err := ticket.Encrypt(sourceKey, nex.NewByteStreamOut(server))
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return []byte{}, nex.ResultCodes.Authentication.Unknown
+		return []byte{}, nex.NewError(nex.ResultCodes.Authentication.Unknown, "Failed to encrypt Ticket")
 	}
 
-	return encryptedTicket, 0
+	return encryptedTicket, nil
 }

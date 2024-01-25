@@ -18,19 +18,19 @@ func requestTicket(err error, packet nex.PacketInterface, callID uint32, idSourc
 	endpoint := connection.Endpoint
 	server := endpoint.Server
 
-	sourceAccount, errorCode := commonProtocol.AccountDetailsByPID(idSource)
-	if errorCode != 0 && errorCode != nex.ResultCodes.Core.AccessDenied {
-		return nil, errorCode
+	sourceAccount, errorCode := endpoint.AccountDetailsByPID(idSource)
+	if errorCode != nil && errorCode.ResultCode != nex.ResultCodes.Core.AccessDenied {
+		return nil, errorCode.ResultCode
 	}
 
-	targetAccount, errorCode := commonProtocol.AccountDetailsByPID(idTarget)
-	if errorCode != 0 && errorCode != nex.ResultCodes.Core.AccessDenied {
-		return nil, errorCode
+	targetAccount, errorCode := endpoint.AccountDetailsByPID(idTarget)
+	if errorCode != nil && errorCode.ResultCode != nex.ResultCodes.Core.AccessDenied {
+		return nil, errorCode.ResultCode
 	}
 
 	encryptedTicket, errorCode := generateTicket(sourceAccount, targetAccount, commonProtocol.SessionKeyLength, server)
-	if errorCode != 0 && errorCode != nex.ResultCodes.Core.AccessDenied {
-		return nil, errorCode
+	if errorCode != nil && errorCode.ResultCode != nex.ResultCodes.Core.AccessDenied {
+		return nil, errorCode.ResultCode
 	}
 
 	// * From the wiki:
@@ -39,7 +39,7 @@ func requestTicket(err error, packet nex.PacketInterface, callID uint32, idSourc
 	retval := types.NewQResultSuccess(nex.ResultCodes.Core.Unknown)
 	bufResponse := types.NewBuffer(encryptedTicket)
 
-	if errorCode != 0 {
+	if errorCode != nil {
 		retval = types.NewQResultError(nex.ResultCodes.Core.AccessDenied)
 		bufResponse = types.NewBuffer([]byte{})
 	}

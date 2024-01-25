@@ -10,17 +10,17 @@ import (
 func deleteObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreDeleteParam) (*nex.RMCMessage, uint32) {
 	if commonProtocol.GetObjectInfoByDataID == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataID not defined")
-		return nil, nex.ResultCodesCore.NotImplemented
+		return nil, nex.ResultCodes.Core.NotImplemented
 	}
 
 	if commonProtocol.DeleteObjectByDataIDWithPassword == nil {
 		common_globals.Logger.Warning("DeleteObjectByDataIDWithPassword not defined")
-		return nil, nex.ResultCodesCore.NotImplemented
+		return nil, nex.ResultCodes.Core.NotImplemented
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.ResultCodesDataStore.Unknown
+		return nil, nex.ResultCodes.DataStore.Unknown
 	}
 
 	// TODO - This assumes a PRUDP connection. Refactor to support HPP

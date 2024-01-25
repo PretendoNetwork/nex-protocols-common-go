@@ -20,23 +20,23 @@ func loginEx(err error, packet nex.PacketInterface, callID uint32, strUserName *
 	endpoint := connection.Endpoint
 	server := endpoint.Server
 
-	sourceAccount, errorCode := commonProtocol.AccountDetailsByUsername(strUserName.Value)
-	if errorCode != 0 && errorCode != nex.ResultCodes.RendezVous.InvalidUsername {
+	sourceAccount, errorCode := endpoint.AccountDetailsByUsername(strUserName.Value)
+	if errorCode != nil && errorCode.ResultCode != nex.ResultCodes.RendezVous.InvalidUsername {
 		// * Some other error happened
-		return nil, errorCode
+		return nil, errorCode.ResultCode
 	}
 
-	targetAccount, errorCode := commonProtocol.AccountDetailsByUsername(commonProtocol.SecureServerAccount.Username)
-	if errorCode != 0 && errorCode != nex.ResultCodes.RendezVous.InvalidUsername {
+	targetAccount, errorCode := endpoint.AccountDetailsByUsername(commonProtocol.SecureServerAccount.Username)
+	if errorCode != nil && errorCode.ResultCode != nex.ResultCodes.RendezVous.InvalidUsername {
 		// * Some other error happened
-		return nil, errorCode
+		return nil, errorCode.ResultCode
 	}
 
 	encryptedTicket, errorCode := generateTicket(sourceAccount, targetAccount, commonProtocol.SessionKeyLength, server)
 
-	if errorCode != 0 && errorCode != nex.ResultCodes.RendezVous.InvalidUsername {
+	if errorCode != nil && errorCode.ResultCode != nex.ResultCodes.RendezVous.InvalidUsername {
 		// * Some other error happened
-		return nil, errorCode
+		return nil, errorCode.ResultCode
 	}
 
 	var retval *types.QResult
@@ -49,8 +49,8 @@ func loginEx(err error, packet nex.PacketInterface, callID uint32, strUserName *
 	// *
 	// * "If the username does not exist, the %retval% field is set to
 	// * RendezVous::InvalidUsername and the other fields are left blank."
-	if errorCode == nex.ResultCodes.RendezVous.InvalidUsername {
-		retval = types.NewQResultError(errorCode)
+	if errorCode != nil && errorCode.ResultCode == nex.ResultCodes.RendezVous.InvalidUsername {
+		retval = types.NewQResultError(errorCode.ResultCode)
 	} else {
 		retval = types.NewQResultSuccess(nex.ResultCodes.Core.Unknown)
 		pidPrincipal = sourceAccount.PID

@@ -8,15 +8,15 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
-func sendReport(err error, packet nex.PacketInterface, callID uint32, reportID *types.PrimitiveU32, reportData *types.Buffer) (*nex.RMCMessage, uint32) {
+func sendReport(err error, packet nex.PacketInterface, callID uint32, reportID *types.PrimitiveU32, reportData *types.QBuffer) (*nex.RMCMessage, uint32) {
 	if commonProtocol.CreateReportDBRecord == nil {
 		common_globals.Logger.Warning("SecureConnection::SendReport missing CreateReportDBRecord!")
-		return nil, nex.ResultCodesCore.NotImplemented
+		return nil, nex.ResultCodes.Core.NotImplemented
 	}
 
 	if err != nil {
 		common_globals.Logger.Critical(err.Error())
-		return nil, nex.ResultCodesCore.Unknown
+		return nil, nex.ResultCodes.Core.Unknown
 	}
 
 	// TODO - This assumes a PRUDP connection. Refactor to support HPP
@@ -27,7 +27,7 @@ func sendReport(err error, packet nex.PacketInterface, callID uint32, reportID *
 	err = commonProtocol.CreateReportDBRecord(connection.PID(), reportID, reportData)
 	if err != nil {
 		common_globals.Logger.Critical(err.Error())
-		return nil, nex.ResultCodesCore.Unknown
+		return nil, nex.ResultCodes.Core.Unknown
 	}
 
 	rmcResponse := nex.NewRMCSuccess(server, nil)
