@@ -7,38 +7,36 @@ import (
 	ticket_granting "github.com/PretendoNetwork/nex-protocols-go/ticket-granting"
 )
 
-func login(err error, packet nex.PacketInterface, callID uint32, strUserName *types.String) (*nex.RMCMessage, uint32) {
+func login(err error, packet nex.PacketInterface, callID uint32, strUserName *types.String) (*nex.RMCMessage, *nex.Error) {
 	if !commonProtocol.allowInsecureLoginMethod {
-		return nil, nex.ResultCodes.Authentication.ValidationFailed
+		return nil, nex.NewError(nex.ResultCodes.Authentication.ValidationFailed, "change_error")
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.ResultCodes.Core.InvalidArgument
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	// TODO - This assumes a PRUDP connection. Refactor to support HPP
 	connection := packet.Sender().(*nex.PRUDPConnection)
-	endpoint := connection.Endpoint
-	server := endpoint.Server
+	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
 	sourceAccount, errorCode := endpoint.AccountDetailsByUsername(strUserName.Value)
 	if errorCode != nil && errorCode.ResultCode != nex.ResultCodes.RendezVous.InvalidUsername {
 		// * Some other error happened
-		return nil, errorCode.ResultCode
+		return nil, errorCode
 	}
 
 	targetAccount, errorCode := endpoint.AccountDetailsByUsername(commonProtocol.SecureServerAccount.Username)
 	if errorCode != nil && errorCode.ResultCode != nex.ResultCodes.RendezVous.InvalidUsername {
 		// * Some other error happened
-		return nil, errorCode.ResultCode
+		return nil, errorCode
 	}
 
-	encryptedTicket, errorCode := generateTicket(sourceAccount, targetAccount, commonProtocol.SessionKeyLength, server)
+	encryptedTicket, errorCode := generateTicket(sourceAccount, targetAccount, commonProtocol.SessionKeyLength, endpoint)
 
 	if errorCode != nil && errorCode.ResultCode != nex.ResultCodes.RendezVous.InvalidUsername {
 		// * Some other error happened
-		return nil, errorCode.ResultCode
+		return nil, errorCode
 	}
 
 	var retval *types.QResult
@@ -70,7 +68,7 @@ func login(err error, packet nex.PacketInterface, callID uint32, strUserName *ty
 		pConnectionData.Time = types.NewDateTime(0).Now()
 	}
 
-	rmcResponseStream := nex.NewByteStreamOut(server)
+	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
 	retval.WriteTo(rmcResponseStream)
 	pidPrincipal.WriteTo(rmcResponseStream)
@@ -80,10 +78,10 @@ func login(err error, packet nex.PacketInterface, callID uint32, strUserName *ty
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
 	rmcResponse.ProtocolID = ticket_granting.ProtocolID
 	rmcResponse.MethodID = ticket_granting.MethodLogin
 	rmcResponse.CallID = callID
 
-	return rmcResponse, 0
+	return rmcResponse, nil
 }

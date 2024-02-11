@@ -7,37 +7,35 @@ import (
 	ranking "github.com/PretendoNetwork/nex-protocols-go/ranking"
 )
 
-func getCommonData(err error, packet nex.PacketInterface, callID uint32, uniqueID *types.PrimitiveU64) (*nex.RMCMessage, uint32) {
+func getCommonData(err error, packet nex.PacketInterface, callID uint32, uniqueID *types.PrimitiveU64) (*nex.RMCMessage, *nex.Error) {
 	if commonProtocol.GetCommonData == nil {
 		common_globals.Logger.Warning("Ranking::GetCommonData missing GetCommonData!")
-		return nil, nex.ResultCodes.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.ResultCodes.Ranking.InvalidArgument
+		return nil, nex.NewError(nex.ResultCodes.Ranking.InvalidArgument, "change_error")
 	}
 
-	// TODO - This assumes a PRUDP connection. Refactor to support HPP
-	connection := packet.Sender().(*nex.PRUDPConnection)
-	endpoint := connection.Endpoint
-	server := endpoint.Server
+	connection := packet.Sender()
+	endpoint := connection.Endpoint()
 
 	commonData, err := commonProtocol.GetCommonData(uniqueID)
 	if err != nil {
-		return nil, nex.ResultCodes.Ranking.NotFound
+		return nil, nex.NewError(nex.ResultCodes.Ranking.NotFound, "change_error")
 	}
 
-	rmcResponseStream := nex.NewByteStreamOut(server)
+	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
 	commonData.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
 	rmcResponse.ProtocolID = ranking.ProtocolID
 	rmcResponse.MethodID = ranking.MethodGetCommonData
 	rmcResponse.CallID = callID
 
-	return rmcResponse, 0
+	return rmcResponse, nil
 }

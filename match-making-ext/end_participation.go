@@ -10,20 +10,19 @@ import (
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/notifications/types"
 )
 
-func endParticipation(err error, packet nex.PacketInterface, callID uint32, idGathering *types.PrimitiveU32, strMessage *types.String) (*nex.RMCMessage, uint32) {
+func endParticipation(err error, packet nex.PacketInterface, callID uint32, idGathering *types.PrimitiveU32, strMessage *types.String) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.ResultCodes.Core.InvalidArgument
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
 	session, ok := common_globals.Sessions[idGathering.Value]
 	if !ok {
-		return nil, nex.ResultCodes.RendezVous.SessionVoid
+		return nil, nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "change_error")
 	}
 
-	// TODO - This assumes a PRUDP connection. Refactor to support HPP
 	connection := packet.Sender().(*nex.PRUDPConnection)
-	endpoint := connection.Endpoint
+	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 	server := endpoint.Server
 
 	matchmakeSession := session.GameMatchmakeSession
@@ -49,13 +48,13 @@ func endParticipation(err error, packet nex.PacketInterface, callID uint32, idGa
 
 	retval := types.NewPrimitiveBool(true)
 
-	rmcResponseStream := nex.NewByteStreamOut(server)
+	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
 	retval.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
 	rmcResponse.ProtocolID = match_making_ext.ProtocolID
 	rmcResponse.MethodID = match_making_ext.MethodEndParticipation
 	rmcResponse.CallID = callID
@@ -70,11 +69,11 @@ func endParticipation(err error, packet nex.PacketInterface, callID uint32, idGa
 	oEvent.Param2 = types.NewPrimitiveU32(connection.PID().LegacyValue()) // TODO - This assumes a legacy client. Will not work on the Switch
 	oEvent.StrParam = strMessage.Copy().(*types.String)
 
-	stream := nex.NewByteStreamOut(server)
+	stream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
 	oEvent.WriteTo(stream)
 
-	rmcRequest := nex.NewRMCRequest(server)
+	rmcRequest := nex.NewRMCRequest(endpoint)
 	rmcRequest.ProtocolID = notifications.ProtocolID
 	rmcRequest.MethodID = notifications.MethodProcessNotificationEvent
 	rmcRequest.CallID = common_globals.CurrentMatchmakingCallID.Next()
@@ -85,27 +84,27 @@ func endParticipation(err error, packet nex.PacketInterface, callID uint32, idGa
 	target := endpoint.FindConnectionByPID(ownerPID.Value())
 	if target == nil {
 		common_globals.Logger.Warning("Owner client not found")
-		return nil, 0
+		return nil, nil
 	}
 
 	var messagePacket nex.PRUDPPacketInterface
 
 	if target.DefaultPRUDPVersion == 0 {
-		messagePacket, _ = nex.NewPRUDPPacketV0(target, nil)
+		messagePacket, _ = nex.NewPRUDPPacketV0(server, target, nil)
 	} else {
-		messagePacket, _ = nex.NewPRUDPPacketV1(target, nil)
+		messagePacket, _ = nex.NewPRUDPPacketV1(server, target, nil)
 	}
 
 	messagePacket.SetType(nex.DataPacket)
 	messagePacket.AddFlag(nex.FlagNeedsAck)
 	messagePacket.AddFlag(nex.FlagReliable)
 	messagePacket.SetSourceVirtualPortStreamType(target.StreamType)
-	messagePacket.SetSourceVirtualPortStreamID(target.Endpoint.StreamID)
+	messagePacket.SetSourceVirtualPortStreamID(endpoint.StreamID)
 	messagePacket.SetDestinationVirtualPortStreamType(target.StreamType)
 	messagePacket.SetDestinationVirtualPortStreamID(target.StreamID)
 	messagePacket.SetPayload(rmcRequestBytes)
 
 	server.Send(messagePacket)
 
-	return rmcResponse, 0
+	return rmcResponse, nil
 }

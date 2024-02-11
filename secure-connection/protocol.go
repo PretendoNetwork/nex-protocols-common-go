@@ -9,7 +9,7 @@ import (
 var commonProtocol *CommonProtocol
 
 type CommonProtocol struct {
-	server               nex.ServerInterface
+	endpoint             nex.EndpointInterface
 	protocol             secure_connection.Interface
 	CreateReportDBRecord func(pid *types.PID, reportID *types.PrimitiveU32, reportData *types.QBuffer) error
 }
@@ -21,7 +21,7 @@ func NewCommonProtocol(protocol secure_connection.Interface) *CommonProtocol {
 	protocol.SetHandlerSendReport(sendReport)
 
 	commonProtocol = &CommonProtocol{
-		server:   protocol.Server(),
+		endpoint: protocol.Endpoint(),
 		protocol: protocol,
 	}
 

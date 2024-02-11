@@ -9,29 +9,28 @@ import (
 	nat_traversal "github.com/PretendoNetwork/nex-protocols-go/nat-traversal"
 )
 
-func requestProbeInitiationExt(err error, packet nex.PacketInterface, callID uint32, targetList *types.List[*types.String], stationToProbe *types.String) (*nex.RMCMessage, uint32) {
+func requestProbeInitiationExt(err error, packet nex.PacketInterface, callID uint32, targetList *types.List[*types.String], stationToProbe *types.String) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.ResultCodes.Core.InvalidArgument
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	// TODO - This assumes a PRUDP connection. Refactor to support HPP
 	connection := packet.Sender().(*nex.PRUDPConnection)
-	endpoint := connection.Endpoint
+	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 	server := endpoint.Server
 
-	rmcResponse := nex.NewRMCSuccess(server, nil)
+	rmcResponse := nex.NewRMCSuccess(endpoint, nil)
 	rmcResponse.ProtocolID = nat_traversal.ProtocolID
 	rmcResponse.MethodID = nat_traversal.MethodRequestProbeInitiationExt
 	rmcResponse.CallID = callID
 
-	rmcRequestStream := nex.NewByteStreamOut(server)
+	rmcRequestStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
 	stationToProbe.WriteTo(rmcRequestStream)
 
 	rmcRequestBody := rmcRequestStream.Bytes()
 
-	rmcRequest := nex.NewRMCRequest(server)
+	rmcRequest := nex.NewRMCRequest(endpoint)
 	rmcRequest.ProtocolID = nat_traversal.ProtocolID
 	rmcRequest.CallID = 0xFFFF0000 + callID
 	rmcRequest.MethodID = nat_traversal.MethodInitiateProbe
@@ -57,16 +56,16 @@ func requestProbeInitiationExt(err error, packet nex.PacketInterface, callID uin
 			var messagePacket nex.PRUDPPacketInterface
 
 			if target.DefaultPRUDPVersion == 0 {
-				messagePacket, _ = nex.NewPRUDPPacketV0(target, nil)
+				messagePacket, _ = nex.NewPRUDPPacketV0(server, target, nil)
 			} else {
-				messagePacket, _ = nex.NewPRUDPPacketV1(target, nil)
+				messagePacket, _ = nex.NewPRUDPPacketV1(server, target, nil)
 			}
 
 			messagePacket.SetType(nex.DataPacket)
 			messagePacket.AddFlag(nex.FlagNeedsAck)
 			messagePacket.AddFlag(nex.FlagReliable)
 			messagePacket.SetSourceVirtualPortStreamType(target.StreamType)
-			messagePacket.SetSourceVirtualPortStreamID(target.Endpoint.StreamID)
+			messagePacket.SetSourceVirtualPortStreamID(endpoint.StreamID)
 			messagePacket.SetDestinationVirtualPortStreamType(target.StreamType)
 			messagePacket.SetDestinationVirtualPortStreamID(target.StreamID)
 			messagePacket.SetPayload(rmcRequestBytes)
@@ -75,5 +74,5 @@ func requestProbeInitiationExt(err error, packet nex.PacketInterface, callID uin
 		}
 	}
 
-	return rmcResponse, 0
+	return rmcResponse, nil
 }

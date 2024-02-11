@@ -7,21 +7,19 @@ import (
 	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
 )
 
-func updateSessionURL(err error, packet nex.PacketInterface, callID uint32, idGathering *types.PrimitiveU32, strURL *types.String) (*nex.RMCMessage, uint32) {
+func updateSessionURL(err error, packet nex.PacketInterface, callID uint32, idGathering *types.PrimitiveU32, strURL *types.String) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.ResultCodes.Core.InvalidArgument
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
 	session, ok := common_globals.Sessions[idGathering.Value]
 	if !ok {
-		return nil, nex.ResultCodes.RendezVous.SessionVoid
+		return nil, nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "change_error")
 	}
 
-	// TODO - This assumes a PRUDP connection. Refactor to support HPP
 	connection := packet.Sender().(*nex.PRUDPConnection)
-	endpoint := connection.Endpoint
-	server := endpoint.Server
+	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
 	// * Mario Kart 7 seems to set an empty strURL, so I assume this is what the method does?
 	session.GameMatchmakeSession.Gathering.HostPID = connection.PID().Copy().(*types.PID)
@@ -31,16 +29,16 @@ func updateSessionURL(err error, packet nex.PacketInterface, callID uint32, idGa
 
 	retval := types.NewPrimitiveBool(true)
 
-	rmcResponseStream := nex.NewByteStreamOut(server)
+	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
 	retval.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
 	rmcResponse.ProtocolID = match_making.ProtocolID
 	rmcResponse.MethodID = match_making.MethodGetSessionURLs
 	rmcResponse.CallID = callID
 
-	return rmcResponse, 0
+	return rmcResponse, nil
 }

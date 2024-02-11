@@ -7,32 +7,30 @@ import (
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension"
 )
 
-func openParticipation(err error, packet nex.PacketInterface, callID uint32, gid *types.PrimitiveU32) (*nex.RMCMessage, uint32) {
+func openParticipation(err error, packet nex.PacketInterface, callID uint32, gid *types.PrimitiveU32) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.ResultCodes.Core.InvalidArgument
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	// TODO - This assumes a PRUDP connection. Refactor to support HPP
 	connection := packet.Sender().(*nex.PRUDPConnection)
-	endpoint := connection.Endpoint
-	server := endpoint.Server
+	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
 	session, ok := common_globals.Sessions[gid.Value]
 	if !ok {
-		return nil, nex.ResultCodes.RendezVous.SessionVoid
+		return nil, nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "change_error")
 	}
 
 	if session.GameMatchmakeSession.Gathering.OwnerPID.Equals(connection.PID()) {
-		return nil, nex.ResultCodes.RendezVous.PermissionDenied
+		return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
 	}
 
 	session.GameMatchmakeSession.OpenParticipation = types.NewPrimitiveBool(true)
 
-	rmcResponse := nex.NewRMCSuccess(server, nil)
+	rmcResponse := nex.NewRMCSuccess(endpoint, nil)
 	rmcResponse.ProtocolID = matchmake_extension.ProtocolID
 	rmcResponse.MethodID = matchmake_extension.MethodOpenParticipation
 	rmcResponse.CallID = callID
 
-	return rmcResponse, 0
+	return rmcResponse, nil
 }

@@ -11,7 +11,7 @@ import (
 var commonProtocol *CommonProtocol
 
 type CommonProtocol struct {
-	server                                           nex.ServerInterface
+	endpoint                                         nex.EndpointInterface
 	protocol                                         matchmake_extension.Interface
 	CleanupSearchMatchmakeSession                    func(matchmakeSession *match_making_types.MatchmakeSession)
 	GameSpecificMatchmakeSessionSearchCriteriaChecks func(searchCriteria *match_making_types.MatchmakeSessionSearchCriteria, matchmakeSession *match_making_types.MatchmakeSession) bool
@@ -40,7 +40,7 @@ func NewCommonProtocol(protocol matchmake_extension.Interface) *CommonProtocol {
 	protocol.SetHandlerBrowseMatchmakeSession(browseMatchmakeSession)
 
 	commonProtocol = &CommonProtocol{
-		server:   protocol.Server(),
+		endpoint: protocol.Endpoint(),
 		protocol: protocol,
 	}
 

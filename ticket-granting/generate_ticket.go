@@ -8,7 +8,7 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
-func generateTicket(source, target *nex.Account, sessionKeyLength int, server nex.ServerInterface) ([]byte, *nex.Error) {
+func generateTicket(source, target *nex.Account, sessionKeyLength int, endpoint *nex.PRUDPEndPoint) ([]byte, *nex.Error) {
 	if source == nil || target == nil {
 		return []byte{}, nex.NewError(nex.ResultCodes.Authentication.Unknown, "Source or target account is nil")
 	}
@@ -23,14 +23,14 @@ func generateTicket(source, target *nex.Account, sessionKeyLength int, server ne
 		return []byte{}, nex.NewError(nex.ResultCodes.Authentication.Unknown, "Failed to generate session key")
 	}
 
-	ticketInternalData := nex.NewKerberosTicketInternalData()
+	ticketInternalData := nex.NewKerberosTicketInternalData(endpoint.Server)
 	serverTime := types.NewDateTime(0).Now()
 
 	ticketInternalData.Issued = serverTime
 	ticketInternalData.SourcePID = source.PID
 	ticketInternalData.SessionKey = sessionKey
 
-	encryptedTicketInternalData, err := ticketInternalData.Encrypt(targetKey, nex.NewByteStreamOut(server))
+	encryptedTicketInternalData, err := ticketInternalData.Encrypt(targetKey, nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings()))
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return []byte{}, nex.NewError(nex.ResultCodes.Authentication.Unknown, "Failed to encrypt Ticket Internal Data")
@@ -41,7 +41,7 @@ func generateTicket(source, target *nex.Account, sessionKeyLength int, server ne
 	ticket.TargetPID = target.PID
 	ticket.InternalData = types.NewBuffer(encryptedTicketInternalData)
 
-	encryptedTicket, err := ticket.Encrypt(sourceKey, nex.NewByteStreamOut(server))
+	encryptedTicket, err := ticket.Encrypt(sourceKey, nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings()))
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return []byte{}, nex.NewError(nex.ResultCodes.Authentication.Unknown, "Failed to encrypt Ticket")

@@ -8,7 +8,7 @@ import (
 var commonProtocol *CommonProtocol
 
 type CommonProtocol struct {
-	server   nex.ServerInterface
+	endpoint nex.EndpointInterface
 	protocol match_making_ext.Interface
 }
 
@@ -17,7 +17,7 @@ func NewCommonProtocol(protocol match_making_ext.Interface) *CommonProtocol {
 	protocol.SetHandlerEndParticipation(endParticipation)
 
 	commonProtocol = &CommonProtocol{
-		server:   protocol.Server(),
+		endpoint: protocol.Endpoint(),
 		protocol: protocol,
 	}
 

@@ -7,32 +7,30 @@ import (
 	ranking "github.com/PretendoNetwork/nex-protocols-go/ranking"
 )
 
-func uploadCommonData(err error, packet nex.PacketInterface, callID uint32, commonData *types.Buffer, uniqueID *types.PrimitiveU64) (*nex.RMCMessage, uint32) {
+func uploadCommonData(err error, packet nex.PacketInterface, callID uint32, commonData *types.Buffer, uniqueID *types.PrimitiveU64) (*nex.RMCMessage, *nex.Error) {
 	if commonProtocol.UploadCommonData == nil {
 		common_globals.Logger.Warning("Ranking::UploadCommonData missing UploadCommonData!")
-		return nil, nex.ResultCodes.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.ResultCodes.Ranking.InvalidArgument
+		return nil, nex.NewError(nex.ResultCodes.Ranking.InvalidArgument, "change_error")
 	}
 
-	// TODO - This assumes a PRUDP connection. Refactor to support HPP
-	connection := packet.Sender().(*nex.PRUDPConnection)
-	endpoint := connection.Endpoint
-	server := endpoint.Server
+	connection := packet.Sender()
+	endpoint := connection.Endpoint()
 
 	err = commonProtocol.UploadCommonData(connection.PID(), uniqueID, commonData)
 	if err != nil {
 		common_globals.Logger.Critical(err.Error())
-		return nil, nex.ResultCodes.Ranking.Unknown
+		return nil, nex.NewError(nex.ResultCodes.Ranking.Unknown, "change_error")
 	}
 
-	rmcResponse := nex.NewRMCSuccess(server, nil)
+	rmcResponse := nex.NewRMCSuccess(endpoint, nil)
 	rmcResponse.ProtocolID = ranking.ProtocolID
 	rmcResponse.MethodID = ranking.MethodUploadCommonData
 	rmcResponse.CallID = callID
 
-	return rmcResponse, 0
+	return rmcResponse, nil
 }

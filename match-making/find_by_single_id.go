@@ -7,21 +7,19 @@ import (
 	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
 )
 
-func findBySingleID(err error, packet nex.PacketInterface, callID uint32, id *types.PrimitiveU32) (*nex.RMCMessage, uint32) {
+func findBySingleID(err error, packet nex.PacketInterface, callID uint32, id *types.PrimitiveU32) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.ResultCodes.Core.InvalidArgument
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
 	session, ok := common_globals.Sessions[id.Value]
 	if !ok {
-		return nil, nex.ResultCodes.RendezVous.SessionVoid
+		return nil, nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "change_error")
 	}
 
-	// TODO - This assumes a PRUDP connection. Refactor to support HPP
 	connection := packet.Sender().(*nex.PRUDPConnection)
-	endpoint := connection.Endpoint
-	server := endpoint.Server
+	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
 	bResult := types.NewPrimitiveBool(true)
 	pGathering := types.NewAnyDataHolder()
@@ -29,17 +27,17 @@ func findBySingleID(err error, packet nex.PacketInterface, callID uint32, id *ty
 	pGathering.TypeName = types.NewString("MatchmakeSession")
 	pGathering.ObjectData = session.GameMatchmakeSession.Copy()
 
-	rmcResponseStream := nex.NewByteStreamOut(server)
+	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
 	bResult.WriteTo(rmcResponseStream)
 	pGathering.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
 	rmcResponse.ProtocolID = match_making.ProtocolID
 	rmcResponse.MethodID = match_making.MethodFindBySingleID
 	rmcResponse.CallID = callID
 
-	return rmcResponse, 0
+	return rmcResponse, nil
 }

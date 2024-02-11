@@ -7,29 +7,27 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
 )
 
-func getMeta(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreGetMetaParam) (*nex.RMCMessage, uint32) {
+func getMeta(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreGetMetaParam) (*nex.RMCMessage, *nex.Error) {
 	if commonProtocol.GetObjectInfoByPersistenceTargetWithPassword == nil {
 		common_globals.Logger.Warning("GetObjectInfoByPersistenceTargetWithPassword not defined")
-		return nil, nex.ResultCodes.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
 	if commonProtocol.GetObjectInfoByDataIDWithPassword == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataIDWithPassword not defined")
-		return nil, nex.ResultCodes.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.ResultCodes.DataStore.Unknown
+		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
 	}
 
-	// TODO - This assumes a PRUDP connection. Refactor to support HPP
-	connection := packet.Sender().(*nex.PRUDPConnection)
-	endpoint := connection.Endpoint
-	server := endpoint.Server
+	connection := packet.Sender()
+	endpoint := connection.Endpoint()
 
 	var pMetaInfo *datastore_types.DataStoreMetaInfo
-	var errCode uint32
+	var errCode *nex.Error
 
 	// * Real server ignores PersistenceTarget if DataID is set
 	if param.DataID.Value == 0 {
@@ -38,27 +36,27 @@ func getMeta(err error, packet nex.PacketInterface, callID uint32, param *datast
 		pMetaInfo, errCode = commonProtocol.GetObjectInfoByDataIDWithPassword(param.DataID, param.AccessPassword)
 	}
 
-	if errCode != 0 {
+	if errCode != nil {
 		return nil, errCode
 	}
 
 	errCode = commonProtocol.VerifyObjectPermission(pMetaInfo.OwnerID, connection.PID(), pMetaInfo.Permission)
-	if errCode != 0 {
+	if errCode != nil {
 		return nil, errCode
 	}
 
 	pMetaInfo.FilterPropertiesByResultOption(param.ResultOption)
 
-	rmcResponseStream := nex.NewByteStreamOut(server)
+	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
 	pMetaInfo.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
 	rmcResponse.ProtocolID = datastore.ProtocolID
 	rmcResponse.MethodID = datastore.MethodGetMeta
 	rmcResponse.CallID = callID
 
-	return rmcResponse, 0
+	return rmcResponse, nil
 }

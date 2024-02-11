@@ -11,44 +11,42 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
 )
 
-func preparePostObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStorePreparePostParam) (*nex.RMCMessage, uint32) {
+func preparePostObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStorePreparePostParam) (*nex.RMCMessage, *nex.Error) {
 	if commonProtocol.InitializeObjectByPreparePostParam == nil {
 		common_globals.Logger.Warning("InitializeObjectByPreparePostParam not defined")
-		return nil, nex.ResultCodes.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
 	if commonProtocol.InitializeObjectRatingWithSlot == nil {
 		common_globals.Logger.Warning("InitializeObjectRatingWithSlot not defined")
-		return nil, nex.ResultCodes.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
 	if commonProtocol.S3Presigner == nil {
 		common_globals.Logger.Warning("S3Presigner not defined")
-		return nil, nex.ResultCodes.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.ResultCodes.DataStore.Unknown
+		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
 	}
 
-	// TODO - This assumes a PRUDP connection. Refactor to support HPP
-	connection := packet.Sender().(*nex.PRUDPConnection)
-	endpoint := connection.Endpoint
-	server := endpoint.Server
+	connection := packet.Sender()
+	endpoint := connection.Endpoint()
 
 	// TODO - Need to verify what param.PersistenceInitParam.DeleteLastObject really means. It's often set to true even when it wouldn't make sense
 	dataID, errCode := commonProtocol.InitializeObjectByPreparePostParam(connection.PID(), param)
-	if errCode != 0 {
-		common_globals.Logger.Errorf("Error code %d on object init", errCode)
+	if errCode != nil {
+		common_globals.Logger.Errorf("Error on object init: %s", errCode.Error())
 		return nil, errCode
 	}
 
 	// TODO - Should this be moved to InitializeObjectByPreparePostParam?
 	param.RatingInitParams.Each(func(_ int, ratingInitParamWithSlot *datastore_types.DataStoreRatingInitParamWithSlot) bool {
 		errCode = commonProtocol.InitializeObjectRatingWithSlot(dataID, ratingInitParamWithSlot)
-		if errCode != 0 {
-			common_globals.Logger.Errorf("Error code %d on rating init", errCode)
+		if errCode != nil {
+			common_globals.Logger.Errorf("Error on rating init: %s", errCode.Error())
 
 			return true
 		}
@@ -56,7 +54,7 @@ func preparePostObject(err error, packet nex.PacketInterface, callID uint32, par
 		return false
 	})
 
-	if errCode != 0 {
+	if errCode != nil {
 		return nil, errCode
 	}
 
@@ -66,11 +64,11 @@ func preparePostObject(err error, packet nex.PacketInterface, callID uint32, par
 	URL, formData, err := commonProtocol.S3Presigner.PostObject(bucket, key, time.Minute*15)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.ResultCodes.DataStore.OperationNotAllowed
+		return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "change_error")
 	}
 
 	requestHeaders, errCode := commonProtocol.S3PostRequestHeaders()
-	if errCode != 0 {
+	if errCode != nil {
 		return nil, errCode
 	}
 
@@ -95,16 +93,16 @@ func preparePostObject(err error, packet nex.PacketInterface, callID uint32, par
 		pReqPostInfo.FormFields.Append(field)
 	}
 
-	rmcResponseStream := nex.NewByteStreamOut(server)
+	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
 	pReqPostInfo.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
 	rmcResponse.ProtocolID = datastore.ProtocolID
 	rmcResponse.MethodID = datastore.MethodPreparePostObject
 	rmcResponse.CallID = callID
 
-	return rmcResponse, 0
+	return rmcResponse, nil
 }

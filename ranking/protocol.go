@@ -10,7 +10,7 @@ import (
 var commonProtocol *CommonProtocol
 
 type CommonProtocol struct {
-	server                                            nex.ServerInterface
+	endpoint                                          nex.EndpointInterface
 	protocol                                          ranking.Interface
 	GetCommonData                                     func(uniqueID *types.PrimitiveU64) (*types.Buffer, error)
 	UploadCommonData                                  func(pid *types.PID, uniqueID *types.PrimitiveU64, commonData *types.Buffer) error
@@ -28,7 +28,7 @@ func NewCommonProtocol(protocol ranking.Interface) *CommonProtocol {
 	protocol.SetHandlerUploadScore(uploadScore)
 
 	commonProtocol = &CommonProtocol{
-		server:   protocol.Server(),
+		endpoint: protocol.Endpoint(),
 		protocol: protocol,
 	}
 

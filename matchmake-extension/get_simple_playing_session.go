@@ -11,16 +11,14 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-func getSimplePlayingSession(err error, packet nex.PacketInterface, callID uint32, listPID *types.List[*types.PID], includeLoginUser *types.PrimitiveBool) (*nex.RMCMessage, uint32) {
+func getSimplePlayingSession(err error, packet nex.PacketInterface, callID uint32, listPID *types.List[*types.PID], includeLoginUser *types.PrimitiveBool) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.ResultCodes.Core.InvalidArgument
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	// TODO - This assumes a PRUDP connection. Refactor to support HPP
 	connection := packet.Sender().(*nex.PRUDPConnection)
-	endpoint := connection.Endpoint
-	server := endpoint.Server
+	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
 	// * Does nothing if element is not present in the List
 	listPID.Remove(connection.PID())
@@ -50,7 +48,7 @@ func getSimplePlayingSession(err error, packet nex.PacketInterface, callID uint3
 					attribute0, err := session.GameMatchmakeSession.Attributes.Get(0)
 					if err != nil {
 						common_globals.Logger.Error(err.Error())
-						return nil, nex.ResultCodes.Core.InvalidArgument
+						return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 					}
 
 					simplePlayingSessions[key] = match_making_types.NewSimplePlayingSession()
@@ -69,16 +67,16 @@ func getSimplePlayingSession(err error, packet nex.PacketInterface, callID uint3
 		lstSimplePlayingSession.Append(simplePlayingSession)
 	}
 
-	rmcResponseStream := nex.NewByteStreamOut(server)
+	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
 	lstSimplePlayingSession.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
 	rmcResponse.ProtocolID = matchmake_extension.ProtocolID
 	rmcResponse.MethodID = matchmake_extension.MethodGetSimplePlayingSession
 	rmcResponse.CallID = callID
 
-	return rmcResponse, 0
+	return rmcResponse, nil
 }

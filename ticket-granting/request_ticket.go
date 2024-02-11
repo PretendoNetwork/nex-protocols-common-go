@@ -7,30 +7,28 @@ import (
 	ticket_granting "github.com/PretendoNetwork/nex-protocols-go/ticket-granting"
 )
 
-func requestTicket(err error, packet nex.PacketInterface, callID uint32, idSource *types.PID, idTarget *types.PID) (*nex.RMCMessage, uint32) {
+func requestTicket(err error, packet nex.PacketInterface, callID uint32, idSource *types.PID, idTarget *types.PID) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.ResultCodes.Core.InvalidArgument
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	// TODO - This assumes a PRUDP connection. Refactor to support HPP
-	connection := packet.Sender().(*nex.PRUDPConnection)
-	endpoint := connection.Endpoint
-	server := endpoint.Server
+	connection := packet.Sender()
+	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
 	sourceAccount, errorCode := endpoint.AccountDetailsByPID(idSource)
 	if errorCode != nil && errorCode.ResultCode != nex.ResultCodes.Core.AccessDenied {
-		return nil, errorCode.ResultCode
+		return nil, errorCode
 	}
 
 	targetAccount, errorCode := endpoint.AccountDetailsByPID(idTarget)
 	if errorCode != nil && errorCode.ResultCode != nex.ResultCodes.Core.AccessDenied {
-		return nil, errorCode.ResultCode
+		return nil, errorCode
 	}
 
-	encryptedTicket, errorCode := generateTicket(sourceAccount, targetAccount, commonProtocol.SessionKeyLength, server)
+	encryptedTicket, errorCode := generateTicket(sourceAccount, targetAccount, commonProtocol.SessionKeyLength, endpoint)
 	if errorCode != nil && errorCode.ResultCode != nex.ResultCodes.Core.AccessDenied {
-		return nil, errorCode.ResultCode
+		return nil, errorCode
 	}
 
 	// * From the wiki:
@@ -44,17 +42,17 @@ func requestTicket(err error, packet nex.PacketInterface, callID uint32, idSourc
 		bufResponse = types.NewBuffer([]byte{})
 	}
 
-	rmcResponseStream := nex.NewByteStreamOut(server)
+	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
 	retval.WriteTo(rmcResponseStream)
 	bufResponse.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
 	rmcResponse.ProtocolID = ticket_granting.ProtocolID
 	rmcResponse.MethodID = ticket_granting.MethodRequestTicket
 	rmcResponse.CallID = callID
 
-	return rmcResponse, 0
+	return rmcResponse, nil
 }

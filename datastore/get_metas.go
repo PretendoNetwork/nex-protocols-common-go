@@ -8,21 +8,19 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
 )
 
-func getMetas(err error, packet nex.PacketInterface, callID uint32, dataIDs *types.List[*types.PrimitiveU64], param *datastore_types.DataStoreGetMetaParam) (*nex.RMCMessage, uint32) {
+func getMetas(err error, packet nex.PacketInterface, callID uint32, dataIDs *types.List[*types.PrimitiveU64], param *datastore_types.DataStoreGetMetaParam) (*nex.RMCMessage, *nex.Error) {
 	if commonProtocol.GetObjectInfoByDataID == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataID not defined")
-		return nil, nex.ResultCodes.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.ResultCodes.DataStore.Unknown
+		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
 	}
 
-	// TODO - This assumes a PRUDP connection. Refactor to support HPP
-	connection := packet.Sender().(*nex.PRUDPConnection)
-	endpoint := connection.Endpoint
-	server := endpoint.Server
+	connection := packet.Sender()
+	endpoint := connection.Endpoint()
 
 	// TODO - Verify if param.PersistenceTarget is respected? It wouldn't make sense here but who knows
 
@@ -40,16 +38,16 @@ func getMetas(err error, packet nex.PacketInterface, callID uint32, dataIDs *typ
 	dataIDs.Each(func(_ int, dataID *types.PrimitiveU64) bool {
 		objectInfo, errCode := commonProtocol.GetObjectInfoByDataID(dataID)
 
-		if errCode != 0 {
+		if errCode != nil {
 			objectInfo = datastore_types.NewDataStoreMetaInfo()
 
-			pResults.Append(types.NewQResultError(errCode))
+			pResults.Append(types.NewQResultError(errCode.ResultCode))
 		} else {
 			errCode = commonProtocol.VerifyObjectPermission(objectInfo.OwnerID, connection.PID(), objectInfo.Permission)
-			if errCode != 0 {
+			if errCode != nil {
 				objectInfo = datastore_types.NewDataStoreMetaInfo()
 
-				pResults.Append(types.NewQResultError(errCode))
+				pResults.Append(types.NewQResultError(errCode.ResultCode))
 			} else {
 				pResults.Append(types.NewQResultSuccess(nex.ResultCodes.DataStore.Unknown))
 			}
@@ -62,17 +60,17 @@ func getMetas(err error, packet nex.PacketInterface, callID uint32, dataIDs *typ
 		return false
 	})
 
-	rmcResponseStream := nex.NewByteStreamOut(server)
+	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
 	pMetaInfo.WriteTo(rmcResponseStream)
 	pResults.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
 	rmcResponse.ProtocolID = datastore.ProtocolID
 	rmcResponse.MethodID = datastore.MethodGetMetas
 	rmcResponse.CallID = callID
 
-	return rmcResponse, 0
+	return rmcResponse, nil
 }

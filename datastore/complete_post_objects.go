@@ -9,33 +9,31 @@ import (
 	datastore "github.com/PretendoNetwork/nex-protocols-go/datastore"
 )
 
-func completePostObjects(err error, packet nex.PacketInterface, callID uint32, dataIDs *types.List[*types.PrimitiveU64]) (*nex.RMCMessage, uint32) {
+func completePostObjects(err error, packet nex.PacketInterface, callID uint32, dataIDs *types.List[*types.PrimitiveU64]) (*nex.RMCMessage, *nex.Error) {
 	if commonProtocol.minIOClient == nil {
 		common_globals.Logger.Warning("MinIOClient not defined")
-		return nil, nex.ResultCodes.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
 	if commonProtocol.GetObjectSizeByDataID == nil {
 		common_globals.Logger.Warning("GetObjectSizeByDataID not defined")
-		return nil, nex.ResultCodes.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
 	if commonProtocol.UpdateObjectUploadCompletedByDataID == nil {
 		common_globals.Logger.Warning("UpdateObjectUploadCompletedByDataID not defined")
-		return nil, nex.ResultCodes.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.ResultCodes.DataStore.Unknown
+		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
 	}
 
-	// TODO - This assumes a PRUDP connection. Refactor to support HPP
-	connection := packet.Sender().(*nex.PRUDPConnection)
-	endpoint := connection.Endpoint
-	server := endpoint.Server
+	connection := packet.Sender()
+	endpoint := connection.Endpoint()
 
-	var errorCode uint32
+	var errorCode *nex.Error
 
 	dataIDs.Each(func(_ int, dataID *types.PrimitiveU64) bool {
 		bucket := commonProtocol.S3Bucket
@@ -44,13 +42,13 @@ func completePostObjects(err error, packet nex.PacketInterface, callID uint32, d
 		objectSizeS3, err := commonProtocol.S3ObjectSize(bucket, key)
 		if err != nil {
 			common_globals.Logger.Error(err.Error())
-			errorCode = nex.ResultCodes.DataStore.NotFound
+			errorCode = nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
 
 			return true
 		}
 
 		objectSizeDB, errCode := commonProtocol.GetObjectSizeByDataID(dataID)
-		if errCode != 0 {
+		if errCode != nil {
 			errorCode = errCode
 
 			return true
@@ -59,13 +57,13 @@ func completePostObjects(err error, packet nex.PacketInterface, callID uint32, d
 		if objectSizeS3 != uint64(objectSizeDB) {
 			common_globals.Logger.Errorf("Object with DataID %d did not upload correctly! Mismatched sizes", dataID)
 			// TODO - Is this a good error?
-			errorCode = nex.ResultCodes.DataStore.Unknown
+			errorCode = nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
 
 			return true
 		}
 
 		errCode = commonProtocol.UpdateObjectUploadCompletedByDataID(dataID, true)
-		if errCode != 0 {
+		if errCode != nil {
 			errorCode = errCode
 
 			return true
@@ -74,14 +72,14 @@ func completePostObjects(err error, packet nex.PacketInterface, callID uint32, d
 		return false
 	})
 
-	if errorCode != 0 {
+	if errorCode != nil {
 		return nil, errorCode
 	}
 
-	rmcResponse := nex.NewRMCSuccess(server, nil)
+	rmcResponse := nex.NewRMCSuccess(endpoint, nil)
 	rmcResponse.ProtocolID = datastore.ProtocolID
 	rmcResponse.MethodID = datastore.MethodCompletePostObjects
 	rmcResponse.CallID = callID
 
-	return rmcResponse, 0
+	return rmcResponse, nil
 }

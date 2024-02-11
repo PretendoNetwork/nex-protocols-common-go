@@ -8,15 +8,14 @@ import (
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension"
 )
 
-func createMatchmakeSession(err error, packet nex.PacketInterface, callID uint32, anyGathering *types.AnyDataHolder, message *types.String, participationCount *types.PrimitiveU16) (*nex.RMCMessage, uint32) {
+func createMatchmakeSession(err error, packet nex.PacketInterface, callID uint32, anyGathering *types.AnyDataHolder, message *types.String, participationCount *types.PrimitiveU16) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.ResultCodes.Core.InvalidArgument
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	// TODO - This assumes a PRUDP connection. Refactor to support HPP
 	connection := packet.Sender().(*nex.PRUDPConnection)
-	endpoint := connection.Endpoint
+	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 	server := endpoint.Server
 
 	// * A client may disconnect from a session without leaving reliably,
@@ -29,35 +28,35 @@ func createMatchmakeSession(err error, packet nex.PacketInterface, callID uint32
 		matchmakeSession = anyGathering.ObjectData.(*match_making_types.MatchmakeSession)
 	} else {
 		common_globals.Logger.Critical("Non-MatchmakeSession DataType?!")
-		return nil, nex.ResultCodes.Core.InvalidArgument
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	session, err, errCode := common_globals.CreateSessionByMatchmakeSession(matchmakeSession, nil, connection.PID())
-	if err != nil {
-		common_globals.Logger.Error(err.Error())
+	session, errCode := common_globals.CreateSessionByMatchmakeSession(matchmakeSession, nil, connection.PID())
+	if errCode != nil {
+		common_globals.Logger.Error(errCode.Error())
 		return nil, errCode
 	}
 
-	err, errCode = common_globals.AddPlayersToSession(session, []uint32{connection.ID}, connection, message.Value)
-	if err != nil {
-		common_globals.Logger.Error(err.Error())
+	errCode = common_globals.AddPlayersToSession(session, []uint32{connection.ID}, connection, message.Value)
+	if errCode != nil {
+		common_globals.Logger.Error(errCode.Error())
 		return nil, errCode
 	}
 
-	rmcResponseStream := nex.NewByteStreamOut(server)
+	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
 	session.GameMatchmakeSession.Gathering.ID.WriteTo(rmcResponseStream)
 
-	if server.MatchMakingProtocolVersion().GreaterOrEqual("3.0.0") {
+	if server.LibraryVersions.MatchMaking.GreaterOrEqual("3.0.0") {
 		session.GameMatchmakeSession.SessionKey.WriteTo(rmcResponseStream)
 	}
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
 	rmcResponse.ProtocolID = matchmake_extension.ProtocolID
 	rmcResponse.MethodID = matchmake_extension.MethodCreateMatchmakeSession
 	rmcResponse.CallID = callID
 
-	return rmcResponse, 0
+	return rmcResponse, nil
 }

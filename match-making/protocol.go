@@ -1,6 +1,8 @@
 package matchmaking
 
 import (
+	"fmt"
+
 	"github.com/PretendoNetwork/nex-go"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 	_ "github.com/PretendoNetwork/nex-protocols-go"
@@ -10,14 +12,13 @@ import (
 var commonProtocol *CommonProtocol
 
 type CommonProtocol struct {
-	server   *nex.PRUDPServer
+	endpoint *nex.PRUDPEndPoint
 	protocol match_making.Interface
 }
 
 // NewCommonProtocol returns a new CommonProtocol
 func NewCommonProtocol(protocol match_making.Interface) *CommonProtocol {
-	// TODO - Remove cast to PRUDPServer?
-	server := protocol.Server().(*nex.PRUDPServer)
+	endpoint := protocol.Endpoint().(*nex.PRUDPEndPoint)
 
 	common_globals.Sessions = make(map[uint32]*common_globals.CommonMatchmakeSession)
 
@@ -29,15 +30,14 @@ func NewCommonProtocol(protocol match_making.Interface) *CommonProtocol {
 	protocol.SetHandlerUpdateSessionHost(updateSessionHost)
 
 	commonProtocol = &CommonProtocol{
-		server:   server,
+		endpoint: endpoint,
 		protocol: protocol,
 	}
 
-	// TODO - This needs to be added back somehow to work with the PRUDPEndPoint type
-	//server.OnClientRemoved(func(client *nex.PRUDPClient) {
-	//	fmt.Println("Leaving")
-	//	common_globals.RemoveClientFromAllSessions(client)
-	//})
+	endpoint.OnConnectionEnded(func(connection *nex.PRUDPConnection) {
+		fmt.Println("Leaving")
+		common_globals.RemoveConnectionFromAllSessions(connection)
+	})
 
 	return commonProtocol
 }

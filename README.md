@@ -35,14 +35,13 @@ var nexServer *nex.PRUDPServer
 
 func main() {
 	nexServer := nex.NewPRUDPServer()
-	nexServer.PRUDPVersion = 0
-	nexServer.SetFragmentSize(962)
-	nexServer.SetDefaultLibraryVersion(nex.NewLibraryVersion(1, 1, 0))
-	nexServer.SetKerberosPassword([]byte("password"))
-	nexServer.SetKerberosKeySize(16)
-	nexServer.SetAccessKey("ridfebb9")
 
-	nexServer.OnData(func(packet nex.PacketInterface) {
+	endpoint := nex.NewPRUDPEndPoint(1)
+	endpoint.ServerAccount = nex.NewAccount(types.NewPID(1), "Quazal Authentication", "password"))
+	endpoint.AccountDetailsByPID = accountDetailsByPID
+	endpoint.AccountDetailsByUsername = accountDetailsByUsername
+
+	endpoint.OnData(func(packet nex.PacketInterface) {
 		request := packet.RMCMessage()
 
 		fmt.Println("==Friends - Auth==")
@@ -51,7 +50,13 @@ func main() {
 		fmt.Println("==================")
 	})
 
-	ticketGrantingProtocol := ticket_granting.NewProtocol(nexServer)
+	nexServer.SetFragmentSize(962)
+	nexServer.LibraryVersions.SetDefault(nex.NewLibraryVersion(1, 1, 0))
+	nexServer.SessionKeyLength = 16
+	nexServer.AccessKey = "ridfebb9"
+
+	ticketGrantingProtocol := ticket_granting.NewProtocol(endpoint)
+	endpoint.RegisterServiceProtocol(ticketGrantingProtocol)
 	commonTicketGrantingProtocol := common_ticket_granting.NewCommonProtocol(ticketGrantingProtocol)
 
 	secureStationURL := nex.NewStationURL("")
@@ -66,7 +71,6 @@ func main() {
 
 	commonTicketGrantingProtocol.SecureStationURL = secureStationURL
 	commonTicketGrantingProtocol.BuildName = "Pretendo Friends Auth"
-	nexServer.SetPasswordFromPIDFunction(passwordFromPID)
 
 	nexServer.Listen(60000)
 }

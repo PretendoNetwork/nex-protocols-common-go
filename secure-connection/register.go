@@ -11,16 +11,14 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
-func register(err error, packet nex.PacketInterface, callID uint32, vecMyURLs *types.List[*types.StationURL]) (*nex.RMCMessage, uint32) {
+func register(err error, packet nex.PacketInterface, callID uint32, vecMyURLs *types.List[*types.StationURL]) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.ResultCodes.Core.InvalidArgument
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	// TODO - This assumes a PRUDP connection. Refactor to support HPP
 	connection := packet.Sender().(*nex.PRUDPConnection)
-	endpoint := connection.Endpoint
-	server := endpoint.Server
+	endpoint := connection.Endpoint()
 
 	// * vecMyURLs may contain multiple StationURLs. Search them all
 	var localStation *types.StationURL
@@ -45,7 +43,7 @@ func register(err error, packet nex.PacketInterface, callID uint32, vecMyURLs *t
 
 	if localStation == nil {
 		common_globals.Logger.Error("Failed to find local station")
-		return nil, nex.ResultCodes.Core.InvalidArgument
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
 	if publicStation == nil {
@@ -80,7 +78,7 @@ func register(err error, packet nex.PacketInterface, callID uint32, vecMyURLs *t
 	pidConnectionID := types.NewPrimitiveU32(connection.ID)
 	urlPublic := types.NewString(publicStation.EncodeToString())
 
-	rmcResponseStream := nex.NewByteStreamOut(server)
+	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
 	retval.WriteTo(rmcResponseStream)
 	pidConnectionID.WriteTo(rmcResponseStream)
@@ -88,10 +86,10 @@ func register(err error, packet nex.PacketInterface, callID uint32, vecMyURLs *t
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
 	rmcResponse.ProtocolID = secure_connection.ProtocolID
 	rmcResponse.MethodID = secure_connection.MethodRegister
 	rmcResponse.CallID = callID
 
-	return rmcResponse, 0
+	return rmcResponse, nil
 }

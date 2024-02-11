@@ -8,21 +8,19 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
 )
 
-func searchObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreSearchParam) (*nex.RMCMessage, uint32) {
+func searchObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreSearchParam) (*nex.RMCMessage, *nex.Error) {
 	if commonProtocol.GetObjectInfosByDataStoreSearchParam == nil {
 		common_globals.Logger.Warning("GetObjectInfosByDataStoreSearchParam not defined")
-		return nil, nex.ResultCodes.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.ResultCodes.DataStore.Unknown
+		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
 	}
 
-	// TODO - This assumes a PRUDP connection. Refactor to support HPP
-	connection := packet.Sender().(*nex.PRUDPConnection)
-	endpoint := connection.Endpoint
-	server := endpoint.Server
+	connection := packet.Sender()
+	endpoint := connection.Endpoint()
 
 	// * This is likely game-specific. Also developer note:
 	// * Please keep in mind that no results is allowed. errCode
@@ -32,7 +30,7 @@ func searchObject(err error, packet nex.PacketInterface, callID uint32, param *d
 	// * returned results. TotalCount is the total matching objects
 	// * in the database, whereas objects is the limited results
 	objects, totalCount, errCode := commonProtocol.GetObjectInfosByDataStoreSearchParam(param)
-	if errCode != 0 {
+	if errCode != nil {
 		return nil, errCode
 	}
 
@@ -43,7 +41,7 @@ func searchObject(err error, packet nex.PacketInterface, callID uint32, param *d
 
 	for _, object := range objects {
 		errCode = commonProtocol.VerifyObjectPermission(object.OwnerID, connection.PID(), object.Permission)
-		if errCode != 0 {
+		if errCode != nil {
 			// * Since we don't error here, should we also
 			// * "hide" these results by also decrementing
 			// * totalCount?
@@ -71,7 +69,7 @@ func searchObject(err error, packet nex.PacketInterface, callID uint32, param *d
 	// *
 	// * Only seen in struct revision 3 or
 	// * NEX 4.0+
-	if param.StructureVersion >= 3 || server.DataStoreProtocolVersion().GreaterOrEqual("4.0.0") {
+	if param.StructureVersion >= 3 || endpoint.LibraryVersions().DataStore.GreaterOrEqual("4.0.0") {
 		if !param.TotalCountEnabled.Value {
 			totalCount = 0
 			totalCountType = 3
@@ -81,16 +79,16 @@ func searchObject(err error, packet nex.PacketInterface, callID uint32, param *d
 	pSearchResult.TotalCount = types.NewPrimitiveU32(totalCount)
 	pSearchResult.TotalCountType = types.NewPrimitiveU8(totalCountType)
 
-	rmcResponseStream := nex.NewByteStreamOut(server)
+	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
 	pSearchResult.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
 	rmcResponse.ProtocolID = datastore.ProtocolID
 	rmcResponse.MethodID = datastore.MethodSearchObject
 	rmcResponse.CallID = callID
 
-	return rmcResponse, 0
+	return rmcResponse, nil
 }

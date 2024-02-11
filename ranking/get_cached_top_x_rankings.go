@@ -10,26 +10,24 @@ import (
 	ranking_types "github.com/PretendoNetwork/nex-protocols-go/ranking/types"
 )
 
-func getCachedTopXRankings(err error, packet nex.PacketInterface, callID uint32, categories *types.List[*types.PrimitiveU32], orderParams *types.List[*ranking_types.RankingOrderParam]) (*nex.RMCMessage, uint32) {
+func getCachedTopXRankings(err error, packet nex.PacketInterface, callID uint32, categories *types.List[*types.PrimitiveU32], orderParams *types.List[*ranking_types.RankingOrderParam]) (*nex.RMCMessage, *nex.Error) {
 	if commonProtocol.GetRankingsAndCountByCategoryAndRankingOrderParam == nil {
 		common_globals.Logger.Warning("Ranking::GetCachedTopXRankings missing GetRankingsAndCountByCategoryAndRankingOrderParam!")
-		return nil, nex.ResultCodes.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.ResultCodes.Ranking.InvalidArgument
+		return nil, nex.NewError(nex.ResultCodes.Ranking.InvalidArgument, "change_error")
 	}
 
 	// TODO - Is this true?
 	if categories.Length() != orderParams.Length() {
-		return nil, nex.ResultCodes.Ranking.InvalidArgument
+		return nil, nex.NewError(nex.ResultCodes.Ranking.InvalidArgument, "change_error")
 	}
 
-	// TODO - This assumes a PRUDP connection. Refactor to support HPP
-	connection := packet.Sender().(*nex.PRUDPConnection)
-	endpoint := connection.Endpoint
-	server := endpoint.Server
+	connection := packet.Sender()
+	endpoint := connection.Endpoint()
 
 	pResult := types.NewList[*ranking_types.RankingCachedResult]()
 
@@ -39,17 +37,17 @@ func getCachedTopXRankings(err error, packet nex.PacketInterface, callID uint32,
 		orderParam, err := orderParams.Get(i)
 		if err != nil {
 			common_globals.Logger.Error(err.Error())
-			return nil, nex.ResultCodes.Ranking.InvalidArgument
+			return nil, nex.NewError(nex.ResultCodes.Ranking.InvalidArgument, "change_error")
 		}
 
 		rankDataList, totalCount, err := commonProtocol.GetRankingsAndCountByCategoryAndRankingOrderParam(category, orderParam)
 		if err != nil {
 			common_globals.Logger.Critical(err.Error())
-			return nil, nex.ResultCodes.Ranking.Unknown
+			return nil, nex.NewError(nex.ResultCodes.Ranking.Unknown, "change_error")
 		}
 
 		if totalCount == 0 || rankDataList.Length() == 0 {
-			return nil, nex.ResultCodes.Ranking.NotFound
+			return nil, nex.NewError(nex.ResultCodes.Ranking.NotFound, "change_error")
 		}
 
 		result := ranking_types.NewRankingCachedResult()
@@ -71,16 +69,16 @@ func getCachedTopXRankings(err error, packet nex.PacketInterface, callID uint32,
 		pResult.Append(result)
 	}
 
-	rmcResponseStream := nex.NewByteStreamOut(server)
+	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
 	pResult.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
 	rmcResponse.ProtocolID = ranking.ProtocolID
 	rmcResponse.MethodID = ranking.MethodGetCachedTopXRankings
 	rmcResponse.CallID = callID
 
-	return rmcResponse, 0
+	return rmcResponse, nil
 }

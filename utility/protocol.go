@@ -8,7 +8,7 @@ import (
 var commonProtocol *CommonProtocol
 
 type CommonProtocol struct {
-	server              nex.ServerInterface
+	endpoint            nex.EndpointInterface
 	protocol            utility.Interface
 	GenerateNEXUniqueID func() uint64
 }
@@ -18,7 +18,7 @@ func NewCommonProtocol(protocol utility.Interface) *CommonProtocol {
 	protocol.SetHandlerAcquireNexUniqueID(acquireNexUniqueID)
 
 	commonProtocol = &CommonProtocol{
-		server:   protocol.Server(),
+		endpoint: protocol.Endpoint(),
 		protocol: protocol,
 	}
 

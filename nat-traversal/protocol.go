@@ -8,7 +8,7 @@ import (
 var commonProtocol *CommonProtocol
 
 type CommonProtocol struct {
-	server   nex.ServerInterface
+	endpoint nex.EndpointInterface
 	protocol nat_traversal.Interface
 }
 
@@ -21,7 +21,7 @@ func NewCommonProtocol(protocol nat_traversal.Interface) *CommonProtocol {
 	protocol.SetHandlerReportNATTraversalResultDetail(reportNATTraversalResultDetail)
 
 	commonProtocol = &CommonProtocol{
-		server:   protocol.Server(),
+		endpoint: protocol.Endpoint(),
 		protocol: protocol,
 	}
 

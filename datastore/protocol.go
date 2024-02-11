@@ -15,7 +15,7 @@ import (
 var commonProtocol *CommonProtocol
 
 type CommonProtocol struct {
-	server                                       nex.ServerInterface
+	endpoint                                     nex.EndpointInterface
 	protocol                                     datastore.Interface
 	S3Bucket                                     string
 	s3DataKeyBase                                string
@@ -24,23 +24,23 @@ type CommonProtocol struct {
 	minIOClient                                  *minio.Client
 	S3Presigner                                  S3PresignerInterface
 	GetUserFriendPIDs                            func(pid uint32) []uint32
-	GetObjectInfoByDataID                        func(dataID *types.PrimitiveU64) (*datastore_types.DataStoreMetaInfo, uint32)
-	UpdateObjectPeriodByDataIDWithPassword       func(dataID *types.PrimitiveU64, dataType *types.PrimitiveU16, password *types.PrimitiveU64) uint32
-	UpdateObjectMetaBinaryByDataIDWithPassword   func(dataID *types.PrimitiveU64, metaBinary *types.QBuffer, password *types.PrimitiveU64) uint32
-	UpdateObjectDataTypeByDataIDWithPassword     func(dataID *types.PrimitiveU64, period *types.PrimitiveU16, password *types.PrimitiveU64) uint32
-	GetObjectSizeByDataID                        func(dataID *types.PrimitiveU64) (uint32, uint32)
-	UpdateObjectUploadCompletedByDataID          func(dataID *types.PrimitiveU64, uploadCompleted bool) uint32
-	GetObjectInfoByPersistenceTargetWithPassword func(persistenceTarget *datastore_types.DataStorePersistenceTarget, password *types.PrimitiveU64) (*datastore_types.DataStoreMetaInfo, uint32)
-	GetObjectInfoByDataIDWithPassword            func(dataID *types.PrimitiveU64, password *types.PrimitiveU64) (*datastore_types.DataStoreMetaInfo, uint32)
-	S3GetRequestHeaders                          func() ([]*datastore_types.DataStoreKeyValue, uint32)
-	S3PostRequestHeaders                         func() ([]*datastore_types.DataStoreKeyValue, uint32)
-	InitializeObjectByPreparePostParam           func(ownerPID *types.PID, param *datastore_types.DataStorePreparePostParam) (uint64, uint32)
-	InitializeObjectRatingWithSlot               func(dataID uint64, param *datastore_types.DataStoreRatingInitParamWithSlot) uint32
-	RateObjectWithPassword                       func(dataID *types.PrimitiveU64, slot *types.PrimitiveU8, ratingValue *types.PrimitiveS32, accessPassword *types.PrimitiveU64) (*datastore_types.DataStoreRatingInfo, uint32)
-	DeleteObjectByDataIDWithPassword             func(dataID *types.PrimitiveU64, password *types.PrimitiveU64) uint32
-	DeleteObjectByDataID                         func(dataID *types.PrimitiveU64) uint32
-	GetObjectInfosByDataStoreSearchParam         func(param *datastore_types.DataStoreSearchParam) ([]*datastore_types.DataStoreMetaInfo, uint32, uint32)
-	GetObjectOwnerByDataID                       func(dataID *types.PrimitiveU64) (uint32, uint32)
+	GetObjectInfoByDataID                        func(dataID *types.PrimitiveU64) (*datastore_types.DataStoreMetaInfo, *nex.Error)
+	UpdateObjectPeriodByDataIDWithPassword       func(dataID *types.PrimitiveU64, dataType *types.PrimitiveU16, password *types.PrimitiveU64) *nex.Error
+	UpdateObjectMetaBinaryByDataIDWithPassword   func(dataID *types.PrimitiveU64, metaBinary *types.QBuffer, password *types.PrimitiveU64) *nex.Error
+	UpdateObjectDataTypeByDataIDWithPassword     func(dataID *types.PrimitiveU64, period *types.PrimitiveU16, password *types.PrimitiveU64) *nex.Error
+	GetObjectSizeByDataID                        func(dataID *types.PrimitiveU64) (uint32, *nex.Error)
+	UpdateObjectUploadCompletedByDataID          func(dataID *types.PrimitiveU64, uploadCompleted bool) *nex.Error
+	GetObjectInfoByPersistenceTargetWithPassword func(persistenceTarget *datastore_types.DataStorePersistenceTarget, password *types.PrimitiveU64) (*datastore_types.DataStoreMetaInfo, *nex.Error)
+	GetObjectInfoByDataIDWithPassword            func(dataID *types.PrimitiveU64, password *types.PrimitiveU64) (*datastore_types.DataStoreMetaInfo, *nex.Error)
+	S3GetRequestHeaders                          func() ([]*datastore_types.DataStoreKeyValue, *nex.Error)
+	S3PostRequestHeaders                         func() ([]*datastore_types.DataStoreKeyValue, *nex.Error)
+	InitializeObjectByPreparePostParam           func(ownerPID *types.PID, param *datastore_types.DataStorePreparePostParam) (uint64, *nex.Error)
+	InitializeObjectRatingWithSlot               func(dataID uint64, param *datastore_types.DataStoreRatingInitParamWithSlot) *nex.Error
+	RateObjectWithPassword                       func(dataID *types.PrimitiveU64, slot *types.PrimitiveU8, ratingValue *types.PrimitiveS32, accessPassword *types.PrimitiveU64) (*datastore_types.DataStoreRatingInfo, *nex.Error)
+	DeleteObjectByDataIDWithPassword             func(dataID *types.PrimitiveU64, password *types.PrimitiveU64) *nex.Error
+	DeleteObjectByDataID                         func(dataID *types.PrimitiveU64) *nex.Error
+	GetObjectInfosByDataStoreSearchParam         func(param *datastore_types.DataStoreSearchParam) ([]*datastore_types.DataStoreMetaInfo, uint32, *nex.Error)
+	GetObjectOwnerByDataID                       func(dataID *types.PrimitiveU64) (uint32, *nex.Error)
 }
 
 func (c *CommonProtocol) S3StatObject(bucket, key string) (minio.ObjectInfo, error) {
@@ -56,19 +56,19 @@ func (c *CommonProtocol) S3ObjectSize(bucket, key string) (uint64, error) {
 	return uint64(info.Size), nil
 }
 
-func (c *CommonProtocol) VerifyObjectPermission(ownerPID, accessorPID *types.PID, permission *datastore_types.DataStorePermission) uint32 {
+func (c *CommonProtocol) VerifyObjectPermission(ownerPID, accessorPID *types.PID, permission *datastore_types.DataStorePermission) *nex.Error {
 	if permission.Permission.Value > 3 {
-		return nex.ResultCodes.DataStore.InvalidArgument
+		return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 	}
 
 	// * Owner can always access their own objects
 	if ownerPID.Equals(accessorPID) {
-		return 0
+		return nil
 	}
 
 	// * Allow anyone
 	if permission.Permission.Value == 0 {
-		return 0
+		return nil
 	}
 
 	// * Allow only friends of the owner
@@ -77,25 +77,25 @@ func (c *CommonProtocol) VerifyObjectPermission(ownerPID, accessorPID *types.PID
 		friendsList := c.GetUserFriendPIDs(ownerPID.LegacyValue())
 
 		if !slices.Contains(friendsList, accessorPID.LegacyValue()) {
-			return nex.ResultCodes.DataStore.PermissionDenied
+			return nex.NewError(nex.ResultCodes.DataStore.PermissionDenied, "change_error")
 		}
 	}
 
 	// * Allow only users whose PIDs are defined in permission.RecipientIDs
 	if permission.Permission.Value == 2 {
 		if !permission.RecipientIDs.Contains(accessorPID) {
-			return nex.ResultCodes.DataStore.PermissionDenied
+			return nex.NewError(nex.ResultCodes.DataStore.PermissionDenied, "change_error")
 		}
 	}
 
 	// * Allow only the owner
 	if permission.Permission.Value == 3 {
 		if !ownerPID.Equals(accessorPID) {
-			return nex.ResultCodes.DataStore.PermissionDenied
+			return nex.NewError(nex.ResultCodes.DataStore.PermissionDenied, "change_error")
 		}
 	}
 
-	return 0
+	return nil
 }
 
 // SetDataKeyBase sets the base for the key to be used when uploading standard DataStore objects
@@ -137,14 +137,14 @@ func NewCommonProtocol(protocol datastore.Interface) *CommonProtocol {
 	protocol.SetHandlerRateObjects(rateObjects)
 
 	commonProtocol = &CommonProtocol{
-		server:     protocol.Server(),
+		endpoint:   protocol.Endpoint(),
 		protocol:   protocol,
 		RootCACert: []byte{},
-		S3GetRequestHeaders: func() ([]*datastore_types.DataStoreKeyValue, uint32) {
-			return []*datastore_types.DataStoreKeyValue{}, 0
+		S3GetRequestHeaders: func() ([]*datastore_types.DataStoreKeyValue, *nex.Error) {
+			return []*datastore_types.DataStoreKeyValue{}, nil
 		},
-		S3PostRequestHeaders: func() ([]*datastore_types.DataStoreKeyValue, uint32) {
-			return []*datastore_types.DataStoreKeyValue{}, 0
+		S3PostRequestHeaders: func() ([]*datastore_types.DataStoreKeyValue, *nex.Error) {
+			return []*datastore_types.DataStoreKeyValue{}, nil
 		},
 	}
 	return commonProtocol

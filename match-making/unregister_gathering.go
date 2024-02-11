@@ -9,24 +9,23 @@ import (
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/notifications/types"
 )
 
-func unregisterGathering(err error, packet nex.PacketInterface, callID uint32, idGathering *types.PrimitiveU32) (*nex.RMCMessage, uint32) {
+func unregisterGathering(err error, packet nex.PacketInterface, callID uint32, idGathering *types.PrimitiveU32) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.ResultCodes.Core.InvalidArgument
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
 	session, ok := common_globals.Sessions[idGathering.Value]
 	if !ok {
-		return nil, nex.ResultCodes.RendezVous.SessionVoid
+		return nil, nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "change_error")
 	}
 
-	// TODO - This assumes a PRUDP connection. Refactor to support HPP
 	connection := packet.Sender().(*nex.PRUDPConnection)
-	endpoint := connection.Endpoint
+	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 	server := endpoint.Server
 
 	if session.GameMatchmakeSession.Gathering.OwnerPID.Equals(connection.PID()) {
-		return nil, nex.ResultCodes.RendezVous.PermissionDenied
+		return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
 	}
 
 	gatheringPlayers := session.ConnectionIDs
@@ -35,13 +34,13 @@ func unregisterGathering(err error, packet nex.PacketInterface, callID uint32, i
 
 	retval := types.NewPrimitiveBool(true)
 
-	rmcResponseStream := nex.NewByteStreamOut(server)
+	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
 	retval.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCSuccess(server, rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
 	rmcResponse.ProtocolID = match_making.ProtocolID
 	rmcResponse.MethodID = match_making.MethodUnregisterGathering
 	rmcResponse.CallID = callID
@@ -54,11 +53,11 @@ func unregisterGathering(err error, packet nex.PacketInterface, callID uint32, i
 	oEvent.Type = types.NewPrimitiveU32(notifications.BuildNotificationType(category, subtype))
 	oEvent.Param1 = idGathering.Copy().(*types.PrimitiveU32)
 
-	stream := nex.NewByteStreamOut(server)
+	stream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
 	oEvent.WriteTo(stream)
 
-	rmcRequest := nex.NewRMCRequest(server)
+	rmcRequest := nex.NewRMCRequest(endpoint)
 	rmcRequest.ProtocolID = notifications.ProtocolID
 	rmcRequest.CallID = common_globals.CurrentMatchmakingCallID.Next()
 	rmcRequest.MethodID = notifications.MethodProcessNotificationEvent
@@ -76,16 +75,16 @@ func unregisterGathering(err error, packet nex.PacketInterface, callID uint32, i
 		var messagePacket nex.PRUDPPacketInterface
 
 		if target.DefaultPRUDPVersion == 0 {
-			messagePacket, _ = nex.NewPRUDPPacketV0(target, nil)
+			messagePacket, _ = nex.NewPRUDPPacketV0(server, target, nil)
 		} else {
-			messagePacket, _ = nex.NewPRUDPPacketV1(target, nil)
+			messagePacket, _ = nex.NewPRUDPPacketV1(server, target, nil)
 		}
 
 		messagePacket.SetType(nex.DataPacket)
 		messagePacket.AddFlag(nex.FlagNeedsAck)
 		messagePacket.AddFlag(nex.FlagReliable)
 		messagePacket.SetSourceVirtualPortStreamType(target.StreamType)
-		messagePacket.SetSourceVirtualPortStreamID(target.Endpoint.StreamID)
+		messagePacket.SetSourceVirtualPortStreamID(endpoint.StreamID)
 		messagePacket.SetDestinationVirtualPortStreamType(target.StreamType)
 		messagePacket.SetDestinationVirtualPortStreamID(target.StreamID)
 		messagePacket.SetPayload(rmcRequestBytes)
@@ -93,5 +92,5 @@ func unregisterGathering(err error, packet nex.PacketInterface, callID uint32, i
 		server.Send(messagePacket)
 	}
 
-	return rmcResponse, 0
+	return rmcResponse, nil
 }
