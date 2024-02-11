@@ -7,7 +7,7 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
 )
 
-func postMetaBinary(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStorePreparePostParam) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) postMetaBinary(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStorePreparePostParam) (*nex.RMCMessage, *nex.Error) {
 	// * This method looks to function identically to DataStore::PreparePostObject,
 	// * except the only difference being it doesn't return an S3 upload URL. This
 	// * needs to be verified though, as there are other methods in the family such

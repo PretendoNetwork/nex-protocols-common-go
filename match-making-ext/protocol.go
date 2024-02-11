@@ -5,8 +5,6 @@ import (
 	match_making_ext "github.com/PretendoNetwork/nex-protocols-go/match-making-ext"
 )
 
-var commonProtocol *CommonProtocol
-
 type CommonProtocol struct {
 	endpoint nex.EndpointInterface
 	protocol match_making_ext.Interface
@@ -14,12 +12,12 @@ type CommonProtocol struct {
 
 // NewCommonProtocol returns a new CommonProtocol
 func NewCommonProtocol(protocol match_making_ext.Interface) *CommonProtocol {
-	protocol.SetHandlerEndParticipation(endParticipation)
-
-	commonProtocol = &CommonProtocol{
+	commonProtocol := &CommonProtocol{
 		endpoint: protocol.Endpoint(),
 		protocol: protocol,
 	}
+
+	protocol.SetHandlerEndParticipation(commonProtocol.endParticipation)
 
 	return commonProtocol
 }

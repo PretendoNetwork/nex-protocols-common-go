@@ -7,8 +7,6 @@ import (
 	ranking_types "github.com/PretendoNetwork/nex-protocols-go/ranking/types"
 )
 
-var commonProtocol *CommonProtocol
-
 type CommonProtocol struct {
 	endpoint                                          nex.EndpointInterface
 	protocol                                          ranking.Interface
@@ -20,17 +18,17 @@ type CommonProtocol struct {
 
 // NewCommonProtocol returns a new CommonProtocol
 func NewCommonProtocol(protocol ranking.Interface) *CommonProtocol {
-	protocol.SetHandlerGetCachedTopXRanking(getCachedTopXRanking)
-	protocol.SetHandlerGetCachedTopXRankings(getCachedTopXRankings)
-	protocol.SetHandlerGetCommonData(getCommonData)
-	protocol.SetHandlerGetRanking(getRanking)
-	protocol.SetHandlerUploadCommonData(uploadCommonData)
-	protocol.SetHandlerUploadScore(uploadScore)
-
-	commonProtocol = &CommonProtocol{
+	commonProtocol := &CommonProtocol{
 		endpoint: protocol.Endpoint(),
 		protocol: protocol,
 	}
+
+	protocol.SetHandlerGetCachedTopXRanking(commonProtocol.getCachedTopXRanking)
+	protocol.SetHandlerGetCachedTopXRankings(commonProtocol.getCachedTopXRankings)
+	protocol.SetHandlerGetCommonData(commonProtocol.getCommonData)
+	protocol.SetHandlerGetRanking(commonProtocol.getRanking)
+	protocol.SetHandlerUploadCommonData(commonProtocol.uploadCommonData)
+	protocol.SetHandlerUploadScore(commonProtocol.uploadScore)
 
 	return commonProtocol
 }

@@ -8,7 +8,7 @@ import (
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension"
 )
 
-func autoMatchmake_Postpone(err error, packet nex.PacketInterface, callID uint32, anyGathering *types.AnyDataHolder, message *types.String) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) autoMatchmake_Postpone(err error, packet nex.PacketInterface, callID uint32, anyGathering *types.AnyDataHolder, message *types.String) (*nex.RMCMessage, *nex.Error) {
 	if commonProtocol.CleanupSearchMatchmakeSession == nil {
 		common_globals.Logger.Warning("MatchmakeExtension::AutoMatchmake_Postpone missing CleanupSearchMatchmakeSession!")
 		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")

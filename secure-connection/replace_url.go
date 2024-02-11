@@ -10,7 +10,7 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
-func replaceURL(err error, packet nex.PacketInterface, callID uint32, target *types.StationURL, url *types.StationURL) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) replaceURL(err error, packet nex.PacketInterface, callID uint32, target *types.StationURL, url *types.StationURL) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")

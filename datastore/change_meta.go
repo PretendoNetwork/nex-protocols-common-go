@@ -7,7 +7,7 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
 )
 
-func changeMeta(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreChangeMetaParam) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) changeMeta(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreChangeMetaParam) (*nex.RMCMessage, *nex.Error) {
 	if commonProtocol.GetObjectInfoByDataID == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataID not defined")
 		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")

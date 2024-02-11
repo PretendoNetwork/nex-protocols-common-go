@@ -8,7 +8,7 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
 )
 
-func rateObject(err error, packet nex.PacketInterface, callID uint32, target *datastore_types.DataStoreRatingTarget, param *datastore_types.DataStoreRateObjectParam, fetchRatings *types.PrimitiveBool) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) rateObject(err error, packet nex.PacketInterface, callID uint32, target *datastore_types.DataStoreRatingTarget, param *datastore_types.DataStoreRateObjectParam, fetchRatings *types.PrimitiveBool) (*nex.RMCMessage, *nex.Error) {
 	if commonProtocol.GetObjectInfoByDataIDWithPassword == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataIDWithPassword not defined")
 		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")

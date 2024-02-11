@@ -7,7 +7,7 @@ import (
 	ticket_granting "github.com/PretendoNetwork/nex-protocols-go/ticket-granting"
 )
 
-func login(err error, packet nex.PacketInterface, callID uint32, strUserName *types.String) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) login(err error, packet nex.PacketInterface, callID uint32, strUserName *types.String) (*nex.RMCMessage, *nex.Error) {
 	if !commonProtocol.allowInsecureLoginMethod {
 		return nil, nex.NewError(nex.ResultCodes.Authentication.ValidationFailed, "change_error")
 	}

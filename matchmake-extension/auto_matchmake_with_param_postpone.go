@@ -8,7 +8,7 @@ import (
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension"
 )
 
-func autoMatchmakeWithParam_Postpone(err error, packet nex.PacketInterface, callID uint32, autoMatchmakeParam *match_making_types.AutoMatchmakeParam) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) autoMatchmakeWithParam_Postpone(err error, packet nex.PacketInterface, callID uint32, autoMatchmakeParam *match_making_types.AutoMatchmakeParam) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")

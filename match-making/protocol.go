@@ -9,8 +9,6 @@ import (
 	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
 )
 
-var commonProtocol *CommonProtocol
-
 type CommonProtocol struct {
 	endpoint *nex.PRUDPEndPoint
 	protocol match_making.Interface
@@ -20,19 +18,19 @@ type CommonProtocol struct {
 func NewCommonProtocol(protocol match_making.Interface) *CommonProtocol {
 	endpoint := protocol.Endpoint().(*nex.PRUDPEndPoint)
 
-	common_globals.Sessions = make(map[uint32]*common_globals.CommonMatchmakeSession)
-
-	protocol.SetHandlerUnregisterGathering(unregisterGathering)
-	protocol.SetHandlerFindBySingleID(findBySingleID)
-	protocol.SetHandlerUpdateSessionURL(updateSessionURL)
-	protocol.SetHandlerUpdateSessionHostV1(updateSessionHostV1)
-	protocol.SetHandlerGetSessionURLs(getSessionURLs)
-	protocol.SetHandlerUpdateSessionHost(updateSessionHost)
-
-	commonProtocol = &CommonProtocol{
+	commonProtocol := &CommonProtocol{
 		endpoint: endpoint,
 		protocol: protocol,
 	}
+
+	common_globals.Sessions = make(map[uint32]*common_globals.CommonMatchmakeSession)
+
+	protocol.SetHandlerUnregisterGathering(commonProtocol.unregisterGathering)
+	protocol.SetHandlerFindBySingleID(commonProtocol.findBySingleID)
+	protocol.SetHandlerUpdateSessionURL(commonProtocol.updateSessionURL)
+	protocol.SetHandlerUpdateSessionHostV1(commonProtocol.updateSessionHostV1)
+	protocol.SetHandlerGetSessionURLs(commonProtocol.getSessionURLs)
+	protocol.SetHandlerUpdateSessionHost(commonProtocol.updateSessionHost)
 
 	endpoint.OnConnectionEnded(func(connection *nex.PRUDPConnection) {
 		fmt.Println("Leaving")

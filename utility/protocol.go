@@ -5,8 +5,6 @@ import (
 	utility "github.com/PretendoNetwork/nex-protocols-go/utility"
 )
 
-var commonProtocol *CommonProtocol
-
 type CommonProtocol struct {
 	endpoint            nex.EndpointInterface
 	protocol            utility.Interface
@@ -15,12 +13,12 @@ type CommonProtocol struct {
 
 // NewCommonProtocol returns a new CommonProtocol
 func NewCommonProtocol(protocol utility.Interface) *CommonProtocol {
-	protocol.SetHandlerAcquireNexUniqueID(acquireNexUniqueID)
-
-	commonProtocol = &CommonProtocol{
+	commonProtocol := &CommonProtocol{
 		endpoint: protocol.Endpoint(),
 		protocol: protocol,
 	}
+
+	protocol.SetHandlerAcquireNexUniqueID(commonProtocol.acquireNexUniqueID)
 
 	return commonProtocol
 }

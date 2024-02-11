@@ -9,7 +9,7 @@ import (
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/notifications/types"
 )
 
-func updateSessionHost(err error, packet nex.PacketInterface, callID uint32, gid *types.PrimitiveU32, isMigrateOwner *types.PrimitiveBool) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) updateSessionHost(err error, packet nex.PacketInterface, callID uint32, gid *types.PrimitiveU32, isMigrateOwner *types.PrimitiveBool) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")

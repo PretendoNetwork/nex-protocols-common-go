@@ -8,7 +8,7 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
 )
 
-func searchObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreSearchParam) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) searchObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreSearchParam) (*nex.RMCMessage, *nex.Error) {
 	if commonProtocol.GetObjectInfosByDataStoreSearchParam == nil {
 		common_globals.Logger.Warning("GetObjectInfosByDataStoreSearchParam not defined")
 		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")

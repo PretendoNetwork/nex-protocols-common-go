@@ -9,8 +9,6 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
-var commonProtocol *CommonProtocol
-
 type CommonProtocol struct {
 	protocol                   ticket_granting.Interface
 	SecureStationURL           *types.StationURL
@@ -18,7 +16,7 @@ type CommonProtocol struct {
 	StationURLSpecialProtocols *types.StationURL
 	BuildName                  *types.String
 	allowInsecureLoginMethod   bool
-	SessionKeyLength           int
+	SessionKeyLength           int // TODO - Use server SessionKeyLength?
 	SecureServerAccount        *nex.Account
 }
 
@@ -33,11 +31,7 @@ func (commonProtocol *CommonProtocol) EnableInsecureLogin() {
 
 // NewCommonProtocol returns a new CommonProtocol
 func NewCommonProtocol(protocol ticket_granting.Interface) *CommonProtocol {
-	protocol.SetHandlerLogin(login)
-	protocol.SetHandlerLoginEx(loginEx)
-	protocol.SetHandlerRequestTicket(requestTicket)
-
-	commonProtocol = &CommonProtocol{
+	commonProtocol := &CommonProtocol{
 		protocol:                   protocol,
 		SecureStationURL:           types.NewStationURL("prudp:/"),
 		SpecialProtocols:           make([]*types.PrimitiveU8, 0),
@@ -46,6 +40,10 @@ func NewCommonProtocol(protocol ticket_granting.Interface) *CommonProtocol {
 		allowInsecureLoginMethod:   false,
 		SessionKeyLength:           32,
 	}
+
+	protocol.SetHandlerLogin(commonProtocol.login)
+	protocol.SetHandlerLoginEx(commonProtocol.loginEx)
+	protocol.SetHandlerRequestTicket(commonProtocol.requestTicket)
 
 	commonProtocol.DisableInsecureLogin() // * Disable insecure login by default
 

@@ -12,8 +12,6 @@ import (
 	"github.com/minio/minio-go/v7"
 )
 
-var commonProtocol *CommonProtocol
-
 type CommonProtocol struct {
 	endpoint                                     nex.EndpointInterface
 	protocol                                     datastore.Interface
@@ -122,21 +120,7 @@ func (c *CommonProtocol) SetMinIOClient(client *minio.Client) {
 
 // NewCommonProtocol returns a new CommonProtocol
 func NewCommonProtocol(protocol datastore.Interface) *CommonProtocol {
-	protocol.SetHandlerDeleteObject(deleteObject)
-	protocol.SetHandlerGetMeta(getMeta)
-	protocol.SetHandlerGetMetas(getMetas)
-	protocol.SetHandlerSearchObject(searchObject)
-	protocol.SetHandlerRateObject(rateObject)
-	protocol.SetHandlerPostMetaBinary(postMetaBinary)
-	protocol.SetHandlerPreparePostObject(preparePostObject)
-	protocol.SetHandlerPrepareGetObject(prepareGetObject)
-	protocol.SetHandlerCompletePostObject(completePostObject)
-	protocol.SetHandlerGetMetasMultipleParam(getMetasMultipleParam)
-	protocol.SetHandlerCompletePostObjects(completePostObjects)
-	protocol.SetHandlerChangeMeta(changeMeta)
-	protocol.SetHandlerRateObjects(rateObjects)
-
-	commonProtocol = &CommonProtocol{
+	commonProtocol := &CommonProtocol{
 		endpoint:   protocol.Endpoint(),
 		protocol:   protocol,
 		RootCACert: []byte{},
@@ -147,5 +131,20 @@ func NewCommonProtocol(protocol datastore.Interface) *CommonProtocol {
 			return []*datastore_types.DataStoreKeyValue{}, nil
 		},
 	}
+
+	protocol.SetHandlerDeleteObject(commonProtocol.deleteObject)
+	protocol.SetHandlerGetMeta(commonProtocol.getMeta)
+	protocol.SetHandlerGetMetas(commonProtocol.getMetas)
+	protocol.SetHandlerSearchObject(commonProtocol.searchObject)
+	protocol.SetHandlerRateObject(commonProtocol.rateObject)
+	protocol.SetHandlerPostMetaBinary(commonProtocol.postMetaBinary)
+	protocol.SetHandlerPreparePostObject(commonProtocol.preparePostObject)
+	protocol.SetHandlerPrepareGetObject(commonProtocol.prepareGetObject)
+	protocol.SetHandlerCompletePostObject(commonProtocol.completePostObject)
+	protocol.SetHandlerGetMetasMultipleParam(commonProtocol.getMetasMultipleParam)
+	protocol.SetHandlerCompletePostObjects(commonProtocol.completePostObjects)
+	protocol.SetHandlerChangeMeta(commonProtocol.changeMeta)
+	protocol.SetHandlerRateObjects(commonProtocol.rateObjects)
+
 	return commonProtocol
 }

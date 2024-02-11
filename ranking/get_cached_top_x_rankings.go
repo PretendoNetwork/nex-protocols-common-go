@@ -10,7 +10,7 @@ import (
 	ranking_types "github.com/PretendoNetwork/nex-protocols-go/ranking/types"
 )
 
-func getCachedTopXRankings(err error, packet nex.PacketInterface, callID uint32, categories *types.List[*types.PrimitiveU32], orderParams *types.List[*ranking_types.RankingOrderParam]) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) getCachedTopXRankings(err error, packet nex.PacketInterface, callID uint32, categories *types.List[*types.PrimitiveU32], orderParams *types.List[*ranking_types.RankingOrderParam]) (*nex.RMCMessage, *nex.Error) {
 	if commonProtocol.GetRankingsAndCountByCategoryAndRankingOrderParam == nil {
 		common_globals.Logger.Warning("Ranking::GetCachedTopXRankings missing GetRankingsAndCountByCategoryAndRankingOrderParam!")
 		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")

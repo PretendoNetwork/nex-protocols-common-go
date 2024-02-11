@@ -7,7 +7,7 @@ import (
 	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
 )
 
-func updateSessionHostV1(err error, packet nex.PacketInterface, callID uint32, gid *types.PrimitiveU32) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) updateSessionHostV1(err error, packet nex.PacketInterface, callID uint32, gid *types.PrimitiveU32) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")

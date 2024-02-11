@@ -11,7 +11,7 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
 )
 
-func preparePostObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStorePreparePostParam) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) preparePostObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStorePreparePostParam) (*nex.RMCMessage, *nex.Error) {
 	if commonProtocol.InitializeObjectByPreparePostParam == nil {
 		common_globals.Logger.Warning("InitializeObjectByPreparePostParam not defined")
 		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")

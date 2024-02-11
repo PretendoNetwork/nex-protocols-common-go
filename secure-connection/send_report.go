@@ -8,7 +8,7 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 )
 
-func sendReport(err error, packet nex.PacketInterface, callID uint32, reportID *types.PrimitiveU32, reportData *types.QBuffer) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) sendReport(err error, packet nex.PacketInterface, callID uint32, reportID *types.PrimitiveU32, reportData *types.QBuffer) (*nex.RMCMessage, *nex.Error) {
 	if commonProtocol.CreateReportDBRecord == nil {
 		common_globals.Logger.Warning("SecureConnection::SendReport missing CreateReportDBRecord!")
 		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")

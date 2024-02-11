@@ -7,7 +7,7 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
 )
 
-func getMeta(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreGetMetaParam) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) getMeta(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreGetMetaParam) (*nex.RMCMessage, *nex.Error) {
 	if commonProtocol.GetObjectInfoByPersistenceTargetWithPassword == nil {
 		common_globals.Logger.Warning("GetObjectInfoByPersistenceTargetWithPassword not defined")
 		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")

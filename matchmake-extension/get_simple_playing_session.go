@@ -11,7 +11,7 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-func getSimplePlayingSession(err error, packet nex.PacketInterface, callID uint32, listPID *types.List[*types.PID], includeLoginUser *types.PrimitiveBool) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) getSimplePlayingSession(err error, packet nex.PacketInterface, callID uint32, listPID *types.List[*types.PID], includeLoginUser *types.PrimitiveBool) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")

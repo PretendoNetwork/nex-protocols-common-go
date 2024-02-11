@@ -9,7 +9,7 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
 )
 
-func completePostObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreCompletePostParam) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) completePostObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreCompletePostParam) (*nex.RMCMessage, *nex.Error) {
 	if commonProtocol.minIOClient == nil {
 		common_globals.Logger.Warning("MinIOClient not defined")
 		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")

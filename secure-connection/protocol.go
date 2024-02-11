@@ -6,8 +6,6 @@ import (
 	secure_connection "github.com/PretendoNetwork/nex-protocols-go/secure-connection"
 )
 
-var commonProtocol *CommonProtocol
-
 type CommonProtocol struct {
 	endpoint             nex.EndpointInterface
 	protocol             secure_connection.Interface
@@ -16,14 +14,14 @@ type CommonProtocol struct {
 
 // NewCommonProtocol returns a new CommonProtocol
 func NewCommonProtocol(protocol secure_connection.Interface) *CommonProtocol {
-	protocol.SetHandlerRegister(register)
-	protocol.SetHandlerReplaceURL(replaceURL)
-	protocol.SetHandlerSendReport(sendReport)
-
-	commonProtocol = &CommonProtocol{
+	commonProtocol := &CommonProtocol{
 		endpoint: protocol.Endpoint(),
 		protocol: protocol,
 	}
+
+	protocol.SetHandlerRegister(commonProtocol.register)
+	protocol.SetHandlerReplaceURL(commonProtocol.replaceURL)
+	protocol.SetHandlerSendReport(commonProtocol.sendReport)
 
 	return commonProtocol
 }
