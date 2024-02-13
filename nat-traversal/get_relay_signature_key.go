@@ -17,7 +17,7 @@ func (commonProtocol *CommonProtocol) getRelaySignatureKey(err error, packet nex
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
 	relayMode := types.NewPrimitiveS32(0)        // * Relay mode? No idea what this means
-	currentUTCTime := types.NewDateTime(0).Now() // Current time for the relay server, UTC
+	currentUTCTime := types.NewDateTime(0).Now() // * Current time for the relay server, UTC
 	address := types.NewString("")               // * Relay server address. We don't have one, so for now this is empty.
 	port := types.NewPrimitiveU16(0)             // * Relay server port. We don't have one, so for now this is empty.
 	relayAddressType := types.NewPrimitiveS32(0) // * Relay address type? No idea what this means
