@@ -18,7 +18,7 @@ func (commonProtocol *CommonProtocol) reportNATTraversalResultDetail(err error, 
 
 	rmcResponse := nex.NewRMCSuccess(endpoint, nil)
 	rmcResponse.ProtocolID = nat_traversal.ProtocolID
-	rmcResponse.MethodID = nat_traversal.MethodReportNATTraversalResult
+	rmcResponse.MethodID = nat_traversal.MethodReportNATTraversalResultDetail
 	rmcResponse.CallID = callID
 
 	return rmcResponse, nil
