@@ -78,5 +78,9 @@ func (commonProtocol *CommonProtocol) getSimplePlayingSession(err error, packet 
 	rmcResponse.MethodID = matchmake_extension.MethodGetSimplePlayingSession
 	rmcResponse.CallID = callID
 
+	if commonProtocol.OnAfterGetSimplePlayingSession != nil {
+		go commonProtocol.OnAfterGetSimplePlayingSession(packet, listPID, includeLoginUser)
+	}
+
 	return rmcResponse, nil
 }

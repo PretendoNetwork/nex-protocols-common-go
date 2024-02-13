@@ -6,9 +6,10 @@ import (
 )
 
 type CommonProtocol struct {
-	endpoint            nex.EndpointInterface
-	protocol            utility.Interface
-	GenerateNEXUniqueID func() uint64
+	endpoint                  nex.EndpointInterface
+	protocol                  utility.Interface
+	GenerateNEXUniqueID       func() uint64
+	OnAfterAcquireNexUniqueID func(packet nex.PacketInterface)
 }
 
 // NewCommonProtocol returns a new CommonProtocol

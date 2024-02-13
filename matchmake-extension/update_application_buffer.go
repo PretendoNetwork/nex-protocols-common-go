@@ -30,5 +30,9 @@ func (commonProtocol *CommonProtocol) updateApplicationBuffer(err error, packet 
 	rmcResponse.MethodID = matchmake_extension.MethodUpdateApplicationBuffer
 	rmcResponse.CallID = callID
 
+	if commonProtocol.OnAfterUpdateApplicationBuffer != nil {
+		go commonProtocol.OnAfterUpdateApplicationBuffer(packet, gid, applicationBuffer)
+	}
+
 	return rmcResponse, nil
 }

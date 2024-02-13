@@ -38,5 +38,9 @@ func (commonProtocol *CommonProtocol) modifyCurrentGameAttribute(err error, pack
 	rmcResponse.MethodID = matchmake_extension.MethodModifyCurrentGameAttribute
 	rmcResponse.CallID = callID
 
+	if commonProtocol.OnAfterModifyCurrentGameAttribute != nil {
+		go commonProtocol.OnAfterModifyCurrentGameAttribute(packet, gid, attribIndex, newValue)
+	}
+
 	return rmcResponse, nil
 }

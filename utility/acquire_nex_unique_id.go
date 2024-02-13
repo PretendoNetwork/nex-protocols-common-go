@@ -34,5 +34,9 @@ func (commonProtocol *CommonProtocol) acquireNexUniqueID(err error, packet nex.P
 	rmcResponse.MethodID = utility.MethodAcquireNexUniqueID
 	rmcResponse.CallID = callID
 
+	if commonProtocol.OnAfterAcquireNexUniqueID != nil {
+		go commonProtocol.OnAfterAcquireNexUniqueID(packet)
+	}
+
 	return rmcResponse, nil
 }

@@ -74,5 +74,9 @@ func (commonProtocol *CommonProtocol) autoMatchmake_Postpone(err error, packet n
 	rmcResponse.MethodID = matchmake_extension.MethodAutoMatchmakePostpone
 	rmcResponse.CallID = callID
 
+	if commonProtocol.OnAfterAutoMatchmakePostpone != nil {
+		go commonProtocol.OnAfterAutoMatchmakePostpone(packet, anyGathering, message)
+	}
+
 	return rmcResponse, nil
 }

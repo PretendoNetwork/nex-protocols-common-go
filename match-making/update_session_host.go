@@ -36,6 +36,10 @@ func (commonProtocol *CommonProtocol) updateSessionHost(err error, packet nex.Pa
 	rmcResponse.CallID = callID
 
 	if !isMigrateOwner.Value {
+		if commonProtocol.OnAfterUpdateSessionHost != nil {
+			go commonProtocol.OnAfterUpdateSessionHost(packet, gid, isMigrateOwner)
+		}
+
 		return rmcResponse, nil
 	}
 
@@ -92,6 +96,10 @@ func (commonProtocol *CommonProtocol) updateSessionHost(err error, packet nex.Pa
 		messagePacket.SetPayload(rmcRequestBytes)
 
 		server.Send(messagePacket)
+	}
+
+	if commonProtocol.OnAfterUpdateSessionHost != nil {
+		go commonProtocol.OnAfterUpdateSessionHost(packet, gid, isMigrateOwner)
 	}
 
 	return rmcResponse, nil

@@ -92,5 +92,9 @@ func (commonProtocol *CommonProtocol) unregisterGathering(err error, packet nex.
 		server.Send(messagePacket)
 	}
 
+	if commonProtocol.OnAfterUnregisterGathering != nil {
+		go commonProtocol.OnAfterUnregisterGathering(packet, idGathering)
+	}
+
 	return rmcResponse, nil
 }

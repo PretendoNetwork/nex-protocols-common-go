@@ -66,5 +66,9 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithSearchCriteria_Postpone(e
 	rmcResponse.MethodID = matchmake_extension.MethodAutoMatchmakeWithSearchCriteriaPostpone
 	rmcResponse.CallID = callID
 
+	if commonProtocol.OnAfterAutoMatchmakeWithSearchCriteriaPostpone != nil {
+		go commonProtocol.OnAfterAutoMatchmakeWithSearchCriteriaPostpone(packet, lstSearchCriteria, anyGathering, strMessage)
+	}
+
 	return rmcResponse, nil
 }

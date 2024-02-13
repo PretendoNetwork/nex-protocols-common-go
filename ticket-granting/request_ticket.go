@@ -54,5 +54,9 @@ func (commonProtocol *CommonProtocol) requestTicket(err error, packet nex.Packet
 	rmcResponse.MethodID = ticket_granting.MethodRequestTicket
 	rmcResponse.CallID = callID
 
+	if commonProtocol.OnAfterRequestTicket != nil {
+		go commonProtocol.OnAfterRequestTicket(packet, idSource, idTarget)
+	}
+
 	return rmcResponse, nil
 }

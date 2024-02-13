@@ -104,5 +104,9 @@ func (commonProtocol *CommonProtocol) preparePostObject(err error, packet nex.Pa
 	rmcResponse.MethodID = datastore.MethodPreparePostObject
 	rmcResponse.CallID = callID
 
+	if commonProtocol.OnAfterPreparePostObject != nil {
+		go commonProtocol.OnAfterPreparePostObject(packet, param)
+	}
+
 	return rmcResponse, nil
 }

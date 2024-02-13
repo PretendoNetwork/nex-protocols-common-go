@@ -32,5 +32,9 @@ func (commonProtocol *CommonProtocol) openParticipation(err error, packet nex.Pa
 	rmcResponse.MethodID = matchmake_extension.MethodOpenParticipation
 	rmcResponse.CallID = callID
 
+	if commonProtocol.OnAfterOpenParticipation != nil {
+		go commonProtocol.OnAfterOpenParticipation(packet, gid)
+	}
+
 	return rmcResponse, nil
 }

@@ -46,5 +46,9 @@ func (commonProtocol *CommonProtocol) deleteObject(err error, packet nex.PacketI
 	rmcResponse.MethodID = datastore.MethodDeleteObject
 	rmcResponse.CallID = callID
 
+	if commonProtocol.OnAfterDeleteObject != nil {
+		go commonProtocol.OnAfterDeleteObject(packet, param)
+	}
+
 	return rmcResponse, nil
 }

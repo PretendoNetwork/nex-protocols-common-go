@@ -73,5 +73,9 @@ func (commonProtocol *CommonProtocol) changeMeta(err error, packet nex.PacketInt
 	rmcResponse.MethodID = datastore.MethodChangeMeta
 	rmcResponse.CallID = callID
 
+	if commonProtocol.OnAfterChangeMeta != nil {
+		go commonProtocol.OnAfterChangeMeta(packet, param)
+	}
+
 	return rmcResponse, nil
 }

@@ -36,5 +36,9 @@ func (commonProtocol *CommonProtocol) updateProgressScore(err error, packet nex.
 	rmcResponse.MethodID = matchmake_extension.MethodUpdateProgressScore
 	rmcResponse.CallID = callID
 
+	if commonProtocol.OnAfterUpdateProgressScore != nil {
+		go commonProtocol.OnAfterUpdateProgressScore(packet, gid, progressScore)
+	}
+
 	return rmcResponse, nil
 }

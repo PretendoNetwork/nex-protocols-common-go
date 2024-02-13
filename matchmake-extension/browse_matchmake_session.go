@@ -53,5 +53,9 @@ func (commonProtocol *CommonProtocol) browseMatchmakeSession(err error, packet n
 	rmcResponse.MethodID = matchmake_extension.MethodBrowseMatchmakeSession
 	rmcResponse.CallID = callID
 
+	if commonProtocol.OnAfterBrowseMatchmakeSession != nil {
+		go commonProtocol.OnAfterBrowseMatchmakeSession(packet, searchCriteria, resultRange)
+	}
+
 	return rmcResponse, nil
 }

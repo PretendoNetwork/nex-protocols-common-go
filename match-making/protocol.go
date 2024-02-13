@@ -4,14 +4,21 @@ import (
 	"fmt"
 
 	"github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 	_ "github.com/PretendoNetwork/nex-protocols-go"
 	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
 )
 
 type CommonProtocol struct {
-	endpoint *nex.PRUDPEndPoint
-	protocol match_making.Interface
+	endpoint                   *nex.PRUDPEndPoint
+	protocol                   match_making.Interface
+	OnAfterUnregisterGathering func(packet nex.PacketInterface, idGathering *types.PrimitiveU32)
+	OnAfterFindBySingleID      func(packet nex.PacketInterface, id *types.PrimitiveU32)
+	OnAfterUpdateSessionURL    func(packet nex.PacketInterface, idGathering *types.PrimitiveU32, strURL *types.String)
+	OnAfterUpdateSessionHostV1 func(packet nex.PacketInterface, gid *types.PrimitiveU32)
+	OnAfterGetSessionURLs      func(packet nex.PacketInterface, gid *types.PrimitiveU32)
+	OnAfterUpdateSessionHost   func(packet nex.PacketInterface, gid *types.PrimitiveU32, isMigrateOwner *types.PrimitiveBool)
 }
 
 // NewCommonProtocol returns a new CommonProtocol

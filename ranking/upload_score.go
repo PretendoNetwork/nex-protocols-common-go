@@ -33,5 +33,9 @@ func (commonProtocol *CommonProtocol) uploadScore(err error, packet nex.PacketIn
 	rmcResponse.MethodID = ranking.MethodUploadScore
 	rmcResponse.CallID = callID
 
+	if commonProtocol.OnAfterUploadScore != nil {
+		go commonProtocol.OnAfterUploadScore(packet, scoreData, uniqueID)
+	}
+
 	return rmcResponse, nil
 }

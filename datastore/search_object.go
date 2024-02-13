@@ -90,5 +90,9 @@ func (commonProtocol *CommonProtocol) searchObject(err error, packet nex.PacketI
 	rmcResponse.MethodID = datastore.MethodSearchObject
 	rmcResponse.CallID = callID
 
+	if commonProtocol.OnAfterSearchObject != nil {
+		go commonProtocol.OnAfterSearchObject(packet, param)
+	}
+
 	return rmcResponse, nil
 }

@@ -21,5 +21,9 @@ func (commonProtocol *CommonProtocol) reportNATTraversalResult(err error, packet
 	rmcResponse.MethodID = nat_traversal.MethodReportNATTraversalResult
 	rmcResponse.CallID = callID
 
+	if commonProtocol.OnAfterReportNATTraversalResult != nil {
+		go commonProtocol.OnAfterReportNATTraversalResult(packet, cid, result, rtt)
+	}
+
 	return rmcResponse, nil
 }

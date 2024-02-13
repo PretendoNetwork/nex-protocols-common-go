@@ -83,5 +83,9 @@ func (commonProtocol *CommonProtocol) login(err error, packet nex.PacketInterfac
 	rmcResponse.MethodID = ticket_granting.MethodLogin
 	rmcResponse.CallID = callID
 
+	if commonProtocol.OnAfterLogin != nil {
+		go commonProtocol.OnAfterLogin(packet, strUserName)
+	}
+
 	return rmcResponse, nil
 }

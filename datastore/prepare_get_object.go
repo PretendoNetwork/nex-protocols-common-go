@@ -76,5 +76,9 @@ func (commonProtocol *CommonProtocol) prepareGetObject(err error, packet nex.Pac
 	rmcResponse.MethodID = datastore.MethodPrepareGetObject
 	rmcResponse.CallID = callID
 
+	if commonProtocol.OnAfterPrepareGetObject != nil {
+		go commonProtocol.OnAfterPrepareGetObject(packet, param)
+	}
+
 	return rmcResponse, nil
 }

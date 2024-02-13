@@ -61,5 +61,9 @@ func (commonProtocol *CommonProtocol) rateObject(err error, packet nex.PacketInt
 	rmcResponse.MethodID = datastore.MethodRateObject
 	rmcResponse.CallID = callID
 
+	if commonProtocol.OnAfterRateObject != nil {
+		go commonProtocol.OnAfterRateObject(packet, target, param, fetchRatings)
+	}
+
 	return rmcResponse, nil
 }

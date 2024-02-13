@@ -32,5 +32,9 @@ func (commonProtocol *CommonProtocol) uploadCommonData(err error, packet nex.Pac
 	rmcResponse.MethodID = ranking.MethodUploadCommonData
 	rmcResponse.CallID = callID
 
+	if commonProtocol.OnAfterUploadCommonData != nil {
+		go commonProtocol.OnAfterUploadCommonData(packet, commonData, uniqueID)
+	}
+
 	return rmcResponse, nil
 }

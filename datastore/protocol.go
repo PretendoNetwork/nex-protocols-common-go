@@ -39,6 +39,19 @@ type CommonProtocol struct {
 	DeleteObjectByDataID                         func(dataID *types.PrimitiveU64) *nex.Error
 	GetObjectInfosByDataStoreSearchParam         func(param *datastore_types.DataStoreSearchParam) ([]*datastore_types.DataStoreMetaInfo, uint32, *nex.Error)
 	GetObjectOwnerByDataID                       func(dataID *types.PrimitiveU64) (uint32, *nex.Error)
+	OnAfterDeleteObject                          func(packet nex.PacketInterface, param *datastore_types.DataStoreDeleteParam)
+	OnAfterGetMeta                               func(packet nex.PacketInterface, param *datastore_types.DataStoreGetMetaParam)
+	OnAfterGetMetas                              func(packet nex.PacketInterface, dataIDs *types.List[*types.PrimitiveU64], param *datastore_types.DataStoreGetMetaParam)
+	OnAfterSearchObject                          func(packet nex.PacketInterface, param *datastore_types.DataStoreSearchParam)
+	OnAfterRateObject                            func(packet nex.PacketInterface, target *datastore_types.DataStoreRatingTarget, param *datastore_types.DataStoreRateObjectParam, fetchRatings *types.PrimitiveBool)
+	OnAfterPostMetaBinary                        func(packet nex.PacketInterface, param *datastore_types.DataStorePreparePostParam)
+	OnAfterPreparePostObject                     func(packet nex.PacketInterface, param *datastore_types.DataStorePreparePostParam)
+	OnAfterPrepareGetObject                      func(packet nex.PacketInterface, param *datastore_types.DataStorePrepareGetParam)
+	OnAfterCompletePostObject                    func(packet nex.PacketInterface, param *datastore_types.DataStoreCompletePostParam)
+	OnAfterGetMetasMultipleParam                 func(packet nex.PacketInterface, params *types.List[*datastore_types.DataStoreGetMetaParam])
+	OnAfterCompletePostObjects                   func(packet nex.PacketInterface, dataIDs *types.List[*types.PrimitiveU64])
+	OnAfterChangeMeta                            func(packet nex.PacketInterface, param *datastore_types.DataStoreChangeMetaParam)
+	OnAfterRateObjects                           func(packet nex.PacketInterface, targets *types.List[*datastore_types.DataStoreRatingTarget], params *types.List[*datastore_types.DataStoreRateObjectParam], transactional *types.PrimitiveBool, fetchRatings *types.PrimitiveBool)
 }
 
 func (c *CommonProtocol) S3StatObject(bucket, key string) (minio.ObjectInfo, error) {

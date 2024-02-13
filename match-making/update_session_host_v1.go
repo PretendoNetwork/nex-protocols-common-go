@@ -35,5 +35,9 @@ func (commonProtocol *CommonProtocol) updateSessionHostV1(err error, packet nex.
 	rmcResponse.MethodID = match_making.MethodUpdateSessionHostV1
 	rmcResponse.CallID = callID
 
+	if commonProtocol.OnAfterUpdateSessionHostV1 != nil {
+		go commonProtocol.OnAfterUpdateSessionHostV1(packet, gid)
+	}
+
 	return rmcResponse, nil
 }

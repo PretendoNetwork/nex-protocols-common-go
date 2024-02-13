@@ -40,5 +40,9 @@ func (commonProtocol *CommonProtocol) updateSessionURL(err error, packet nex.Pac
 	rmcResponse.MethodID = match_making.MethodGetSessionURLs
 	rmcResponse.CallID = callID
 
+	if commonProtocol.OnAfterUpdateSessionURL != nil {
+		go commonProtocol.OnAfterUpdateSessionURL(packet, idGathering, strURL)
+	}
+
 	return rmcResponse, nil
 }

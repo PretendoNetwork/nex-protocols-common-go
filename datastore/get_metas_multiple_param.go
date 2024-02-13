@@ -78,5 +78,9 @@ func (commonProtocol *CommonProtocol) getMetasMultipleParam(err error, packet ne
 	rmcResponse.MethodID = datastore.MethodGetMetasMultipleParam
 	rmcResponse.CallID = callID
 
+	if commonProtocol.OnAfterGetMetasMultipleParam != nil {
+		go commonProtocol.OnAfterGetMetasMultipleParam(packet, params)
+	}
+
 	return rmcResponse, nil
 }

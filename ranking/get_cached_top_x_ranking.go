@@ -61,5 +61,9 @@ func (commonProtocol *CommonProtocol) getCachedTopXRanking(err error, packet nex
 	rmcResponse.MethodID = ranking.MethodGetCachedTopXRanking
 	rmcResponse.CallID = callID
 
+	if commonProtocol.OnAfterGetCachedTopXRanking != nil {
+		go commonProtocol.OnAfterGetCachedTopXRanking(packet, category, orderParam)
+	}
+
 	return rmcResponse, nil
 }

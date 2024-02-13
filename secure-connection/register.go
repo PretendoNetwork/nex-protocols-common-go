@@ -91,5 +91,9 @@ func (commonProtocol *CommonProtocol) register(err error, packet nex.PacketInter
 	rmcResponse.MethodID = secure_connection.MethodRegister
 	rmcResponse.CallID = callID
 
+	if commonProtocol.OnAfterRegister != nil {
+		go commonProtocol.OnAfterRegister(packet, vecMyURLs)
+	}
+
 	return rmcResponse, nil
 }

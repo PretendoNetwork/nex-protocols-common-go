@@ -39,5 +39,9 @@ func (commonProtocol *CommonProtocol) findBySingleID(err error, packet nex.Packe
 	rmcResponse.MethodID = match_making.MethodFindBySingleID
 	rmcResponse.CallID = callID
 
+	if commonProtocol.OnAfterFindBySingleID != nil {
+		go commonProtocol.OnAfterFindBySingleID(packet, id)
+	}
+
 	return rmcResponse, nil
 }

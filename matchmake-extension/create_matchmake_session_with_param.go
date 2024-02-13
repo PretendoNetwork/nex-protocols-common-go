@@ -44,5 +44,9 @@ func (commonProtocol *CommonProtocol) createMatchmakeSessionWithParam(err error,
 	rmcResponse.MethodID = matchmake_extension.MethodCreateMatchmakeSessionWithParam
 	rmcResponse.CallID = callID
 
+	if commonProtocol.OnAfterCreateMatchmakeSessionWithParam != nil {
+		go commonProtocol.OnAfterCreateMatchmakeSessionWithParam(packet, createMatchmakeSessionParam)
+	}
+
 	return rmcResponse, nil
 }

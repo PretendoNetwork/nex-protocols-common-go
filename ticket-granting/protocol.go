@@ -18,6 +18,9 @@ type CommonProtocol struct {
 	allowInsecureLoginMethod   bool
 	SessionKeyLength           int // TODO - Use server SessionKeyLength?
 	SecureServerAccount        *nex.Account
+	OnAfterLogin               func(packet nex.PacketInterface, strUserName *types.String)
+	OnAfterLoginEx             func(packet nex.PacketInterface, strUserName *types.String, oExtraData *types.AnyDataHolder)
+	OnAfterRequestTicket       func(packet nex.PacketInterface, idSource *types.PID, idTarget *types.PID)
 }
 
 func (commonProtocol *CommonProtocol) DisableInsecureLogin() {

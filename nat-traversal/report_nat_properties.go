@@ -33,5 +33,9 @@ func (commonProtocol *CommonProtocol) reportNATProperties(err error, packet nex.
 	rmcResponse.MethodID = nat_traversal.MethodReportNATProperties
 	rmcResponse.CallID = callID
 
+	if commonProtocol.OnAfterReportNATProperties != nil {
+		go commonProtocol.OnAfterReportNATProperties(packet, natmapping, natfiltering, rtt)
+	}
+
 	return rmcResponse, nil
 }

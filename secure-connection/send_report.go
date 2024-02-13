@@ -33,5 +33,9 @@ func (commonProtocol *CommonProtocol) sendReport(err error, packet nex.PacketInt
 	rmcResponse.MethodID = secure_connection.MethodSendReport
 	rmcResponse.CallID = callID
 
+	if commonProtocol.OnAfterSendReport != nil {
+		go commonProtocol.OnAfterSendReport(packet, reportID, reportData)
+	}
+
 	return rmcResponse, nil
 }

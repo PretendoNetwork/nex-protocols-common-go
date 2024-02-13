@@ -74,5 +74,9 @@ func (commonProtocol *CommonProtocol) requestProbeInitiationExt(err error, packe
 		}
 	}
 
+	if commonProtocol.OnAfterRequestProbeInitiationExt != nil {
+		go commonProtocol.OnAfterRequestProbeInitiationExt(packet, targetList, stationToProbe)
+	}
+
 	return rmcResponse, nil
 }

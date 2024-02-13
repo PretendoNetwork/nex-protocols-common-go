@@ -106,5 +106,9 @@ func (commonProtocol *CommonProtocol) endParticipation(err error, packet nex.Pac
 
 	server.Send(messagePacket)
 
+	if commonProtocol.OnAfterEndParticipation != nil {
+		go commonProtocol.OnAfterEndParticipation(packet, idGathering, strMessage)
+	}
+
 	return rmcResponse, nil
 }

@@ -66,5 +66,9 @@ func (commonProtocol *CommonProtocol) postMetaBinary(err error, packet nex.Packe
 	rmcResponse.MethodID = datastore.MethodPostMetaBinary
 	rmcResponse.CallID = callID
 
+	if commonProtocol.OnAfterPostMetaBinary != nil {
+		go commonProtocol.OnAfterPostMetaBinary(packet, param)
+	}
+
 	return rmcResponse, nil
 }

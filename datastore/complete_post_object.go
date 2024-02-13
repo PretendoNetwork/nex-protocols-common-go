@@ -103,5 +103,9 @@ func (commonProtocol *CommonProtocol) completePostObject(err error, packet nex.P
 	rmcResponse.MethodID = datastore.MethodCompletePostObject
 	rmcResponse.CallID = callID
 
+	if commonProtocol.OnAfterCompletePostObject != nil {
+		go commonProtocol.OnAfterCompletePostObject(packet, param)
+	}
+
 	return rmcResponse, nil
 }

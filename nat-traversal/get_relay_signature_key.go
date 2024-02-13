@@ -39,5 +39,9 @@ func (commonProtocol *CommonProtocol) getRelaySignatureKey(err error, packet nex
 	rmcResponse.MethodID = nat_traversal.MethodGetRelaySignatureKey
 	rmcResponse.CallID = callID
 
+	if commonProtocol.OnAfterGetRelaySignatureKey != nil {
+		go commonProtocol.OnAfterGetRelaySignatureKey(packet)
+	}
+
 	return rmcResponse, nil
 }

@@ -37,5 +37,9 @@ func (commonProtocol *CommonProtocol) getCommonData(err error, packet nex.Packet
 	rmcResponse.MethodID = ranking.MethodGetCommonData
 	rmcResponse.CallID = callID
 
+	if commonProtocol.OnAfterGetCommonData != nil {
+		go commonProtocol.OnAfterGetCommonData(packet, uniqueID)
+	}
+
 	return rmcResponse, nil
 }

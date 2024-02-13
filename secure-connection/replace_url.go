@@ -45,5 +45,9 @@ func (commonProtocol *CommonProtocol) replaceURL(err error, packet nex.PacketInt
 	rmcResponse.MethodID = secure_connection.MethodReplaceURL
 	rmcResponse.CallID = callID
 
+	if commonProtocol.OnAfterReplaceURL != nil {
+		go commonProtocol.OnAfterReplaceURL(packet, target, url)
+	}
+
 	return rmcResponse, nil
 }

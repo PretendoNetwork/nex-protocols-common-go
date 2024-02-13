@@ -49,5 +49,9 @@ func (commonProtocol *CommonProtocol) getRanking(err error, packet nex.PacketInt
 	rmcResponse.MethodID = ranking.MethodGetRanking
 	rmcResponse.CallID = callID
 
+	if commonProtocol.OnAfterGetRanking != nil {
+		go commonProtocol.OnAfterGetRanking(packet, rankingMode, category, orderParam, uniqueID, principalID)
+	}
+
 	return rmcResponse, nil
 }
