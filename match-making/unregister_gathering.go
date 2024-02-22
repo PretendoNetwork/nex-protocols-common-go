@@ -24,7 +24,7 @@ func (commonProtocol *CommonProtocol) unregisterGathering(err error, packet nex.
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 	server := endpoint.Server
 
-	if session.GameMatchmakeSession.Gathering.OwnerPID.Equals(connection.PID()) {
+	if !session.GameMatchmakeSession.Gathering.OwnerPID.Equals(connection.PID()) {
 		return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
 	}
 

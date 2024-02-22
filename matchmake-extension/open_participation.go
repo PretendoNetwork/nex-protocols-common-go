@@ -21,7 +21,7 @@ func (commonProtocol *CommonProtocol) openParticipation(err error, packet nex.Pa
 		return nil, nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "change_error")
 	}
 
-	if session.GameMatchmakeSession.Gathering.OwnerPID.Equals(connection.PID()) {
+	if !session.GameMatchmakeSession.Gathering.OwnerPID.Equals(connection.PID()) {
 		return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
 	}
 

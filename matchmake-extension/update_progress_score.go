@@ -25,7 +25,7 @@ func (commonProtocol *CommonProtocol) updateProgressScore(err error, packet nex.
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
-	if session.GameMatchmakeSession.Gathering.OwnerPID.Equals(connection.PID()) {
+	if !session.GameMatchmakeSession.Gathering.OwnerPID.Equals(connection.PID()) {
 		return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
 	}
 
