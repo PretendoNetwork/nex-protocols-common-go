@@ -51,8 +51,11 @@ func (commonProtocol *CommonProtocol) register(err error, packet nex.PacketInter
 
 		var address, port string
 
+		// * We have to duplicate this because Go automatically breaks on switch statements
 		switch clientAddress := connection.Address().(type) {
 		case *net.UDPAddr:
+			address = clientAddress.IP.String()
+			port = strconv.Itoa(clientAddress.Port)
 		case *net.TCPAddr:
 			address = clientAddress.IP.String()
 			port = strconv.Itoa(clientAddress.Port)

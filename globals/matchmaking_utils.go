@@ -249,6 +249,10 @@ func FindSessionsByMatchmakeSessionSearchCriterias(pid *types.PID, searchCriteri
 				continue
 			}
 
+			if !compareSearchCriteria(session.GameMatchmakeSession.MatchmakeSystemType.Value, criteria.MatchmakeSystemType.Value) {
+				continue
+			}
+
 			if !compareSearchCriteria(session.GameMatchmakeSession.GameMode.Value, criteria.GameMode.Value) {
 				continue
 			}

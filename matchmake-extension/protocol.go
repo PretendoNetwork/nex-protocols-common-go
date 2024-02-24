@@ -28,6 +28,7 @@ type CommonProtocol struct {
 	OnAfterJoinMatchmakeSessionWithParam             func(packet nex.PacketInterface, joinMatchmakeSessionParam *match_making_types.JoinMatchmakeSessionParam)
 	OnAfterModifyCurrentGameAttribute                func(packet nex.PacketInterface, gid *types.PrimitiveU32, attribIndex *types.PrimitiveU32, newValue *types.PrimitiveU32)
 	OnAfterBrowseMatchmakeSession                    func(packet nex.PacketInterface, searchCriteria *match_making_types.MatchmakeSessionSearchCriteria, resultRange *types.ResultRange)
+	OnAfterJoinMatchmakeSessionEx                    func(packet nex.PacketInterface, gid *types.PrimitiveU32, strMessage *types.String, dontCareMyBlockList *types.PrimitiveBool, participationCount *types.PrimitiveU16)
 }
 
 // GetUserFriendPIDs sets the GetUserFriendPIDs handler function
@@ -56,6 +57,7 @@ func NewCommonProtocol(protocol matchmake_extension.Interface) *CommonProtocol {
 	protocol.SetHandlerJoinMatchmakeSessionWithParam(commonProtocol.joinMatchmakeSessionWithParam)
 	protocol.SetHandlerModifyCurrentGameAttribute(commonProtocol.modifyCurrentGameAttribute)
 	protocol.SetHandlerBrowseMatchmakeSession(commonProtocol.browseMatchmakeSession)
+	protocol.SetHandlerJoinMatchmakeSessionEx(commonProtocol.joinMatchmakeSessionEx)
 
 	return commonProtocol
 }

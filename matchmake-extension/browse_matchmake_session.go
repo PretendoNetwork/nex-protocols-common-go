@@ -1,6 +1,8 @@
 package matchmake_extension
 
 import (
+	"math"
+
 	"github.com/PretendoNetwork/nex-go"
 	"github.com/PretendoNetwork/nex-go/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
@@ -21,11 +23,15 @@ func (commonProtocol *CommonProtocol) browseMatchmakeSession(err error, packet n
 
 	sessions := common_globals.FindSessionsByMatchmakeSessionSearchCriterias(connection.PID(), searchCriterias, commonProtocol.GameSpecificMatchmakeSessionSearchCriteriaChecks)
 
-	if len(sessions) < int(resultRange.Offset.Value) {
-		return nil, nex.NewError(nex.ResultCodes.Core.InvalidIndex, "change_error")
+	// TODO - Is this right?
+	if resultRange.Offset.Value != math.MaxUint32 {
+		if len(sessions) < int(resultRange.Offset.Value) {
+			return nil, nex.NewError(nex.ResultCodes.Core.InvalidIndex, "change_error")
+		}
+
+		sessions = sessions[resultRange.Offset.Value:]
 	}
 
-	sessions = sessions[resultRange.Offset.Value:]
 
 	if len(sessions) > int(resultRange.Length.Value) {
 		sessions = sessions[:resultRange.Length.Value]
