@@ -1,8 +1,6 @@
 package matchmaking
 
 import (
-	"fmt"
-
 	"github.com/PretendoNetwork/nex-go"
 	"github.com/PretendoNetwork/nex-go/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
@@ -40,7 +38,6 @@ func NewCommonProtocol(protocol match_making.Interface) *CommonProtocol {
 	protocol.SetHandlerUpdateSessionHost(commonProtocol.updateSessionHost)
 
 	endpoint.OnConnectionEnded(func(connection *nex.PRUDPConnection) {
-		fmt.Println("Leaving")
 		common_globals.RemoveConnectionFromAllSessions(connection)
 	})
 
