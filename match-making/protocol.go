@@ -1,8 +1,6 @@
 package matchmaking
 
 import (
-	"fmt"
-
 	"github.com/PretendoNetwork/nex-go"
 	"github.com/PretendoNetwork/nex-go/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
