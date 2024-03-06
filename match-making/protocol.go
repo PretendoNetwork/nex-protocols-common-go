@@ -40,7 +40,6 @@ func NewCommonProtocol(protocol match_making.Interface) *CommonProtocol {
 	protocol.SetHandlerUpdateSessionHost(commonProtocol.updateSessionHost)
 
 	endpoint.OnConnectionEnded(func(connection *nex.PRUDPConnection) {
-		fmt.Println("Leaving")
 		common_globals.RemoveConnectionFromAllSessions(connection)
 	})
 
