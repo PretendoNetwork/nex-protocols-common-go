@@ -38,6 +38,7 @@ func RemoveConnectionIDFromSession(id uint32, gathering uint32) {
 	for index, connectionID := range Sessions[gathering].ConnectionIDs {
 		if connectionID == id {
 			Sessions[gathering].ConnectionIDs = DeleteIndex(Sessions[gathering].ConnectionIDs, index)
+			Sessions[gathering].GameMatchmakeSession.ParticipationCount.Value -= 1
 		}
 	}
 
