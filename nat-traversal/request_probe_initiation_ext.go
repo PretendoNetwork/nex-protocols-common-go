@@ -1,9 +1,8 @@
 package nattraversal
 
 import (
-	"strconv"
-
 	"github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go/constants"
 	"github.com/PretendoNetwork/nex-go/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 	nat_traversal "github.com/PretendoNetwork/nex-protocols-go/nat-traversal"
@@ -41,13 +40,8 @@ func (commonProtocol *CommonProtocol) requestProbeInitiationExt(err error, packe
 	for _, target := range targetList.Slice() {
 		targetStation := types.NewStationURL(target.Value)
 
-		if connectionIDString, ok := targetStation.Fields["RVCID"]; ok {
-			connectionID, err := strconv.Atoi(connectionIDString)
-			if err != nil {
-				common_globals.Logger.Error(err.Error())
-			}
-
-			target := endpoint.FindConnectionByID(uint32(connectionID))
+		if connectionID, ok := targetStation.RVConnectionID(); ok {
+			target := endpoint.FindConnectionByID(connectionID)
 			if target == nil {
 				common_globals.Logger.Warning("Client not found")
 				continue
@@ -61,9 +55,9 @@ func (commonProtocol *CommonProtocol) requestProbeInitiationExt(err error, packe
 				messagePacket, _ = nex.NewPRUDPPacketV1(server, target, nil)
 			}
 
-			messagePacket.SetType(nex.DataPacket)
-			messagePacket.AddFlag(nex.FlagNeedsAck)
-			messagePacket.AddFlag(nex.FlagReliable)
+			messagePacket.SetType(constants.DataPacket)
+			messagePacket.AddFlag(constants.PacketFlagNeedsAck)
+			messagePacket.AddFlag(constants.PacketFlagReliable)
 			messagePacket.SetSourceVirtualPortStreamType(target.StreamType)
 			messagePacket.SetSourceVirtualPortStreamID(endpoint.StreamID)
 			messagePacket.SetDestinationVirtualPortStreamType(target.StreamType)

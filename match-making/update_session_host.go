@@ -2,6 +2,7 @@ package matchmaking
 
 import (
 	"github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go/constants"
 	"github.com/PretendoNetwork/nex-go/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
 	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
@@ -86,9 +87,9 @@ func (commonProtocol *CommonProtocol) updateSessionHost(err error, packet nex.Pa
 			messagePacket, _ = nex.NewPRUDPPacketV1(server, target, nil)
 		}
 
-		messagePacket.SetType(nex.DataPacket)
-		messagePacket.AddFlag(nex.FlagNeedsAck)
-		messagePacket.AddFlag(nex.FlagReliable)
+		messagePacket.SetType(constants.DataPacket)
+		messagePacket.AddFlag(constants.PacketFlagNeedsAck)
+		messagePacket.AddFlag(constants.PacketFlagReliable)
 		messagePacket.SetSourceVirtualPortStreamType(target.StreamType)
 		messagePacket.SetSourceVirtualPortStreamID(endpoint.StreamID)
 		messagePacket.SetDestinationVirtualPortStreamType(target.StreamType)

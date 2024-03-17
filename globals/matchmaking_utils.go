@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go/constants"
 	"github.com/PretendoNetwork/nex-go/types"
 	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
 	match_making_types "github.com/PretendoNetwork/nex-protocols-go/match-making/types"
@@ -123,9 +124,9 @@ func RemoveConnectionFromAllSessions(connection *nex.PRUDPConnection) {
 				messagePacket, _ = nex.NewPRUDPPacketV1(server, target, nil)
 			}
 
-			messagePacket.SetType(nex.DataPacket)
-			messagePacket.AddFlag(nex.FlagNeedsAck)
-			messagePacket.AddFlag(nex.FlagReliable)
+			messagePacket.SetType(constants.DataPacket)
+			messagePacket.AddFlag(constants.PacketFlagNeedsAck)
+			messagePacket.AddFlag(constants.PacketFlagReliable)
 			messagePacket.SetSourceVirtualPortStreamType(connection.StreamType)
 			messagePacket.SetSourceVirtualPortStreamID(endpoint.StreamID)
 			messagePacket.SetDestinationVirtualPortStreamType(connection.StreamType)
@@ -396,9 +397,9 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 			messagePacket, _ = nex.NewPRUDPPacketV1(server, target, nil)
 		}
 
-		messagePacket.SetType(nex.DataPacket)
-		messagePacket.AddFlag(nex.FlagNeedsAck)
-		messagePacket.AddFlag(nex.FlagReliable)
+		messagePacket.SetType(constants.DataPacket)
+		messagePacket.AddFlag(constants.PacketFlagNeedsAck)
+		messagePacket.AddFlag(constants.PacketFlagReliable)
 		messagePacket.SetSourceVirtualPortStreamType(target.StreamType)
 		messagePacket.SetSourceVirtualPortStreamID(endpoint.StreamID)
 		messagePacket.SetDestinationVirtualPortStreamType(target.StreamType)
@@ -452,9 +453,9 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 				messagePacket, _ = nex.NewPRUDPPacketV1(server, initiatingConnection, nil)
 			}
 
-			messagePacket.SetType(nex.DataPacket)
-			messagePacket.AddFlag(nex.FlagNeedsAck)
-			messagePacket.AddFlag(nex.FlagReliable)
+			messagePacket.SetType(constants.DataPacket)
+			messagePacket.AddFlag(constants.PacketFlagNeedsAck)
+			messagePacket.AddFlag(constants.PacketFlagReliable)
 			messagePacket.SetSourceVirtualPortStreamType(target.StreamType)
 			messagePacket.SetSourceVirtualPortStreamID(endpoint.StreamID)
 			messagePacket.SetDestinationVirtualPortStreamType(target.StreamType)
@@ -495,9 +496,9 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 			messagePacket, _ = nex.NewPRUDPPacketV1(server, initiatingConnection, nil)
 		}
 
-		messagePacket.SetType(nex.DataPacket)
-		messagePacket.AddFlag(nex.FlagNeedsAck)
-		messagePacket.AddFlag(nex.FlagReliable)
+		messagePacket.SetType(constants.DataPacket)
+		messagePacket.AddFlag(constants.PacketFlagNeedsAck)
+		messagePacket.AddFlag(constants.PacketFlagReliable)
 		messagePacket.SetSourceVirtualPortStreamType(initiatingConnection.StreamType)
 		messagePacket.SetSourceVirtualPortStreamID(endpoint.StreamID)
 		messagePacket.SetDestinationVirtualPortStreamType(initiatingConnection.StreamType)
@@ -519,9 +520,9 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 			messagePacket, _ = nex.NewPRUDPPacketV1(server, target, nil)
 		}
 
-		messagePacket.SetType(nex.DataPacket)
-		messagePacket.AddFlag(nex.FlagNeedsAck)
-		messagePacket.AddFlag(nex.FlagReliable)
+		messagePacket.SetType(constants.DataPacket)
+		messagePacket.AddFlag(constants.PacketFlagNeedsAck)
+		messagePacket.AddFlag(constants.PacketFlagReliable)
 		messagePacket.SetSourceVirtualPortStreamType(target.StreamType)
 		messagePacket.SetSourceVirtualPortStreamID(endpoint.StreamID)
 		messagePacket.SetDestinationVirtualPortStreamType(target.StreamType)
@@ -595,9 +596,9 @@ func ChangeSessionOwner(currentOwner *nex.PRUDPConnection, gathering uint32) {
 			messagePacket, _ = nex.NewPRUDPPacketV1(server, target, nil)
 		}
 
-		messagePacket.SetType(nex.DataPacket)
-		messagePacket.AddFlag(nex.FlagNeedsAck)
-		messagePacket.AddFlag(nex.FlagReliable)
+		messagePacket.SetType(constants.DataPacket)
+		messagePacket.AddFlag(constants.PacketFlagNeedsAck)
+		messagePacket.AddFlag(constants.PacketFlagReliable)
 		messagePacket.SetSourceVirtualPortStreamType(target.StreamType)
 		messagePacket.SetSourceVirtualPortStreamID(endpoint.StreamID)
 		messagePacket.SetDestinationVirtualPortStreamType(target.StreamType)

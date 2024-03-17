@@ -1,8 +1,6 @@
 package secureconnection
 
 import (
-	"strconv"
-
 	"github.com/PretendoNetwork/nex-go"
 	"github.com/PretendoNetwork/nex-go/types"
 	secure_connection "github.com/PretendoNetwork/nex-protocols-go/secure-connection"
@@ -20,10 +18,10 @@ func (commonProtocol *CommonProtocol) replaceURL(err error, packet nex.PacketInt
 	endpoint := connection.Endpoint()
 
 	connection.StationURLs.Each(func(i int, station *types.StationURL) bool {
-		currentStationAddress, currentStationAddressOk := station.Fields["address"]
-		currentStationPort, currentStationPortOk := station.Fields["port"]
-		oldStationAddress, oldStationAddressOk := target.Fields["address"]
-		oldStationPort, oldStationPortOk := target.Fields["port"]
+		currentStationAddress, currentStationAddressOk := station.Address()
+		currentStationPort, currentStationPortOk := station.PortNumber()
+		oldStationAddress, oldStationAddressOk := target.Address()
+		oldStationPort, oldStationPortOk := target.PortNumber()
 
 		if currentStationAddressOk && currentStationPortOk && oldStationAddressOk && oldStationPortOk {
 			if currentStationAddress == oldStationAddress && currentStationPort == oldStationPort {
@@ -31,7 +29,7 @@ func (commonProtocol *CommonProtocol) replaceURL(err error, packet nex.PacketInt
 				// TODO - What are we really meant to do here?
 				newStation := url.Copy().(*types.StationURL)
 
-				newStation.Fields["PID"] = strconv.Itoa(int(connection.PID().Value()))
+				newStation.SetPrincipalID(connection.PID())
 
 				connection.StationURLs.SetIndex(i, newStation)
 			}

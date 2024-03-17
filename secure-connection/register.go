@@ -2,9 +2,9 @@ package secureconnection
 
 import (
 	"net"
-	"strconv"
 
 	"github.com/PretendoNetwork/nex-go"
+	"github.com/PretendoNetwork/nex-go/constants"
 	"github.com/PretendoNetwork/nex-go/types"
 	secure_connection "github.com/PretendoNetwork/nex-protocols-go/secure-connection"
 
@@ -25,18 +25,18 @@ func (commonProtocol *CommonProtocol) register(err error, packet nex.PacketInter
 	var publicStation *types.StationURL
 
 	for _, stationURL := range vecMyURLs.Slice() {
-		natf := stationURL.Fields["natf"]
-		natm := stationURL.Fields["natm"]
-		pmp := stationURL.Fields["pmp"]
-		transportType := stationURL.Fields["type"]
+		natf, ok := stationURL.NATFiltering()
+		if !ok { continue; }
+		natm, ok := stationURL.NATMapping()
+		if !ok { continue; }
+		pmp := stationURL.IsNATPMPSupported()
+		transportType, transportTypeOk := stationURL.Type()
 
-		if natf == "0" && natm == "0" && pmp == "0" && transportType == "" && localStation == nil {
-			stationURL.SetLocal()
+		if natf == constants.UnknownNATFiltering && natm == constants.UnknownNATMapping && !pmp && !transportTypeOk && localStation == nil {
 			localStation = stationURL.Copy().(*types.StationURL)
 		}
 
-		if transportType == "3" && publicStation == nil {
-			stationURL.SetPublic()
+		if (transportType & uint8(constants.StationURLFlagPublic) == 1) && publicStation == nil {
 			publicStation = stationURL.Copy().(*types.StationURL)
 		}
 	}
@@ -49,30 +49,31 @@ func (commonProtocol *CommonProtocol) register(err error, packet nex.PacketInter
 	if publicStation == nil {
 		publicStation = localStation.Copy().(*types.StationURL)
 
-		var address, port string
+		var address string
+		var port uint16
 
 		// * We have to duplicate this because Go automatically breaks on switch statements
 		switch clientAddress := connection.Address().(type) {
 		case *net.UDPAddr:
 			address = clientAddress.IP.String()
-			port = strconv.Itoa(clientAddress.Port)
+			port = uint16(clientAddress.Port)
 		case *net.TCPAddr:
 			address = clientAddress.IP.String()
-			port = strconv.Itoa(clientAddress.Port)
+			port = uint16(clientAddress.Port)
 		}
 
-		publicStation.Fields["address"] = address
-		publicStation.Fields["port"] = port
-		publicStation.Fields["natf"] = "0"
-		publicStation.Fields["natm"] = "0"
-		publicStation.Fields["type"] = "3"
+		publicStation.SetAddress(address)
+		publicStation.SetPortNumber(port)
+		publicStation.SetNATFiltering(constants.UnknownNATFiltering)
+		publicStation.SetNATMapping(constants.UnknownNATMapping)
+		publicStation.SetType(uint8(constants.StationURLFlagPublic) | uint8(constants.StationURLFlagBehindNAT))
 	}
 
-	localStation.Fields["PID"] = strconv.Itoa(int(connection.PID().Value()))
-	publicStation.Fields["PID"] = strconv.Itoa(int(connection.PID().Value()))
+	localStation.SetPrincipalID(connection.PID())
+	publicStation.SetPrincipalID(connection.PID())
 
-	localStation.Fields["RVCID"] = strconv.Itoa(int(connection.ID))
-	publicStation.Fields["RVCID"] = strconv.Itoa(int(connection.ID))
+	localStation.SetRVConnectionID(connection.ID)
+	publicStation.SetRVConnectionID(connection.ID)
 
 	connection.StationURLs.Append(localStation)
 	connection.StationURLs.Append(publicStation)
