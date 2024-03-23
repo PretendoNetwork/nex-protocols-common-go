@@ -72,11 +72,11 @@ func (commonProtocol *CommonProtocol) updateSessionHost(err error, packet nex.Pa
 
 	rmcRequestBytes := rmcRequest.Bytes()
 
-	for _, connectionID := range common_globals.Sessions[gid.Value].ConnectionIDs {
+	common_globals.Sessions[gid.Value].ConnectionIDs.Each(func(_ int, connectionID uint32) bool {
 		target := endpoint.FindConnectionByID(connectionID)
 		if target == nil {
 			common_globals.Logger.Warning("Client not found")
-			continue
+			return false
 		}
 
 		var messagePacket nex.PRUDPPacketInterface
@@ -97,7 +97,9 @@ func (commonProtocol *CommonProtocol) updateSessionHost(err error, packet nex.Pa
 		messagePacket.SetPayload(rmcRequestBytes)
 
 		server.Send(messagePacket)
-	}
+
+		return false
+	})
 
 	if commonProtocol.OnAfterUpdateSessionHost != nil {
 		go commonProtocol.OnAfterUpdateSessionHost(packet, gid, isMigrateOwner)

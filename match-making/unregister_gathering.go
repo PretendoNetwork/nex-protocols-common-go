@@ -66,11 +66,11 @@ func (commonProtocol *CommonProtocol) unregisterGathering(err error, packet nex.
 
 	rmcRequestBytes := rmcRequest.Bytes()
 
-	for _, connectionID := range gatheringPlayers {
+	gatheringPlayers.Each(func(_ int, connectionID uint32) bool {
 		target := endpoint.FindConnectionByID(connectionID)
 		if target == nil {
 			common_globals.Logger.Warning("Client not found")
-			continue
+			return false
 		}
 
 		var messagePacket nex.PRUDPPacketInterface
@@ -91,7 +91,9 @@ func (commonProtocol *CommonProtocol) unregisterGathering(err error, packet nex.
 		messagePacket.SetPayload(rmcRequestBytes)
 
 		server.Send(messagePacket)
-	}
+
+		return false
+	})
 
 	if commonProtocol.OnAfterUnregisterGathering != nil {
 		go commonProtocol.OnAfterUnregisterGathering(packet, idGathering)

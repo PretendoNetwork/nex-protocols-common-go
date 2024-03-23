@@ -25,25 +25,24 @@ func GetAvailableGatheringID() uint32 {
 // FindOtherConnectionID searches a connection ID on the session that isn't the given one
 // Returns 0 if no connection ID could be found
 func FindOtherConnectionID(excludedConnectionID uint32, gatheringID uint32) uint32 {
-	for _, connectionID := range Sessions[gatheringID].ConnectionIDs {
+	var otherConnectionID uint32 = 0
+	Sessions[gatheringID].ConnectionIDs.Each(func(_ int, connectionID uint32) bool {
 		if connectionID != excludedConnectionID {
-			return connectionID
+			otherConnectionID = connectionID
+			return true
 		}
-	}
 
-	return 0
+		return false
+	})
+
+	return otherConnectionID
 }
 
 // RemoveConnectionIDFromSession removes a PRUDP connection from the session
 func RemoveConnectionIDFromSession(id uint32, gathering uint32) {
-	for index, connectionID := range Sessions[gathering].ConnectionIDs {
-		if connectionID == id {
-			Sessions[gathering].ConnectionIDs = DeleteIndex(Sessions[gathering].ConnectionIDs, index)
-			Sessions[gathering].GameMatchmakeSession.ParticipationCount.Value -= 1
-		}
-	}
+	Sessions[gathering].ConnectionIDs.DeleteAll(id)
 
-	if len(Sessions[gathering].ConnectionIDs) == 0 {
+	if Sessions[gathering].ConnectionIDs.Size() == 0 {
 		delete(Sessions, gathering)
 	}
 }
@@ -51,7 +50,7 @@ func RemoveConnectionIDFromSession(id uint32, gathering uint32) {
 // FindConnectionSession searches for session the given connection ID is connected to
 func FindConnectionSession(id uint32) uint32 {
 	for gatheringID := range Sessions {
-		if slices.Contains(Sessions[gatheringID].ConnectionIDs, id) {
+		if Sessions[gatheringID].ConnectionIDs.Has(id) {
 			return gatheringID
 		}
 	}
@@ -64,7 +63,7 @@ func RemoveConnectionFromAllSessions(connection *nex.PRUDPConnection) {
 	// * Keep checking until no session is found
 	for gid := FindConnectionSession(connection.ID); gid != 0; {
 		session := Sessions[gid]
-		lenParticipants := len(session.ConnectionIDs)
+		lenParticipants := session.ConnectionIDs.Size()
 
 		RemoveConnectionIDFromSession(connection.ID, gid)
 
@@ -150,6 +149,7 @@ func CreateSessionByMatchmakeSession(matchmakeSession *match_making_types.Matchm
 	session := CommonMatchmakeSession{
 		SearchMatchmakeSession: searchMatchmakeSession,
 		GameMatchmakeSession:   matchmakeSession,
+		ConnectionIDs:          nex.NewMutexSlice[uint32](),
 	}
 
 	session.GameMatchmakeSession.Gathering.ID = types.NewPrimitiveU32(sessionIndex)
@@ -193,7 +193,7 @@ func FindSessionByMatchmakeSession(pid *types.PID, searchMatchmakeSession *match
 	var friendList []uint32
 	for _, sessionIndex := range candidateSessionIndexes {
 		sessionToCheck := Sessions[sessionIndex]
-		if len(sessionToCheck.ConnectionIDs) >= int(sessionToCheck.GameMatchmakeSession.MaximumParticipants.Value) {
+		if sessionToCheck.ConnectionIDs.Size() >= int(sessionToCheck.GameMatchmakeSession.MaximumParticipants.Value) {
 			continue
 		}
 
@@ -259,7 +259,7 @@ func FindSessionsByMatchmakeSessionSearchCriterias(pid *types.PID, searchCriteri
 				continue
 			}
 
-			if len(session.ConnectionIDs) >= int(session.GameMatchmakeSession.MaximumParticipants.Value) {
+			if session.ConnectionIDs.Size() >= int(session.GameMatchmakeSession.MaximumParticipants.Value) {
 				continue
 			}
 
@@ -341,29 +341,28 @@ func compareSearchCriteria[T ~uint16 | ~uint32](original T, search string) bool 
 // AddPlayersToSession updates the given sessions state to include the provided connection IDs
 // Returns a NEX error code if failed
 func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32, initiatingConnection *nex.PRUDPConnection, joinMessage string) *nex.Error {
-	if (len(session.ConnectionIDs) + len(connectionIDs)) > int(session.GameMatchmakeSession.Gathering.MaximumParticipants.Value) {
+	if (session.ConnectionIDs.Size() + len(connectionIDs)) > int(session.GameMatchmakeSession.Gathering.MaximumParticipants.Value) {
 		return nex.NewError(nex.ResultCodes.RendezVous.SessionFull, fmt.Sprintf("Gathering %d is full", session.GameMatchmakeSession.Gathering.ID))
 	}
 
 	for _, connectedID := range connectionIDs {
-		if slices.Contains(session.ConnectionIDs, connectedID) {
+		if session.ConnectionIDs.Has(connectedID) {
 			return nex.NewError(nex.ResultCodes.RendezVous.AlreadyParticipatedGathering, fmt.Sprintf("Connection ID %d is already in gathering %d", connectedID, session.GameMatchmakeSession.Gathering.ID))
 		}
 
-		session.ConnectionIDs = append(session.ConnectionIDs, connectedID)
-
+		session.ConnectionIDs.Add(connectedID)
 		session.GameMatchmakeSession.ParticipationCount.Value += 1
 	}
 
 	endpoint := initiatingConnection.Endpoint().(*nex.PRUDPEndPoint)
 	server := endpoint.Server
 
-	for i := 0; i < len(session.ConnectionIDs); i++ {
-		target := endpoint.FindConnectionByID(session.ConnectionIDs[i])
+	session.ConnectionIDs.Each(func(_ int, connectionID uint32) bool {
+		target := endpoint.FindConnectionByID(connectionID)
 		if target == nil {
 			// TODO - Error here?
 			Logger.Warning("Player not found")
-			continue
+			return false
 		}
 
 		notificationCategory := notifications.NotificationCategories.Participation
@@ -407,19 +406,21 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 		messagePacket.SetPayload(notificationRequestBytes)
 
 		server.Send(messagePacket)
-	}
+
+		return false
+	})
 
 	// * This appears to be correct. Tri-Force Heroes uses 3.9.0,
 	// * and has issues if these notifications are sent.
 	// * Minecraft, however, requires these to be sent
 	// TODO - Check other games both pre and post 3.10.0 and validate
 	if server.LibraryVersions.MatchMaking.GreaterOrEqual("3.10.0") {
-		for i := 0; i < len(session.ConnectionIDs); i++ {
-			target := endpoint.FindConnectionByID(session.ConnectionIDs[i])
+		session.ConnectionIDs.Each(func(_ int, connectionID uint32) bool {
+			target := endpoint.FindConnectionByID(connectionID)
 			if target == nil {
 				// TODO - Error here?
 				Logger.Warning("Player not found")
-				continue
+				return false
 			}
 
 			notificationCategory := notifications.NotificationCategories.Participation
@@ -463,7 +464,9 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 			messagePacket.SetPayload(notificationRequestBytes)
 
 			server.Send(messagePacket)
-		}
+
+			return false
+		})
 
 		notificationCategory := notifications.NotificationCategories.Participation
 		notificationSubtype := notifications.NotificationSubTypes.Participation.NewParticipant
@@ -581,11 +584,11 @@ func ChangeSessionOwner(currentOwner *nex.PRUDPConnection, gathering uint32) {
 
 	rmcRequestBytes := rmcRequest.Bytes()
 
-	for _, connectionID := range Sessions[gathering].ConnectionIDs {
+	Sessions[gathering].ConnectionIDs.Each(func(_ int, connectionID uint32) bool {
 		target := endpoint.FindConnectionByID(connectionID)
 		if target == nil {
 			Logger.Warning("Connection not found")
-			continue
+			return false
 		}
 
 		var messagePacket nex.PRUDPPacketInterface
@@ -606,5 +609,7 @@ func ChangeSessionOwner(currentOwner *nex.PRUDPConnection, gathering uint32) {
 		messagePacket.SetPayload(rmcRequestBytes)
 
 		server.Send(messagePacket)
-	}
+
+		return false
+	})
 }

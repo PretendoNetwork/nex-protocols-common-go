@@ -34,15 +34,16 @@ func (commonProtocol *CommonProtocol) getSimplePlayingSession(err error, packet 
 			key := fmt.Sprintf("%d-%d", gatheringID, pid.Value())
 			if simplePlayingSessions[key] == nil {
 				connectedPIDs := make([]uint64, 0)
-				for _, connectionID := range session.ConnectionIDs {
+				session.ConnectionIDs.Each(func(_ int, connectionID uint32) bool {
 					player := endpoint.FindConnectionByID(connectionID)
 					if player == nil {
 						common_globals.Logger.Warning("Player not found")
-						continue
+						return false
 					}
 
 					connectedPIDs = append(connectedPIDs, player.PID().Value())
-				}
+					return false
+				})
 
 				if slices.Contains(connectedPIDs, pid.Value()) {
 					attribute0, err := session.GameMatchmakeSession.Attributes.Get(0)
