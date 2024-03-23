@@ -26,14 +26,16 @@ func GetAvailableGatheringID() uint32 {
 // Returns 0 if no connection ID could be found
 func FindOtherConnectionID(excludedConnectionID uint32, gatheringID uint32) uint32 {
 	var otherConnectionID uint32 = 0
-	Sessions[gatheringID].ConnectionIDs.Each(func(_ int, connectionID uint32) bool {
-		if connectionID != excludedConnectionID {
-			otherConnectionID = connectionID
-			return true
-		}
+	if session, ok := Sessions[gatheringID]; ok {
+		session.ConnectionIDs.Each(func(_ int, connectionID uint32) bool {
+			if connectionID != excludedConnectionID {
+				otherConnectionID = connectionID
+				return true
+			}
 
-		return false
-	})
+			return false
+		})
+	}
 
 	return otherConnectionID
 }
