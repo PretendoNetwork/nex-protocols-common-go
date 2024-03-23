@@ -36,7 +36,7 @@ func (commonProtocol *CommonProtocol) register(err error, packet nex.PacketInter
 			localStation = stationURL.Copy().(*types.StationURL)
 		}
 
-		if (transportType & uint8(constants.StationURLFlagPublic) == 1) && publicStation == nil {
+		if (transportType & uint8(constants.StationURLFlagPublic) == uint8(constants.StationURLFlagPublic)) && publicStation == nil {
 			publicStation = stationURL.Copy().(*types.StationURL)
 		}
 	}
