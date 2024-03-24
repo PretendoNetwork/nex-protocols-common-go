@@ -37,7 +37,7 @@ func (commonProtocol *CommonProtocol) endParticipation(err error, packet nex.Pac
 		if matchmakeSession.Gathering.Flags.PAND(match_making.GatheringFlags.DisconnectChangeOwner) == 0 {
 			deleteSession = true
 		} else {
-			common_globals.ChangeSessionOwner(connection, idGathering.Value)
+			common_globals.ChangeSessionOwner(connection, idGathering.Value, true)
 		}
 	}
 

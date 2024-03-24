@@ -83,7 +83,7 @@ func RemoveConnectionFromAllSessions(connection *nex.PRUDPConnection) {
 			if session.GameMatchmakeSession.Gathering.Flags.PAND(match_making.GatheringFlags.DisconnectChangeOwner) == 0 {
 				delete(Sessions, gid)
 			} else {
-				ChangeSessionOwner(connection, gid)
+				ChangeSessionOwner(connection, gid, true)
 			}
 		} else {
 			endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
@@ -541,9 +541,10 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 }
 
 // ChangeSessionOwner changes the session owner to a different connection
-func ChangeSessionOwner(currentOwner *nex.PRUDPConnection, gathering uint32) {
+func ChangeSessionOwner(currentOwner *nex.PRUDPConnection, gathering uint32, isLeaving bool) {
 	endpoint := currentOwner.Endpoint().(*nex.PRUDPEndPoint)
 	server := endpoint.Server
+	session := Sessions[gathering]
 
 	var newOwner *nex.PRUDPConnection
 
@@ -555,7 +556,11 @@ func ChangeSessionOwner(currentOwner *nex.PRUDPConnection, gathering uint32) {
 			return
 		}
 
-		Sessions[gathering].GameMatchmakeSession.Gathering.OwnerPID = newOwner.PID()
+		// If the current owner is the host and they are leaving, change it by the new owner
+		if session.GameMatchmakeSession.Gathering.HostPID.Equals(currentOwner.PID()) && isLeaving {
+			session.GameMatchmakeSession.Gathering.HostPID = newOwner.PID()
+		}
+		session.GameMatchmakeSession.Gathering.OwnerPID = newOwner.PID()
 	} else {
 		return
 	}
@@ -586,7 +591,7 @@ func ChangeSessionOwner(currentOwner *nex.PRUDPConnection, gathering uint32) {
 
 	rmcRequestBytes := rmcRequest.Bytes()
 
-	Sessions[gathering].ConnectionIDs.Each(func(_ int, connectionID uint32) bool {
+	session.ConnectionIDs.Each(func(_ int, connectionID uint32) bool {
 		target := endpoint.FindConnectionByID(connectionID)
 		if target == nil {
 			Logger.Warning("Connection not found")
