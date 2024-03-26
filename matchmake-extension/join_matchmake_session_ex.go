@@ -7,7 +7,7 @@ import (
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension"
 )
 
-func (commonProtocol *CommonProtocol) joinMatchmakeSession(err error, packet nex.PacketInterface, callID uint32, gid *types.PrimitiveU32, strMessage *types.String) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) joinMatchmakeSessionEx(err error, packet nex.PacketInterface, callID uint32, gid *types.PrimitiveU32, strMessage *types.String, dontCareMyBlockList *types.PrimitiveBool, participationCount *types.PrimitiveU16) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
@@ -41,11 +41,11 @@ func (commonProtocol *CommonProtocol) joinMatchmakeSession(err error, packet nex
 
 	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
 	rmcResponse.ProtocolID = matchmake_extension.ProtocolID
-	rmcResponse.MethodID = matchmake_extension.MethodJoinMatchmakeSession
+	rmcResponse.MethodID = matchmake_extension.MethodJoinMatchmakeSessionEx
 	rmcResponse.CallID = callID
 
-	if commonProtocol.OnAfterJoinMatchmakeSession != nil {
-		go commonProtocol.OnAfterJoinMatchmakeSession(packet, gid, strMessage)
+	if commonProtocol.OnAfterJoinMatchmakeSessionEx != nil {
+		go commonProtocol.OnAfterJoinMatchmakeSessionEx(packet, gid, strMessage, dontCareMyBlockList, participationCount)
 	}
 
 	return rmcResponse, nil
