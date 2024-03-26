@@ -46,6 +46,9 @@ func RemoveConnectionIDFromSession(id uint32, gathering uint32) {
 
 	if Sessions[gathering].ConnectionIDs.Size() == 0 {
 		delete(Sessions, gathering)
+	} else {
+		// Update the participation count with the new connection ID count
+		Sessions[gathering].GameMatchmakeSession.ParticipationCount.Value = uint32(Sessions[gathering].ConnectionIDs.Size())
 	}
 }
 
@@ -353,7 +356,9 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 		}
 
 		session.ConnectionIDs.Add(connectedID)
-		session.GameMatchmakeSession.ParticipationCount.Value += 1
+
+		// Update the participation count with the new connection ID count
+		session.GameMatchmakeSession.ParticipationCount.Value = uint32(session.ConnectionIDs.Size())
 	}
 
 	endpoint := initiatingConnection.Endpoint().(*nex.PRUDPEndPoint)
