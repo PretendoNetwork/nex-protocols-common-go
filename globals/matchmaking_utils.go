@@ -574,7 +574,7 @@ func ChangeSessionOwner(currentOwner *nex.PRUDPConnection, gathering uint32, isL
 	subtype := notifications.NotificationSubTypes.OwnershipChanged.None
 
 	oEvent := notifications_types.NewNotificationEvent()
-	oEvent.PIDSource = newOwner.PID()
+	oEvent.PIDSource = currentOwner.PID()
 	oEvent.Type = types.NewPrimitiveU32(notifications.BuildNotificationType(category, subtype))
 	oEvent.Param1 = types.NewPrimitiveU32(gathering)
 	oEvent.Param2 = types.NewPrimitiveU32(newOwner.PID().LegacyValue()) // TODO - This assumes a legacy client. Will not work on the Switch

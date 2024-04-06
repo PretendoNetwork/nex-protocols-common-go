@@ -44,13 +44,14 @@ func (commonProtocol *CommonProtocol) updateSessionHost(err error, packet nex.Pa
 		return rmcResponse, nil
 	}
 
+	originalOwner := session.GameMatchmakeSession.Gathering.OwnerPID
 	session.GameMatchmakeSession.Gathering.OwnerPID = connection.PID().Copy().(*types.PID)
 
 	category := notifications.NotificationCategories.OwnershipChanged
 	subtype := notifications.NotificationSubTypes.OwnershipChanged.None
 
 	oEvent := notifications_types.NewNotificationEvent()
-	oEvent.PIDSource = connection.PID().Copy().(*types.PID)
+	oEvent.PIDSource = originalOwner.Copy().(*types.PID)
 	oEvent.Type = types.NewPrimitiveU32(notifications.BuildNotificationType(category, subtype))
 	oEvent.Param1 = gid.Copy().(*types.PrimitiveU32)
 	oEvent.Param2 = types.NewPrimitiveU32(connection.PID().LegacyValue()) // TODO - This assumes a legacy client. Will not work on the Switch
