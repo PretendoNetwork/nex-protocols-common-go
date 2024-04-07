@@ -3,124 +3,109 @@ package datastore
 import (
 	"fmt"
 
-	nex "github.com/PretendoNetwork/nex-go"
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
-	datastore "github.com/PretendoNetwork/nex-protocols-go/datastore"
-	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
+	"github.com/PretendoNetwork/nex-go/v2"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	datastore "github.com/PretendoNetwork/nex-protocols-go/v2/datastore"
+	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
-func completePostObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreCompletePostParam) uint32 {
-	if commonDataStoreProtocol.minIOClient == nil {
+func (commonProtocol *CommonProtocol) completePostObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreCompletePostParam) (*nex.RMCMessage, *nex.Error) {
+	if commonProtocol.minIOClient == nil {
 		common_globals.Logger.Warning("MinIOClient not defined")
-		return nex.Errors.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
-	if commonDataStoreProtocol.getObjectInfoByDataIDHandler == nil {
+	if commonProtocol.GetObjectInfoByDataID == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataID not defined")
-		return nex.Errors.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
-	if commonDataStoreProtocol.getObjectOwnerByDataIDHandler == nil {
+	if commonProtocol.GetObjectOwnerByDataID == nil {
 		common_globals.Logger.Warning("GetObjectOwnerByDataID not defined")
-		return nex.Errors.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
-	if commonDataStoreProtocol.getObjectSizeByDataIDHandler == nil {
+	if commonProtocol.GetObjectSizeByDataID == nil {
 		common_globals.Logger.Warning("GetObjectSizeByDataID not defined")
-		return nex.Errors.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
-	if commonDataStoreProtocol.updateObjectUploadCompletedByDataIDHandler == nil {
+	if commonProtocol.UpdateObjectUploadCompletedByDataID == nil {
 		common_globals.Logger.Warning("UpdateObjectUploadCompletedByDataID not defined")
-		return nex.Errors.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
-	if commonDataStoreProtocol.deleteObjectByDataIDHandler == nil {
+	if commonProtocol.DeleteObjectByDataID == nil {
 		common_globals.Logger.Warning("DeleteObjectByDataID not defined")
-		return nex.Errors.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.DataStore.Unknown
+		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
 	}
 
-	client := packet.Sender()
+	connection := packet.Sender()
+	endpoint := connection.Endpoint()
 
 	// * If GetObjectInfoByDataID returns data then that means
 	// * the object has already been marked as uploaded. So do
 	// * nothing
-	objectInfo, _ := commonDataStoreProtocol.getObjectInfoByDataIDHandler(param.DataID)
+	objectInfo, _ := commonProtocol.GetObjectInfoByDataID(param.DataID)
 	if objectInfo != nil {
-		return nex.Errors.DataStore.PermissionDenied
+		return nil, nex.NewError(nex.ResultCodes.DataStore.PermissionDenied, "change_error")
 	}
 
 	// * Only allow an objects owner to make this request
-	ownerPID, errCode := commonDataStoreProtocol.getObjectOwnerByDataIDHandler(param.DataID)
-	if errCode != 0 {
-		return errCode
+	ownerPID, errCode := commonProtocol.GetObjectOwnerByDataID(param.DataID)
+	if errCode != nil {
+		return nil, errCode
 	}
 
-	if ownerPID != client.PID() {
-		return nex.Errors.DataStore.PermissionDenied
+	if ownerPID != connection.PID().LegacyValue() {
+		return nil, nex.NewError(nex.ResultCodes.DataStore.PermissionDenied, "change_error")
 	}
 
-	bucket := commonDataStoreProtocol.s3Bucket
-	key := fmt.Sprintf("%s/%d.bin", commonDataStoreProtocol.s3DataKeyBase, param.DataID)
+	bucket := commonProtocol.S3Bucket
+	key := fmt.Sprintf("%s/%d.bin", commonProtocol.s3DataKeyBase, param.DataID)
 
-	if param.IsSuccess {
-		objectSizeS3, err := commonDataStoreProtocol.S3ObjectSize(bucket, key)
+	if param.IsSuccess.Value {
+		objectSizeS3, err := commonProtocol.S3ObjectSize(bucket, key)
 		if err != nil {
 			common_globals.Logger.Error(err.Error())
-			return nex.Errors.DataStore.NotFound
+			return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
 		}
 
-		objectSizeDB, errCode := commonDataStoreProtocol.getObjectSizeByDataIDHandler(param.DataID)
-		if errCode != 0 {
-			return errCode
+		objectSizeDB, errCode := commonProtocol.GetObjectSizeByDataID(param.DataID)
+		if errCode != nil {
+			return nil, errCode
 		}
 
 		if objectSizeS3 != uint64(objectSizeDB) {
 			common_globals.Logger.Errorf("Object with DataID %d did not upload correctly! Mismatched sizes", param.DataID)
 			// TODO - Is this a good error?
-			return nex.Errors.DataStore.Unknown
+			return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
 		}
 
-		errCode = commonDataStoreProtocol.updateObjectUploadCompletedByDataIDHandler(param.DataID, true)
-		if errCode != 0 {
-			return errCode
+		errCode = commonProtocol.UpdateObjectUploadCompletedByDataID(param.DataID, true)
+		if errCode != nil {
+			return nil, errCode
 		}
 	} else {
-		errCode := commonDataStoreProtocol.deleteObjectByDataIDHandler(param.DataID)
-		if errCode != 0 {
-			return errCode
+		errCode := commonProtocol.DeleteObjectByDataID(param.DataID)
+		if errCode != nil {
+			return nil, errCode
 		}
 	}
 
-	rmcResponse := nex.NewRMCResponse(datastore.ProtocolID, callID)
-	rmcResponse.SetSuccess(datastore.MethodCompletePostObject, nil)
+	rmcResponse := nex.NewRMCSuccess(endpoint, nil)
+	rmcResponse.ProtocolID = datastore.ProtocolID
+	rmcResponse.MethodID = datastore.MethodCompletePostObject
+	rmcResponse.CallID = callID
 
-	rmcResponseBytes := rmcResponse.Bytes()
-
-	var responsePacket nex.PacketInterface
-
-	if commonDataStoreProtocol.server.PRUDPVersion() == 0 {
-		responsePacket, _ = nex.NewPacketV0(client, nil)
-		responsePacket.SetVersion(0)
-	} else {
-		responsePacket, _ = nex.NewPacketV1(client, nil)
-		responsePacket.SetVersion(1)
+	if commonProtocol.OnAfterCompletePostObject != nil {
+		go commonProtocol.OnAfterCompletePostObject(packet, param)
 	}
 
-	responsePacket.SetSource(packet.Destination())
-	responsePacket.SetDestination(packet.Source())
-	responsePacket.SetType(nex.DataPacket)
-	responsePacket.SetPayload(rmcResponseBytes)
-
-	responsePacket.AddFlag(nex.FlagNeedsAck)
-	responsePacket.AddFlag(nex.FlagReliable)
-
-	commonDataStoreProtocol.server.Send(responsePacket)
-
-	return 0
+	return rmcResponse, nil
 }

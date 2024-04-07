@@ -1,60 +1,42 @@
 package utility
 
 import (
-	nex "github.com/PretendoNetwork/nex-go"
-	utility "github.com/PretendoNetwork/nex-protocols-go/utility"
-
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
+	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/types"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	utility "github.com/PretendoNetwork/nex-protocols-go/v2/utility"
 )
 
-func acquireNexUniqueID(err error, packet nex.PacketInterface, callID uint32) uint32 {
+func (commonProtocol *CommonProtocol) acquireNexUniqueID(err error, packet nex.PacketInterface, callID uint32) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.Core.InvalidArgument
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	client := packet.Sender()
-
-	var pNexUniqueID uint64
-
-	if commonUtilityProtocol.randomU64Handler != nil {
-		pNexUniqueID = commonUtilityProtocol.randomU64Handler()
-	} else {
-		pNexUniqueID = commonUtilityProtocol.randGenerator.Uint64()
+	if commonProtocol.GenerateNEXUniqueID == nil {
+		common_globals.Logger.Warning("Utility::AcquireNexUniqueID missing GenerateNEXUniqueID!")
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
-	server := commonUtilityProtocol.server
+	connection := packet.Sender()
+	endpoint := connection.Endpoint()
 
-	rmcResponseStream := nex.NewStreamOut(server)
+	pNexUniqueID := types.NewPrimitiveU64(commonProtocol.GenerateNEXUniqueID())
 
-	rmcResponseStream.WriteUInt64LE(pNexUniqueID)
+	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
+
+	pNexUniqueID.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCResponse(utility.ProtocolID, callID)
-	rmcResponse.SetSuccess(utility.MethodAcquireNexUniqueID, rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
+	rmcResponse.ProtocolID = utility.ProtocolID
+	rmcResponse.MethodID = utility.MethodAcquireNexUniqueID
+	rmcResponse.CallID = callID
 
-	rmcResponseBytes := rmcResponse.Bytes()
-
-	var responsePacket nex.PacketInterface
-
-	if server.PRUDPVersion() == 0 {
-		responsePacket, _ = nex.NewPacketV0(client, nil)
-		responsePacket.SetVersion(0)
-	} else {
-		responsePacket, _ = nex.NewPacketV1(client, nil)
-		responsePacket.SetVersion(1)
+	if commonProtocol.OnAfterAcquireNexUniqueID != nil {
+		go commonProtocol.OnAfterAcquireNexUniqueID(packet)
 	}
 
-	responsePacket.SetSource(packet.Destination())
-	responsePacket.SetDestination(packet.Source())
-	responsePacket.SetType(nex.DataPacket)
-	responsePacket.SetPayload(rmcResponseBytes)
-
-	responsePacket.AddFlag(nex.FlagNeedsAck)
-	responsePacket.AddFlag(nex.FlagReliable)
-
-	server.Send(responsePacket)
-
-	return 0
+	return rmcResponse, nil
 }

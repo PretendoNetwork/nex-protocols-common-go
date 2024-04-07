@@ -1,52 +1,54 @@
 package ticket_granting
 
 import (
-	"github.com/PretendoNetwork/nex-go"
-	_ "github.com/PretendoNetwork/nex-protocols-go"
-	ticket_granting "github.com/PretendoNetwork/nex-protocols-go/ticket-granting"
+	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/types"
+	_ "github.com/PretendoNetwork/nex-protocols-go/v2"
+	ticket_granting "github.com/PretendoNetwork/nex-protocols-go/v2/ticket-granting"
 
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 )
 
-var commonTicketGrantingProtocol *CommonTicketGrantingProtocol
-
-type CommonTicketGrantingProtocol struct {
-	*ticket_granting.Protocol
-	server                   *nex.Server
-	secureStationURL         *nex.StationURL
-	buildName                string
-	allowInsecureLoginMethod bool
+type CommonProtocol struct {
+	protocol                   ticket_granting.Interface
+	SecureStationURL           *types.StationURL
+	SpecialProtocols           []*types.PrimitiveU8
+	StationURLSpecialProtocols *types.StationURL
+	BuildName                  *types.String
+	allowInsecureLoginMethod   bool
+	SessionKeyLength           int // TODO - Use server SessionKeyLength?
+	SecureServerAccount        *nex.Account
+	OnAfterLogin               func(packet nex.PacketInterface, strUserName *types.String)
+	OnAfterLoginEx             func(packet nex.PacketInterface, strUserName *types.String, oExtraData *types.AnyDataHolder)
+	OnAfterRequestTicket       func(packet nex.PacketInterface, idSource *types.PID, idTarget *types.PID)
 }
 
-func (commonTicketGrantingProtocol *CommonTicketGrantingProtocol) SetSecureStationURL(stationURL *nex.StationURL) {
-	commonTicketGrantingProtocol.secureStationURL = stationURL
+func (commonProtocol *CommonProtocol) DisableInsecureLogin() {
+	commonProtocol.allowInsecureLoginMethod = false
 }
 
-func (commonTicketGrantingProtocol *CommonTicketGrantingProtocol) SetBuildName(buildName string) {
-	commonTicketGrantingProtocol.buildName = buildName
-}
-
-func (commonTicketGrantingProtocol *CommonTicketGrantingProtocol) DisableInsecureLogin() {
-	commonTicketGrantingProtocol.allowInsecureLoginMethod = false
-}
-
-func (commonTicketGrantingProtocol *CommonTicketGrantingProtocol) EnableInsecureLogin() {
+func (commonProtocol *CommonProtocol) EnableInsecureLogin() {
 	common_globals.Logger.Warning("INSECURE LOGIN HAS BEEN ENABLED. THIS ALLOWS THE USE OF CUSTOM CLIENTS TO BYPASS THE ACCOUNT SERVER AND CONNECT DIRECTLY TO THIS GAME SERVER, EVADING BANS! USE WITH CAUTION!")
-	commonTicketGrantingProtocol.allowInsecureLoginMethod = true
+	commonProtocol.allowInsecureLoginMethod = true
 }
 
-// NewCommonTicketGrantingProtocol returns a new CommonTicketGrantingProtocol
-func NewCommonTicketGrantingProtocol(server *nex.Server) *CommonTicketGrantingProtocol {
-	ticketGrantingProtocol := ticket_granting.NewProtocol(server)
-	commonTicketGrantingProtocol = &CommonTicketGrantingProtocol{
-		Protocol: ticketGrantingProtocol,
-		server:   server,
+// NewCommonProtocol returns a new CommonProtocol
+func NewCommonProtocol(protocol ticket_granting.Interface) *CommonProtocol {
+	commonProtocol := &CommonProtocol{
+		protocol:                   protocol,
+		SecureStationURL:           types.NewStationURL("prudp:/"),
+		SpecialProtocols:           make([]*types.PrimitiveU8, 0),
+		StationURLSpecialProtocols: types.NewStationURL(""),
+		BuildName:                  types.NewString(""),
+		allowInsecureLoginMethod:   false,
+		SessionKeyLength:           32,
 	}
 
-	commonTicketGrantingProtocol.DisableInsecureLogin() // * Disable insecure login by default
-	commonTicketGrantingProtocol.Login(login)
-	commonTicketGrantingProtocol.LoginEx(loginEx)
-	commonTicketGrantingProtocol.RequestTicket(requestTicket)
+	protocol.SetHandlerLogin(commonProtocol.login)
+	protocol.SetHandlerLoginEx(commonProtocol.loginEx)
+	protocol.SetHandlerRequestTicket(commonProtocol.requestTicket)
 
-	return commonTicketGrantingProtocol
+	commonProtocol.DisableInsecureLogin() // * Disable insecure login by default
+
+	return commonProtocol
 }

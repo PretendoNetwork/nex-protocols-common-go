@@ -1,55 +1,41 @@
 package secureconnection
 
 import (
-	nex "github.com/PretendoNetwork/nex-go"
-	secure_connection "github.com/PretendoNetwork/nex-protocols-go/secure-connection"
+	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/types"
+	secure_connection "github.com/PretendoNetwork/nex-protocols-go/v2/secure-connection"
 
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 )
 
-func sendReport(err error, packet nex.PacketInterface, callID uint32, reportID uint32, reportData []byte) uint32 {
-	if commonSecureConnectionProtocol.createReportDBRecordHandler == nil {
+func (commonProtocol *CommonProtocol) sendReport(err error, packet nex.PacketInterface, callID uint32, reportID *types.PrimitiveU32, reportData *types.QBuffer) (*nex.RMCMessage, *nex.Error) {
+	if commonProtocol.CreateReportDBRecord == nil {
 		common_globals.Logger.Warning("SecureConnection::SendReport missing CreateReportDBRecord!")
-		return nex.Errors.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
 	if err != nil {
 		common_globals.Logger.Critical(err.Error())
-		return nex.Errors.Core.Unknown
+		return nil, nex.NewError(nex.ResultCodes.Core.Unknown, "change_error")
 	}
 
-	client := packet.Sender()
+	connection := packet.Sender()
+	endpoint := connection.Endpoint()
 
-	err = commonSecureConnectionProtocol.createReportDBRecordHandler(client.PID(), reportID, reportData)
+	err = commonProtocol.CreateReportDBRecord(connection.PID(), reportID, reportData)
 	if err != nil {
 		common_globals.Logger.Critical(err.Error())
-		return nex.Errors.Core.Unknown
+		return nil, nex.NewError(nex.ResultCodes.Core.Unknown, "change_error")
 	}
 
-	rmcResponse := nex.NewRMCResponse(secure_connection.ProtocolID, callID)
-	rmcResponse.SetSuccess(secure_connection.MethodSendReport, nil)
+	rmcResponse := nex.NewRMCSuccess(endpoint, nil)
+	rmcResponse.ProtocolID = secure_connection.ProtocolID
+	rmcResponse.MethodID = secure_connection.MethodSendReport
+	rmcResponse.CallID = callID
 
-	rmcResponseBytes := rmcResponse.Bytes()
-
-	var responsePacket nex.PacketInterface
-
-	if commonSecureConnectionProtocol.server.PRUDPVersion() == 0 {
-		responsePacket, _ = nex.NewPacketV0(client, nil)
-		responsePacket.SetVersion(0)
-	} else {
-		responsePacket, _ = nex.NewPacketV1(client, nil)
-		responsePacket.SetVersion(1)
+	if commonProtocol.OnAfterSendReport != nil {
+		go commonProtocol.OnAfterSendReport(packet, reportID, reportData)
 	}
 
-	responsePacket.SetSource(packet.Destination())
-	responsePacket.SetDestination(packet.Source())
-	responsePacket.SetType(nex.DataPacket)
-	responsePacket.SetPayload(rmcResponseBytes)
-
-	responsePacket.AddFlag(nex.FlagNeedsAck)
-	responsePacket.AddFlag(nex.FlagReliable)
-
-	commonSecureConnectionProtocol.server.Send(responsePacket)
-
-	return 0
+	return rmcResponse, nil
 }

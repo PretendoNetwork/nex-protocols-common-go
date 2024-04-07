@@ -1,88 +1,40 @@
 package ranking
 
 import (
-	"strings"
-
-	"github.com/PretendoNetwork/nex-go"
-	ranking "github.com/PretendoNetwork/nex-protocols-go/ranking"
-	ranking_mario_kart_8 "github.com/PretendoNetwork/nex-protocols-go/ranking/mario-kart-8"
-	ranking_types "github.com/PretendoNetwork/nex-protocols-go/ranking/types"
-
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
+	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/types"
+	ranking "github.com/PretendoNetwork/nex-protocols-go/v2/ranking"
+	ranking_types "github.com/PretendoNetwork/nex-protocols-go/v2/ranking/types"
 )
 
-var commonRankingProtocol *CommonRankingProtocol
-
-type CommonRankingProtocol struct {
-	server             *nex.Server
-	DefaultProtocol    *ranking.Protocol
-	MarioKart8Protocol *ranking_mario_kart_8.Protocol
-
-	getCommonDataHandler                                     func(unique_id uint64) ([]byte, error)
-	uploadCommonDataHandler                                  func(pid uint32, uniqueID uint64, commonData []byte) error
-	insertRankingByPIDAndRankingScoreDataHandler             func(pid uint32, rankingScoreData *ranking_types.RankingScoreData, uniqueID uint64) error
-	getRankingsAndCountByCategoryAndRankingOrderParamHandler func(category uint32, rankingOrderParam *ranking_types.RankingOrderParam) ([]*ranking_types.RankingRankData, uint32, error)
+type CommonProtocol struct {
+	endpoint                                          nex.EndpointInterface
+	protocol                                          ranking.Interface
+	GetCommonData                                     func(uniqueID *types.PrimitiveU64) (*types.Buffer, error)
+	UploadCommonData                                  func(pid *types.PID, uniqueID *types.PrimitiveU64, commonData *types.Buffer) error
+	InsertRankingByPIDAndRankingScoreData             func(pid *types.PID, rankingScoreData *ranking_types.RankingScoreData, uniqueID *types.PrimitiveU64) error
+	GetRankingsAndCountByCategoryAndRankingOrderParam func(category *types.PrimitiveU32, rankingOrderParam *ranking_types.RankingOrderParam) (*types.List[*ranking_types.RankingRankData], uint32, error)
+	OnAfterGetCachedTopXRanking                       func(packet nex.PacketInterface, category *types.PrimitiveU32, orderParam *ranking_types.RankingOrderParam)
+	OnAfterGetCachedTopXRankings                      func(packet nex.PacketInterface, categories *types.List[*types.PrimitiveU32], orderParams *types.List[*ranking_types.RankingOrderParam])
+	OnAfterGetCommonData                              func(packet nex.PacketInterface, uniqueID *types.PrimitiveU64)
+	OnAfterGetRanking                                 func(packet nex.PacketInterface, rankingMode *types.PrimitiveU8, category *types.PrimitiveU32, orderParam *ranking_types.RankingOrderParam, uniqueID *types.PrimitiveU64, principalID *types.PID)
+	OnAfterUploadCommonData                           func(packet nex.PacketInterface, commonData *types.Buffer, uniqueID *types.PrimitiveU64)
+	OnAfterUploadScore                                func(packet nex.PacketInterface, scoreData *ranking_types.RankingScoreData, uniqueID *types.PrimitiveU64)
 }
 
-// GetCommonData sets the GetCommonData handler function
-func (commonRankingProtocol *CommonRankingProtocol) GetCommonData(handler func(unique_id uint64) ([]byte, error)) {
-	commonRankingProtocol.getCommonDataHandler = handler
-}
-
-// UploadCommonData sets the UploadCommonData handler function
-func (commonRankingProtocol *CommonRankingProtocol) UploadCommonData(handler func(pid uint32, uniqueID uint64, commonData []byte) error) {
-	commonRankingProtocol.uploadCommonDataHandler = handler
-}
-
-// InsertRankingByPIDAndRankingScoreData sets the InsertRankingByPIDAndRankingScoreData handler function
-func (commonRankingProtocol *CommonRankingProtocol) InsertRankingByPIDAndRankingScoreData(handler func(pid uint32, rankingScoreData *ranking_types.RankingScoreData, uniqueID uint64) error) {
-	commonRankingProtocol.insertRankingByPIDAndRankingScoreDataHandler = handler
-}
-
-// GetRankingsAndCountByCategoryAndRankingOrderParam sets the GetRankingsAndCountByCategoryAndRankingOrderParam handler function
-func (commonRankingProtocol *CommonRankingProtocol) GetRankingsAndCountByCategoryAndRankingOrderParam(handler func(category uint32, rankingOrderParam *ranking_types.RankingOrderParam) ([]*ranking_types.RankingRankData, uint32, error)) {
-	commonRankingProtocol.getRankingsAndCountByCategoryAndRankingOrderParamHandler = handler
-}
-
-func initDefault(c *CommonRankingProtocol) {
-	// TODO - Organize by method ID
-	c.DefaultProtocol = ranking.NewProtocol(c.server)
-	c.DefaultProtocol.GetCachedTopXRanking(getCachedTopXRanking)
-	c.DefaultProtocol.GetCachedTopXRankings(getCachedTopXRankings)
-	c.DefaultProtocol.GetCommonData(getCommonData)
-	c.DefaultProtocol.GetRanking(getRanking)
-	c.DefaultProtocol.UploadCommonData(uploadCommonData)
-	c.DefaultProtocol.UploadScore(uploadScore)
-}
-
-func initMarioKart8(c *CommonRankingProtocol) {
-	// TODO - Organize by method ID
-	c.MarioKart8Protocol = ranking_mario_kart_8.NewProtocol(c.server)
-	c.MarioKart8Protocol.GetCachedTopXRanking(getCachedTopXRanking)
-	c.MarioKart8Protocol.GetCachedTopXRankings(getCachedTopXRankings)
-	c.MarioKart8Protocol.GetCommonData(getCommonData)
-	c.MarioKart8Protocol.GetRanking(getRanking)
-	c.MarioKart8Protocol.UploadCommonData(uploadCommonData)
-	c.MarioKart8Protocol.UploadScore(uploadScore)
-}
-
-// NewCommonRankingProtocol returns a new CommonRankingProtocol
-func NewCommonRankingProtocol(server *nex.Server) *CommonRankingProtocol {
-	commonRankingProtocol = &CommonRankingProtocol{server: server}
-
-	patch := server.MatchMakingProtocolVersion().GameSpecificPatch
-
-	if strings.EqualFold(patch, "AMKJ") {
-		common_globals.Logger.Info("Using Mario Kart 8 Ranking protocol")
-		initMarioKart8(commonRankingProtocol)
-	} else {
-		if patch != "" {
-			common_globals.Logger.Infof("Ranking version patch %q not recognized", patch)
-		}
-
-		common_globals.Logger.Info("Using default Ranking protocol")
-		initDefault(commonRankingProtocol)
+// NewCommonProtocol returns a new CommonProtocol
+func NewCommonProtocol(protocol ranking.Interface) *CommonProtocol {
+	commonProtocol := &CommonProtocol{
+		endpoint: protocol.Endpoint(),
+		protocol: protocol,
 	}
 
-	return commonRankingProtocol
+	protocol.SetHandlerGetCachedTopXRanking(commonProtocol.getCachedTopXRanking)
+	protocol.SetHandlerGetCachedTopXRankings(commonProtocol.getCachedTopXRankings)
+	protocol.SetHandlerGetCommonData(commonProtocol.getCommonData)
+	protocol.SetHandlerGetRanking(commonProtocol.getRanking)
+	protocol.SetHandlerUploadCommonData(commonProtocol.uploadCommonData)
+	protocol.SetHandlerUploadScore(commonProtocol.uploadScore)
+
+	return commonProtocol
 }

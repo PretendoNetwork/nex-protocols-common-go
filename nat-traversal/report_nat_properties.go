@@ -1,56 +1,40 @@
 package nattraversal
 
 import (
-	nex "github.com/PretendoNetwork/nex-go"
-	nat_traversal "github.com/PretendoNetwork/nex-protocols-go/nat-traversal"
-
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
+	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/constants"
+	"github.com/PretendoNetwork/nex-go/v2/types"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	nat_traversal "github.com/PretendoNetwork/nex-protocols-go/v2/nat-traversal"
 )
 
-func reportNATProperties(err error, packet nex.PacketInterface, callID uint32, natm uint32, natf uint32, rtt uint32) uint32 {
+func (commonProtocol *CommonProtocol) reportNATProperties(err error, packet nex.PacketInterface, callID uint32, natmapping *types.PrimitiveU32, natfiltering *types.PrimitiveU32, rtt *types.PrimitiveU32) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.Core.InvalidArgument
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	server := commonNATTraversalProtocol.server
-	client := packet.Sender()
+	connection := packet.Sender().(*nex.PRUDPConnection)
+	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
-	stations := client.StationURLs()
-	for _, station := range stations {
-		if station.IsLocal() {
-			station.SetNatm(natm)
-			station.SetNatf(natf)
+	for _, station := range connection.StationURLs.Slice() {
+		if !station.IsPublic() {
+			station.SetNATMapping(constants.NATMappingProperties(natmapping.Value))
+			station.SetNATFiltering(constants.NATFilteringProperties(natfiltering.Value))
 		}
 
-		station.SetRVCID(client.ConnectionID())
-		station.SetPID(client.PID())
+		station.SetRVConnectionID(connection.ID)
+		station.SetPrincipalID(connection.PID())
 	}
 
-	rmcResponse := nex.NewRMCResponse(nat_traversal.ProtocolID, callID)
-	rmcResponse.SetSuccess(nat_traversal.MethodReportNATProperties, nil)
+	rmcResponse := nex.NewRMCSuccess(endpoint, nil)
+	rmcResponse.ProtocolID = nat_traversal.ProtocolID
+	rmcResponse.MethodID = nat_traversal.MethodReportNATProperties
+	rmcResponse.CallID = callID
 
-	rmcResponseBytes := rmcResponse.Bytes()
-
-	var responsePacket nex.PacketInterface
-
-	if server.PRUDPVersion() == 0 {
-		responsePacket, _ = nex.NewPacketV0(client, nil)
-		responsePacket.SetVersion(0)
-	} else {
-		responsePacket, _ = nex.NewPacketV1(client, nil)
-		responsePacket.SetVersion(1)
+	if commonProtocol.OnAfterReportNATProperties != nil {
+		go commonProtocol.OnAfterReportNATProperties(packet, natmapping, natfiltering, rtt)
 	}
 
-	responsePacket.SetSource(packet.Destination())
-	responsePacket.SetDestination(packet.Source())
-	responsePacket.SetType(nex.DataPacket)
-	responsePacket.SetPayload(rmcResponseBytes)
-
-	responsePacket.AddFlag(nex.FlagNeedsAck)
-	responsePacket.AddFlag(nex.FlagReliable)
-
-	server.Send(responsePacket)
-
-	return 0
+	return rmcResponse, nil
 }

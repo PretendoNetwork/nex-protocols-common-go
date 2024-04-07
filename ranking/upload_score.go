@@ -1,57 +1,41 @@
 package ranking
 
 import (
-	"github.com/PretendoNetwork/nex-go"
-	ranking "github.com/PretendoNetwork/nex-protocols-go/ranking"
-	ranking_types "github.com/PretendoNetwork/nex-protocols-go/ranking/types"
-
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
+	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/types"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	ranking "github.com/PretendoNetwork/nex-protocols-go/v2/ranking"
+	ranking_types "github.com/PretendoNetwork/nex-protocols-go/v2/ranking/types"
 )
 
-func uploadScore(err error, packet nex.PacketInterface, callID uint32, scoreData *ranking_types.RankingScoreData, uniqueID uint64) uint32 {
-	if commonRankingProtocol.insertRankingByPIDAndRankingScoreDataHandler == nil {
-		common_globals.Logger.Warning("Ranking::UploadScore missing InsertRankingByPIDAndRankingScoreDataHandler!")
-		return nex.Errors.Core.NotImplemented
+func (commonProtocol *CommonProtocol) uploadScore(err error, packet nex.PacketInterface, callID uint32, scoreData *ranking_types.RankingScoreData, uniqueID *types.PrimitiveU64) (*nex.RMCMessage, *nex.Error) {
+	if commonProtocol.InsertRankingByPIDAndRankingScoreData == nil {
+		common_globals.Logger.Warning("Ranking::UploadScore missing InsertRankingByPIDAndRankingScoreData!")
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
-
-	client := packet.Sender()
-	server := commonRankingProtocol.server
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.Ranking.InvalidArgument
+		return nil, nex.NewError(nex.ResultCodes.Ranking.InvalidArgument, "change_error")
 	}
 
-	err = commonRankingProtocol.insertRankingByPIDAndRankingScoreDataHandler(client.PID(), scoreData, uniqueID)
+	connection := packet.Sender()
+	endpoint := connection.Endpoint()
+
+	err = commonProtocol.InsertRankingByPIDAndRankingScoreData(connection.PID(), scoreData, uniqueID)
 	if err != nil {
 		common_globals.Logger.Critical(err.Error())
-		return nex.Errors.Ranking.Unknown
+		return nil, nex.NewError(nex.ResultCodes.Ranking.Unknown, "change_error")
 	}
 
-	rmcResponse := nex.NewRMCResponse(ranking.ProtocolID, callID)
-	rmcResponse.SetSuccess(ranking.MethodUploadScore, nil)
+	rmcResponse := nex.NewRMCSuccess(endpoint, nil)
+	rmcResponse.ProtocolID = ranking.ProtocolID
+	rmcResponse.MethodID = ranking.MethodUploadScore
+	rmcResponse.CallID = callID
 
-	rmcResponseBytes := rmcResponse.Bytes()
-
-	var responsePacket nex.PacketInterface
-
-	if server.PRUDPVersion() == 0 {
-		responsePacket, _ = nex.NewPacketV0(client, nil)
-		responsePacket.SetVersion(0)
-	} else {
-		responsePacket, _ = nex.NewPacketV1(client, nil)
-		responsePacket.SetVersion(1)
+	if commonProtocol.OnAfterUploadScore != nil {
+		go commonProtocol.OnAfterUploadScore(packet, scoreData, uniqueID)
 	}
 
-	responsePacket.SetSource(packet.Destination())
-	responsePacket.SetDestination(packet.Source())
-	responsePacket.SetType(nex.DataPacket)
-	responsePacket.SetPayload(rmcResponseBytes)
-
-	responsePacket.AddFlag(nex.FlagNeedsAck)
-	responsePacket.AddFlag(nex.FlagReliable)
-
-	server.Send(responsePacket)
-
-	return 0
+	return rmcResponse, nil
 }

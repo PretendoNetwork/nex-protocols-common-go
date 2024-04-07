@@ -1,96 +1,99 @@
 package datastore
 
 import (
-	nex "github.com/PretendoNetwork/nex-go"
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
-	datastore "github.com/PretendoNetwork/nex-protocols-go/datastore"
-	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
+	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/types"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	datastore "github.com/PretendoNetwork/nex-protocols-go/v2/datastore"
+	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
-func rateObjects(err error, packet nex.PacketInterface, callID uint32, targets []*datastore_types.DataStoreRatingTarget, params []*datastore_types.DataStoreRateObjectParam, transactional bool, fetchRatings bool) uint32 {
-	if commonDataStoreProtocol.getObjectInfoByDataIDWithPasswordHandler == nil {
+func (commonProtocol *CommonProtocol) rateObjects(err error, packet nex.PacketInterface, callID uint32, targets *types.List[*datastore_types.DataStoreRatingTarget], params *types.List[*datastore_types.DataStoreRateObjectParam], transactional *types.PrimitiveBool, fetchRatings *types.PrimitiveBool) (*nex.RMCMessage, *nex.Error) {
+	if commonProtocol.GetObjectInfoByDataIDWithPassword == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataIDWithPassword not defined")
-		return nex.Errors.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
-	if commonDataStoreProtocol.rateObjectWithPasswordHandler == nil {
+	if commonProtocol.RateObjectWithPassword == nil {
 		common_globals.Logger.Warning("RateObjectWithPassword not defined")
-		return nex.Errors.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.DataStore.Unknown
+		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
 	}
 
-	client := packet.Sender()
+	connection := packet.Sender()
+	endpoint := connection.Endpoint()
 
-	pRatings := make([]*datastore_types.DataStoreRatingInfo, 0)
-	pResults := make([]*nex.Result, 0)
+	pRatings := types.NewList[*datastore_types.DataStoreRatingInfo]()
+	pResults := types.NewList[*types.QResult]()
+
+	pRatings.Type = datastore_types.NewDataStoreRatingInfo()
+	pResults.Type = types.NewQResult(0)
 
 	// * Real DataStore does not actually check this.
 	// * I just didn't feel like working out the
 	// * logic for differing sized lists. So force
 	// * them to always be the same
-	if len(targets) != len(params) {
-		return nex.Errors.DataStore.InvalidArgument
+	if targets.Length() != params.Length() {
+		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 	}
 
-	for i := 0; i < len(targets); i++ {
-		target := targets[i]
-		param := params[i]
+	var errorCode *nex.Error
 
-		objectInfo, errCode := commonDataStoreProtocol.getObjectInfoByDataIDWithPasswordHandler(target.DataID, param.AccessPassword)
-		if errCode != 0 {
-			return errCode
+	targets.Each(func(i int, target *datastore_types.DataStoreRatingTarget) bool {
+		param, err := params.Get(i)
+		if err != nil {
+			errorCode = nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
+			return true
 		}
 
-		errCode = commonDataStoreProtocol.VerifyObjectPermission(objectInfo.OwnerID, client.PID(), objectInfo.Permission)
-		if errCode != 0 {
-			return errCode
+		objectInfo, errCode := commonProtocol.GetObjectInfoByDataIDWithPassword(target.DataID, param.AccessPassword)
+		if errCode != nil {
+			errorCode = errCode
+			return true
 		}
 
-		rating, errCode := commonDataStoreProtocol.rateObjectWithPasswordHandler(target.DataID, target.Slot, param.RatingValue, param.AccessPassword)
-		if errCode != 0 {
-			return errCode
+		errCode = commonProtocol.VerifyObjectPermission(objectInfo.OwnerID, connection.PID(), objectInfo.Permission)
+		if errCode != nil {
+			errorCode = errCode
+			return true
 		}
 
-		if fetchRatings {
-			pRatings = append(pRatings, rating)
+		rating, errCode := commonProtocol.RateObjectWithPassword(target.DataID, target.Slot, param.RatingValue, param.AccessPassword)
+		if errCode != nil {
+			errorCode = errCode
+			return true
 		}
+
+		if fetchRatings.Value {
+			pRatings.Append(rating)
+		}
+
+		return false
+	})
+
+	if errorCode != nil {
+		return nil, errorCode
 	}
 
-	rmcResponseStream := nex.NewStreamOut(commonDataStoreProtocol.server)
+	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
-	rmcResponseStream.WriteListStructure(pRatings)
-	rmcResponseStream.WriteListResult(pResults) // * pResults is ALWAYS empty in SMM?
+	pRatings.WriteTo(rmcResponseStream)
+	pResults.WriteTo(rmcResponseStream) // * pResults is ALWAYS empty in SMM?
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCResponse(datastore.ProtocolID, callID)
-	rmcResponse.SetSuccess(datastore.MethodRateObjects, rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
+	rmcResponse.ProtocolID = datastore.ProtocolID
+	rmcResponse.MethodID = datastore.MethodRateObjects
+	rmcResponse.CallID = callID
 
-	rmcResponseBytes := rmcResponse.Bytes()
-
-	var responsePacket nex.PacketInterface
-
-	if commonDataStoreProtocol.server.PRUDPVersion() == 0 {
-		responsePacket, _ = nex.NewPacketV0(client, nil)
-		responsePacket.SetVersion(0)
-	} else {
-		responsePacket, _ = nex.NewPacketV1(client, nil)
-		responsePacket.SetVersion(1)
+	if commonProtocol.OnAfterRateObjects != nil {
+		go commonProtocol.OnAfterRateObjects(packet, targets, params, transactional, fetchRatings)
 	}
 
-	responsePacket.SetSource(packet.Destination())
-	responsePacket.SetDestination(packet.Source())
-	responsePacket.SetType(nex.DataPacket)
-	responsePacket.SetPayload(rmcResponseBytes)
-
-	responsePacket.AddFlag(nex.FlagNeedsAck)
-	responsePacket.AddFlag(nex.FlagReliable)
-
-	commonDataStoreProtocol.server.Send(responsePacket)
-
-	return 0
+	return rmcResponse, nil
 }

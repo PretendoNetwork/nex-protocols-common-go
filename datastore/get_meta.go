@@ -1,80 +1,66 @@
 package datastore
 
 import (
-	nex "github.com/PretendoNetwork/nex-go"
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
-	datastore "github.com/PretendoNetwork/nex-protocols-go/datastore"
-	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
+	"github.com/PretendoNetwork/nex-go/v2"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	datastore "github.com/PretendoNetwork/nex-protocols-go/v2/datastore"
+	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
-func getMeta(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreGetMetaParam) uint32 {
-	if commonDataStoreProtocol.getObjectInfoByPersistenceTargetWithPasswordHandler == nil {
+func (commonProtocol *CommonProtocol) getMeta(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreGetMetaParam) (*nex.RMCMessage, *nex.Error) {
+	if commonProtocol.GetObjectInfoByPersistenceTargetWithPassword == nil {
 		common_globals.Logger.Warning("GetObjectInfoByPersistenceTargetWithPassword not defined")
-		return nex.Errors.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
-	if commonDataStoreProtocol.getObjectInfoByDataIDWithPasswordHandler == nil {
+	if commonProtocol.GetObjectInfoByDataIDWithPassword == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataIDWithPassword not defined")
-		return nex.Errors.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.DataStore.Unknown
+		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
 	}
 
-	client := packet.Sender()
+	connection := packet.Sender()
+	endpoint := connection.Endpoint()
 
 	var pMetaInfo *datastore_types.DataStoreMetaInfo
-	var errCode uint32
+	var errCode *nex.Error
 
 	// * Real server ignores PersistenceTarget if DataID is set
-	if param.DataID == 0 {
-		pMetaInfo, errCode = commonDataStoreProtocol.getObjectInfoByPersistenceTargetWithPasswordHandler(param.PersistenceTarget, param.AccessPassword)
+	if param.DataID.Value == 0 {
+		pMetaInfo, errCode = commonProtocol.GetObjectInfoByPersistenceTargetWithPassword(param.PersistenceTarget, param.AccessPassword)
 	} else {
-		pMetaInfo, errCode = commonDataStoreProtocol.getObjectInfoByDataIDWithPasswordHandler(param.DataID, param.AccessPassword)
+		pMetaInfo, errCode = commonProtocol.GetObjectInfoByDataIDWithPassword(param.DataID, param.AccessPassword)
 	}
 
-	if errCode != 0 {
-		return errCode
+	if errCode != nil {
+		return nil, errCode
 	}
 
-	errCode = commonDataStoreProtocol.VerifyObjectPermission(pMetaInfo.OwnerID, client.PID(), pMetaInfo.Permission)
-	if errCode != 0 {
-		return errCode
+	errCode = commonProtocol.VerifyObjectPermission(pMetaInfo.OwnerID, connection.PID(), pMetaInfo.Permission)
+	if errCode != nil {
+		return nil, errCode
 	}
 
 	pMetaInfo.FilterPropertiesByResultOption(param.ResultOption)
 
-	rmcResponseStream := nex.NewStreamOut(commonDataStoreProtocol.server)
-	rmcResponseStream.WriteStructure(pMetaInfo)
+	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
+
+	pMetaInfo.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCResponse(datastore.ProtocolID, callID)
-	rmcResponse.SetSuccess(datastore.MethodGetMeta, rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
+	rmcResponse.ProtocolID = datastore.ProtocolID
+	rmcResponse.MethodID = datastore.MethodGetMeta
+	rmcResponse.CallID = callID
 
-	rmcResponseBytes := rmcResponse.Bytes()
-
-	var responsePacket nex.PacketInterface
-
-	if commonDataStoreProtocol.server.PRUDPVersion() == 0 {
-		responsePacket, _ = nex.NewPacketV0(client, nil)
-		responsePacket.SetVersion(0)
-	} else {
-		responsePacket, _ = nex.NewPacketV1(client, nil)
-		responsePacket.SetVersion(1)
+	if commonProtocol.OnAfterGetMeta != nil {
+		go commonProtocol.OnAfterGetMeta(packet, param)
 	}
 
-	responsePacket.SetSource(packet.Destination())
-	responsePacket.SetDestination(packet.Source())
-	responsePacket.SetType(nex.DataPacket)
-	responsePacket.SetPayload(rmcResponseBytes)
-
-	responsePacket.AddFlag(nex.FlagNeedsAck)
-	responsePacket.AddFlag(nex.FlagReliable)
-
-	commonDataStoreProtocol.server.Send(responsePacket)
-
-	return 0
+	return rmcResponse, nil
 }

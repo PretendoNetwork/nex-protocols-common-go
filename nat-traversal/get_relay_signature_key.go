@@ -1,56 +1,47 @@
 package nattraversal
 
 import (
-	nex "github.com/PretendoNetwork/nex-go"
-	nat_traversal "github.com/PretendoNetwork/nex-protocols-go/nat-traversal"
-
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
+	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/types"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	nat_traversal "github.com/PretendoNetwork/nex-protocols-go/v2/nat-traversal"
 )
 
-func getRelaySignatureKey(err error, packet nex.PacketInterface, callID uint32) uint32 {
+func (commonProtocol *CommonProtocol) getRelaySignatureKey(err error, packet nex.PacketInterface, callID uint32) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.Core.InvalidArgument
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	client := packet.Sender()
-	server := commonNATTraversalProtocol.server
+	connection := packet.Sender().(*nex.PRUDPConnection)
+	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
-	rmcResponseStream := nex.NewStreamOut(server)
+	relayMode := types.NewPrimitiveS32(0)        // * Relay mode? No idea what this means
+	currentUTCTime := types.NewDateTime(0).Now() // * Current time for the relay server, UTC
+	address := types.NewString("")               // * Relay server address. We don't have one, so for now this is empty.
+	port := types.NewPrimitiveU16(0)             // * Relay server port. We don't have one, so for now this is empty.
+	relayAddressType := types.NewPrimitiveS32(0) // * Relay address type? No idea what this means
+	gameServerID := types.NewPrimitiveU32(0)     // * Game Server ID. I don't know if this is checked (it doesn't appear to be though).
 
-	rmcResponseStream.WriteInt32LE(0)
-	dateTime := nex.NewDateTime(0)
-	dateTime.UTC()
-	rmcResponseStream.WriteDateTime(dateTime)
-	rmcResponseStream.WriteString("")  // Relay server address. We don't have one, so for now this is empty.
-	rmcResponseStream.WriteUInt16LE(0) // Relay server port. We don't have one, so for now this is empty.
-	rmcResponseStream.WriteInt32LE(0)
-	rmcResponseStream.WriteUInt32LE(0) // Game Server ID. I don't know if this is checked (it doesn't appear to be though).
+	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
+
+	relayMode.WriteTo(rmcResponseStream)
+	currentUTCTime.WriteTo(rmcResponseStream)
+	address.WriteTo(rmcResponseStream)
+	port.WriteTo(rmcResponseStream)
+	relayAddressType.WriteTo(rmcResponseStream)
+	gameServerID.WriteTo(rmcResponseStream)
+
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCResponse(nat_traversal.ProtocolID, callID)
-	rmcResponse.SetSuccess(nat_traversal.MethodGetRelaySignatureKey, rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
+	rmcResponse.ProtocolID = nat_traversal.ProtocolID
+	rmcResponse.MethodID = nat_traversal.MethodGetRelaySignatureKey
+	rmcResponse.CallID = callID
 
-	rmcResponseBytes := rmcResponse.Bytes()
-
-	var responsePacket nex.PacketInterface
-
-	if server.PRUDPVersion() == 0 {
-		responsePacket, _ = nex.NewPacketV0(client, nil)
-		responsePacket.SetVersion(0)
-	} else {
-		responsePacket, _ = nex.NewPacketV1(client, nil)
-		responsePacket.SetVersion(1)
+	if commonProtocol.OnAfterGetRelaySignatureKey != nil {
+		go commonProtocol.OnAfterGetRelaySignatureKey(packet)
 	}
-	responsePacket.SetSource(packet.Destination())
-	responsePacket.SetDestination(packet.Source())
-	responsePacket.SetType(nex.DataPacket)
-	responsePacket.SetPayload(rmcResponseBytes)
 
-	responsePacket.AddFlag(nex.FlagNeedsAck)
-	responsePacket.AddFlag(nex.FlagReliable)
-
-	server.Send(responsePacket)
-
-	return 0
+	return rmcResponse, nil
 }

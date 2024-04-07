@@ -1,51 +1,38 @@
 package matchmake_extension
 
 import (
-	nex "github.com/PretendoNetwork/nex-go"
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
-	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension"
+	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/types"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/v2/matchmake-extension"
 )
 
-func updateApplicationBuffer(err error, packet nex.PacketInterface, callID uint32, gid uint32, applicationBuffer []byte) uint32 {
+func (commonProtocol *CommonProtocol) updateApplicationBuffer(err error, packet nex.PacketInterface, callID uint32, gid *types.PrimitiveU32, applicationBuffer *types.Buffer) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.Core.InvalidArgument
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	client := packet.Sender()
-	server := commonMatchmakeExtensionProtocol.server
+	connection := packet.Sender().(*nex.PRUDPConnection)
+	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
-	session, ok := common_globals.Sessions[gid]
+	session, ok := common_globals.Sessions[gid.Value]
 	if !ok {
-		return nex.Errors.RendezVous.SessionVoid
+		return nil, nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "change_error")
 	}
 
-	session.GameMatchmakeSession.ApplicationData = applicationBuffer
+	// TODO - Should ANYONE be allowed to do this??
 
-	rmcResponse := nex.NewRMCResponse(matchmake_extension.ProtocolID, callID)
-	rmcResponse.SetSuccess(matchmake_extension.MethodUpdateApplicationBuffer, nil)
+	session.GameMatchmakeSession.ApplicationBuffer = applicationBuffer.Copy().(*types.Buffer)
 
-	rmcResponseBytes := rmcResponse.Bytes()
+	rmcResponse := nex.NewRMCSuccess(endpoint, nil)
+	rmcResponse.ProtocolID = matchmake_extension.ProtocolID
+	rmcResponse.MethodID = matchmake_extension.MethodUpdateApplicationBuffer
+	rmcResponse.CallID = callID
 
-	var responsePacket nex.PacketInterface
-
-	if server.PRUDPVersion() == 0 {
-		responsePacket, _ = nex.NewPacketV0(client, nil)
-		responsePacket.SetVersion(0)
-	} else {
-		responsePacket, _ = nex.NewPacketV1(client, nil)
-		responsePacket.SetVersion(1)
+	if commonProtocol.OnAfterUpdateApplicationBuffer != nil {
+		go commonProtocol.OnAfterUpdateApplicationBuffer(packet, gid, applicationBuffer)
 	}
 
-	responsePacket.SetSource(packet.Destination())
-	responsePacket.SetDestination(packet.Source())
-	responsePacket.SetType(nex.DataPacket)
-	responsePacket.SetPayload(rmcResponseBytes)
-
-	responsePacket.AddFlag(nex.FlagNeedsAck)
-	responsePacket.AddFlag(nex.FlagReliable)
-
-	server.Send(responsePacket)
-
-	return 0
+	return rmcResponse, nil
 }

@@ -3,82 +3,67 @@ package ranking
 import (
 	"time"
 
-	"github.com/PretendoNetwork/nex-go"
-	ranking "github.com/PretendoNetwork/nex-protocols-go/ranking"
-	ranking_types "github.com/PretendoNetwork/nex-protocols-go/ranking/types"
-
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
+	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/types"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	ranking "github.com/PretendoNetwork/nex-protocols-go/v2/ranking"
+	ranking_types "github.com/PretendoNetwork/nex-protocols-go/v2/ranking/types"
 )
 
-func getCachedTopXRanking(err error, packet nex.PacketInterface, callID uint32, category uint32, orderParam *ranking_types.RankingOrderParam) uint32 {
-	if commonRankingProtocol.getRankingsAndCountByCategoryAndRankingOrderParamHandler == nil {
-		common_globals.Logger.Warning("Ranking::GetCachedTopXRanking missing GetRankingsAndCountByCategoryAndRankingOrderParamHandler!")
-		return nex.Errors.Core.NotImplemented
+func (commonProtocol *CommonProtocol) getCachedTopXRanking(err error, packet nex.PacketInterface, callID uint32, category *types.PrimitiveU32, orderParam *ranking_types.RankingOrderParam) (*nex.RMCMessage, *nex.Error) {
+	if commonProtocol.GetRankingsAndCountByCategoryAndRankingOrderParam == nil {
+		common_globals.Logger.Warning("Ranking::GetCachedTopXRanking missing GetRankingsAndCountByCategoryAndRankingOrderParam!")
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
-	client := packet.Sender()
-	server := commonRankingProtocol.server
+	connection := packet.Sender()
+	endpoint := connection.Endpoint()
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.Ranking.InvalidArgument
+		return nil, nex.NewError(nex.ResultCodes.Ranking.InvalidArgument, "change_error")
 	}
 
-	rankDataList, totalCount, err := commonRankingProtocol.getRankingsAndCountByCategoryAndRankingOrderParamHandler(category, orderParam)
+	rankDataList, totalCount, err := commonProtocol.GetRankingsAndCountByCategoryAndRankingOrderParam(category, orderParam)
 	if err != nil {
 		common_globals.Logger.Critical(err.Error())
-		return nex.Errors.Ranking.Unknown
+		return nil, nex.NewError(nex.ResultCodes.Ranking.Unknown, "change_error")
 	}
 
-	if totalCount == 0 || len(rankDataList) == 0 {
-		return nex.Errors.Ranking.NotFound
+	if totalCount == 0 || rankDataList.Length() == 0 {
+		return nil, nex.NewError(nex.ResultCodes.Ranking.NotFound, "change_error")
 	}
-
-	rankingResult := ranking_types.NewRankingResult()
-
-	rankingResult.RankDataList = rankDataList
-	rankingResult.TotalCount = totalCount
-	rankingResult.SinceTime = nex.NewDateTime(0x1f40420000) // * 2000-01-01T00:00:00.000Z, this is what the real server sends back
 
 	pResult := ranking_types.NewRankingCachedResult()
-	serverTime := nex.NewDateTime(0)
-	pResult.CreatedTime = nex.NewDateTime(serverTime.UTC())
-	//The real server sends the "CreatedTime" + 5 minutes.
-	//It doesn't change, even on subsequent requests, until after the ExpiredTime has passed (seemingly what the "cached" means).
-	//Whether we need to replicate this idk, but in case, here's a note.
-	pResult.ExpiredTime = nex.NewDateTime(serverTime.FromTimestamp(time.Now().UTC().Add(time.Minute * time.Duration(5))))
-	pResult.MaxLength = 10 //This is the length Ultimate NES Remix uses. TODO: Does this matter? and are other games different?
 
-	rmcResponseStream := nex.NewStreamOut(server)
+	pResult.RankingResult.RankDataList = rankDataList
+	pResult.RankingResult.TotalCount = types.NewPrimitiveU32(totalCount)
+	pResult.RankingResult.SinceTime = types.NewDateTime(0x1F40420000) // * 2000-01-01T00:00:00.000Z, this is what the real server sends back
 
-	rmcResponseStream.WriteStructure(pResult)
+	pResult.CreatedTime = types.NewDateTime(0).Now()
+	// * The real server sends the "CreatedTime" + 5 minutes.
+	// * It doesn't change, even on subsequent requests, until after the
+	// * ExpiredTime has passed (seemingly what the "cached" means).
+	// * Whether we need to replicate this idk, but in case, here's a note.
+	pResult.ExpiredTime = types.NewDateTime(0).FromTimestamp(time.Now().UTC().Add(time.Minute * time.Duration(5)))
+	// * This is the length Ultimate NES Remix uses
+	// TODO - Does this matter? and are other games different?
+	pResult.MaxLength = types.NewPrimitiveU8(10)
+
+	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
+
+	pResult.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCResponse(ranking.ProtocolID, callID)
-	rmcResponse.SetSuccess(ranking.MethodGetCachedTopXRanking, rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
+	rmcResponse.ProtocolID = ranking.ProtocolID
+	rmcResponse.MethodID = ranking.MethodGetCachedTopXRanking
+	rmcResponse.CallID = callID
 
-	rmcResponseBytes := rmcResponse.Bytes()
-
-	var responsePacket nex.PacketInterface
-
-	if server.PRUDPVersion() == 0 {
-		responsePacket, _ = nex.NewPacketV0(client, nil)
-		responsePacket.SetVersion(0)
-	} else {
-		responsePacket, _ = nex.NewPacketV1(client, nil)
-		responsePacket.SetVersion(1)
+	if commonProtocol.OnAfterGetCachedTopXRanking != nil {
+		go commonProtocol.OnAfterGetCachedTopXRanking(packet, category, orderParam)
 	}
 
-	responsePacket.SetSource(packet.Destination())
-	responsePacket.SetDestination(packet.Source())
-	responsePacket.SetType(nex.DataPacket)
-	responsePacket.SetPayload(rmcResponseBytes)
-
-	responsePacket.AddFlag(nex.FlagNeedsAck)
-	responsePacket.AddFlag(nex.FlagReliable)
-
-	server.Send(responsePacket)
-
-	return 0
+	return rmcResponse, nil
 }

@@ -1,108 +1,89 @@
 package ticket_granting
 
 import (
-	"strconv"
-	"strings"
-
-	nex "github.com/PretendoNetwork/nex-go"
-	ticket_granting "github.com/PretendoNetwork/nex-protocols-go/ticket-granting"
-
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
+	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/types"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	ticket_granting "github.com/PretendoNetwork/nex-protocols-go/v2/ticket-granting"
 )
 
-func loginEx(err error, packet nex.PacketInterface, callID uint32, username string, oExtraData *nex.DataHolder) uint32 {
+func (commonProtocol *CommonProtocol) loginEx(err error, packet nex.PacketInterface, callID uint32, strUserName *types.String, oExtraData *types.AnyDataHolder) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.Core.InvalidArgument
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	client := packet.Sender()
+	// TODO - VALIDATE oExtraData!
 
-	var userPID uint32
+	connection := packet.Sender().(*nex.PRUDPConnection)
+	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
-	if username == "guest" {
-		userPID = 100
+	sourceAccount, errorCode := endpoint.AccountDetailsByUsername(strUserName.Value)
+	if errorCode != nil && errorCode.ResultCode != nex.ResultCodes.RendezVous.InvalidUsername {
+		// * Some other error happened
+		return nil, errorCode
+	}
+
+	targetAccount, errorCode := endpoint.AccountDetailsByUsername(commonProtocol.SecureServerAccount.Username)
+	if errorCode != nil && errorCode.ResultCode != nex.ResultCodes.RendezVous.InvalidUsername {
+		// * Some other error happened
+		return nil, errorCode
+	}
+
+	encryptedTicket, errorCode := generateTicket(sourceAccount, targetAccount, commonProtocol.SessionKeyLength, endpoint)
+
+	if errorCode != nil && errorCode.ResultCode != nex.ResultCodes.RendezVous.InvalidUsername {
+		// * Some other error happened
+		return nil, errorCode
+	}
+
+	var retval *types.QResult
+	pidPrincipal := types.NewPID(0)
+	pbufResponse := types.NewBuffer([]byte{})
+	pConnectionData := types.NewRVConnectionData()
+	strReturnMsg := types.NewString("")
+
+	// * From the wiki:
+	// *
+	// * "If the username does not exist, the %retval% field is set to
+	// * RendezVous::InvalidUsername and the other fields are left blank."
+	if errorCode != nil && errorCode.ResultCode == nex.ResultCodes.RendezVous.InvalidUsername {
+		retval = types.NewQResultError(errorCode.ResultCode)
 	} else {
-		converted, err := strconv.Atoi(strings.TrimRight(username, "\x00"))
-		if err != nil {
-			panic(err)
-		}
+		retval = types.NewQResultSuccess(nex.ResultCodes.Core.Unknown)
+		pidPrincipal = sourceAccount.PID
+		pbufResponse = types.NewBuffer(encryptedTicket)
+		strReturnMsg = commonProtocol.BuildName.Copy().(*types.String)
 
-		userPID = uint32(converted)
+		specialProtocols := types.NewList[*types.PrimitiveU8]()
+
+		specialProtocols.Type = types.NewPrimitiveU8(0)
+		specialProtocols.SetFromData(commonProtocol.SpecialProtocols)
+
+		pConnectionData.StationURL = commonProtocol.SecureStationURL
+		pConnectionData.SpecialProtocols = specialProtocols
+		pConnectionData.StationURLSpecialProtocols = commonProtocol.StationURLSpecialProtocols
+		pConnectionData.Time = types.NewDateTime(0).Now()
 	}
 
-	var targetPID uint32 = 2 // "Quazal Rendez-Vous" (the server user) account PID
+	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
-	encryptedTicket, errorCode := generateTicket(userPID, targetPID)
-
-	rmcResponse := nex.NewRMCResponse(ticket_granting.ProtocolID, callID)
-
-	if errorCode != 0 && errorCode != nex.Errors.RendezVous.InvalidUsername {
-		// Some other error happened
-		return errorCode
-	}
-
-	var retval *nex.Result
-	var pidPrincipal uint32
-	var pbufResponse []byte
-	var pConnectionData *nex.RVConnectionData
-	var strReturnMsg string
-
-	pConnectionData = nex.NewRVConnectionData()
-	pConnectionData.SetStationURL(commonTicketGrantingProtocol.secureStationURL.EncodeToString())
-	pConnectionData.SetSpecialProtocols([]byte{})
-	pConnectionData.SetStationURLSpecialProtocols("")
-	serverTime := nex.NewDateTime(0)
-	pConnectionData.SetTime(nex.NewDateTime(serverTime.UTC()))
-
-	/*
-		From the wiki:
-
-		"If the username does not exist, the %retval% field is set to
-		RendezVous::InvalidUsername and the other fields are left blank."
-	*/
-	if errorCode == nex.Errors.RendezVous.InvalidUsername {
-		retval = nex.NewResultError(errorCode)
-	} else {
-		retval = nex.NewResultSuccess(nex.Errors.Core.Unknown)
-		pidPrincipal = userPID
-		pbufResponse = encryptedTicket
-		strReturnMsg = commonTicketGrantingProtocol.buildName
-	}
-
-	rmcResponseStream := nex.NewStreamOut(commonTicketGrantingProtocol.server)
-
-	rmcResponseStream.WriteResult(retval)
-	rmcResponseStream.WriteUInt32LE(pidPrincipal)
-	rmcResponseStream.WriteBuffer(pbufResponse)
-	rmcResponseStream.WriteStructure(pConnectionData)
-	rmcResponseStream.WriteString(strReturnMsg)
+	retval.WriteTo(rmcResponseStream)
+	pidPrincipal.WriteTo(rmcResponseStream)
+	pbufResponse.WriteTo(rmcResponseStream)
+	pConnectionData.WriteTo(rmcResponseStream)
+	strReturnMsg.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse.SetSuccess(ticket_granting.MethodLoginEx, rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
+	rmcResponse.ProtocolID = ticket_granting.ProtocolID
+	rmcResponse.MethodID = ticket_granting.MethodLoginEx
+	rmcResponse.CallID = callID
 
-	rmcResponseBytes := rmcResponse.Bytes()
-
-	var responsePacket nex.PacketInterface
-
-	if commonTicketGrantingProtocol.server.PRUDPVersion() == 0 {
-		responsePacket, _ = nex.NewPacketV0(client, nil)
-		responsePacket.SetVersion(0)
-	} else {
-		responsePacket, _ = nex.NewPacketV1(client, nil)
-		responsePacket.SetVersion(1)
+	if commonProtocol.OnAfterLoginEx != nil {
+		go commonProtocol.OnAfterLoginEx(packet, strUserName, oExtraData)
 	}
 
-	responsePacket.SetSource(packet.Destination())
-	responsePacket.SetDestination(packet.Source())
-	responsePacket.SetType(nex.DataPacket)
-	responsePacket.SetPayload(rmcResponseBytes)
-
-	responsePacket.AddFlag(nex.FlagNeedsAck)
-	responsePacket.AddFlag(nex.FlagReliable)
-
-	commonTicketGrantingProtocol.server.Send(responsePacket)
-
-	return 0
+	return rmcResponse, nil
 }

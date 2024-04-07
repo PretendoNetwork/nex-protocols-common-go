@@ -1,60 +1,44 @@
 package matchmake_extension
 
 import (
-	nex "github.com/PretendoNetwork/nex-go"
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
-	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension"
+	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/types"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/v2/matchmake-extension"
 )
 
-func updateProgressScore(err error, packet nex.PacketInterface, callID uint32, gid uint32, progressScore uint8) uint32 {
+func (commonProtocol *CommonProtocol) updateProgressScore(err error, packet nex.PacketInterface, callID uint32, gid *types.PrimitiveU32, progressScore *types.PrimitiveU8) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.Core.InvalidArgument
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	client := packet.Sender()
-
-	session := common_globals.Sessions[gid]
+	session := common_globals.Sessions[gid.Value]
 	if session == nil {
-		return nex.Errors.RendezVous.SessionVoid
+		return nil, nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "change_error")
 	}
 
-	if progressScore > 100 {
-		return nex.Errors.Core.InvalidArgument
+	if progressScore.Value > 100 {
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	if session.GameMatchmakeSession.Gathering.OwnerPID != client.PID() {
-		return nex.Errors.RendezVous.PermissionDenied
+	connection := packet.Sender().(*nex.PRUDPConnection)
+	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
+
+	if !session.GameMatchmakeSession.Gathering.OwnerPID.Equals(connection.PID()) {
+		return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
 	}
 
-	session.GameMatchmakeSession.ProgressScore += progressScore
+	session.GameMatchmakeSession.ProgressScore.Value += progressScore.Value
 
-	server := commonMatchmakeExtensionProtocol.server
+	rmcResponse := nex.NewRMCSuccess(endpoint, nil)
+	rmcResponse.ProtocolID = matchmake_extension.ProtocolID
+	rmcResponse.MethodID = matchmake_extension.MethodUpdateProgressScore
+	rmcResponse.CallID = callID
 
-	rmcResponse := nex.NewRMCResponse(matchmake_extension.ProtocolID, callID)
-	rmcResponse.SetSuccess(matchmake_extension.MethodUpdateProgressScore, nil)
-
-	rmcResponseBytes := rmcResponse.Bytes()
-
-	var responsePacket nex.PacketInterface
-
-	if server.PRUDPVersion() == 0 {
-		responsePacket, _ = nex.NewPacketV0(client, nil)
-		responsePacket.SetVersion(0)
-	} else {
-		responsePacket, _ = nex.NewPacketV1(client, nil)
-		responsePacket.SetVersion(1)
+	if commonProtocol.OnAfterUpdateProgressScore != nil {
+		go commonProtocol.OnAfterUpdateProgressScore(packet, gid, progressScore)
 	}
 
-	responsePacket.SetSource(packet.Destination())
-	responsePacket.SetDestination(packet.Source())
-	responsePacket.SetType(nex.DataPacket)
-	responsePacket.SetPayload(rmcResponseBytes)
-
-	responsePacket.AddFlag(nex.FlagNeedsAck)
-	responsePacket.AddFlag(nex.FlagReliable)
-
-	server.Send(responsePacket)
-
-	return 0
+	return rmcResponse, nil
 }

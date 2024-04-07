@@ -1,93 +1,103 @@
 package secureconnection
 
 import (
-	nex "github.com/PretendoNetwork/nex-go"
-	secure_connection "github.com/PretendoNetwork/nex-protocols-go/secure-connection"
+	"net"
 
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
+	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/constants"
+	"github.com/PretendoNetwork/nex-go/v2/types"
+	secure_connection "github.com/PretendoNetwork/nex-protocols-go/v2/secure-connection"
+
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 )
 
-func register(err error, packet nex.PacketInterface, callID uint32, stationUrls []*nex.StationURL) uint32 {
+func (commonProtocol *CommonProtocol) register(err error, packet nex.PacketInterface, callID uint32, vecMyURLs *types.List[*types.StationURL]) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.Core.InvalidArgument
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	server := commonSecureConnectionProtocol.server
-	client := packet.Sender()
+	connection := packet.Sender().(*nex.PRUDPConnection)
+	endpoint := connection.Endpoint()
 
-	nextConnectionID := uint32(server.ConnectionIDCounter().Increment())
-	client.SetConnectionID(nextConnectionID)
+	// * vecMyURLs may contain multiple StationURLs. Search them all
+	var localStation *types.StationURL
+	var publicStation *types.StationURL
 
-	localStation := stationUrls[0]
+	for _, stationURL := range vecMyURLs.Slice() {
+		natf, ok := stationURL.NATFiltering()
+		if !ok { continue; }
+		natm, ok := stationURL.NATMapping()
+		if !ok { continue; }
+		pmp := stationURL.IsNATPMPSupported()
+		transportType, transportTypeOk := stationURL.Type()
 
-	// * A NEX client can set the public station URL by setting two URLs on the array
-	// * Check each URL for a public station
-	var publicStation *nex.StationURL
-	for _, stationURL := range stationUrls {
-		if stationURL.Type() == 3 {
-			publicStation = stationURL
-			break
+		if natf == constants.UnknownNATFiltering && natm == constants.UnknownNATMapping && !pmp && !transportTypeOk && localStation == nil {
+			localStation = stationURL.Copy().(*types.StationURL)
+		}
+
+		if (transportType & uint8(constants.StationURLFlagPublic) == uint8(constants.StationURLFlagPublic)) && publicStation == nil {
+			publicStation = stationURL.Copy().(*types.StationURL)
 		}
 	}
 
-	if publicStation == nil {
-		publicStation = localStation.Copy()
-
-		publicStation.SetAddress(client.Address().IP.String())
-		publicStation.SetPort(uint32(client.Address().Port))
-		publicStation.SetNatf(0)
-		publicStation.SetNatm(0)
-		publicStation.SetType(3)
+	if localStation == nil {
+		common_globals.Logger.Error("Failed to find local station")
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	localStation.SetPID(client.PID())
-	publicStation.SetPID(client.PID())
+	if publicStation == nil {
+		publicStation = localStation.Copy().(*types.StationURL)
 
-	localStation.SetRVCID(client.ConnectionID())
-	publicStation.SetRVCID(client.ConnectionID())
+		var address string
+		var port uint16
 
-	localStation.SetLocal()
-	publicStation.SetPublic()
+		// * We have to duplicate this because Go automatically breaks on switch statements
+		switch clientAddress := connection.Address().(type) {
+		case *net.UDPAddr:
+			address = clientAddress.IP.String()
+			port = uint16(clientAddress.Port)
+		case *net.TCPAddr:
+			address = clientAddress.IP.String()
+			port = uint16(clientAddress.Port)
+		}
 
-	client.AddStationURL(localStation)
-	client.AddStationURL(publicStation)
+		publicStation.SetAddress(address)
+		publicStation.SetPortNumber(port)
+		publicStation.SetNATFiltering(constants.UnknownNATFiltering)
+		publicStation.SetNATMapping(constants.UnknownNATMapping)
+		publicStation.SetType(uint8(constants.StationURLFlagPublic) | uint8(constants.StationURLFlagBehindNAT))
+	}
 
-	retval := nex.NewResultSuccess(nex.Errors.Core.Unknown)
+	localStation.SetPrincipalID(connection.PID())
+	publicStation.SetPrincipalID(connection.PID())
 
-	rmcResponseStream := nex.NewStreamOut(server)
+	localStation.SetRVConnectionID(connection.ID)
+	publicStation.SetRVConnectionID(connection.ID)
 
-	rmcResponseStream.WriteResult(retval) // Success
-	rmcResponseStream.WriteUInt32LE(client.ConnectionID())
-	rmcResponseStream.WriteString(publicStation.EncodeToString())
+	connection.StationURLs.Append(localStation)
+	connection.StationURLs.Append(publicStation)
+
+	retval := types.NewQResultSuccess(nex.ResultCodes.Core.Unknown)
+	pidConnectionID := types.NewPrimitiveU32(connection.ID)
+	urlPublic := types.NewString(publicStation.EncodeToString())
+
+	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
+
+	retval.WriteTo(rmcResponseStream)
+	pidConnectionID.WriteTo(rmcResponseStream)
+	urlPublic.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	// Build response packet
-	rmcResponse := nex.NewRMCResponse(secure_connection.ProtocolID, callID)
-	rmcResponse.SetSuccess(secure_connection.MethodRegister, rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
+	rmcResponse.ProtocolID = secure_connection.ProtocolID
+	rmcResponse.MethodID = secure_connection.MethodRegister
+	rmcResponse.CallID = callID
 
-	rmcResponseBytes := rmcResponse.Bytes()
-
-	var responsePacket nex.PacketInterface
-
-	if server.PRUDPVersion() == 0 {
-		responsePacket, _ = nex.NewPacketV0(client, nil)
-		responsePacket.SetVersion(0)
-	} else {
-		responsePacket, _ = nex.NewPacketV1(client, nil)
-		responsePacket.SetVersion(1)
+	if commonProtocol.OnAfterRegister != nil {
+		go commonProtocol.OnAfterRegister(packet, vecMyURLs)
 	}
 
-	responsePacket.SetSource(packet.Destination())
-	responsePacket.SetDestination(packet.Source())
-	responsePacket.SetType(nex.DataPacket)
-	responsePacket.SetPayload(rmcResponseBytes)
-
-	responsePacket.AddFlag(nex.FlagNeedsAck)
-	responsePacket.AddFlag(nex.FlagReliable)
-
-	server.Send(responsePacket)
-
-	return 0
+	return rmcResponse, nil
 }

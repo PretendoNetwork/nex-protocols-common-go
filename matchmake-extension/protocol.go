@@ -1,90 +1,63 @@
 package matchmake_extension
 
 import (
-	"strings"
+	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/types"
+	match_making_types "github.com/PretendoNetwork/nex-protocols-go/v2/match-making/types"
+	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/v2/matchmake-extension"
 
-	nex "github.com/PretendoNetwork/nex-go"
-	match_making_types "github.com/PretendoNetwork/nex-protocols-go/match-making/types"
-	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension"
-	matchmake_extension_mario_kart_8 "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension/mario-kart-8"
-
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 )
 
-var commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol
-
-type CommonMatchmakeExtensionProtocol struct {
-	server             *nex.Server
-	DefaultProtocol    *matchmake_extension.Protocol
-	MarioKart8Protocol *matchmake_extension_mario_kart_8.Protocol
-
-	cleanupSearchMatchmakeSessionHandler                    func(matchmakeSession *match_making_types.MatchmakeSession)
-	gameSpecificMatchmakeSessionSearchCriteriaChecksHandler func(searchCriteria *match_making_types.MatchmakeSessionSearchCriteria, matchmakeSession *match_making_types.MatchmakeSession) bool
-}
-
-// CleanupSearchMatchmakeSession sets the CleanupSearchMatchmakeSession handler function
-func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) CleanupSearchMatchmakeSession(handler func(matchmakeSession *match_making_types.MatchmakeSession)) {
-	commonMatchmakeExtensionProtocol.cleanupSearchMatchmakeSessionHandler = handler
-}
-
-// GameSpecificMatchmakeSessionSearchCriteriaChecks sets the GameSpecificMatchmakeSessionSearchCriteriaChecks handler function
-func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) GameSpecificMatchmakeSessionSearchCriteriaChecks(handler func(searchCriteria *match_making_types.MatchmakeSessionSearchCriteria, matchmakeSession *match_making_types.MatchmakeSession) bool) {
-	commonMatchmakeExtensionProtocol.gameSpecificMatchmakeSessionSearchCriteriaChecksHandler = handler
+type CommonProtocol struct {
+	endpoint                                         nex.EndpointInterface
+	protocol                                         matchmake_extension.Interface
+	CleanupSearchMatchmakeSession                    func(matchmakeSession *match_making_types.MatchmakeSession)
+	GameSpecificMatchmakeSessionSearchCriteriaChecks func(searchCriteria *match_making_types.MatchmakeSessionSearchCriteria, matchmakeSession *match_making_types.MatchmakeSession) bool
+	OnAfterOpenParticipation                         func(packet nex.PacketInterface, gid *types.PrimitiveU32)
+	OnAfterCloseParticipation                        func(packet nex.PacketInterface, gid *types.PrimitiveU32)
+	OnAfterCreateMatchmakeSession                    func(packet nex.PacketInterface, anyGathering *types.AnyDataHolder, message *types.String, participationCount *types.PrimitiveU16)
+	OnAfterGetSimplePlayingSession                   func(packet nex.PacketInterface, listPID *types.List[*types.PID], includeLoginUser *types.PrimitiveBool)
+	OnAfterAutoMatchmakePostpone                     func(packet nex.PacketInterface, anyGathering *types.AnyDataHolder, message *types.String)
+	OnAfterAutoMatchmakeWithParamPostpone            func(packet nex.PacketInterface, autoMatchmakeParam *match_making_types.AutoMatchmakeParam)
+	OnAfterAutoMatchmakeWithSearchCriteriaPostpone   func(packet nex.PacketInterface, lstSearchCriteria *types.List[*match_making_types.MatchmakeSessionSearchCriteria], anyGathering *types.AnyDataHolder, strMessage *types.String)
+	OnAfterUpdateProgressScore                       func(packet nex.PacketInterface, gid *types.PrimitiveU32, progressScore *types.PrimitiveU8)
+	OnAfterCreateMatchmakeSessionWithParam           func(packet nex.PacketInterface, createMatchmakeSessionParam *match_making_types.CreateMatchmakeSessionParam)
+	OnAfterUpdateApplicationBuffer                   func(packet nex.PacketInterface, gid *types.PrimitiveU32, applicationBuffer *types.Buffer)
+	OnAfterJoinMatchmakeSession                      func(packet nex.PacketInterface, gid *types.PrimitiveU32, strMessage *types.String)
+	OnAfterJoinMatchmakeSessionWithParam             func(packet nex.PacketInterface, joinMatchmakeSessionParam *match_making_types.JoinMatchmakeSessionParam)
+	OnAfterModifyCurrentGameAttribute                func(packet nex.PacketInterface, gid *types.PrimitiveU32, attribIndex *types.PrimitiveU32, newValue *types.PrimitiveU32)
+	OnAfterBrowseMatchmakeSession                    func(packet nex.PacketInterface, searchCriteria *match_making_types.MatchmakeSessionSearchCriteria, resultRange *types.ResultRange)
+	OnAfterJoinMatchmakeSessionEx                    func(packet nex.PacketInterface, gid *types.PrimitiveU32, strMessage *types.String, dontCareMyBlockList *types.PrimitiveBool, participationCount *types.PrimitiveU16)
 }
 
 // GetUserFriendPIDs sets the GetUserFriendPIDs handler function
-func (commonMatchmakeExtensionProtocol *CommonMatchmakeExtensionProtocol) GetUserFriendPIDs(handler func(pid uint32) []uint32) {
+func (commonProtocol *CommonProtocol) GetUserFriendPIDs(handler func(pid uint32) []uint32) {
 	common_globals.GetUserFriendPIDsHandler = handler
 }
 
-func initDefault(c *CommonMatchmakeExtensionProtocol) {
-	// TODO - Organize by method ID
-	c.DefaultProtocol = matchmake_extension.NewProtocol(c.server)
-	c.DefaultProtocol.OpenParticipation(openParticipation)
-	c.DefaultProtocol.CloseParticipation(closeParticipation)
-	c.DefaultProtocol.CreateMatchmakeSession(createMatchmakeSession)
-	c.DefaultProtocol.GetSimplePlayingSession(getSimplePlayingSession)
-	c.DefaultProtocol.AutoMatchmakePostpone(autoMatchmake_Postpone)
-	c.DefaultProtocol.AutoMatchmakeWithParamPostpone(autoMatchmakeWithParam_Postpone)
-	c.DefaultProtocol.AutoMatchmakeWithSearchCriteriaPostpone(autoMatchmakeWithSearchCriteria_Postpone)
-	c.DefaultProtocol.UpdateProgressScore(updateProgressScore)
-	c.DefaultProtocol.CreateMatchmakeSessionWithParam(createMatchmakeSessionWithParam)
-	c.DefaultProtocol.UpdateApplicationBuffer(updateApplicationBuffer)
-	c.DefaultProtocol.JoinMatchmakeSession(joinMatchmakeSession)
-	c.DefaultProtocol.JoinMatchmakeSessionWithParam(joinMatchmakeSessionWithParam)
-	c.DefaultProtocol.ModifyCurrentGameAttribute(modifyCurrentGameAttribute)
-	c.DefaultProtocol.BrowseMatchmakeSession(browseMatchmakeSession)
-}
-
-func initMarioKart8(c *CommonMatchmakeExtensionProtocol) {
-	// TODO - Organize by method ID
-	c.MarioKart8Protocol = matchmake_extension_mario_kart_8.NewProtocol(c.server)
-	c.MarioKart8Protocol.OpenParticipation(openParticipation)
-	c.MarioKart8Protocol.CloseParticipation(closeParticipation)
-	c.MarioKart8Protocol.CreateMatchmakeSession(createMatchmakeSession)
-	c.MarioKart8Protocol.GetSimplePlayingSession(getSimplePlayingSession)
-	c.MarioKart8Protocol.AutoMatchmakePostpone(autoMatchmake_Postpone)
-	c.MarioKart8Protocol.AutoMatchmakeWithSearchCriteriaPostpone(autoMatchmakeWithSearchCriteria_Postpone)
-	c.MarioKart8Protocol.UpdateProgressScore(updateProgressScore)
-}
-
-// NewCommonMatchmakeExtensionProtocol returns a new CommonMatchmakeExtensionProtocol
-func NewCommonMatchmakeExtensionProtocol(server *nex.Server) *CommonMatchmakeExtensionProtocol {
-	commonMatchmakeExtensionProtocol = &CommonMatchmakeExtensionProtocol{server: server}
-
-	patch := server.MatchMakingProtocolVersion().GameSpecificPatch
-
-	if strings.EqualFold(patch, "AMKJ") {
-		common_globals.Logger.Info("Using Mario Kart 8 MatchmakeExtension protocol")
-		initMarioKart8(commonMatchmakeExtensionProtocol)
-	} else {
-		if patch != "" {
-			common_globals.Logger.Infof("Matchmaking version patch %q not recognized", patch)
-		}
-
-		common_globals.Logger.Info("Using default MatchmakeExtension protocol")
-		initDefault(commonMatchmakeExtensionProtocol)
+// NewCommonProtocol returns a new CommonProtocol
+func NewCommonProtocol(protocol matchmake_extension.Interface) *CommonProtocol {
+	commonProtocol := &CommonProtocol{
+		endpoint: protocol.Endpoint(),
+		protocol: protocol,
 	}
 
-	return commonMatchmakeExtensionProtocol
+	protocol.SetHandlerOpenParticipation(commonProtocol.openParticipation)
+	protocol.SetHandlerCloseParticipation(commonProtocol.closeParticipation)
+	protocol.SetHandlerCreateMatchmakeSession(commonProtocol.createMatchmakeSession)
+	protocol.SetHandlerGetSimplePlayingSession(commonProtocol.getSimplePlayingSession)
+	protocol.SetHandlerAutoMatchmakePostpone(commonProtocol.autoMatchmakePostpone)
+	protocol.SetHandlerAutoMatchmakeWithParamPostpone(commonProtocol.autoMatchmakeWithParamPostpone)
+	protocol.SetHandlerAutoMatchmakeWithSearchCriteriaPostpone(commonProtocol.autoMatchmakeWithSearchCriteriaPostpone)
+	protocol.SetHandlerUpdateProgressScore(commonProtocol.updateProgressScore)
+	protocol.SetHandlerCreateMatchmakeSessionWithParam(commonProtocol.createMatchmakeSessionWithParam)
+	protocol.SetHandlerUpdateApplicationBuffer(commonProtocol.updateApplicationBuffer)
+	protocol.SetHandlerJoinMatchmakeSession(commonProtocol.joinMatchmakeSession)
+	protocol.SetHandlerJoinMatchmakeSessionWithParam(commonProtocol.joinMatchmakeSessionWithParam)
+	protocol.SetHandlerModifyCurrentGameAttribute(commonProtocol.modifyCurrentGameAttribute)
+	protocol.SetHandlerBrowseMatchmakeSession(commonProtocol.browseMatchmakeSession)
+	protocol.SetHandlerJoinMatchmakeSessionEx(commonProtocol.joinMatchmakeSessionEx)
+
+	return commonProtocol
 }

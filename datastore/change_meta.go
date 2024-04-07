@@ -1,96 +1,81 @@
 package datastore
 
 import (
-	nex "github.com/PretendoNetwork/nex-go"
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
-	datastore "github.com/PretendoNetwork/nex-protocols-go/datastore"
-	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
+	"github.com/PretendoNetwork/nex-go/v2"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	datastore "github.com/PretendoNetwork/nex-protocols-go/v2/datastore"
+	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
-func changeMeta(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreChangeMetaParam) uint32 {
-	if commonDataStoreProtocol.getObjectInfoByDataIDHandler == nil {
+func (commonProtocol *CommonProtocol) changeMeta(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreChangeMetaParam) (*nex.RMCMessage, *nex.Error) {
+	if commonProtocol.GetObjectInfoByDataID == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataID not defined")
-		return nex.Errors.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
-	if commonDataStoreProtocol.updateObjectPeriodByDataIDWithPasswordHandler == nil {
+	if commonProtocol.UpdateObjectPeriodByDataIDWithPassword == nil {
 		common_globals.Logger.Warning("UpdateObjectPeriodByDataIDWithPassword not defined")
-		return nex.Errors.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
-	if commonDataStoreProtocol.updateObjectMetaBinaryByDataIDWithPasswordHandler == nil {
+	if commonProtocol.UpdateObjectMetaBinaryByDataIDWithPassword == nil {
 		common_globals.Logger.Warning("UpdateObjectMetaBinaryByDataIDWithPassword not defined")
-		return nex.Errors.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
-	if commonDataStoreProtocol.updateObjectDataTypeByDataIDWithPasswordHandler == nil {
+	if commonProtocol.UpdateObjectDataTypeByDataIDWithPassword == nil {
 		common_globals.Logger.Warning("UpdateObjectDataTypeByDataIDWithPassword not defined")
-		return nex.Errors.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.DataStore.Unknown
+		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
 	}
 
-	client := packet.Sender()
+	connection := packet.Sender()
+	endpoint := connection.Endpoint()
 
-	metaInfo, errCode := commonDataStoreProtocol.getObjectInfoByDataIDHandler(param.DataID)
-	if errCode != 0 {
-		return errCode
+	metaInfo, errCode := commonProtocol.GetObjectInfoByDataID(param.DataID)
+	if errCode != nil {
+		return nil, errCode
 	}
 
 	// TODO - Is this the right permission?
-	errCode = commonDataStoreProtocol.VerifyObjectPermission(metaInfo.OwnerID, client.PID(), metaInfo.DelPermission)
-	if errCode != 0 {
-		return errCode
+	errCode = commonProtocol.VerifyObjectPermission(metaInfo.OwnerID, connection.PID(), metaInfo.DelPermission)
+	if errCode != nil {
+		return nil, errCode
 	}
 
-	if param.ModifiesFlag&0x08 != 0 {
-		errCode = commonDataStoreProtocol.updateObjectPeriodByDataIDWithPasswordHandler(param.DataID, param.Period, param.UpdatePassword)
-		if errCode != 0 {
-			return errCode
+	if param.ModifiesFlag.PAND(0x08) != 0 {
+		errCode = commonProtocol.UpdateObjectPeriodByDataIDWithPassword(param.DataID, param.Period, param.UpdatePassword)
+		if errCode != nil {
+			return nil, errCode
 		}
 	}
 
-	if param.ModifiesFlag&0x10 != 0 {
-		errCode = commonDataStoreProtocol.updateObjectMetaBinaryByDataIDWithPasswordHandler(param.DataID, param.MetaBinary, param.UpdatePassword)
-		if errCode != 0 {
-			return errCode
+	if param.ModifiesFlag.PAND(0x10) != 0 {
+		errCode = commonProtocol.UpdateObjectMetaBinaryByDataIDWithPassword(param.DataID, param.MetaBinary, param.UpdatePassword)
+		if errCode != nil {
+			return nil, errCode
 		}
 	}
 
-	if param.ModifiesFlag&0x80 != 0 {
-		errCode = commonDataStoreProtocol.updateObjectDataTypeByDataIDWithPasswordHandler(param.DataID, param.DataType, param.UpdatePassword)
-		if errCode != 0 {
-			return errCode
+	if param.ModifiesFlag.PAND(0x80) != 0 {
+		errCode = commonProtocol.UpdateObjectDataTypeByDataIDWithPassword(param.DataID, param.DataType, param.UpdatePassword)
+		if errCode != nil {
+			return nil, errCode
 		}
 	}
 
-	rmcResponse := nex.NewRMCResponse(datastore.ProtocolID, callID)
-	rmcResponse.SetSuccess(datastore.MethodChangeMeta, nil)
+	rmcResponse := nex.NewRMCSuccess(endpoint, nil)
+	rmcResponse.ProtocolID = datastore.ProtocolID
+	rmcResponse.MethodID = datastore.MethodChangeMeta
+	rmcResponse.CallID = callID
 
-	rmcResponseBytes := rmcResponse.Bytes()
-
-	var responsePacket nex.PacketInterface
-
-	if commonDataStoreProtocol.server.PRUDPVersion() == 0 {
-		responsePacket, _ = nex.NewPacketV0(client, nil)
-		responsePacket.SetVersion(0)
-	} else {
-		responsePacket, _ = nex.NewPacketV1(client, nil)
-		responsePacket.SetVersion(1)
+	if commonProtocol.OnAfterChangeMeta != nil {
+		go commonProtocol.OnAfterChangeMeta(packet, param)
 	}
 
-	responsePacket.SetSource(packet.Destination())
-	responsePacket.SetDestination(packet.Source())
-	responsePacket.SetType(nex.DataPacket)
-	responsePacket.SetPayload(rmcResponseBytes)
-
-	responsePacket.AddFlag(nex.FlagNeedsAck)
-	responsePacket.AddFlag(nex.FlagReliable)
-
-	commonDataStoreProtocol.server.Send(responsePacket)
-
-	return 0
+	return rmcResponse, nil
 }

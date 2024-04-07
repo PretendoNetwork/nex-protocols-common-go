@@ -1,32 +1,30 @@
 package secureconnection
 
 import (
-	"github.com/PretendoNetwork/nex-go"
-	secure_connection "github.com/PretendoNetwork/nex-protocols-go/secure-connection"
+	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/types"
+	secure_connection "github.com/PretendoNetwork/nex-protocols-go/v2/secure-connection"
 )
 
-var commonSecureConnectionProtocol *CommonSecureConnectionProtocol
-
-type CommonSecureConnectionProtocol struct {
-	*secure_connection.Protocol
-	server                      *nex.Server
-	createReportDBRecordHandler func(pid uint32, reportID uint32, reportData []byte) error
+type CommonProtocol struct {
+	endpoint             nex.EndpointInterface
+	protocol             secure_connection.Interface
+	CreateReportDBRecord func(pid *types.PID, reportID *types.PrimitiveU32, reportData *types.QBuffer) error
+	OnAfterRegister      func(packet nex.PacketInterface, vecMyURLs *types.List[*types.StationURL])
+	OnAfterReplaceURL    func(packet nex.PacketInterface, target *types.StationURL, url *types.StationURL)
+	OnAfterSendReport    func(packet nex.PacketInterface, reportID *types.PrimitiveU32, reportData *types.QBuffer)
 }
 
-// CleanupSearchMatchmakeSession sets the CleanupSearchMatchmakeSession handler function
-func (commonSecureConnectionProtocol *CommonSecureConnectionProtocol) CreateReportDBRecord(handler func(pid uint32, reportID uint32, reportData []byte) error) {
-	commonSecureConnectionProtocol.createReportDBRecordHandler = handler
-}
+// NewCommonProtocol returns a new CommonProtocol
+func NewCommonProtocol(protocol secure_connection.Interface) *CommonProtocol {
+	commonProtocol := &CommonProtocol{
+		endpoint: protocol.Endpoint(),
+		protocol: protocol,
+	}
 
-// NewCommonSecureConnectionProtocol returns a new CommonSecureConnectionProtocol
-func NewCommonSecureConnectionProtocol(server *nex.Server) *CommonSecureConnectionProtocol {
-	secureConnectionProtocol := secure_connection.NewProtocol(server)
-	commonSecureConnectionProtocol = &CommonSecureConnectionProtocol{Protocol: secureConnectionProtocol, server: server}
+	protocol.SetHandlerRegister(commonProtocol.register)
+	protocol.SetHandlerReplaceURL(commonProtocol.replaceURL)
+	protocol.SetHandlerSendReport(commonProtocol.sendReport)
 
-	server.On("Connect", connect)
-	commonSecureConnectionProtocol.Register(register)
-	commonSecureConnectionProtocol.ReplaceURL(replaceURL)
-	commonSecureConnectionProtocol.SendReport(sendReport)
-
-	return commonSecureConnectionProtocol
+	return commonProtocol
 }

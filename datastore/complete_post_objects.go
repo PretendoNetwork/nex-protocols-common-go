@@ -3,85 +3,87 @@ package datastore
 import (
 	"fmt"
 
-	"github.com/PretendoNetwork/nex-go"
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
-	datastore "github.com/PretendoNetwork/nex-protocols-go/datastore"
+	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/types"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	datastore "github.com/PretendoNetwork/nex-protocols-go/v2/datastore"
 )
 
-func completePostObjects(err error, packet nex.PacketInterface, callID uint32, dataIDs []uint64) uint32 {
-	if commonDataStoreProtocol.minIOClient == nil {
+func (commonProtocol *CommonProtocol) completePostObjects(err error, packet nex.PacketInterface, callID uint32, dataIDs *types.List[*types.PrimitiveU64]) (*nex.RMCMessage, *nex.Error) {
+	if commonProtocol.minIOClient == nil {
 		common_globals.Logger.Warning("MinIOClient not defined")
-		return nex.Errors.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
-	if commonDataStoreProtocol.getObjectSizeByDataIDHandler == nil {
+	if commonProtocol.GetObjectSizeByDataID == nil {
 		common_globals.Logger.Warning("GetObjectSizeByDataID not defined")
-		return nex.Errors.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
-	if commonDataStoreProtocol.updateObjectUploadCompletedByDataIDHandler == nil {
+	if commonProtocol.UpdateObjectUploadCompletedByDataID == nil {
 		common_globals.Logger.Warning("UpdateObjectUploadCompletedByDataID not defined")
-		return nex.Errors.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.DataStore.Unknown
+		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
 	}
 
-	client := packet.Sender()
+	connection := packet.Sender()
+	endpoint := connection.Endpoint()
 
-	for _, dataID := range dataIDs {
-		bucket := commonDataStoreProtocol.s3Bucket
-		key := fmt.Sprintf("%s/%d.bin", commonDataStoreProtocol.s3DataKeyBase, dataID)
+	var errorCode *nex.Error
 
-		objectSizeS3, err := commonDataStoreProtocol.S3ObjectSize(bucket, key)
+	dataIDs.Each(func(_ int, dataID *types.PrimitiveU64) bool {
+		bucket := commonProtocol.S3Bucket
+		key := fmt.Sprintf("%s/%d.bin", commonProtocol.s3DataKeyBase, dataID)
+
+		objectSizeS3, err := commonProtocol.S3ObjectSize(bucket, key)
 		if err != nil {
 			common_globals.Logger.Error(err.Error())
-			return nex.Errors.DataStore.NotFound
+			errorCode = nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
+
+			return true
 		}
 
-		objectSizeDB, errCode := commonDataStoreProtocol.getObjectSizeByDataIDHandler(dataID)
-		if errCode != 0 {
-			return errCode
+		objectSizeDB, errCode := commonProtocol.GetObjectSizeByDataID(dataID)
+		if errCode != nil {
+			errorCode = errCode
+
+			return true
 		}
 
 		if objectSizeS3 != uint64(objectSizeDB) {
 			common_globals.Logger.Errorf("Object with DataID %d did not upload correctly! Mismatched sizes", dataID)
 			// TODO - Is this a good error?
-			return nex.Errors.DataStore.Unknown
+			errorCode = nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
+
+			return true
 		}
 
-		errCode = commonDataStoreProtocol.updateObjectUploadCompletedByDataIDHandler(dataID, true)
-		if errCode != 0 {
-			return errCode
+		errCode = commonProtocol.UpdateObjectUploadCompletedByDataID(dataID, true)
+		if errCode != nil {
+			errorCode = errCode
+
+			return true
 		}
+
+		return false
+	})
+
+	if errorCode != nil {
+		return nil, errorCode
 	}
 
-	rmcResponse := nex.NewRMCResponse(datastore.ProtocolID, callID)
-	rmcResponse.SetSuccess(datastore.MethodCompletePostObjects, nil)
+	rmcResponse := nex.NewRMCSuccess(endpoint, nil)
+	rmcResponse.ProtocolID = datastore.ProtocolID
+	rmcResponse.MethodID = datastore.MethodCompletePostObjects
+	rmcResponse.CallID = callID
 
-	rmcResponseBytes := rmcResponse.Bytes()
-
-	var responsePacket nex.PacketInterface
-
-	if commonDataStoreProtocol.server.PRUDPVersion() == 0 {
-		responsePacket, _ = nex.NewPacketV0(client, nil)
-		responsePacket.SetVersion(0)
-	} else {
-		responsePacket, _ = nex.NewPacketV1(client, nil)
-		responsePacket.SetVersion(1)
+	if commonProtocol.OnAfterCompletePostObjects != nil {
+		go commonProtocol.OnAfterCompletePostObjects(packet, dataIDs)
 	}
 
-	responsePacket.SetSource(packet.Destination())
-	responsePacket.SetDestination(packet.Source())
-	responsePacket.SetType(nex.DataPacket)
-	responsePacket.SetPayload(rmcResponseBytes)
-
-	responsePacket.AddFlag(nex.FlagNeedsAck)
-	responsePacket.AddFlag(nex.FlagReliable)
-
-	commonDataStoreProtocol.server.Send(responsePacket)
-
-	return 0
+	return rmcResponse, nil
 }

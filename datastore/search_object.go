@@ -1,24 +1,26 @@
 package datastore
 
 import (
-	"github.com/PretendoNetwork/nex-go"
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
-	datastore "github.com/PretendoNetwork/nex-protocols-go/datastore"
-	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
+	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/types"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	datastore "github.com/PretendoNetwork/nex-protocols-go/v2/datastore"
+	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
-func searchObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreSearchParam) uint32 {
-	if commonDataStoreProtocol.getObjectInfosByDataStoreSearchParamHandler == nil {
+func (commonProtocol *CommonProtocol) searchObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreSearchParam) (*nex.RMCMessage, *nex.Error) {
+	if commonProtocol.GetObjectInfosByDataStoreSearchParam == nil {
 		common_globals.Logger.Warning("GetObjectInfosByDataStoreSearchParam not defined")
-		return nex.Errors.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.DataStore.Unknown
+		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
 	}
 
-	client := packet.Sender()
+	connection := packet.Sender()
+	endpoint := connection.Endpoint()
 
 	// * This is likely game-specific. Also developer note:
 	// * Please keep in mind that no results is allowed. errCode
@@ -27,18 +29,19 @@ func searchObject(err error, packet nex.PacketInterface, callID uint32, param *d
 	// * DataStoreSearchParam contains a ResultRange to limit the
 	// * returned results. TotalCount is the total matching objects
 	// * in the database, whereas objects is the limited results
-	objects, totalCount, errCode := commonDataStoreProtocol.getObjectInfosByDataStoreSearchParamHandler(param)
-	if errCode != 0 {
-		return errCode
+	objects, totalCount, errCode := commonProtocol.GetObjectInfosByDataStoreSearchParam(param)
+	if errCode != nil {
+		return nil, errCode
 	}
 
 	pSearchResult := datastore_types.NewDataStoreSearchResult()
 
-	pSearchResult.Result = make([]*datastore_types.DataStoreMetaInfo, 0, len(objects))
+	pSearchResult.Result = types.NewList[*datastore_types.DataStoreMetaInfo]()
+	pSearchResult.Result.Type = datastore_types.NewDataStoreMetaInfo()
 
 	for _, object := range objects {
-		errCode = commonDataStoreProtocol.VerifyObjectPermission(object.OwnerID, client.PID(), object.Permission)
-		if errCode != 0 {
+		errCode = commonProtocol.VerifyObjectPermission(object.OwnerID, connection.PID(), object.Permission)
+		if errCode != nil {
 			// * Since we don't error here, should we also
 			// * "hide" these results by also decrementing
 			// * totalCount?
@@ -47,7 +50,7 @@ func searchObject(err error, packet nex.PacketInterface, callID uint32, param *d
 
 		object.FilterPropertiesByResultOption(param.ResultOption)
 
-		pSearchResult.Result = append(pSearchResult.Result, object)
+		pSearchResult.Result.Append(object)
 	}
 
 	var totalCountType uint8
@@ -56,7 +59,7 @@ func searchObject(err error, packet nex.PacketInterface, callID uint32, param *d
 	// * the permissions checks in the
 	// * previous loop will mutate the data
 	// * returned from the database
-	if totalCount == uint32(len(pSearchResult.Result)) {
+	if totalCount == uint32(pSearchResult.Result.Length()) {
 		totalCountType = 0 // * Has no more data. All possible results were returned
 	} else {
 		totalCountType = 1 // * Has more data. Not all possible results were returned
@@ -66,46 +69,30 @@ func searchObject(err error, packet nex.PacketInterface, callID uint32, param *d
 	// *
 	// * Only seen in struct revision 3 or
 	// * NEX 4.0+
-	if param.StructureVersion() >= 3 || commonDataStoreProtocol.server.DataStoreProtocolVersion().GreaterOrEqual("4.0.0") {
-		if !param.TotalCountEnabled {
+	if param.StructureVersion >= 3 || endpoint.LibraryVersions().DataStore.GreaterOrEqual("4.0.0") {
+		if !param.TotalCountEnabled.Value {
 			totalCount = 0
 			totalCountType = 3
 		}
 	}
 
-	pSearchResult.TotalCount = totalCount
-	pSearchResult.TotalCountType = totalCountType
+	pSearchResult.TotalCount = types.NewPrimitiveU32(totalCount)
+	pSearchResult.TotalCountType = types.NewPrimitiveU8(totalCountType)
 
-	rmcResponseStream := nex.NewStreamOut(commonDataStoreProtocol.server)
+	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
-	rmcResponseStream.WriteStructure(pSearchResult)
+	pSearchResult.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCResponse(datastore.ProtocolID, callID)
-	rmcResponse.SetSuccess(datastore.MethodSearchObject, rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
+	rmcResponse.ProtocolID = datastore.ProtocolID
+	rmcResponse.MethodID = datastore.MethodSearchObject
+	rmcResponse.CallID = callID
 
-	rmcResponseBytes := rmcResponse.Bytes()
-
-	var responsePacket nex.PacketInterface
-
-	if commonDataStoreProtocol.server.PRUDPVersion() == 0 {
-		responsePacket, _ = nex.NewPacketV0(client, nil)
-		responsePacket.SetVersion(0)
-	} else {
-		responsePacket, _ = nex.NewPacketV1(client, nil)
-		responsePacket.SetVersion(1)
+	if commonProtocol.OnAfterSearchObject != nil {
+		go commonProtocol.OnAfterSearchObject(packet, param)
 	}
 
-	responsePacket.SetSource(packet.Destination())
-	responsePacket.SetDestination(packet.Source())
-	responsePacket.SetType(nex.DataPacket)
-	responsePacket.SetPayload(rmcResponseBytes)
-
-	responsePacket.AddFlag(nex.FlagNeedsAck)
-	responsePacket.AddFlag(nex.FlagReliable)
-
-	commonDataStoreProtocol.server.Send(responsePacket)
-
-	return 0
+	return rmcResponse, nil
 }

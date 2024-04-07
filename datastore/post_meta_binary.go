@@ -1,13 +1,13 @@
 package datastore
 
 import (
-	"github.com/PretendoNetwork/nex-go"
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
-	datastore "github.com/PretendoNetwork/nex-protocols-go/datastore"
-	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
+	"github.com/PretendoNetwork/nex-go/v2"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	datastore "github.com/PretendoNetwork/nex-protocols-go/v2/datastore"
+	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
-func postMetaBinary(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStorePreparePostParam) uint32 {
+func (commonProtocol *CommonProtocol) postMetaBinary(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStorePreparePostParam) (*nex.RMCMessage, *nex.Error) {
 	// * This method looks to function identically to DataStore::PreparePostObject,
 	// * except the only difference being it doesn't return an S3 upload URL. This
 	// * needs to be verified though, as there are other methods in the family such
@@ -15,69 +15,60 @@ func postMetaBinary(err error, packet nex.PacketInterface, callID uint32, param 
 	// * unless those are just used to *update* a meta binary? Or maybe the DataID in
 	// * those methods is a pre-allocated DataID from the server? Needs more testing
 
-	if commonDataStoreProtocol.initializeObjectByPreparePostParamHandler == nil {
+	if commonProtocol.InitializeObjectByPreparePostParam == nil {
 		common_globals.Logger.Warning("InitializeObjectByPreparePostParam not defined")
-		return nex.Errors.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
-	if commonDataStoreProtocol.initializeObjectRatingWithSlotHandler == nil {
+	if commonProtocol.InitializeObjectRatingWithSlot == nil {
 		common_globals.Logger.Warning("InitializeObjectRatingWithSlot not defined")
-		return nex.Errors.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.DataStore.Unknown
+		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
 	}
 
-	client := packet.Sender()
+	connection := packet.Sender()
+	endpoint := connection.Endpoint()
 
 	// TODO - Need to verify what param.PersistenceInitParam.DeleteLastObject really means. It's often set to true even when it wouldn't make sense
-	dataID, errCode := commonDataStoreProtocol.initializeObjectByPreparePostParamHandler(client.PID(), param)
-	if errCode != 0 {
-		common_globals.Logger.Errorf("Error code %d on object init", errCode)
-		return errCode
+	dataID, errCode := commonProtocol.InitializeObjectByPreparePostParam(connection.PID(), param)
+	if errCode != nil {
+		common_globals.Logger.Errorf("Error code on object init: %s", errCode.Error())
+		return nil, errCode
 	}
 
 	// TODO - Should this be moved to InitializeObjectByPreparePostParam?
-	for _, ratingInitParamWithSlot := range param.RatingInitParams {
-		errCode = commonDataStoreProtocol.initializeObjectRatingWithSlotHandler(dataID, ratingInitParamWithSlot)
-		if errCode != 0 {
-			common_globals.Logger.Errorf("Error code %d on rating init", errCode)
-			return errCode
+	param.RatingInitParams.Each(func(_ int, ratingInitParamWithSlot *datastore_types.DataStoreRatingInitParamWithSlot) bool {
+		errCode = commonProtocol.InitializeObjectRatingWithSlot(dataID, ratingInitParamWithSlot)
+		if errCode != nil {
+			common_globals.Logger.Errorf("Error code on rating init: %s", errCode.Error())
+			return true
 		}
+
+		return false
+	})
+
+	if errCode != nil {
+		return nil, errCode
 	}
 
-	rmcResponseStream := nex.NewStreamOut(commonDataStoreProtocol.server)
+	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
-	rmcResponseStream.WriteUInt64LE(uint64(dataID))
+	rmcResponseStream.WritePrimitiveUInt64LE(dataID)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCResponse(datastore.ProtocolID, callID)
-	rmcResponse.SetSuccess(datastore.MethodPostMetaBinary, rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
+	rmcResponse.ProtocolID = datastore.ProtocolID
+	rmcResponse.MethodID = datastore.MethodPostMetaBinary
+	rmcResponse.CallID = callID
 
-	rmcResponseBytes := rmcResponse.Bytes()
-
-	var responsePacket nex.PacketInterface
-
-	if commonDataStoreProtocol.server.PRUDPVersion() == 0 {
-		responsePacket, _ = nex.NewPacketV0(client, nil)
-		responsePacket.SetVersion(0)
-	} else {
-		responsePacket, _ = nex.NewPacketV1(client, nil)
-		responsePacket.SetVersion(1)
+	if commonProtocol.OnAfterPostMetaBinary != nil {
+		go commonProtocol.OnAfterPostMetaBinary(packet, param)
 	}
 
-	responsePacket.SetSource(packet.Destination())
-	responsePacket.SetDestination(packet.Source())
-	responsePacket.SetType(nex.DataPacket)
-	responsePacket.SetPayload(rmcResponseBytes)
-
-	responsePacket.AddFlag(nex.FlagNeedsAck)
-	responsePacket.AddFlag(nex.FlagReliable)
-
-	commonDataStoreProtocol.server.Send(responsePacket)
-
-	return 0
+	return rmcResponse, nil
 }

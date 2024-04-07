@@ -4,92 +4,81 @@ import (
 	"fmt"
 	"time"
 
-	nex "github.com/PretendoNetwork/nex-go"
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
-	datastore "github.com/PretendoNetwork/nex-protocols-go/datastore"
-	datastore_types "github.com/PretendoNetwork/nex-protocols-go/datastore/types"
+	nex "github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/types"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	datastore "github.com/PretendoNetwork/nex-protocols-go/v2/datastore"
+	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
-func prepareGetObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStorePrepareGetParam) uint32 {
-	if commonDataStoreProtocol.getObjectInfoByDataIDHandler == nil {
+func (commonProtocol *CommonProtocol) prepareGetObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStorePrepareGetParam) (*nex.RMCMessage, *nex.Error) {
+	if commonProtocol.GetObjectInfoByDataID == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataID not defined")
-		return nex.Errors.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
-	if commonDataStoreProtocol.S3Presigner == nil {
+	if commonProtocol.S3Presigner == nil {
 		common_globals.Logger.Warning("S3Presigner not defined")
-		return nex.Errors.Core.NotImplemented
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.Core.Unknown
+		return nil, nex.NewError(nex.ResultCodes.Core.Unknown, "change_error")
 	}
 
-	client := packet.Sender()
+	connection := packet.Sender()
+	endpoint := connection.Endpoint()
 
-	bucket := commonDataStoreProtocol.s3Bucket
-	key := fmt.Sprintf("%s/%d.bin", commonDataStoreProtocol.s3DataKeyBase, param.DataID)
+	bucket := commonProtocol.S3Bucket
+	key := fmt.Sprintf("%s/%d.bin", commonProtocol.s3DataKeyBase, param.DataID)
 
-	objectInfo, errCode := commonDataStoreProtocol.getObjectInfoByDataIDHandler(param.DataID)
-	if errCode != 0 {
-		return errCode
+	objectInfo, errCode := commonProtocol.GetObjectInfoByDataID(param.DataID)
+	if errCode != nil {
+		return nil, errCode
 	}
 
-	errCode = commonDataStoreProtocol.VerifyObjectPermission(objectInfo.OwnerID, client.PID(), objectInfo.Permission)
-	if errCode != 0 {
-		return errCode
+	errCode = commonProtocol.VerifyObjectPermission(objectInfo.OwnerID, connection.PID(), objectInfo.Permission)
+	if errCode != nil {
+		return nil, errCode
 	}
 
-	url, err := commonDataStoreProtocol.S3Presigner.GetObject(bucket, key, time.Minute*15)
+	url, err := commonProtocol.S3Presigner.GetObject(bucket, key, time.Minute*15)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.DataStore.OperationNotAllowed
+		return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "change_error")
 	}
 
-	requestHeaders, errCode := commonDataStoreProtocol.s3GetRequestHeadersHandler()
-	if errCode != 0 {
-		return errCode
+	requestHeaders, errCode := commonProtocol.S3GetRequestHeaders()
+	if errCode != nil {
+		return nil, errCode
 	}
 
 	pReqGetInfo := datastore_types.NewDataStoreReqGetInfo()
 
-	pReqGetInfo.URL = url.String()
-	pReqGetInfo.RequestHeaders = requestHeaders
-	pReqGetInfo.Size = objectInfo.Size
-	pReqGetInfo.RootCACert = commonDataStoreProtocol.rootCACert
+	pReqGetInfo.URL = types.NewString(url.String())
+	pReqGetInfo.RequestHeaders = types.NewList[*datastore_types.DataStoreKeyValue]()
+	pReqGetInfo.Size = objectInfo.Size.Copy().(*types.PrimitiveU32)
+	pReqGetInfo.RootCACert = types.NewBuffer(commonProtocol.RootCACert)
 	pReqGetInfo.DataID = param.DataID
 
-	rmcResponseStream := nex.NewStreamOut(commonDataStoreProtocol.server)
+	pReqGetInfo.RequestHeaders.Type = datastore_types.NewDataStoreKeyValue()
+	pReqGetInfo.RequestHeaders.SetFromData(requestHeaders)
 
-	rmcResponseStream.WriteStructure(pReqGetInfo)
+	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
+
+	pReqGetInfo.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCResponse(datastore.ProtocolID, callID)
-	rmcResponse.SetSuccess(datastore.MethodPrepareGetObject, rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
+	rmcResponse.ProtocolID = datastore.ProtocolID
+	rmcResponse.MethodID = datastore.MethodPrepareGetObject
+	rmcResponse.CallID = callID
 
-	rmcResponseBytes := rmcResponse.Bytes()
-
-	var responsePacket nex.PacketInterface
-
-	if commonDataStoreProtocol.server.PRUDPVersion() == 0 {
-		responsePacket, _ = nex.NewPacketV0(client, nil)
-		responsePacket.SetVersion(0)
-	} else {
-		responsePacket, _ = nex.NewPacketV1(client, nil)
-		responsePacket.SetVersion(1)
+	if commonProtocol.OnAfterPrepareGetObject != nil {
+		go commonProtocol.OnAfterPrepareGetObject(packet, param)
 	}
 
-	responsePacket.SetSource(packet.Destination())
-	responsePacket.SetDestination(packet.Source())
-	responsePacket.SetType(nex.DataPacket)
-	responsePacket.SetPayload(rmcResponseBytes)
-
-	responsePacket.AddFlag(nex.FlagNeedsAck)
-	responsePacket.AddFlag(nex.FlagReliable)
-
-	commonDataStoreProtocol.server.Send(responsePacket)
-
-	return 0
+	return rmcResponse, nil
 }

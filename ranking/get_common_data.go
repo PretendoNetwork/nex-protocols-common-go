@@ -1,59 +1,45 @@
 package ranking
 
 import (
-	"github.com/PretendoNetwork/nex-go"
-	ranking "github.com/PretendoNetwork/nex-protocols-go/ranking"
-
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
+	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/types"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	ranking "github.com/PretendoNetwork/nex-protocols-go/v2/ranking"
 )
 
-func getCommonData(err error, packet nex.PacketInterface, callID uint32, uniqueID uint64) uint32 {
-	if commonRankingProtocol.getCommonDataHandler == nil {
-		common_globals.Logger.Warning("Ranking::GetCommonData missing GetCommonDataHandler!")
-		return nex.Errors.Core.NotImplemented
+func (commonProtocol *CommonProtocol) getCommonData(err error, packet nex.PacketInterface, callID uint32, uniqueID *types.PrimitiveU64) (*nex.RMCMessage, *nex.Error) {
+	if commonProtocol.GetCommonData == nil {
+		common_globals.Logger.Warning("Ranking::GetCommonData missing GetCommonData!")
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 	}
-
-	client := packet.Sender()
-	server := commonRankingProtocol.server
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.Ranking.InvalidArgument
+		return nil, nex.NewError(nex.ResultCodes.Ranking.InvalidArgument, "change_error")
 	}
 
-	commonData, err := commonRankingProtocol.getCommonDataHandler(uniqueID)
+	connection := packet.Sender()
+	endpoint := connection.Endpoint()
+
+	commonData, err := commonProtocol.GetCommonData(uniqueID)
 	if err != nil {
-		return nex.Errors.Ranking.NotFound
+		return nil, nex.NewError(nex.ResultCodes.Ranking.NotFound, "change_error")
 	}
 
-	rmcResponseStream := nex.NewStreamOut(server)
-	rmcResponseStream.WriteBuffer(commonData)
+	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
+
+	commonData.WriteTo(rmcResponseStream)
+
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCResponse(ranking.ProtocolID, callID)
-	rmcResponse.SetSuccess(ranking.MethodGetCommonData, rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
+	rmcResponse.ProtocolID = ranking.ProtocolID
+	rmcResponse.MethodID = ranking.MethodGetCommonData
+	rmcResponse.CallID = callID
 
-	rmcResponseBytes := rmcResponse.Bytes()
-
-	var responsePacket nex.PacketInterface
-
-	if server.PRUDPVersion() == 0 {
-		responsePacket, _ = nex.NewPacketV0(client, nil)
-		responsePacket.SetVersion(0)
-	} else {
-		responsePacket, _ = nex.NewPacketV1(client, nil)
-		responsePacket.SetVersion(1)
+	if commonProtocol.OnAfterGetCommonData != nil {
+		go commonProtocol.OnAfterGetCommonData(packet, uniqueID)
 	}
 
-	responsePacket.SetSource(packet.Destination())
-	responsePacket.SetDestination(packet.Source())
-	responsePacket.SetType(nex.DataPacket)
-	responsePacket.SetPayload(rmcResponseBytes)
-
-	responsePacket.AddFlag(nex.FlagNeedsAck)
-	responsePacket.AddFlag(nex.FlagReliable)
-
-	server.Send(responsePacket)
-
-	return 0
+	return rmcResponse, nil
 }

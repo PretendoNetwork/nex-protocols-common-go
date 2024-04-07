@@ -1,68 +1,52 @@
 package matchmake_extension
 
 import (
-	nex "github.com/PretendoNetwork/nex-go"
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
-	match_making_types "github.com/PretendoNetwork/nex-protocols-go/match-making/types"
-	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/matchmake-extension"
+	"github.com/PretendoNetwork/nex-go/v2"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	match_making_types "github.com/PretendoNetwork/nex-protocols-go/v2/match-making/types"
+	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/v2/matchmake-extension"
 )
 
-func createMatchmakeSessionWithParam(err error, packet nex.PacketInterface, callID uint32, createMatchmakeSessionParam *match_making_types.CreateMatchmakeSessionParam) uint32 {
+func (commonProtocol *CommonProtocol) createMatchmakeSessionWithParam(err error, packet nex.PacketInterface, callID uint32, createMatchmakeSessionParam *match_making_types.CreateMatchmakeSessionParam) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nex.Errors.Core.InvalidArgument
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	client := packet.Sender()
-	server := commonMatchmakeExtensionProtocol.server
+	connection := packet.Sender().(*nex.PRUDPConnection)
+	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
 	// * A client may disconnect from a session without leaving reliably,
 	// * so let's make sure the client is removed from all sessions
-	common_globals.RemoveClientFromAllSessions(client)
+	common_globals.RemoveConnectionFromAllSessions(connection)
 
 	joinedMatchmakeSession := createMatchmakeSessionParam.SourceMatchmakeSession.Copy().(*match_making_types.MatchmakeSession)
-	session, err, errCode := common_globals.CreateSessionByMatchmakeSession(joinedMatchmakeSession, nil, client.PID())
-	if err != nil {
-		common_globals.Logger.Error(err.Error())
-		return errCode
+	session, errCode := common_globals.CreateSessionByMatchmakeSession(joinedMatchmakeSession, nil, connection.PID())
+	if errCode != nil {
+		common_globals.Logger.Error(errCode.Error())
+		return nil, errCode
 	}
 
-	err, errCode = common_globals.AddPlayersToSession(session, []uint32{client.ConnectionID()}, client, createMatchmakeSessionParam.JoinMessage)
-	if err != nil {
-		common_globals.Logger.Error(err.Error())
-		return errCode
+	errCode = common_globals.AddPlayersToSession(session, []uint32{connection.ID}, connection, createMatchmakeSessionParam.JoinMessage.Value)
+	if errCode != nil {
+		common_globals.Logger.Error(errCode.Error())
+		return nil, errCode
 	}
 
-	rmcResponseStream := nex.NewStreamOut(server)
+	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
-	rmcResponseStream.WriteStructure(session.GameMatchmakeSession)
+	session.GameMatchmakeSession.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
-	rmcResponse := nex.NewRMCResponse(matchmake_extension.ProtocolID, callID)
-	rmcResponse.SetSuccess(matchmake_extension.MethodCreateMatchmakeSessionWithParam, rmcResponseBody)
+	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
+	rmcResponse.ProtocolID = matchmake_extension.ProtocolID
+	rmcResponse.MethodID = matchmake_extension.MethodCreateMatchmakeSessionWithParam
+	rmcResponse.CallID = callID
 
-	rmcResponseBytes := rmcResponse.Bytes()
-
-	var responsePacket nex.PacketInterface
-
-	if server.PRUDPVersion() == 0 {
-		responsePacket, _ = nex.NewPacketV0(client, nil)
-		responsePacket.SetVersion(0)
-	} else {
-		responsePacket, _ = nex.NewPacketV1(client, nil)
-		responsePacket.SetVersion(1)
+	if commonProtocol.OnAfterCreateMatchmakeSessionWithParam != nil {
+		go commonProtocol.OnAfterCreateMatchmakeSessionWithParam(packet, createMatchmakeSessionParam)
 	}
 
-	responsePacket.SetSource(packet.Destination())
-	responsePacket.SetDestination(packet.Source())
-	responsePacket.SetType(nex.DataPacket)
-	responsePacket.SetPayload(rmcResponseBytes)
-
-	responsePacket.AddFlag(nex.FlagNeedsAck)
-	responsePacket.AddFlag(nex.FlagReliable)
-
-	server.Send(responsePacket)
-
-	return 0
+	return rmcResponse, nil
 }
