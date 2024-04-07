@@ -1,8 +1,8 @@
 package utility
 
 import (
-	"github.com/PretendoNetwork/nex-go"
-	utility "github.com/PretendoNetwork/nex-protocols-go/utility"
+	"github.com/PretendoNetwork/nex-go/v2"
+	utility "github.com/PretendoNetwork/nex-protocols-go/v2/utility"
 )
 
 type CommonProtocol struct {

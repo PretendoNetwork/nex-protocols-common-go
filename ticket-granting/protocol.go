@@ -1,12 +1,12 @@
 package ticket_granting
 
 import (
-	"github.com/PretendoNetwork/nex-go"
-	"github.com/PretendoNetwork/nex-go/types"
-	_ "github.com/PretendoNetwork/nex-protocols-go"
-	ticket_granting "github.com/PretendoNetwork/nex-protocols-go/ticket-granting"
+	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/types"
+	_ "github.com/PretendoNetwork/nex-protocols-go/v2"
+	ticket_granting "github.com/PretendoNetwork/nex-protocols-go/v2/ticket-granting"
 
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 )
 
 type CommonProtocol struct {

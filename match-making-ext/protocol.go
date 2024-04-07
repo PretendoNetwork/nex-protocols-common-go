@@ -1,9 +1,9 @@
 package match_making_ext
 
 import (
-	"github.com/PretendoNetwork/nex-go"
-	"github.com/PretendoNetwork/nex-go/types"
-	match_making_ext "github.com/PretendoNetwork/nex-protocols-go/match-making-ext"
+	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/types"
+	match_making_ext "github.com/PretendoNetwork/nex-protocols-go/v2/match-making-ext"
 )
 
 type CommonProtocol struct {

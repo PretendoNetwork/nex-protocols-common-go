@@ -6,13 +6,13 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/PretendoNetwork/nex-go"
-	"github.com/PretendoNetwork/nex-go/constants"
-	"github.com/PretendoNetwork/nex-go/types"
-	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
-	match_making_types "github.com/PretendoNetwork/nex-protocols-go/match-making/types"
-	notifications "github.com/PretendoNetwork/nex-protocols-go/notifications"
-	notifications_types "github.com/PretendoNetwork/nex-protocols-go/notifications/types"
+	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/constants"
+	"github.com/PretendoNetwork/nex-go/v2/types"
+	match_making "github.com/PretendoNetwork/nex-protocols-go/v2/match-making"
+	match_making_types "github.com/PretendoNetwork/nex-protocols-go/v2/match-making/types"
+	notifications "github.com/PretendoNetwork/nex-protocols-go/v2/notifications"
+	notifications_types "github.com/PretendoNetwork/nex-protocols-go/v2/notifications/types"
 	"golang.org/x/exp/slices"
 )
 

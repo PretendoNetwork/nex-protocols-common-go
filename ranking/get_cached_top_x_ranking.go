@@ -3,11 +3,11 @@ package ranking
 import (
 	"time"
 
-	"github.com/PretendoNetwork/nex-go"
-	"github.com/PretendoNetwork/nex-go/types"
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
-	ranking "github.com/PretendoNetwork/nex-protocols-go/ranking"
-	ranking_types "github.com/PretendoNetwork/nex-protocols-go/ranking/types"
+	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/types"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	ranking "github.com/PretendoNetwork/nex-protocols-go/v2/ranking"
+	ranking_types "github.com/PretendoNetwork/nex-protocols-go/v2/ranking/types"
 )
 
 func (commonProtocol *CommonProtocol) getCachedTopXRanking(err error, packet nex.PacketInterface, callID uint32, category *types.PrimitiveU32, orderParam *ranking_types.RankingOrderParam) (*nex.RMCMessage, *nex.Error) {

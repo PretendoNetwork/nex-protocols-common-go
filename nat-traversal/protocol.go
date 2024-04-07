@@ -1,9 +1,9 @@
 package nattraversal
 
 import (
-	"github.com/PretendoNetwork/nex-go"
-	"github.com/PretendoNetwork/nex-go/types"
-	nat_traversal "github.com/PretendoNetwork/nex-protocols-go/nat-traversal"
+	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/types"
+	nat_traversal "github.com/PretendoNetwork/nex-protocols-go/v2/nat-traversal"
 )
 
 type CommonProtocol struct {

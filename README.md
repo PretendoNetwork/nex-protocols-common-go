@@ -1,7 +1,7 @@
 # NEX Protocols Common Go
 ## NEX protocols used by many games with premade handlers and a high level API
 
-[![GoDoc](https://godoc.org/github.com/PretendoNetwork/nex-protocols-common-go?status.svg)](https://godoc.org/github.com/PretendoNetwork/nex-protocols-common-go)
+[![GoDoc](https://godoc.org/github.com/PretendoNetwork/nex-protocols-common-go/v2?status.svg)](https://godoc.org/github.com/PretendoNetwork/nex-protocols-common-go/v2)
 
 ### Other NEX libraries
 [nex-go](https://github.com/PretendoNetwork/nex-go) - Barebones NEX/PRUDP server implementation
@@ -10,7 +10,7 @@
 
 ### Install
 
-`go get github.com/PretendoNetwork/nex-protocols-common-go`
+`go get github.com/PretendoNetwork/nex-protocols-common-go/v2`
 
 ### Usage
 
@@ -26,9 +26,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/PretendoNetwork/nex-go"
-	ticket_granting "github.com/PretendoNetwork/nex-protocols-go/ticket-granting"
-	common_ticket_granting "github.com/PretendoNetwork/nex-protocols-common-go/ticket-granting"
+	"github.com/PretendoNetwork/nex-go/v2"
+	ticket_granting "github.com/PretendoNetwork/nex-protocols-go/v2/ticket-granting"
+	common_ticket_granting "github.com/PretendoNetwork/nex-protocols-common-go/v2/ticket-granting"
 )
 
 var nexServer *nex.PRUDPServer

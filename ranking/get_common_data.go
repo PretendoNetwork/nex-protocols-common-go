@@ -1,10 +1,10 @@
 package ranking
 
 import (
-	"github.com/PretendoNetwork/nex-go"
-	"github.com/PretendoNetwork/nex-go/types"
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
-	ranking "github.com/PretendoNetwork/nex-protocols-go/ranking"
+	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/types"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	ranking "github.com/PretendoNetwork/nex-protocols-go/v2/ranking"
 )
 
 func (commonProtocol *CommonProtocol) getCommonData(err error, packet nex.PacketInterface, callID uint32, uniqueID *types.PrimitiveU64) (*nex.RMCMessage, *nex.Error) {

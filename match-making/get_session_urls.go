@@ -1,10 +1,10 @@
 package matchmaking
 
 import (
-	"github.com/PretendoNetwork/nex-go"
-	"github.com/PretendoNetwork/nex-go/types"
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
-	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
+	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/types"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	match_making "github.com/PretendoNetwork/nex-protocols-go/v2/match-making"
 )
 
 func (commonProtocol *CommonProtocol) getSessionURLs(err error, packet nex.PacketInterface, callID uint32, gid *types.PrimitiveU32) (*nex.RMCMessage, *nex.Error) {

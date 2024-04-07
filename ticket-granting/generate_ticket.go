@@ -3,9 +3,9 @@ package ticket_granting
 import (
 	"crypto/rand"
 
-	"github.com/PretendoNetwork/nex-go"
-	"github.com/PretendoNetwork/nex-go/types"
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
+	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/types"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 )
 
 func generateTicket(source, target *nex.Account, sessionKeyLength int, endpoint *nex.PRUDPEndPoint) ([]byte, *nex.Error) {

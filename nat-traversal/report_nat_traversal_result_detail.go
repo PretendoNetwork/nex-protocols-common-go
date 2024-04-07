@@ -1,10 +1,10 @@
 package nattraversal
 
 import (
-	"github.com/PretendoNetwork/nex-go"
-	"github.com/PretendoNetwork/nex-go/types"
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
-	nat_traversal "github.com/PretendoNetwork/nex-protocols-go/nat-traversal"
+	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/types"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	nat_traversal "github.com/PretendoNetwork/nex-protocols-go/v2/nat-traversal"
 )
 
 func (commonProtocol *CommonProtocol) reportNATTraversalResultDetail(err error, packet nex.PacketInterface, callID uint32, cid *types.PrimitiveU32, result *types.PrimitiveBool, detail *types.PrimitiveS32, rtt *types.PrimitiveU32) (*nex.RMCMessage, *nex.Error) {

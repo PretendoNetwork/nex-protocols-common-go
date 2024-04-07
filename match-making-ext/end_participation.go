@@ -1,14 +1,14 @@
 package match_making_ext
 
 import (
-	"github.com/PretendoNetwork/nex-go"
-	"github.com/PretendoNetwork/nex-go/constants"
-	"github.com/PretendoNetwork/nex-go/types"
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/globals"
-	match_making "github.com/PretendoNetwork/nex-protocols-go/match-making"
-	match_making_ext "github.com/PretendoNetwork/nex-protocols-go/match-making-ext"
-	notifications "github.com/PretendoNetwork/nex-protocols-go/notifications"
-	notifications_types "github.com/PretendoNetwork/nex-protocols-go/notifications/types"
+	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/constants"
+	"github.com/PretendoNetwork/nex-go/v2/types"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	match_making "github.com/PretendoNetwork/nex-protocols-go/v2/match-making"
+	match_making_ext "github.com/PretendoNetwork/nex-protocols-go/v2/match-making-ext"
+	notifications "github.com/PretendoNetwork/nex-protocols-go/v2/notifications"
+	notifications_types "github.com/PretendoNetwork/nex-protocols-go/v2/notifications/types"
 )
 
 func (commonProtocol *CommonProtocol) endParticipation(err error, packet nex.PacketInterface, callID uint32, idGathering *types.PrimitiveU32, strMessage *types.String) (*nex.RMCMessage, *nex.Error) {
