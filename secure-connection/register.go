@@ -26,17 +26,26 @@ func (commonProtocol *CommonProtocol) register(err error, packet nex.PacketInter
 
 	for _, stationURL := range vecMyURLs.Slice() {
 		natf, ok := stationURL.NATFiltering()
-		if !ok { continue; }
-		natm, ok := stationURL.NATMapping()
-		if !ok { continue; }
-		pmp := stationURL.IsNATPMPSupported()
-		transportType, transportTypeOk := stationURL.Type()
+		if !ok {
+			continue
+		}
 
-		if natf == constants.UnknownNATFiltering && natm == constants.UnknownNATMapping && !pmp && !transportTypeOk && localStation == nil {
+		natm, ok := stationURL.NATMapping()
+		if !ok {
+			continue
+		}
+
+		// * Station reports itself as being non-public (local)
+		if localStation == nil && !stationURL.IsPublic() {
 			localStation = stationURL.Copy().(*types.StationURL)
 		}
 
-		if (transportType & uint8(constants.StationURLFlagPublic) == uint8(constants.StationURLFlagPublic)) && publicStation == nil {
+		// * Still did not find the station, trying heuristics
+		if localStation == nil && natf == constants.UnknownNATFiltering && natm == constants.UnknownNATMapping {
+			localStation = stationURL.Copy().(*types.StationURL)
+		}
+
+		if publicStation == nil && stationURL.IsPublic() {
 			publicStation = stationURL.Copy().(*types.StationURL)
 		}
 	}
