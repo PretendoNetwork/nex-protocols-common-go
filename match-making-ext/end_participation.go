@@ -68,7 +68,7 @@ func (commonProtocol *CommonProtocol) endParticipation(err error, packet nex.Pac
 	target := endpoint.FindConnectionByPID(ownerPID.Value())
 	if target == nil {
 		common_globals.Logger.Warning("Owner client not found")
-		return nil, nil
+		return rmcResponse, nil
 	}
 
 	var messagePacket nex.PRUDPPacketInterface
