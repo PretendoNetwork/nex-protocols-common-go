@@ -188,7 +188,7 @@ func removeConnectionIDFromSessionImpl(connection *nex.PRUDPConnection, gatherin
 		// * More info: https://nintendo-wiki.pretendo.network/docs/nex/protocols/match-making/types#flags
 		// TODO: Check what to do if the owner doesn't end participation gracefully, for now assume it won't be possible to
 		// recover and delete session.
-		if session.GameMatchmakeSession.Gathering.Flags.PAND(match_making.GatheringFlags.DisconnectChangeOwner) == 0 || !gracefully {
+		if session.GameMatchmakeSession.Gathering.Flags.PAND(match_making.GatheringFlags.DisconnectChangeOwner) == 0 {
 			removeSessionImpl(connection, gathering)
 		} else {
 			// TODO: Figure out if this is the correct way to do it!
