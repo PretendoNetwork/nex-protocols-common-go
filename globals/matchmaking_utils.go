@@ -192,7 +192,7 @@ func removeConnectionIDFromSessionImpl(connection *nex.PRUDPConnection, gatherin
 			removeSessionImpl(connection, gathering)
 		} else {
 			// TODO: Figure out if this is the correct way to do it!
-			// changeSessionOwnerImpl(connection, gathering, true)
+			changeSessionOwnerImpl(connection, gathering, true)
 		}
 	} else {
 		endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
@@ -741,13 +741,9 @@ func changeSessionOwnerImpl(currentOwner *nex.PRUDPConnection, gathering uint32,
 		}
 
 		if (SessionManagementDebugLog) {
-			globals.Logger.Infof("GID %d: ChangeSessionOwner from PID %d to PID %d", gathering, currentOwner.PID().LegacyValue(), newOwner.PID().LegacyValue())
+			globals.Logger.Infof("GID %d: ChangeSessionOwner OWNER from PID %d to PID %d", gathering, currentOwner.PID().LegacyValue(), newOwner.PID().LegacyValue())
 		}
 	
-		// If the current owner is the host and they are leaving, change it by the new owner
-		if session.GameMatchmakeSession.Gathering.HostPID.Equals(currentOwner.PID()) && isLeaving {
-			session.GameMatchmakeSession.Gathering.HostPID = newOwner.PID()
-		}
 		session.GameMatchmakeSession.Gathering.OwnerPID = newOwner.PID()
 	} else {
 		return
