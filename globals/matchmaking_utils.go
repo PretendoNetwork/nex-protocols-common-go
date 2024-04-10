@@ -191,7 +191,8 @@ func removeConnectionIDFromSessionImpl(connection *nex.PRUDPConnection, gatherin
 		if session.GameMatchmakeSession.Gathering.Flags.PAND(match_making.GatheringFlags.DisconnectChangeOwner) == 0 || !gracefully {
 			removeSessionImpl(connection, gathering)
 		} else {
-			changeSessionOwnerImpl(connection, gathering, true)
+			// TODO: Figure out if this is the correct way to do it!
+			// changeSessionOwnerImpl(connection, gathering, true)
 		}
 	} else {
 		endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
