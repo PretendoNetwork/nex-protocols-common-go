@@ -13,8 +13,8 @@ func (commonProtocol *CommonProtocol) updateProgressScore(err error, packet nex.
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	session := common_globals.Sessions[gid.Value]
-	if session == nil {
+	session, ok := common_globals.GetSession(gid.Value)
+	if !ok {
 		return nil, nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "change_error")
 	}
 

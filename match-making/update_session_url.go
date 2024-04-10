@@ -16,7 +16,7 @@ func (commonProtocol *CommonProtocol) updateSessionURL(err error, packet nex.Pac
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	session, ok := common_globals.Sessions[idGathering.Value]
+	session, ok := common_globals.GetSession(idGathering.Value)
 	if !ok {
 		return nil, nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "change_error")
 	}
@@ -30,6 +30,10 @@ func (commonProtocol *CommonProtocol) updateSessionURL(err error, packet nex.Pac
 	if session.GameMatchmakeSession.Gathering.Flags.PAND(match_making.GatheringFlags.DisconnectChangeOwner) != 0 {
 		originalOwner := session.GameMatchmakeSession.Gathering.OwnerPID
 		session.GameMatchmakeSession.Gathering.OwnerPID = connection.PID().Copy().(*types.PID)
+
+		if (common_globals.SessionManagementDebugLog) {
+			common_globals.Logger.Infof("GID %d: UpdateSessionURL from PID %d to PID %d", idGathering.Value, originalOwner.Value(), connection.PID().LegacyValue())
+		}
 
 		category := notifications.NotificationCategories.OwnershipChanged
 		subtype := notifications.NotificationSubTypes.OwnershipChanged.None
@@ -57,7 +61,7 @@ func (commonProtocol *CommonProtocol) updateSessionURL(err error, packet nex.Pac
 
 		rmcRequestBytes := rmcRequest.Bytes()
 
-		common_globals.Sessions[idGathering.Value].ConnectionIDs.Each(func(_ int, connectionID uint32) bool {
+		session.ConnectionIDs.Each(func(_ int, connectionID uint32) bool {
 			target := endpoint.FindConnectionByID(connectionID)
 			if target == nil {
 				common_globals.Logger.Warning("Client not found")

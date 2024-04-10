@@ -5,7 +5,6 @@ import (
 	"github.com/PretendoNetwork/nex-go/v2/constants"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
-	match_making "github.com/PretendoNetwork/nex-protocols-go/v2/match-making"
 	match_making_ext "github.com/PretendoNetwork/nex-protocols-go/v2/match-making-ext"
 	notifications "github.com/PretendoNetwork/nex-protocols-go/v2/notifications"
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/v2/notifications/types"
@@ -17,7 +16,7 @@ func (commonProtocol *CommonProtocol) endParticipation(err error, packet nex.Pac
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	session, ok := common_globals.Sessions[idGathering.Value]
+	session, ok := common_globals.GetSession(idGathering.Value)
 	if !ok {
 		return nil, nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "change_error")
 	}
@@ -29,23 +28,7 @@ func (commonProtocol *CommonProtocol) endParticipation(err error, packet nex.Pac
 	matchmakeSession := session.GameMatchmakeSession
 	ownerPID := matchmakeSession.Gathering.OwnerPID
 
-	var deleteSession bool = false
-	if connection.PID().Equals(matchmakeSession.Gathering.OwnerPID) {
-		// * This flag tells the server to change the matchmake session owner if they disconnect
-		// * If the flag is not set, delete the session
-		// * More info: https://nintendo-wiki.pretendo.network/docs/nex/protocols/match-making/types#flags
-		if matchmakeSession.Gathering.Flags.PAND(match_making.GatheringFlags.DisconnectChangeOwner) == 0 {
-			deleteSession = true
-		} else {
-			common_globals.ChangeSessionOwner(connection, idGathering.Value, true)
-		}
-	}
-
-	if deleteSession {
-		delete(common_globals.Sessions, idGathering.Value)
-	} else {
-		common_globals.RemoveConnectionIDFromSession(connection.ID, idGathering.Value)
-	}
+	common_globals.RemoveConnectionIDFromSession(connection, idGathering.Value, true)
 
 	retval := types.NewPrimitiveBool(true)
 

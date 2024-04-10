@@ -28,8 +28,9 @@ func (commonProtocol *CommonProtocol) getSimplePlayingSession(err error, packet 
 	}
 
 	simplePlayingSessions := make(map[string]*match_making_types.SimplePlayingSession)
-
-	for gatheringID, session := range common_globals.Sessions {
+	
+	var errRet *nex.Error = nil
+	common_globals.EachSession((func(gatheringID uint32, session *common_globals.CommonMatchmakeSession) bool {
 		for _, pid := range listPID.Slice() {
 			key := fmt.Sprintf("%d-%d", gatheringID, pid.Value())
 			if simplePlayingSessions[key] == nil {
@@ -49,7 +50,8 @@ func (commonProtocol *CommonProtocol) getSimplePlayingSession(err error, packet 
 					attribute0, err := session.GameMatchmakeSession.Attributes.Get(0)
 					if err != nil {
 						common_globals.Logger.Error(err.Error())
-						return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
+						errRet = nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
+						return true
 					}
 
 					simplePlayingSessions[key] = match_making_types.NewSimplePlayingSession()
@@ -60,6 +62,11 @@ func (commonProtocol *CommonProtocol) getSimplePlayingSession(err error, packet 
 				}
 			}
 		}
+		return false
+	}))
+
+	if (errRet != nil) {
+		return nil, errRet
 	}
 
 	lstSimplePlayingSession := types.NewList[*match_making_types.SimplePlayingSession]()

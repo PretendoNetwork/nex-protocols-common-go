@@ -28,7 +28,7 @@ func NewCommonProtocol(protocol match_making.Interface) *CommonProtocol {
 		protocol: protocol,
 	}
 
-	common_globals.Sessions = make(map[uint32]*common_globals.CommonMatchmakeSession)
+	common_globals.MakeSessions()
 
 	protocol.SetHandlerUnregisterGathering(commonProtocol.unregisterGathering)
 	protocol.SetHandlerFindBySingleID(commonProtocol.findBySingleID)

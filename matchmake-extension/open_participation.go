@@ -16,7 +16,7 @@ func (commonProtocol *CommonProtocol) openParticipation(err error, packet nex.Pa
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
-	session, ok := common_globals.Sessions[gid.Value]
+	session, ok := common_globals.GetSession(gid.Value)
 	if !ok {
 		return nil, nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "change_error")
 	}

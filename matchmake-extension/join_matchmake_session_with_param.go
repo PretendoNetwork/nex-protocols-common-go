@@ -13,7 +13,7 @@ func (commonProtocol *CommonProtocol) joinMatchmakeSessionWithParam(err error, p
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	session, ok := common_globals.Sessions[joinMatchmakeSessionParam.GID.Value]
+	session, ok := common_globals.GetSession(joinMatchmakeSessionParam.GID.Value)
 	if !ok {
 		return nil, nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "change_error")
 	}
