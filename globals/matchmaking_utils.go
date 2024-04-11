@@ -98,7 +98,6 @@ func removeSessionImpl(connection *nex.PRUDPConnection, gathering uint32) {
 		oEvent.Type = types.NewPrimitiveU32(notifications.BuildNotificationType(category, subtype))
 		oEvent.Param1 = types.NewPrimitiveU32(gathering)
 
-		
 		stream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
 		oEvent.WriteTo(stream)
@@ -188,11 +187,13 @@ func removeConnectionIDFromSessionImpl(connection *nex.PRUDPConnection, gatherin
 		// * More info: https://nintendo-wiki.pretendo.network/docs/nex/protocols/match-making/types#flags
 		if session.GameMatchmakeSession.Gathering.Flags.PAND(match_making.GatheringFlags.DisconnectChangeOwner) == 0 {
 			removeSessionImpl(connection, gathering)
+			return
 		} else {
 			// TODO: Figure out if this is the correct way to do it!
 			changeSessionOwnerImpl(connection, gathering, true)
 		}
-	} else if !gracefully {
+	}
+	if !gracefully {
 		// Only send the disconnected notification if the connection disonnected ungracefully
 		endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 		server := endpoint.Server
@@ -536,8 +537,6 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 		// Update the participation count with the new connection ID count
 		session.GameMatchmakeSession.ParticipationCount.Value = uint32(session.ConnectionIDs.Size())
 	}
-
-	
 
 	session.ConnectionIDs.Each(func(_ int, connectionID uint32) bool {
 		target := endpoint.FindConnectionByID(connectionID)
