@@ -65,7 +65,7 @@ func (commonProtocol *CommonProtocol) getSimplePlayingSession(err error, packet 
 		return false
 	}))
 
-	if (errRet != nil) {
+	if errRet != nil {
 		return nil, errRet
 	}
 

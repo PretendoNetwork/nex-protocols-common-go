@@ -52,7 +52,7 @@ func (commonProtocol *CommonProtocol) autoMatchmakePostpone(err error, packet ne
 		var ok bool
 		session, ok = common_globals.GetSession(sessionIndex)
 		// TOCTOU, just in case
-		if (!ok) {
+		if !ok {
 			return nil, nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "change_error")
 		}
 	}

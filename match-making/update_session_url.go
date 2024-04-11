@@ -25,7 +25,7 @@ func (commonProtocol *CommonProtocol) updateSessionURL(err error, packet nex.Pac
 	originalHost := session.GameMatchmakeSession.Gathering.HostPID
 	session.GameMatchmakeSession.Gathering.HostPID = connection.PID().Copy().(*types.PID)
 
-	if (common_globals.SessionManagementDebugLog) {
+	if common_globals.SessionManagementDebugLog {
 		common_globals.Logger.Infof("GID %d: UpdateSessionURL HOST from PID %d to PID %d", idGathering.Value, originalHost.LegacyValue(), connection.PID().LegacyValue())
 	}
 

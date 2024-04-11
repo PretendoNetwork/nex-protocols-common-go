@@ -530,7 +530,7 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 
 		session.ConnectionIDs.Add(connectedID)
 
-		if (SessionManagementDebugLog) {
+		if SessionManagementDebugLog {
 			conn := endpoint.FindConnectionByID(connectedID)
 			globals.Logger.Infof("GID %d: Added PID %d", session.GameMatchmakeSession.Gathering.ID.Value, conn.PID().LegacyValue())
 		}
@@ -727,7 +727,7 @@ func changeSessionOwnerImpl(currentOwner *nex.PRUDPConnection, gathering uint32,
 	endpoint := currentOwner.Endpoint().(*nex.PRUDPEndPoint)
 	server := endpoint.Server
 	session, ok := sessions[gathering]
-	if (!ok) {
+	if !ok {
 		return
 	}
 

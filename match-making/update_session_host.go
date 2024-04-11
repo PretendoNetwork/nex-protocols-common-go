@@ -38,7 +38,7 @@ func (commonProtocol *CommonProtocol) updateSessionHost(err error, packet nex.Pa
 	rmcResponse.MethodID = match_making.MethodUpdateSessionHost
 	rmcResponse.CallID = callID
 
-	if (common_globals.SessionManagementDebugLog) {
+	if common_globals.SessionManagementDebugLog {
 		common_globals.Logger.Infof("GID %d: UpdateSessionHost from PID %d to PID %d", gid.Value, originalHost.LegacyValue(), connection.PID().LegacyValue())
 	}
 

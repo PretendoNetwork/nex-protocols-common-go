@@ -31,7 +31,7 @@ func (commonProtocol *CommonProtocol) updateSessionHostV1(err error, packet nex.
 		session.GameMatchmakeSession.Gathering.OwnerPID = connection.PID()
 	}
 
-	if (common_globals.SessionManagementDebugLog) {
+	if common_globals.SessionManagementDebugLog {
 		common_globals.Logger.Infof("GID %d: UpdateSessionHost from PID %d to PID %d", gid.Value, originalHost.LegacyValue(), connection.PID().LegacyValue())
 	}
 
