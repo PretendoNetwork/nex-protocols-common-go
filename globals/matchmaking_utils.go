@@ -84,7 +84,7 @@ func removeSessionImpl(connection *nex.PRUDPConnection, gathering uint32) {
 	if !ok {
 		return
 	}
-	if (session.ConnectionIDs.Size() != 0) {
+	if session.ConnectionIDs.Size() != 0 {
 		endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 		server := endpoint.Server
 
@@ -157,7 +157,7 @@ func RemoveSession(connection *nex.PRUDPConnection, gathering uint32) {
 // RemoveConnectionIDFromSession removes a PRUDP connection from the session
 func removeConnectionIDFromSessionImpl(connection *nex.PRUDPConnection, gathering uint32, gracefully bool) {
 	session, ok := sessions[gathering]
-	if (!ok) {
+	if !ok {
 		return
 	}
 	session.ConnectionIDs.DeleteAll(connection.ID)
@@ -194,7 +194,8 @@ func removeConnectionIDFromSessionImpl(connection *nex.PRUDPConnection, gatherin
 			// TODO: Figure out if this is the correct way to do it!
 			changeSessionOwnerImpl(connection, gathering, true)
 		}
-	} else {
+	} else if !gracefully {
+		// Only send the disconnected notification if the connection disonnected ungracefully
 		endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 		server := endpoint.Server
 
@@ -326,7 +327,7 @@ func CreateSessionByMatchmakeSession(matchmakeSession *match_making_types.Matchm
 
 	sessions[sessionIndex] = &session
 
-	if (SessionManagementDebugLog) {
+	if SessionManagementDebugLog {
 		globals.Logger.Infof("GID %d: Created", sessionIndex)
 	}
 
@@ -352,7 +353,7 @@ func FindSessionByMatchmakeSession(pid *types.PID, searchMatchmakeSession *match
 	var friendList []uint32
 	for _, sessionIndex := range candidateSessionIndexes {
 		sessionToCheck, ok := sessions[sessionIndex]
-		if (!ok) {
+		if !ok {
 			continue
 		}
 		if sessionToCheck.ConnectionIDs.Size() >= int(sessionToCheck.GameMatchmakeSession.MaximumParticipants.Value) {
@@ -515,7 +516,7 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 
 	// TOCTOU, just in case
 	_, ok := sessions[session.GameMatchmakeSession.Gathering.ID.Value]
-	if (!ok) {
+	if !ok {
 		return nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "change_error")
 	}
 
@@ -740,7 +741,7 @@ func changeSessionOwnerImpl(currentOwner *nex.PRUDPConnection, gathering uint32,
 			return
 		}
 
-		if (SessionManagementDebugLog) {
+		if SessionManagementDebugLog {
 			globals.Logger.Infof("GID %d: ChangeSessionOwner OWNER from PID %d to PID %d", gathering, currentOwner.PID().LegacyValue(), newOwner.PID().LegacyValue())
 		}
 	

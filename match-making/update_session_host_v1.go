@@ -25,9 +25,14 @@ func (commonProtocol *CommonProtocol) updateSessionHostV1(err error, packet nex.
 		return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
 	}
 
+	originalHost := session.GameMatchmakeSession.Gathering.HostPID
 	session.GameMatchmakeSession.Gathering.HostPID = connection.PID()
 	if session.GameMatchmakeSession.Gathering.Flags.PAND(match_making.GatheringFlags.DisconnectChangeOwner) != 0 {
 		session.GameMatchmakeSession.Gathering.OwnerPID = connection.PID()
+	}
+
+	if (common_globals.SessionManagementDebugLog) {
+		common_globals.Logger.Infof("GID %d: UpdateSessionHost from PID %d to PID %d", gid.Value, originalHost.LegacyValue(), connection.PID().LegacyValue())
 	}
 
 	rmcResponse := nex.NewRMCSuccess(endpoint, nil)

@@ -29,12 +29,18 @@ func (commonProtocol *CommonProtocol) updateSessionHost(err error, packet nex.Pa
 		return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
 	}
 
+	
+	originalHost := session.GameMatchmakeSession.Gathering.HostPID
 	session.GameMatchmakeSession.Gathering.HostPID = connection.PID().Copy().(*types.PID)
 
 	rmcResponse := nex.NewRMCSuccess(endpoint, nil)
 	rmcResponse.ProtocolID = match_making.ProtocolID
 	rmcResponse.MethodID = match_making.MethodUpdateSessionHost
 	rmcResponse.CallID = callID
+
+	if (common_globals.SessionManagementDebugLog) {
+		common_globals.Logger.Infof("GID %d: UpdateSessionHost from PID %d to PID %d", gid.Value, originalHost.LegacyValue(), connection.PID().LegacyValue())
+	}
 
 	if !isMigrateOwner.Value {
 		if commonProtocol.OnAfterUpdateSessionHost != nil {
@@ -45,11 +51,7 @@ func (commonProtocol *CommonProtocol) updateSessionHost(err error, packet nex.Pa
 	}
 
 	originalOwner := session.GameMatchmakeSession.Gathering.OwnerPID
-	session.GameMatchmakeSession.Gathering.OwnerPID = connection.PID().Copy().(*types.PID)
-
-	if (common_globals.SessionManagementDebugLog) {
-		common_globals.Logger.Infof("GID %d: UpdateSessionHost from PID %d to PID %d", gid.Value, originalOwner.Value(), connection.PID().LegacyValue())
-	}
+	session.GameMatchmakeSession.Gathering.OwnerPID = connection.PID().Copy().(*types.PID)	
 
 	category := notifications.NotificationCategories.OwnershipChanged
 	subtype := notifications.NotificationSubTypes.OwnershipChanged.None
