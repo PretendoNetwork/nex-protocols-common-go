@@ -32,7 +32,7 @@ func (commonProtocol *CommonProtocol) updateSessionHostV1(err error, packet nex.
 	}
 
 	if common_globals.SessionManagementDebugLog {
-		common_globals.Logger.Infof("GID %d: UpdateSessionHost from PID %d to PID %d", gid.Value, originalHost.LegacyValue(), connection.PID().LegacyValue())
+		common_globals.Logger.Infof("GID %d: UpdateSessionHost from PID %d to PID %d", gid.Value, originalHost.Value(), connection.PID().Value())
 	}
 
 	rmcResponse := nex.NewRMCSuccess(endpoint, nil)

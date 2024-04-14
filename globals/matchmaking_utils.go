@@ -27,6 +27,7 @@ func MakeSessions() {
 	sessions = make(map[uint32]*CommonMatchmakeSession)
 }
 
+// GetSession returns a session using the gathering ID.
 func GetSession(gatheringID uint32) (*CommonMatchmakeSession, bool) {
 	sessionsMutex.RLock()
 	defer sessionsMutex.RUnlock()
@@ -35,6 +36,7 @@ func GetSession(gatheringID uint32) (*CommonMatchmakeSession, bool) {
 	return ret, ok
 }
 
+// EachSession runs a callback for every session until it returns true
 func EachSession(callback func(index uint32, value *CommonMatchmakeSession) bool) bool {
 	sessionsMutex.RLock()
 	defer sessionsMutex.RUnlock()
@@ -171,16 +173,16 @@ func removeConnectionIDFromSessionImpl(connection *nex.PRUDPConnection, gatherin
 		} else {
 			grace = "ungracefully"
 		}
-		globals.Logger.Infof("GID %d: Removed PID %d %s", gathering, connection.PID().LegacyValue(), grace)
+		globals.Logger.Infof("GID %d: Removed PID %d %s", gathering, connection.PID().Value(), grace)
 	}
 
-	// If there are no more participants remove the session
+	// * If there are no more participants, remove the session
 	if lenParticipants == 0 {
 		removeSessionImpl(connection, gathering)
 		return
 	}
 
-	// If the owner is the one being removed...
+	// * If the owner is the one being removed...
 	if ownerPID.Equals(connection.PID()) {
 		// * This flag tells the server to change the matchmake session owner if they disconnect
 		// * If the flag is not set, delete the session
@@ -189,63 +191,66 @@ func removeConnectionIDFromSessionImpl(connection *nex.PRUDPConnection, gatherin
 			removeSessionImpl(connection, gathering)
 			return
 		} else {
-			// TODO: Figure out if this is the correct way to do it!
 			changeSessionOwnerImpl(connection, gathering, true)
 		}
 	}
-	if !gracefully {
-		// Only send the disconnected notification if the connection disonnected ungracefully
-		endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
-		server := endpoint.Server
 
-		category := notifications.NotificationCategories.Participation
-		subtype := notifications.NotificationSubTypes.Participation.Disconnected
+	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
+	server := endpoint.Server
 
-		oEvent := notifications_types.NewNotificationEvent()
-		oEvent.PIDSource = connection.PID()
-		oEvent.Type = types.NewPrimitiveU32(notifications.BuildNotificationType(category, subtype))
-		oEvent.Param1 = types.NewPrimitiveU32(gathering)
-		oEvent.Param2 = types.NewPrimitiveU32(connection.PID().LegacyValue()) // TODO - This assumes a legacy client. This won't work on the Switch
+	category := notifications.NotificationCategories.Participation
 
-		stream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
-
-		oEvent.WriteTo(stream)
-
-		rmcRequest := nex.NewRMCRequest(endpoint)
-		rmcRequest.ProtocolID = notifications.ProtocolID
-		rmcRequest.CallID = CurrentMatchmakingCallID.Next()
-		rmcRequest.MethodID = notifications.MethodProcessNotificationEvent
-		rmcRequest.Parameters = stream.Bytes()
-
-		rmcRequestBytes := rmcRequest.Bytes()
-
-		target := endpoint.FindConnectionByPID(ownerPID.Value())
-		if target == nil {
-			Logger.Warning("Target connection not found")
-			return
-		}
-
-		var messagePacket nex.PRUDPPacketInterface
-
-		if connection.DefaultPRUDPVersion == 0 {
-			messagePacket, _ = nex.NewPRUDPPacketV0(server, target, nil)
-		} else {
-			messagePacket, _ = nex.NewPRUDPPacketV1(server, target, nil)
-		}
-
-		messagePacket.SetType(constants.DataPacket)
-		messagePacket.AddFlag(constants.PacketFlagNeedsAck)
-		messagePacket.AddFlag(constants.PacketFlagReliable)
-		messagePacket.SetSourceVirtualPortStreamType(connection.StreamType)
-		messagePacket.SetSourceVirtualPortStreamID(endpoint.StreamID)
-		messagePacket.SetDestinationVirtualPortStreamType(connection.StreamType)
-		messagePacket.SetDestinationVirtualPortStreamID(connection.StreamID)
-		messagePacket.SetPayload(rmcRequestBytes)
-
-		server.Send(messagePacket)
+	var subtype uint32
+	if gracefully {
+		subtype = notifications.NotificationSubTypes.Participation.Ended
+	} else {
+		subtype = notifications.NotificationSubTypes.Participation.Disconnected
 	}
 
-	// Update the participation count with the new connection ID count
+	oEvent := notifications_types.NewNotificationEvent()
+	oEvent.PIDSource = connection.PID()
+	oEvent.Type = types.NewPrimitiveU32(notifications.BuildNotificationType(category, subtype))
+	oEvent.Param1 = types.NewPrimitiveU32(gathering)
+	oEvent.Param2 = types.NewPrimitiveU32(connection.PID().LegacyValue()) // TODO - This assumes a legacy client. This won't work on the Switch
+
+	stream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
+
+	oEvent.WriteTo(stream)
+
+	rmcRequest := nex.NewRMCRequest(endpoint)
+	rmcRequest.ProtocolID = notifications.ProtocolID
+	rmcRequest.CallID = CurrentMatchmakingCallID.Next()
+	rmcRequest.MethodID = notifications.MethodProcessNotificationEvent
+	rmcRequest.Parameters = stream.Bytes()
+
+	rmcRequestBytes := rmcRequest.Bytes()
+
+	target := endpoint.FindConnectionByPID(ownerPID.Value())
+	if target == nil {
+		Logger.Warning("Target connection not found")
+		return
+	}
+
+	var messagePacket nex.PRUDPPacketInterface
+
+	if connection.DefaultPRUDPVersion == 0 {
+		messagePacket, _ = nex.NewPRUDPPacketV0(server, target, nil)
+	} else {
+		messagePacket, _ = nex.NewPRUDPPacketV1(server, target, nil)
+	}
+
+	messagePacket.SetType(constants.DataPacket)
+	messagePacket.AddFlag(constants.PacketFlagNeedsAck)
+	messagePacket.AddFlag(constants.PacketFlagReliable)
+	messagePacket.SetSourceVirtualPortStreamType(connection.StreamType)
+	messagePacket.SetSourceVirtualPortStreamID(endpoint.StreamID)
+	messagePacket.SetDestinationVirtualPortStreamType(connection.StreamType)
+	messagePacket.SetDestinationVirtualPortStreamID(connection.StreamID)
+	messagePacket.SetPayload(rmcRequestBytes)
+
+	server.Send(messagePacket)
+
+	// * Update the participation count with the new connection ID count
 	session.GameMatchmakeSession.ParticipationCount.Value = uint32(session.ConnectionIDs.Size())
 }
 
@@ -355,6 +360,7 @@ func FindSessionByMatchmakeSession(pid *types.PID, searchMatchmakeSession *match
 		if !ok {
 			continue
 		}
+
 		if sessionToCheck.ConnectionIDs.Size() >= int(sessionToCheck.GameMatchmakeSession.MaximumParticipants.Value) {
 			continue
 		}
@@ -391,7 +397,7 @@ func FindSessionsByMatchmakeSessionSearchCriterias(pid *types.PID, searchCriteri
 	sessionsMutex.RLock()
 	defer sessionsMutex.RUnlock()
 	
-	candidatesessions := make([]*CommonMatchmakeSession, 0, len(sessions))
+	candidateSessions := make([]*CommonMatchmakeSession, 0, len(sessions))
 
 	// TODO - This whole section assumes legacy clients. None of it will work on the Switch
 	var friendList []uint32
@@ -449,14 +455,14 @@ func FindSessionsByMatchmakeSessionSearchCriterias(pid *types.PID, searchCriteri
 				}
 			}
 
-			candidatesessions = append(candidatesessions, session)
+			candidateSessions = append(candidateSessions, session)
 
-			// We don't have to compare with other search criterias
+			// * We don't have to compare with other search criterias
 			break
 		}
 	}
 
-	return candidatesessions
+	return candidateSessions
 }
 
 func compareAttributesSearchCriteria(original []*types.PrimitiveU32, search []*types.String) bool {
@@ -513,7 +519,7 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 		return nex.NewError(nex.ResultCodes.RendezVous.SessionFull, fmt.Sprintf("Gathering %d is full", session.GameMatchmakeSession.Gathering.ID))
 	}
 
-	// TOCTOU, just in case
+	// * TOCTOU, just in case
 	_, ok := sessions[session.GameMatchmakeSession.Gathering.ID.Value]
 	if !ok {
 		return nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "change_error")
@@ -531,10 +537,10 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 
 		if SessionManagementDebugLog {
 			conn := endpoint.FindConnectionByID(connectedID)
-			globals.Logger.Infof("GID %d: Added PID %d", session.GameMatchmakeSession.Gathering.ID.Value, conn.PID().LegacyValue())
+			globals.Logger.Infof("GID %d: Added PID %d", session.GameMatchmakeSession.Gathering.ID.Value, conn.PID().Value())
 		}
 
-		// Update the participation count with the new connection ID count
+		// * Update the participation count with the new connection ID count
 		session.GameMatchmakeSession.ParticipationCount.Value = uint32(session.ConnectionIDs.Size())
 	}
 
@@ -739,7 +745,7 @@ func changeSessionOwnerImpl(currentOwner *nex.PRUDPConnection, gathering uint32,
 		}
 
 		if SessionManagementDebugLog {
-			globals.Logger.Infof("GID %d: ChangeSessionOwner OWNER from PID %d to PID %d", gathering, currentOwner.PID().LegacyValue(), newOwner.PID().LegacyValue())
+			globals.Logger.Infof("GID %d: ChangeSessionOwner OWNER from PID %d to PID %d", gathering, currentOwner.PID().Value(), newOwner.PID().Value())
 		}
 	
 		session.GameMatchmakeSession.Gathering.OwnerPID = newOwner.PID()
