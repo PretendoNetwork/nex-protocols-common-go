@@ -544,14 +544,8 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 		session.GameMatchmakeSession.ParticipationCount.Value = uint32(session.ConnectionIDs.Size())
 	}
 
-	session.ConnectionIDs.Each(func(_ int, connectionID uint32) bool {
-		target := endpoint.FindConnectionByID(connectionID)
-		if target == nil {
-			// TODO - Error here?
-			Logger.Warning("Player not found")
-			return false
-		}
-
+	target := endpoint.FindConnectionByPID(session.GameMatchmakeSession.OwnerPID.Value())
+	if target != nil {
 		notificationCategory := notifications.NotificationCategories.Participation
 		notificationSubtype := notifications.NotificationSubTypes.Participation.NewParticipant
 
@@ -593,9 +587,7 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 		messagePacket.SetPayload(notificationRequestBytes)
 
 		server.Send(messagePacket)
-
-		return false
-	})
+	}	
 
 	// * This appears to be correct. Tri-Force Heroes uses 3.9.0,
 	// * and has issues if these notifications are sent.
