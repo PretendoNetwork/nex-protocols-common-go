@@ -338,8 +338,19 @@ func CreateSessionByMatchmakeSession(matchmakeSession *match_making_types.Matchm
 	return sessions[sessionIndex], nil
 }
 
+// isSessionHostConnected checks if the current session host is connected
+func isSessionHostConnected(session *CommonMatchmakeSession, endpoint *nex.PRUDPEndPoint) bool {
+	return session.ConnectionIDs.Each(func(_ int, connectionID uint32) bool {
+		target := endpoint.FindConnectionByID(connectionID)
+		if target == nil {
+			return false
+		}
+		return session.GameMatchmakeSession.HostPID.Equals(target.PID())
+	})
+}
+
 // FindSessionByMatchmakeSession finds a gathering that matches with a MatchmakeSession
-func FindSessionByMatchmakeSession(pid *types.PID, searchMatchmakeSession *match_making_types.MatchmakeSession) uint32 {
+func FindSessionByMatchmakeSession(connection *nex.PRUDPConnection, searchMatchmakeSession *match_making_types.MatchmakeSession) uint32 {
 	sessionsMutex.RLock()
 	defer sessionsMutex.RUnlock()
 
@@ -348,9 +359,22 @@ func FindSessionByMatchmakeSession(pid *types.PID, searchMatchmakeSession *match
 	// * This is handled below
 	candidateSessionIndexes := make([]uint32, 0, len(sessions))
 	for index, session := range sessions {
-		if session.SearchMatchmakeSession.Equals(searchMatchmakeSession) {
-			candidateSessionIndexes = append(candidateSessionIndexes, index)
+		if !session.SearchMatchmakeSession.Equals(searchMatchmakeSession) {
+			continue
 		}
+		// * Do not find the session if the host is not currently connected
+		if !isSessionHostConnected(session, connection.Endpoint().(*nex.PRUDPEndPoint)) {
+			continue
+		}
+
+		// * Do not find the room if the requesting connection is the host. This means
+		// * the host was disconnected but the room host PID wasn't updated yet by the rest of
+		// * the clients. The host suddenly being available again causes issues.
+		if (session.GameMatchmakeSession.HostPID.Equals(connection.PID())) {
+			continue
+		}
+
+		candidateSessionIndexes = append(candidateSessionIndexes, index)
 	}
 
 	// TODO - This whole section assumes legacy clients. None of it will work on the Switch
@@ -378,7 +402,7 @@ func FindSessionByMatchmakeSession(pid *types.PID, searchMatchmakeSession *match
 			}
 
 			if len(friendList) == 0 {
-				friendList = GetUserFriendPIDsHandler(pid.LegacyValue()) // TODO - This grpc method needs to support the Switch
+				friendList = GetUserFriendPIDsHandler(connection.PID().LegacyValue()) // TODO - This grpc method needs to support the Switch
 			}
 
 			if !slices.Contains(friendList, sessionToCheck.GameMatchmakeSession.OwnerPID.LegacyValue()) {
@@ -393,7 +417,7 @@ func FindSessionByMatchmakeSession(pid *types.PID, searchMatchmakeSession *match
 }
 
 // FindSessionsByMatchmakeSessionSearchCriterias finds a gathering that matches with the given search criteria
-func FindSessionsByMatchmakeSessionSearchCriterias(pid *types.PID, searchCriterias []*match_making_types.MatchmakeSessionSearchCriteria, gameSpecificChecks func(searchCriteria *match_making_types.MatchmakeSessionSearchCriteria, matchmakeSession *match_making_types.MatchmakeSession) bool) []*CommonMatchmakeSession {
+func FindSessionsByMatchmakeSessionSearchCriterias(connection *nex.PRUDPConnection, searchCriterias []*match_making_types.MatchmakeSessionSearchCriteria, gameSpecificChecks func(searchCriteria *match_making_types.MatchmakeSessionSearchCriteria, matchmakeSession *match_making_types.MatchmakeSession) bool) []*CommonMatchmakeSession {
 	sessionsMutex.RLock()
 	defer sessionsMutex.RUnlock()
 	
@@ -402,6 +426,18 @@ func FindSessionsByMatchmakeSessionSearchCriterias(pid *types.PID, searchCriteri
 	// TODO - This whole section assumes legacy clients. None of it will work on the Switch
 	var friendList []uint32
 	for _, session := range sessions {
+		// * Do not find the session if the host is not currently connected
+		if !isSessionHostConnected(session, connection.Endpoint().(*nex.PRUDPEndPoint)) {
+			continue
+		}
+
+		// * Do not find the room if the requesting connection is the host. This means
+		// * the host was disconnected but the room host PID wasn't updated yet by the rest of
+		// * the clients. The host suddenly being available again causes issues.
+		if (session.GameMatchmakeSession.HostPID.Equals(connection.PID())) {
+			continue
+		}
+
 		for _, criteria := range searchCriterias {
 			// * Check things like game specific attributes
 			if gameSpecificChecks != nil {
@@ -447,7 +483,7 @@ func FindSessionsByMatchmakeSessionSearchCriterias(pid *types.PID, searchCriteri
 				}
 
 				if len(friendList) == 0 {
-					friendList = GetUserFriendPIDsHandler(pid.LegacyValue()) // TODO - Support the Switch
+					friendList = GetUserFriendPIDsHandler(connection.PID().LegacyValue()) // TODO - Support the Switch
 				}
 
 				if !slices.Contains(friendList, session.GameMatchmakeSession.OwnerPID.LegacyValue()) {

@@ -21,7 +21,7 @@ func (commonProtocol *CommonProtocol) browseMatchmakeSession(err error, packet n
 
 	searchCriterias := []*match_making_types.MatchmakeSessionSearchCriteria{searchCriteria}
 
-	sessions := common_globals.FindSessionsByMatchmakeSessionSearchCriterias(connection.PID(), searchCriterias, commonProtocol.GameSpecificMatchmakeSessionSearchCriteriaChecks)
+	sessions := common_globals.FindSessionsByMatchmakeSessionSearchCriterias(connection, searchCriterias, commonProtocol.GameSpecificMatchmakeSessionSearchCriteriaChecks)
 
 	// TODO - Is this right?
 	if resultRange.Offset.Value != math.MaxUint32 {
