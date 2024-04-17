@@ -21,6 +21,11 @@ import (
 var sessions map[uint32]*CommonMatchmakeSession
 var sessionsMutex = sync.RWMutex{}
 
+var onSessionCreatedHandlers []func(gid uint32)
+var onSessionDeletedHandlers []func(gid uint32)
+var onPlayerJoinSessionHandlers []func(gid uint32, cid uint32)
+var onPlayerLeaveSessionHandlers []func(gid uint32, cid uint32, gracefully bool)
+
 var SessionManagementDebugLog = false
 
 func MakeSessions() {
@@ -48,6 +53,26 @@ func EachSession(callback func(index uint32, value *CommonMatchmakeSession) bool
 	}
 
 	return false
+}
+
+// OnSessionCreated sets a callback that will run just after a session is created
+func OnSessionCreated(handler func(gid uint32)) {
+	onSessionCreatedHandlers = append(onSessionCreatedHandlers, handler)
+}
+
+// OnSessionDeleted sets a callback that will run just before a session is deleted
+func OnSessionDeleted(handler func(gid uint32)) {
+	onSessionDeletedHandlers = append(onSessionDeletedHandlers, handler)
+}
+
+// OnPlayerJoinSession sets a callback that will run just after a connection joins a session
+func OnPlayerJoinSession(handler func(gid uint32, cid uint32)) {
+	onPlayerJoinSessionHandlers = append(onPlayerJoinSessionHandlers, handler)
+}
+
+// OnPlayerLeaveSession sets a callback that will run just before a connection leaves a session
+func OnPlayerLeaveSession(handler func(gid uint32, cid uint32, gracefully bool)) {
+	onPlayerLeaveSessionHandlers = append(onPlayerLeaveSessionHandlers, handler)
 }
 
 // GetAvailableGatheringID returns a gathering ID which doesn't belong to any session
@@ -145,6 +170,11 @@ func removeSessionImpl(connection *nex.PRUDPConnection, gathering uint32) {
 	if SessionManagementDebugLog {
 		globals.Logger.Infof("GID %d: Deleted", gathering)
 	}
+
+	for _, handler := range onSessionDeletedHandlers {
+		handler(gathering)
+	}
+
 	delete(sessions, gathering)
 }
 
@@ -161,6 +191,11 @@ func removeConnectionIDFromSessionImpl(connection *nex.PRUDPConnection, gatherin
 	if !ok {
 		return
 	}
+
+	for _, handler := range onPlayerLeaveSessionHandlers {
+		handler(gathering, connection.ID, gracefully)
+	}
+
 	session.ConnectionIDs.DeleteAll(connection.ID)
 
 	ownerPID := session.GameMatchmakeSession.Gathering.OwnerPID
@@ -333,6 +368,10 @@ func CreateSessionByMatchmakeSession(matchmakeSession *match_making_types.Matchm
 
 	if SessionManagementDebugLog {
 		globals.Logger.Infof("GID %d: Created", sessionIndex)
+	}
+
+	for _, handler := range onSessionCreatedHandlers {
+		handler(session.GameMatchmakeSession.ID.Value)
 	}
 
 	return sessions[sessionIndex], nil
@@ -578,6 +617,10 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 
 		// * Update the participation count with the new connection ID count
 		session.GameMatchmakeSession.ParticipationCount.Value = uint32(session.ConnectionIDs.Size())
+
+		for _, handler := range onPlayerJoinSessionHandlers {
+			handler(session.GameMatchmakeSession.ID.Value, connectedID)
+		}
 	}
 
 	target := endpoint.FindConnectionByPID(session.GameMatchmakeSession.OwnerPID.Value())
