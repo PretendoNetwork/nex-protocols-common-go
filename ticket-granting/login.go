@@ -66,6 +66,10 @@ func (commonProtocol *CommonProtocol) login(err error, packet nex.PacketInterfac
 		pConnectionData.SpecialProtocols = specialProtocols
 		pConnectionData.StationURLSpecialProtocols = commonProtocol.StationURLSpecialProtocols
 		pConnectionData.Time = types.NewDateTime(0).Now()
+
+		if endpoint.LibraryVersions().Main.GreaterOrEqual("v3.5.0") {
+			pConnectionData.StructureVersion = 1
+		}
 	}
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
