@@ -37,7 +37,7 @@ type CommonProtocol struct {
 	RateObjectWithPassword                       func(dataID *types.PrimitiveU64, slot *types.PrimitiveU8, ratingValue *types.PrimitiveS32, accessPassword *types.PrimitiveU64) (*datastore_types.DataStoreRatingInfo, *nex.Error)
 	DeleteObjectByDataIDWithPassword             func(dataID *types.PrimitiveU64, password *types.PrimitiveU64) *nex.Error
 	DeleteObjectByDataID                         func(dataID *types.PrimitiveU64) *nex.Error
-	GetObjectInfosByDataStoreSearchParam         func(param *datastore_types.DataStoreSearchParam) ([]*datastore_types.DataStoreMetaInfo, uint32, *nex.Error)
+	GetObjectInfosByDataStoreSearchParam         func(param *datastore_types.DataStoreSearchParam, pid *types.PID) ([]*datastore_types.DataStoreMetaInfo, uint32, *nex.Error)
 	GetObjectOwnerByDataID                       func(dataID *types.PrimitiveU64) (uint32, *nex.Error)
 	OnAfterDeleteObject                          func(packet nex.PacketInterface, param *datastore_types.DataStoreDeleteParam)
 	OnAfterGetMeta                               func(packet nex.PacketInterface, param *datastore_types.DataStoreGetMetaParam)

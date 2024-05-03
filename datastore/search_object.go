@@ -29,7 +29,7 @@ func (commonProtocol *CommonProtocol) searchObject(err error, packet nex.PacketI
 	// * DataStoreSearchParam contains a ResultRange to limit the
 	// * returned results. TotalCount is the total matching objects
 	// * in the database, whereas objects is the limited results
-	objects, totalCount, errCode := commonProtocol.GetObjectInfosByDataStoreSearchParam(param)
+	objects, totalCount, errCode := commonProtocol.GetObjectInfosByDataStoreSearchParam(param, connection.PID())
 	if errCode != nil {
 		return nil, errCode
 	}
