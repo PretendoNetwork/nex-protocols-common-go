@@ -21,11 +21,11 @@ func (commonProtocol *CommonProtocol) closeParticipation(err error, packet nex.P
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
-	if !session.GameMatchmakeSession.Gathering.OwnerPID.Equals(connection.PID()) {
-		return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
+	// * PUYOPUYOTETRIS has everyone send CloseParticipation here, not just the owner of the room.
+	// * So, if a non-owner asks, just lie and claim success without actually changing anything.
+	if session.GameMatchmakeSession.Gathering.OwnerPID.Equals(connection.PID()) {
+		session.GameMatchmakeSession.OpenParticipation = types.NewPrimitiveBool(false)
 	}
-
-	session.GameMatchmakeSession.OpenParticipation = types.NewPrimitiveBool(false)
 
 	rmcResponse := nex.NewRMCSuccess(endpoint, nil)
 	rmcResponse.ProtocolID = matchmake_extension.ProtocolID
