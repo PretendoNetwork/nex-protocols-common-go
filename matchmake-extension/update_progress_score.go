@@ -4,6 +4,7 @@ import (
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	"github.com/PretendoNetwork/nex-protocols-common-go/v2/matchmake-extension/database"
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/v2/matchmake-extension"
 )
 
@@ -13,23 +14,33 @@ func (commonProtocol *CommonProtocol) updateProgressScore(err error, packet nex.
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	session := common_globals.Sessions[gid.Value]
-	if session == nil {
-		return nil, nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "change_error")
-	}
+	connection := packet.Sender().(*nex.PRUDPConnection)
+	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
 	if progressScore.Value > 100 {
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	connection := packet.Sender().(*nex.PRUDPConnection)
-	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
+	common_globals.MatchmakingMutex.Lock()
 
-	if !session.GameMatchmakeSession.Gathering.OwnerPID.Equals(connection.PID()) {
+	session, nexError := database.GetMatchmakeSessionByID(commonProtocol.db, endpoint, gid.Value)
+	if nexError != nil {
+		common_globals.MatchmakingMutex.Unlock()
+		return nil, nexError
+	}
+
+	if !session.Gathering.OwnerPID.Equals(connection.PID()) {
+		common_globals.MatchmakingMutex.Unlock()
 		return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
 	}
 
-	session.GameMatchmakeSession.ProgressScore.Value += progressScore.Value
+	nexError = database.UpdateProgressScore(commonProtocol.db, gid.Value, progressScore.Value)
+	if nexError != nil {
+		common_globals.MatchmakingMutex.Unlock()
+		return nil, nexError
+	}
+
+	common_globals.MatchmakingMutex.Unlock()
 
 	rmcResponse := nex.NewRMCSuccess(endpoint, nil)
 	rmcResponse.ProtocolID = matchmake_extension.ProtocolID

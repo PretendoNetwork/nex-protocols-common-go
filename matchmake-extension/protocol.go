@@ -1,6 +1,8 @@
 package matchmake_extension
 
 import (
+	"database/sql"
+
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	match_making_types "github.com/PretendoNetwork/nex-protocols-go/v2/match-making/types"
@@ -12,8 +14,9 @@ import (
 type CommonProtocol struct {
 	endpoint                                         nex.EndpointInterface
 	protocol                                         matchmake_extension.Interface
+	db                                               *sql.DB
 	CleanupSearchMatchmakeSession                    func(matchmakeSession *match_making_types.MatchmakeSession)
-	GameSpecificMatchmakeSessionSearchCriteriaChecks func(searchCriteria *match_making_types.MatchmakeSessionSearchCriteria, matchmakeSession *match_making_types.MatchmakeSession) bool
+	CleanupMatchmakeSessionSearchCriterias           func(searchCriterias *types.List[*match_making_types.MatchmakeSessionSearchCriteria])
 	OnAfterOpenParticipation                         func(packet nex.PacketInterface, gid *types.PrimitiveU32)
 	OnAfterCloseParticipation                        func(packet nex.PacketInterface, gid *types.PrimitiveU32)
 	OnAfterCreateMatchmakeSession                    func(packet nex.PacketInterface, anyGathering *types.AnyDataHolder, message *types.String, participationCount *types.PrimitiveU16)
@@ -34,6 +37,57 @@ type CommonProtocol struct {
 // GetUserFriendPIDs sets the GetUserFriendPIDs handler function
 func (commonProtocol *CommonProtocol) GetUserFriendPIDs(handler func(pid uint32) []uint32) {
 	common_globals.GetUserFriendPIDsHandler = handler
+}
+
+// SetDatabase defines the SQL database to be used by the common protocol
+func (commonProtocol *CommonProtocol) SetDatabase(db *sql.DB) {
+	var err error
+
+	commonProtocol.db = db
+
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS matchmaking.matchmake_sessions (
+		id bigserial PRIMARY KEY,
+		game_mode bigint,
+		attribs bigint[],
+		open_participation boolean,
+		matchmake_system_type bigint,
+		application_buffer bytea,
+		flags bigint,
+		state bigint,
+		progress_score smallint,
+		session_key bytea,
+		option_zero bigint,
+		matchmake_param bytea,
+		user_password text,
+		refer_gid bigint,
+		user_password_enabled boolean,
+		system_password_enabled boolean,
+		codeword text
+	)`)
+	if err != nil {
+		common_globals.Logger.Error(err.Error())
+		return
+	}
+
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS matchmaking.persistent_gatherings (
+		id bigserial PRIMARY KEY,
+		password text,
+		attribs bigint[],
+		application_buffer bytea,
+		participation_start_date timestamp,
+		participation_end_date timestamp
+	)`)
+	if err != nil {
+		common_globals.Logger.Error(err.Error())
+		return
+	}
+
+	// * In case the server is restarted, unregister any previous matchmake sessions
+	_, err = db.Exec(`UPDATE matchmaking.gatherings SET registered=false WHERE type='MatchmakeSession'`)
+	if err != nil {
+		common_globals.Logger.Error(err.Error())
+		return
+	}
 }
 
 // NewCommonProtocol returns a new CommonProtocol

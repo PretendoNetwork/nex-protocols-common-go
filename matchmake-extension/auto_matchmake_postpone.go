@@ -6,6 +6,8 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	match_making_types "github.com/PretendoNetwork/nex-protocols-go/v2/match-making/types"
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/v2/matchmake-extension"
+	match_making_database "github.com/PretendoNetwork/nex-protocols-common-go/v2/match-making/database"
+	database "github.com/PretendoNetwork/nex-protocols-common-go/v2/matchmake-extension/database"
 )
 
 func (commonProtocol *CommonProtocol) autoMatchmakePostpone(err error, packet nex.PacketInterface, callID uint32, anyGathering *types.AnyDataHolder, message *types.String) (*nex.RMCMessage, *nex.Error) {
@@ -22,9 +24,11 @@ func (commonProtocol *CommonProtocol) autoMatchmakePostpone(err error, packet ne
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
+	common_globals.MatchmakingMutex.Lock()
+
 	// * A client may disconnect from a session without leaving reliably,
 	// * so let's make sure the client is removed from the session
-	common_globals.RemoveConnectionFromAllSessions(connection)
+	match_making_database.DisconnectParticipant(commonProtocol.db, connection)
 
 	var matchmakeSession *match_making_types.MatchmakeSession
 	anyGatheringDataType := anyGathering.TypeName
@@ -33,35 +37,42 @@ func (commonProtocol *CommonProtocol) autoMatchmakePostpone(err error, packet ne
 		matchmakeSession = anyGathering.ObjectData.(*match_making_types.MatchmakeSession)
 	} else {
 		common_globals.Logger.Critical("Non-MatchmakeSession DataType?!")
+		common_globals.MatchmakingMutex.Unlock()
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
 	searchMatchmakeSession := matchmakeSession.Copy().(*match_making_types.MatchmakeSession)
 	commonProtocol.CleanupSearchMatchmakeSession(searchMatchmakeSession)
-	sessionIndex := common_globals.FindSessionByMatchmakeSession(connection.PID(), searchMatchmakeSession)
-	var session *common_globals.CommonMatchmakeSession
+	resultSession, nexError := database.FindMatchmakeSession(commonProtocol.db, connection, searchMatchmakeSession)
+	if nexError != nil {
+		common_globals.MatchmakingMutex.Unlock()
+		return nil, nexError
+	}
 
-	if sessionIndex == 0 {
-		var errCode *nex.Error
-		session, errCode = common_globals.CreateSessionByMatchmakeSession(matchmakeSession, searchMatchmakeSession, connection.PID())
-		if err != nil {
-			common_globals.Logger.Error(errCode.Error())
-			return nil, errCode
+	if resultSession == nil {
+		resultSession = searchMatchmakeSession.Copy().(*match_making_types.MatchmakeSession)
+		nexError = database.CreateMatchmakeSession(commonProtocol.db, connection, resultSession)
+		if nexError != nil {
+			common_globals.Logger.Error(nexError.Error())
+			common_globals.MatchmakingMutex.Unlock()
+			return nil, nexError
 		}
-	} else {
-		session = common_globals.Sessions[sessionIndex]
 	}
 
-	errCode := common_globals.AddPlayersToSession(session, []uint32{connection.ID}, connection, message.Value)
-	if errCode != nil {
-		common_globals.Logger.Error(errCode.Error())
-		return nil, errCode
+	participants, nexError := match_making_database.JoinGathering(commonProtocol.db, resultSession.Gathering.ID.Value, connection, 1, message.Value)
+	if nexError != nil {
+		common_globals.MatchmakingMutex.Unlock()
+		return nil, nexError
 	}
+
+	resultSession.ParticipationCount.Value = participants
+
+	common_globals.MatchmakingMutex.Unlock()
 
 	matchmakeDataHolder := types.NewAnyDataHolder()
 
 	matchmakeDataHolder.TypeName = types.NewString("MatchmakeSession")
-	matchmakeDataHolder.ObjectData = session.GameMatchmakeSession.Copy()
+	matchmakeDataHolder.ObjectData = resultSession.Copy()
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 

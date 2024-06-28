@@ -4,11 +4,18 @@ import (
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	match_making_database "github.com/PretendoNetwork/nex-protocols-common-go/v2/match-making/database"
+	"github.com/PretendoNetwork/nex-protocols-common-go/v2/matchmake-extension/database"
 	match_making_types "github.com/PretendoNetwork/nex-protocols-go/v2/match-making/types"
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/v2/matchmake-extension"
 )
 
 func (commonProtocol *CommonProtocol) autoMatchmakeWithParamPostpone(err error, packet nex.PacketInterface, callID uint32, autoMatchmakeParam *match_making_types.AutoMatchmakeParam) (*nex.RMCMessage, *nex.Error) {
+	if commonProtocol.CleanupMatchmakeSessionSearchCriterias == nil {
+		common_globals.Logger.Warning("MatchmakeExtension::AutoMatchmakeWithParam_Postpone missing CleanupMatchmakeSessionSearchCriterias!")
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
+	}
+
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
@@ -17,40 +24,48 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithParamPostpone(err error, 
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
+	common_globals.MatchmakingMutex.Lock()
+
 	// * A client may disconnect from a session without leaving reliably,
 	// * so let's make sure the client is removed from the session
-	common_globals.RemoveConnectionFromAllSessions(connection)
+	match_making_database.DisconnectParticipant(commonProtocol.db, connection)
 
-	matchmakeSession := autoMatchmakeParam.SourceMatchmakeSession
+	commonProtocol.CleanupMatchmakeSessionSearchCriterias(autoMatchmakeParam.LstSearchCriteria)
 
-	sessions := common_globals.FindSessionsByMatchmakeSessionSearchCriterias(connection.PID(), autoMatchmakeParam.LstSearchCriteria.Slice(), commonProtocol.GameSpecificMatchmakeSessionSearchCriteriaChecks)
-	var session *common_globals.CommonMatchmakeSession
+	resultRange := types.NewResultRange()
+	resultRange.Length.Value = 1
+	resultSessions, nexError := database.FindMatchmakeSessionBySearchCriteria(commonProtocol.db, connection, autoMatchmakeParam.LstSearchCriteria.Slice(), resultRange)
+	if nexError != nil {
+		common_globals.MatchmakingMutex.Unlock()
+		return nil, nexError
+	}
 
-	if len(sessions) == 0 {
-		var errCode *nex.Error
-		session, errCode = common_globals.CreateSessionByMatchmakeSession(matchmakeSession, nil, connection.PID())
-		if errCode != nil {
-			common_globals.Logger.Error(errCode.Error())
-			return nil, errCode
+	var resultSession *match_making_types.MatchmakeSession
+	if len(resultSessions) == 0 {
+		resultSession = autoMatchmakeParam.SourceMatchmakeSession.Copy().(*match_making_types.MatchmakeSession)
+		nexError = database.CreateMatchmakeSession(commonProtocol.db, connection, resultSession)
+		if nexError != nil {
+			common_globals.Logger.Error(nexError.Error())
+			common_globals.MatchmakingMutex.Unlock()
+			return nil, nexError
 		}
 	} else {
-		session = sessions[0]
+		resultSession = resultSessions[0]
 	}
 
-	errCode := common_globals.AddPlayersToSession(session, []uint32{connection.ID}, connection, "")
-	if errCode != nil {
-		common_globals.Logger.Error(errCode.Error())
-		return nil, errCode
+	participants, nexError := match_making_database.JoinGatheringWithParticipants(commonProtocol.db, resultSession.ID.Value, connection, autoMatchmakeParam.AdditionalParticipants.Slice(), autoMatchmakeParam.JoinMessage.Value)
+	if nexError != nil {
+		common_globals.MatchmakingMutex.Unlock()
+		return nil, nexError
 	}
 
-	matchmakeDataHolder := types.NewAnyDataHolder()
+	resultSession.ParticipationCount.Value = participants
 
-	matchmakeDataHolder.TypeName = types.NewString("MatchmakeSession")
-	matchmakeDataHolder.ObjectData = session.GameMatchmakeSession.Copy()
+	common_globals.MatchmakingMutex.Unlock()
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
-	session.GameMatchmakeSession.WriteTo(rmcResponseStream)
+	resultSession.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 

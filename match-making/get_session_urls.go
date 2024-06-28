@@ -1,9 +1,12 @@
 package matchmaking
 
 import (
+	"slices"
+
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	"github.com/PretendoNetwork/nex-protocols-common-go/v2/match-making/database"
 	match_making "github.com/PretendoNetwork/nex-protocols-go/v2/match-making"
 )
 
@@ -13,30 +16,44 @@ func (commonProtocol *CommonProtocol) getSessionURLs(err error, packet nex.Packe
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	session, ok := common_globals.Sessions[gid.Value]
-	if !ok {
-		return nil, nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "change_error")
+	common_globals.MatchmakingMutex.RLock()
+	gathering, _, participants, _, nexError := database.FindGatheringByID(commonProtocol.db, gid.Value)
+	if nexError != nil {
+		common_globals.MatchmakingMutex.RUnlock()
+		return nil, nexError
 	}
 
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
-	hostPID := session.GameMatchmakeSession.Gathering.HostPID
-	host := endpoint.FindConnectionByPID(hostPID.Value())
+	if !slices.Contains(participants, connection.PID().Value()) {
+		common_globals.MatchmakingMutex.RUnlock()
+		return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
+	}
+
+	host := endpoint.FindConnectionByPID(gathering.HostPID.Value())
 	if host == nil {
 		// * This popped up once during testing. Leaving it noted here in case it becomes a problem.
 		common_globals.Logger.Warning("Host client not found, trying with owner client")
-		host = endpoint.FindConnectionByPID(session.GameMatchmakeSession.Gathering.OwnerPID.Value())
+		host = endpoint.FindConnectionByPID(gathering.OwnerPID.Value())
 		if host == nil {
 			// * This popped up once during testing. Leaving it noted here in case it becomes a problem.
 			common_globals.Logger.Error("Owner client not found")
-			return nil, nex.NewError(nex.ResultCodes.Core.Exception, "change_error")
 		}
 	}
 
+	common_globals.MatchmakingMutex.RUnlock()
+
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
-	host.StationURLs.WriteTo(rmcResponseStream)
+	// * If no host was found, return an empty list of station URLs
+	if host == nil {
+		stationURLs := types.NewList[*types.StationURL]()
+		stationURLs.Type = types.NewStationURL("")
+		stationURLs.WriteTo(rmcResponseStream)
+	} else {
+		host.StationURLs.WriteTo(rmcResponseStream)
+	}
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 

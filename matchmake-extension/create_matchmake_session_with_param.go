@@ -3,6 +3,8 @@ package matchmake_extension
 import (
 	"github.com/PretendoNetwork/nex-go/v2"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	match_making_database "github.com/PretendoNetwork/nex-protocols-common-go/v2/match-making/database"
+	"github.com/PretendoNetwork/nex-protocols-common-go/v2/matchmake-extension/database"
 	match_making_types "github.com/PretendoNetwork/nex-protocols-go/v2/match-making/types"
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/v2/matchmake-extension"
 )
@@ -16,26 +18,32 @@ func (commonProtocol *CommonProtocol) createMatchmakeSessionWithParam(err error,
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
+	common_globals.MatchmakingMutex.Lock()
+
 	// * A client may disconnect from a session without leaving reliably,
 	// * so let's make sure the client is removed from all sessions
-	common_globals.RemoveConnectionFromAllSessions(connection)
+	match_making_database.DisconnectParticipant(commonProtocol.db, connection)
 
 	joinedMatchmakeSession := createMatchmakeSessionParam.SourceMatchmakeSession.Copy().(*match_making_types.MatchmakeSession)
-	session, errCode := common_globals.CreateSessionByMatchmakeSession(joinedMatchmakeSession, nil, connection.PID())
-	if errCode != nil {
-		common_globals.Logger.Error(errCode.Error())
-		return nil, errCode
+	nexError := database.CreateMatchmakeSession(commonProtocol.db, connection, joinedMatchmakeSession)
+	if nexError != nil {
+		common_globals.Logger.Error(nexError.Error())
+		common_globals.MatchmakingMutex.Unlock()
+		return nil, nexError
 	}
 
-	errCode = common_globals.AddPlayersToSession(session, []uint32{connection.ID}, connection, createMatchmakeSessionParam.JoinMessage.Value)
-	if errCode != nil {
-		common_globals.Logger.Error(errCode.Error())
-		return nil, errCode
+	participants, nexError := match_making_database.JoinGatheringWithParticipants(commonProtocol.db, joinedMatchmakeSession.Gathering.ID.Value, connection, createMatchmakeSessionParam.AdditionalParticipants.Slice(), createMatchmakeSessionParam.JoinMessage.Value)
+	if nexError != nil {
+		common_globals.Logger.Error(nexError.Error())
+		common_globals.MatchmakingMutex.Unlock()
+		return nil, nexError
 	}
+
+	joinedMatchmakeSession.ParticipationCount.Value = participants
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
-	session.GameMatchmakeSession.WriteTo(rmcResponseStream)
+	joinedMatchmakeSession.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
