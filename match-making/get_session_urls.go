@@ -32,15 +32,6 @@ func (commonProtocol *CommonProtocol) getSessionURLs(err error, packet nex.Packe
 	}
 
 	host := endpoint.FindConnectionByPID(gathering.HostPID.Value())
-	if host == nil {
-		// * This popped up once during testing. Leaving it noted here in case it becomes a problem.
-		common_globals.Logger.Warning("Host client not found, trying with owner client")
-		host = endpoint.FindConnectionByPID(gathering.OwnerPID.Value())
-		if host == nil {
-			// * This popped up once during testing. Leaving it noted here in case it becomes a problem.
-			common_globals.Logger.Error("Owner client not found")
-		}
-	}
 
 	common_globals.MatchmakingMutex.RUnlock()
 
@@ -48,6 +39,7 @@ func (commonProtocol *CommonProtocol) getSessionURLs(err error, packet nex.Packe
 
 	// * If no host was found, return an empty list of station URLs
 	if host == nil {
+		common_globals.Logger.Error("Host client not found")
 		stationURLs := types.NewList[*types.StationURL]()
 		stationURLs.Type = types.NewStationURL("")
 		stationURLs.WriteTo(rmcResponseStream)
