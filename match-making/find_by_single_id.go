@@ -13,7 +13,7 @@ func (commonProtocol *CommonProtocol) findBySingleID(err error, packet nex.Packe
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	session, ok := common_globals.Sessions[id.Value]
+	session, ok := common_globals.GetSession(id.Value)
 	if !ok {
 		return nil, nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "change_error")
 	}

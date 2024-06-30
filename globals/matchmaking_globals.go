@@ -11,7 +11,7 @@ type CommonMatchmakeSession struct {
 	ConnectionIDs          *nex.MutexSlice[uint32]              // * Players in the room, referenced by their connection IDs. This is used instead of the PID in order to ensure we're talking to the correct client (in case of e.g. multiple logins)
 }
 
-var Sessions map[uint32]*CommonMatchmakeSession
+
 var GetUserFriendPIDsHandler func(pid uint32) []uint32
 var CurrentGatheringID = nex.NewCounter[uint32](0)
 var CurrentMatchmakingCallID = nex.NewCounter[uint32](0)

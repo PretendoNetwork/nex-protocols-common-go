@@ -38,7 +38,7 @@ func (commonProtocol *CommonProtocol) autoMatchmakePostpone(err error, packet ne
 
 	searchMatchmakeSession := matchmakeSession.Copy().(*match_making_types.MatchmakeSession)
 	commonProtocol.CleanupSearchMatchmakeSession(searchMatchmakeSession)
-	sessionIndex := common_globals.FindSessionByMatchmakeSession(connection.PID(), searchMatchmakeSession)
+	sessionIndex := common_globals.FindSessionByMatchmakeSession(connection, searchMatchmakeSession)
 	var session *common_globals.CommonMatchmakeSession
 
 	if sessionIndex == 0 {
@@ -49,7 +49,12 @@ func (commonProtocol *CommonProtocol) autoMatchmakePostpone(err error, packet ne
 			return nil, errCode
 		}
 	} else {
-		session = common_globals.Sessions[sessionIndex]
+		var ok bool
+		session, ok = common_globals.GetSession(sessionIndex)
+		// TOCTOU, just in case
+		if !ok {
+			return nil, nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "change_error")
+		}
 	}
 
 	errCode := common_globals.AddPlayersToSession(session, []uint32{connection.ID}, connection, message.Value)

@@ -23,7 +23,7 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithParamPostpone(err error, 
 
 	matchmakeSession := autoMatchmakeParam.SourceMatchmakeSession
 
-	sessions := common_globals.FindSessionsByMatchmakeSessionSearchCriterias(connection.PID(), autoMatchmakeParam.LstSearchCriteria.Slice(), commonProtocol.GameSpecificMatchmakeSessionSearchCriteriaChecks)
+	sessions := common_globals.FindSessionsByMatchmakeSessionSearchCriterias(connection, autoMatchmakeParam.LstSearchCriteria.Slice(), commonProtocol.GameSpecificMatchmakeSessionSearchCriteriaChecks)
 	var session *common_globals.CommonMatchmakeSession
 
 	if len(sessions) == 0 {

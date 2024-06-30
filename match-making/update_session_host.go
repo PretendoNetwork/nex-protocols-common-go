@@ -16,7 +16,7 @@ func (commonProtocol *CommonProtocol) updateSessionHost(err error, packet nex.Pa
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	session, ok := common_globals.Sessions[gid.Value]
+	session, ok := common_globals.GetSession(gid.Value)
 	if !ok {
 		return nil, nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "change_error")
 	}
@@ -29,12 +29,17 @@ func (commonProtocol *CommonProtocol) updateSessionHost(err error, packet nex.Pa
 		return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
 	}
 
+	originalHost := session.GameMatchmakeSession.Gathering.HostPID
 	session.GameMatchmakeSession.Gathering.HostPID = connection.PID().Copy().(*types.PID)
 
 	rmcResponse := nex.NewRMCSuccess(endpoint, nil)
 	rmcResponse.ProtocolID = match_making.ProtocolID
 	rmcResponse.MethodID = match_making.MethodUpdateSessionHost
 	rmcResponse.CallID = callID
+
+	if common_globals.SessionManagementDebugLog {
+		common_globals.Logger.Infof("GID %d: UpdateSessionHost from PID %d to PID %d", gid.Value, originalHost.Value(), connection.PID().Value())
+	}
 
 	if !isMigrateOwner.Value {
 		if commonProtocol.OnAfterUpdateSessionHost != nil {
@@ -73,7 +78,7 @@ func (commonProtocol *CommonProtocol) updateSessionHost(err error, packet nex.Pa
 
 	rmcRequestBytes := rmcRequest.Bytes()
 
-	common_globals.Sessions[gid.Value].ConnectionIDs.Each(func(_ int, connectionID uint32) bool {
+	session.ConnectionIDs.Each(func(_ int, connectionID uint32) bool {
 		target := endpoint.FindConnectionByID(connectionID)
 		if target == nil {
 			common_globals.Logger.Warning("Client not found")
