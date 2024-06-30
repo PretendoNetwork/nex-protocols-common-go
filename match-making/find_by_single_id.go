@@ -33,8 +33,11 @@ func (commonProtocol *CommonProtocol) findBySingleID(err error, packet nex.Packe
 
 	matchmakeSession, nexError := matchmake_extension_database.GetMatchmakeSessionByGathering(commonProtocol.db, endpoint, gathering, uint32(len(participants)), startedTime)
 	if nexError != nil {
+		common_globals.MatchmakingMutex.RUnlock()
 		return nil, nexError
 	}
+
+	common_globals.MatchmakingMutex.RUnlock()
 
 	bResult := types.NewPrimitiveBool(true)
 	pGathering := types.NewAnyDataHolder()
