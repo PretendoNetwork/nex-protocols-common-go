@@ -28,7 +28,7 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithSearchCriteriaPostpone(er
 
 	// * A client may disconnect from a session without leaving reliably,
 	// * so let's make sure the client is removed from the session
-	match_making_database.DisconnectParticipant(commonProtocol.db, connection)
+	database.EndMatchmakeSessionsParticipation(commonProtocol.db, connection)
 
 	var matchmakeSession *match_making_types.MatchmakeSession
 

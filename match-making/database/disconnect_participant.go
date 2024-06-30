@@ -56,8 +56,8 @@ func DisconnectParticipant(db *sql.DB, connection *nex.PRUDPConnection) {
 			continue
 		}
 
-		// * If the gathering is a PersistentGathering, ignore and continue
-		if gatheringType == "PersistentGathering" {
+		// * If the gathering is a PersistentGathering and the gathering isn't set to leave when disconnecting, ignore and continue
+		if gatheringType == "PersistentGathering" && flags & match_making.GatheringFlags.PersistentGatheringLeaveParticipation == 0 {
 			continue
 		}
 
