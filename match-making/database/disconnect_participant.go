@@ -110,7 +110,7 @@ func DisconnectParticipant(db *sql.DB, connection *nex.PRUDPConnection) {
 				oEvent.Type.Value = notifications.BuildNotificationType(category, subtype)
 				oEvent.Param1.Value = gatheringID
 
-				common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, participants)
+				common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, common_globals.RemoveDuplicates(participants))
 
 				continue
 			}
@@ -134,7 +134,7 @@ func DisconnectParticipant(db *sql.DB, connection *nex.PRUDPConnection) {
 
 		// * When the VerboseParticipants or VerboseParticipantsEx flags are set, all participant notification events are sent to everyone
 		if gathering.Flags.PAND(match_making.GatheringFlags.VerboseParticipants | match_making.GatheringFlags.VerboseParticipantsEx) != 0 {
-			participantEndedTargets = participants
+			participantEndedTargets = common_globals.RemoveDuplicates(participants)
 		} else {
 			participantEndedTargets = []uint64{gathering.OwnerPID.Value()}
 		}

@@ -61,7 +61,7 @@ func (commonProtocol *CommonProtocol) updateSessionHost(err error, packet nex.Pa
 		// * unixTime := time.Now()
 		// * oEvent.StrParam = strconv.FormatInt(unixTime.UnixMicro(), 10)
 
-		common_globals.SendNotificationEvent(endpoint, oEvent, participants)
+		common_globals.SendNotificationEvent(endpoint, oEvent, common_globals.RemoveDuplicates(participants))
 	}
 
 	common_globals.MatchmakingMutex.Unlock()

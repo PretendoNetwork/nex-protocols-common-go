@@ -57,7 +57,7 @@ func JoinGatheringWithParticipants(db *sql.DB, gatheringID uint32, connection *n
 
 	// * When the VerboseParticipants or the VerboseParticipantsEx flags are set, all participant notification events are sent to everyone
 	if flags & (match_making.GatheringFlags.VerboseParticipants | match_making.GatheringFlags.VerboseParticipantsEx) != 0 {
-		participantJoinedTargets = participants
+		participantJoinedTargets = common_globals.RemoveDuplicates(participants)
 	} else {
 		participantJoinedTargets = []uint64{ownerPID}
 	}
@@ -82,7 +82,8 @@ func JoinGatheringWithParticipants(db *sql.DB, gatheringID uint32, connection *n
 
 		// * This flag also sends a recap of all currently connected players on the gathering to the participant that is connecting
 		if flags & match_making.GatheringFlags.VerboseParticipantsEx != 0 {
-			for _, oldParticipant := range oldParticipants {
+			// TODO - Should this actually be deduplicated?
+			for _, oldParticipant := range common_globals.RemoveDuplicates(oldParticipants) {
 				notificationCategory := notifications.NotificationCategories.Participation
 				notificationSubtype := notifications.NotificationSubTypes.Participation.NewParticipant
 

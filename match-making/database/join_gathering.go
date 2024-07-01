@@ -41,14 +41,11 @@ func JoinGathering(db *sql.DB, gatheringID uint32, connection *nex.PRUDPConnecti
 		return 0, nex.NewError(nex.ResultCodes.RendezVous.AlreadyParticipatedGathering, "change_error")
 	}
 
-	// TODO - This won't work on the Switch!
-	newParticipants := append(participants, connection.PID().Value())
+	var newParticipants []uint64 = participants
 
-	// * Additional participants are represented as the negative of the main participant PID
-	// * These are casted to an unsigned value for compatibility with uint32 and uint64
-	additionalParticipant := int32(-connection.PID().LegacyValue())
-	for range vacantParticipants - 1 {
-		newParticipants = append(newParticipants, uint64(uint32(additionalParticipant)))
+	// * Additional participants are represented by duplicating the main participant PID on the array
+	for range vacantParticipants {
+		newParticipants = append(newParticipants, connection.PID().Value())
 	}
 
 	// * We have already checked that the gathering exists above, so we don't have to check the rows affected on sql.Result
@@ -65,7 +62,7 @@ func JoinGathering(db *sql.DB, gatheringID uint32, connection *nex.PRUDPConnecti
 
 	// * When the VerboseParticipants or VerboseParticipantsEx flags are set, all participant notification events are sent to everyone
 	if flags & (match_making.GatheringFlags.VerboseParticipants | match_making.GatheringFlags.VerboseParticipantsEx) != 0 {
-		participatJoinedTargets = newParticipants
+		participatJoinedTargets = common_globals.RemoveDuplicates(newParticipants)
 	} else {
 		// * If the new participant is the same as the owner, then we are creating a new gathering.
 		// * We don't need to send notification events in that case
@@ -91,7 +88,8 @@ func JoinGathering(db *sql.DB, gatheringID uint32, connection *nex.PRUDPConnecti
 
 	// * This flag also sends a recap of all currently connected players on the gathering to the participant that is connecting
 	if flags & match_making.GatheringFlags.VerboseParticipantsEx != 0 {
-		for _, participant := range participants {
+		// TODO - Should this actually be deduplicated?
+		for _, participant := range common_globals.RemoveDuplicates(participants) {
 			notificationCategory := notifications.NotificationCategories.Participation
 			notificationSubtype := notifications.NotificationSubTypes.Participation.NewParticipant
 

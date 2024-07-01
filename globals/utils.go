@@ -1,7 +1,6 @@
 package common_globals
 
 import (
-	"math"
 	"slices"
 
 	"github.com/PretendoNetwork/nex-go/v2"
@@ -20,11 +19,18 @@ func DeleteIndex(s []uint32, index int) []uint32 {
 	return s[:len(s)-1]
 }
 
-// CheckValidParticipant validates if a participant isn't an additional participant
-func CheckValidParticipant(participant uint64) bool {
-	// * Additional participants are stored as the negative value of the parent participant.
-	// * This seems to only be possible on the 3DS and Wii U, so we don't have to check the uint64 range
-	return (participant <= math.MaxInt32) || (participant > math.MaxUint32)
+// RemoveDuplicates removes duplicate entries on a slice
+func RemoveDuplicates[T comparable](sliceList []T) []T {
+	// * Extracted from https://stackoverflow.com/a/66751055
+	allKeys := make(map[T]bool)
+	list := []T{}
+	for _, item := range sliceList {
+		if _, value := allKeys[item]; !value {
+			allKeys[item] = true
+			list = append(list, item)
+		}
+	}
+	return list
 }
 
 // CheckValidGathering checks if a Gathering is valid
@@ -111,10 +117,6 @@ func SendNotificationEvent(endpoint *nex.PRUDPEndPoint, event *notifications_typ
 	rmcRequestBytes := rmcRequest.Bytes()
 
 	for _, pid := range targets {
-		if !CheckValidParticipant(pid) {
-			continue
-		}
-
 		target := endpoint.FindConnectionByPID(pid)
 		if target == nil {
 			Logger.Warning("Client not found")

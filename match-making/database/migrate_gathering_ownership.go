@@ -14,10 +14,10 @@ import (
 // MigrateGatheringOwnership switches the owner of the gathering with a different one
 func MigrateGatheringOwnership(db *sql.DB, connection *nex.PRUDPConnection, gathering *match_making_types.Gathering, participants []uint64) *nex.Error {
 	var nexError *nex.Error
-
+	var uniqueParticipants []uint64 = common_globals.RemoveDuplicates(participants)
 	var newOwner uint64
-	for _, participant := range participants {
-		if participant != gathering.OwnerPID.Value() && common_globals.CheckValidParticipant(participant) {
+	for _, participant := range uniqueParticipants {
+		if participant != gathering.OwnerPID.Value() {
 			newOwner = participant
 			break
 		}
@@ -38,7 +38,7 @@ func MigrateGatheringOwnership(db *sql.DB, connection *nex.PRUDPConnection, gath
 		oEvent.Type.Value = notifications.BuildNotificationType(category, subtype)
 		oEvent.Param1.Value = gathering.ID.Value
 
-		common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, participants)
+		common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, uniqueParticipants)
 		return nil
 	}
 
@@ -64,6 +64,6 @@ func MigrateGatheringOwnership(db *sql.DB, connection *nex.PRUDPConnection, gath
 	// * unixTime := time.Now()
 	// * oEvent.StrParam = strconv.FormatInt(unixTime.UnixMicro(), 10)
 
-	common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, participants)
+	common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, uniqueParticipants)
 	return nil
 }

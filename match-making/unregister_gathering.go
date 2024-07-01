@@ -45,7 +45,7 @@ func (commonProtocol *CommonProtocol) unregisterGathering(err error, packet nex.
 	oEvent.Type.Value = notifications.BuildNotificationType(category, subtype)
 	oEvent.Param1.Value = idGathering.Value
 
-	common_globals.SendNotificationEvent(endpoint, oEvent, participants)
+	common_globals.SendNotificationEvent(endpoint, oEvent, common_globals.RemoveDuplicates(participants))
 
 	common_globals.MatchmakingMutex.Unlock()
 

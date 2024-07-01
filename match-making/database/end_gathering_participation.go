@@ -35,34 +35,9 @@ func EndGatheringParticipation(db *sql.DB, gatheringID uint32, connection *nex.P
 		return nexError
 	}
 
-	var targetParticipants []uint64
-
-	// * Minecraft (NEX 3.10) sends all gathering notification events to everyone
-	// TODO - Is this the case for all NEX 3.10+ games?
-	if connection.Endpoint().(*nex.PRUDPEndPoint).LibraryVersions().MatchMaking.GreaterOrEqual("v3.10") {
-		targetParticipants = participants
-	} else {
-		targetParticipants = newParticipants
-	}
-
 	if len(newParticipants) == 0 {
 		// * There are no more participants, so we just unregister the gathering
-		nexError = UnregisterGathering(db, gatheringID)
-		if nexError != nil {
-			return nexError
-		}
-
-		category := notifications.NotificationCategories.GatheringUnregistered
-		subtype := notifications.NotificationSubTypes.GatheringUnregistered.None
-
-		oEvent := notifications_types.NewNotificationEvent()
-		oEvent.PIDSource = connection.PID().Copy().(*types.PID)
-		oEvent.Type.Value = notifications.BuildNotificationType(category, subtype)
-		oEvent.Param1.Value = gatheringID
-
-		common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, targetParticipants)
-
-		return nil
+		return UnregisterGathering(db, gatheringID)
 	}
 
 	if connection.PID().Equals(gathering.OwnerPID) {
@@ -83,12 +58,12 @@ func EndGatheringParticipation(db *sql.DB, gatheringID uint32, connection *nex.P
 			oEvent.Type.Value = notifications.BuildNotificationType(category, subtype)
 			oEvent.Param1.Value = gatheringID
 
-			common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, targetParticipants)
+			common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, common_globals.RemoveDuplicates(newParticipants))
 
 			return nil
 		}
 
-		nexError = MigrateGatheringOwnership(db, connection, gathering, targetParticipants)
+		nexError = MigrateGatheringOwnership(db, connection, gathering, newParticipants)
 		if nexError != nil {
 			return nexError
 		}
@@ -108,7 +83,7 @@ func EndGatheringParticipation(db *sql.DB, gatheringID uint32, connection *nex.P
 
 	// * When the VerboseParticipants or VerboseParticipantsEx flags are set, all participant notification events are sent to everyone
 	if gathering.Flags.PAND(match_making.GatheringFlags.VerboseParticipants | match_making.GatheringFlags.VerboseParticipantsEx) != 0 {
-		participationEndedTargets = participants
+		participationEndedTargets = common_globals.RemoveDuplicates(participants)
 	} else {
 		participationEndedTargets = []uint64{gathering.OwnerPID.Value()}
 	}
