@@ -27,7 +27,6 @@ func FindMatchmakeSessionBySearchCriteria(db *sql.DB, connection *nex.PRUDPConne
 		friendList = common_globals.GetUserFriendPIDsHandler(connection.PID().LegacyValue())
 	}
 
-	// TODO - Is this right?
 	if resultRange.Offset.Value == math.MaxUint32 {
 		resultRange.Offset.Value = 0
 	}
@@ -69,7 +68,9 @@ func FindMatchmakeSessionBySearchCriteria(db *sql.DB, connection *nex.PRUDPConne
 			ms.refer_gid=$1 AND
 			ms.codeword=$2 AND
 			array_length(ms.attribs, 1)=$3 AND
-			(CASE WHEN g.participation_policy=98 THEN g.owner_pid=ANY($4) ELSE true END)`
+			(CASE WHEN g.participation_policy=98 THEN g.owner_pid=ANY($4) ELSE true END) AND
+			(CASE WHEN $5=true THEN ms.user_password_enabled=false ELSE true END) AND
+			(CASE WHEN $6=true THEN ms.system_password_enabled=false ELSE true END)`
 
 		var valid bool = true
 		for i, attrib := range searchCriteria.Attribs.Slice() {
@@ -227,6 +228,8 @@ func FindMatchmakeSessionBySearchCriteria(db *sql.DB, connection *nex.PRUDPConne
 			searchCriteria.CodeWord.Value,
 			searchCriteria.Attribs.Length(),
 			pqextended.Array(friendList),
+			searchCriteria.ExcludeUserPasswordSet.Value,
+			searchCriteria.ExcludeSystemPasswordSet.Value,
 		)
 		if err != nil {
 			globals.Logger.Critical(err.Error())

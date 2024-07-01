@@ -70,6 +70,12 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithSearchCriteriaPostpone(er
 		}
 	} else {
 		resultSession = resultSessions[0]
+
+		// TODO - What should really happen here?
+		if resultSession.UserPasswordEnabled.Value || resultSession.SystemPasswordEnabled.Value {
+			common_globals.MatchmakingMutex.Unlock()
+			return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
+		}
 	}
 
 	var vacantParticipants uint16 = 1

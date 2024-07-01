@@ -24,11 +24,22 @@ func (commonProtocol *CommonProtocol) joinMatchmakeSessionWithParam(err error, p
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
-	joinedMatchmakeSession, nexError := database.GetMatchmakeSessionByID(commonProtocol.db, endpoint, joinMatchmakeSessionParam.GID.Value)
+	joinedMatchmakeSession, systemPassword, nexError := database.GetMatchmakeSessionByID(commonProtocol.db, endpoint, joinMatchmakeSessionParam.GID.Value)
 	if nexError != nil {
 		common_globals.Logger.Error(nexError.Error())
 		common_globals.MatchmakingMutex.Unlock()
 		return nil, nexError
+	}
+
+	// TODO - Are these the correct error codes?
+	if joinedMatchmakeSession.UserPasswordEnabled.Value && !joinMatchmakeSessionParam.StrUserPassword.Equals(joinedMatchmakeSession.UserPassword) {
+		common_globals.MatchmakingMutex.Unlock()
+		return nil, nex.NewError(nex.ResultCodes.RendezVous.InvalidPassword, "change_error")
+	}
+
+	if joinedMatchmakeSession.SystemPasswordEnabled.Value && joinMatchmakeSessionParam.StrSystemPassword.Value != systemPassword {
+		common_globals.MatchmakingMutex.Unlock()
+		return nil, nex.NewError(nex.ResultCodes.RendezVous.InvalidPassword, "change_error")
 	}
 
 	nexError = common_globals.CanJoinMatchmakeSession(connection.PID(), joinedMatchmakeSession)

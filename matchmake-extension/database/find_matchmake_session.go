@@ -54,6 +54,8 @@ func FindMatchmakeSession(db *sql.DB, connection *nex.PRUDPConnection, searchMat
 		g.type='MatchmakeSession' AND
 		ms.open_participation=true AND
 		array_length(g.participants, 1) < g.max_participants AND
+		ms.user_password_enabled=false AND
+		ms.system_password_enabled=false AND
 		g.max_participants=$1 AND
 		g.min_participants=$2 AND
 		ms.game_mode=$3 AND

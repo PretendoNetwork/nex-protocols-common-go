@@ -19,7 +19,7 @@ func (commonProtocol *CommonProtocol) closeParticipation(err error, packet nex.P
 
 	common_globals.MatchmakingMutex.Lock()
 
-	session, nexError := database.GetMatchmakeSessionByID(commonProtocol.db, endpoint, gid.Value)
+	session, _, nexError := database.GetMatchmakeSessionByID(commonProtocol.db, endpoint, gid.Value)
 	if nexError != nil {
 		common_globals.MatchmakingMutex.Unlock()
 		return nil, nexError

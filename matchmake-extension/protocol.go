@@ -62,7 +62,8 @@ func (commonProtocol *CommonProtocol) SetDatabase(db *sql.DB) {
 		refer_gid bigint,
 		user_password_enabled boolean,
 		system_password_enabled boolean,
-		codeword text
+		codeword text,
+		system_password text NOT NULL DEFAULT ''
 	)`)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
@@ -71,6 +72,7 @@ func (commonProtocol *CommonProtocol) SetDatabase(db *sql.DB) {
 
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS matchmaking.persistent_gatherings (
 		id bigserial PRIMARY KEY,
+		community_type bigint,
 		password text,
 		attribs bigint[],
 		application_buffer bytea,

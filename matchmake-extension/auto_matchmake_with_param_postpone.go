@@ -59,6 +59,12 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithParamPostpone(err error, 
 		}
 	} else {
 		resultSession = resultSessions[0]
+
+		// TODO - What should really happen here?
+		if resultSession.UserPasswordEnabled.Value || resultSession.SystemPasswordEnabled.Value {
+			common_globals.MatchmakingMutex.Unlock()
+			return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
+		}
 	}
 
 	participants, nexError := match_making_database.JoinGatheringWithParticipants(commonProtocol.db, resultSession.ID.Value, connection, autoMatchmakeParam.AdditionalParticipants.Slice(), autoMatchmakeParam.JoinMessage.Value)

@@ -40,6 +40,7 @@ func CreateMatchmakeSession(db *sql.DB, connection *nex.PRUDPConnection, matchma
 
 	matchmakeSession.StartedTime = startedTime
 	matchmakeSession.SessionKey.Value = make([]byte, 32)
+	matchmakeSession.SystemPasswordEnabled.Value = false
 	rand.Read(matchmakeSession.SessionKey.Value)
 
 	_, err := db.Exec(`INSERT INTO matchmaking.matchmake_sessions (

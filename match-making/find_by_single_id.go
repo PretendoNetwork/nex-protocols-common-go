@@ -37,6 +37,10 @@ func (commonProtocol *CommonProtocol) findBySingleID(err error, packet nex.Packe
 		return nil, nexError
 	}
 
+	// * Scrap session key and user password
+	matchmakeSession.SessionKey.Value = make([]byte, 0)
+	matchmakeSession.UserPassword.Value = ""
+
 	common_globals.MatchmakingMutex.RUnlock()
 
 	bResult := types.NewPrimitiveBool(true)

@@ -10,14 +10,15 @@ import (
 	pqextended "github.com/PretendoNetwork/pq-extended"
 )
 
-// GetMatchmakeSessionByID gets a matchmake session with the given gathering ID
-func GetMatchmakeSessionByID(db *sql.DB, endpoint *nex.PRUDPEndPoint, gatheringID uint32) (*match_making_types.MatchmakeSession, *nex.Error) {
+// GetMatchmakeSessionByID gets a matchmake session with the given gathering ID and the system password
+func GetMatchmakeSessionByID(db *sql.DB, endpoint *nex.PRUDPEndPoint, gatheringID uint32) (*match_making_types.MatchmakeSession, string, *nex.Error) {
 	resultMatchmakeSession := match_making_types.NewMatchmakeSession()
 	var ownerPID uint64
 	var hostPID uint64
 	var startedTime time.Time
 	var resultAttribs []uint32
 	var resultMatchmakeParam []byte
+	var systemPassword string
 
 	// * For simplicity, we will only compare the values that exist on a MatchmakeSessionSearchCriteria
 	err := db.QueryRow(`SELECT
@@ -46,7 +47,8 @@ func GetMatchmakeSessionByID(db *sql.DB, endpoint *nex.PRUDPEndPoint, gatheringI
 		ms.refer_gid,
 		ms.user_password_enabled,
 		ms.system_password_enabled,
-		ms.codeword
+		ms.codeword,
+		ms.system_password
 		FROM matchmaking.gatherings AS g
 		INNER JOIN matchmaking.matchmake_sessions AS ms ON ms.id = g.id
 		WHERE
@@ -81,12 +83,13 @@ func GetMatchmakeSessionByID(db *sql.DB, endpoint *nex.PRUDPEndPoint, gatheringI
 		&resultMatchmakeSession.UserPasswordEnabled.Value,
 		&resultMatchmakeSession.SystemPasswordEnabled.Value,
 		&resultMatchmakeSession.CodeWord.Value,
+		&systemPassword,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "change_error")
+			return nil, "", nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "change_error")
 		} else {
-			return nil, nex.NewError(nex.ResultCodes.Core.Unknown, err.Error())
+			return nil, "", nex.NewError(nex.ResultCodes.Core.Unknown, err.Error())
 		}
 	}
 
@@ -103,5 +106,5 @@ func GetMatchmakeSessionByID(db *sql.DB, endpoint *nex.PRUDPEndPoint, gatheringI
 	matchmakeParamBytes := nex.NewByteStreamIn(resultMatchmakeParam, endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 	resultMatchmakeSession.MatchmakeParam.ExtractFrom(matchmakeParamBytes)
 
-	return resultMatchmakeSession, nil
+	return resultMatchmakeSession, systemPassword, nil
 }
