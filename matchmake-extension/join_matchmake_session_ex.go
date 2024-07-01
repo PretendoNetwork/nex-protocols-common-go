@@ -15,6 +15,10 @@ func (commonProtocol *CommonProtocol) joinMatchmakeSessionEx(err error, packet n
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
+	if len(strMessage.Value) > 256 {
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
+	}
+
 	common_globals.MatchmakingMutex.Lock()
 
 	connection := packet.Sender().(*nex.PRUDPConnection)

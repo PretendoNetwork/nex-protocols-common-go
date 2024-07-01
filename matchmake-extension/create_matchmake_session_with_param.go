@@ -18,6 +18,14 @@ func (commonProtocol *CommonProtocol) createMatchmakeSessionWithParam(err error,
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
+	if !common_globals.CheckValidMatchmakeSession(createMatchmakeSessionParam.SourceMatchmakeSession) {
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
+	}
+
+	if len(createMatchmakeSessionParam.JoinMessage.Value) > 256 {
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
+	}
+
 	common_globals.MatchmakingMutex.Lock()
 
 	// * A client may disconnect from a session without leaving reliably,

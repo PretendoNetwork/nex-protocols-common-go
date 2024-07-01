@@ -21,6 +21,14 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithParamPostpone(err error, 
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
+	if !common_globals.CheckValidMatchmakeSession(autoMatchmakeParam.SourceMatchmakeSession) {
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
+	}
+
+	if len(autoMatchmakeParam.JoinMessage.Value) > 256 {
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
+	}
+
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 

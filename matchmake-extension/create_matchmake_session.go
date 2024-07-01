@@ -16,6 +16,10 @@ func (commonProtocol *CommonProtocol) createMatchmakeSession(err error, packet n
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
+	if len(message.Value) > 256 {
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
+	}
+
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 	server := endpoint.Server
@@ -32,6 +36,11 @@ func (commonProtocol *CommonProtocol) createMatchmakeSession(err error, packet n
 		matchmakeSession = anyGathering.ObjectData.(*match_making_types.MatchmakeSession)
 	} else {
 		common_globals.Logger.Critical("Non-MatchmakeSession DataType?!")
+		common_globals.MatchmakingMutex.Unlock()
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
+	}
+
+	if !common_globals.CheckValidMatchmakeSession(matchmakeSession) {
 		common_globals.MatchmakingMutex.Unlock()
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}

@@ -27,6 +27,50 @@ func CheckValidParticipant(participant uint64) bool {
 	return (participant <= math.MaxInt32) || (participant > math.MaxUint32)
 }
 
+// CheckValidGathering checks if a Gathering is valid
+func CheckValidGathering(gathering *match_making_types.Gathering) bool {
+	if len(gathering.Description.Value) > 256 {
+		return false
+	}
+
+	return true
+}
+
+// CheckValidMatchmakeSession checks if a MatchmakeSession is valid
+func CheckValidMatchmakeSession(matchmakeSession *match_making_types.MatchmakeSession) bool {
+	if !CheckValidGathering(matchmakeSession.Gathering) {
+		return false
+	}
+
+	if matchmakeSession.Attributes.Length() != 6 {
+		return false
+	}
+
+	if matchmakeSession.ProgressScore.Value > 100 {
+		return false
+	}
+
+	if len(matchmakeSession.UserPassword.Value) > 32 {
+		return false
+	}
+
+	// * Except for UserPassword, all strings must have a length lower than 256
+	if len(matchmakeSession.CodeWord.Value) > 256 {
+		return false
+	}
+
+	// * All buffers must have a length lower than 512
+	if len(matchmakeSession.ApplicationBuffer.Value) > 512 {
+		return false
+	}
+
+	if len(matchmakeSession.SessionKey.Value) > 512 {
+		return false
+	}
+
+	return true
+}
+
 // CanJoinMatchmakeSession checks if a PID is allowed to join a matchmake session
 func CanJoinMatchmakeSession(pid *types.PID, matchmakeSession *match_making_types.MatchmakeSession) *nex.Error {
 	// TODO - Is this the right error?

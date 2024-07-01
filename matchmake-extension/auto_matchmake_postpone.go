@@ -21,6 +21,10 @@ func (commonProtocol *CommonProtocol) autoMatchmakePostpone(err error, packet ne
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
+	if len(message.Value) > 256 {
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
+	}
+
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
@@ -37,6 +41,11 @@ func (commonProtocol *CommonProtocol) autoMatchmakePostpone(err error, packet ne
 		matchmakeSession = anyGathering.ObjectData.(*match_making_types.MatchmakeSession)
 	} else {
 		common_globals.Logger.Critical("Non-MatchmakeSession DataType?!")
+		common_globals.MatchmakingMutex.Unlock()
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
+	}
+
+	if !common_globals.CheckValidMatchmakeSession(matchmakeSession) {
 		common_globals.MatchmakingMutex.Unlock()
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
