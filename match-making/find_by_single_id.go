@@ -4,8 +4,6 @@ import (
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
-	"github.com/PretendoNetwork/nex-protocols-common-go/v2/match-making/database"
-	matchmake_extension_database "github.com/PretendoNetwork/nex-protocols-common-go/v2/matchmake-extension/database"
 	match_making "github.com/PretendoNetwork/nex-protocols-go/v2/match-making"
 )
 
@@ -15,39 +13,24 @@ func (commonProtocol *CommonProtocol) findBySingleID(err error, packet nex.Packe
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	common_globals.MatchmakingMutex.RLock()
-	gathering, gatheringType, participants, startedTime, nexError := database.FindGatheringByID(commonProtocol.db, id.Value)
-	if nexError != nil {
-		common_globals.MatchmakingMutex.RUnlock()
-		return nil, nexError
-	}
-
-	// TODO - Add PersistentGathering
-	if gatheringType != "MatchmakeSession" {
-		common_globals.MatchmakingMutex.RUnlock()
-		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
-	}
-
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
-	matchmakeSession, nexError := matchmake_extension_database.GetMatchmakeSessionByGathering(commonProtocol.db, endpoint, gathering, uint32(len(participants)), startedTime)
+	commonProtocol.manager.Mutex.RLock()
+
+	gathering, gatheringType, nexError := commonProtocol.manager.GetDetailedGatheringByID(commonProtocol.manager, id.Value)
 	if nexError != nil {
-		common_globals.MatchmakingMutex.RUnlock()
+		commonProtocol.manager.Mutex.RUnlock()
 		return nil, nexError
 	}
 
-	// * Scrap session key and user password
-	matchmakeSession.SessionKey.Value = make([]byte, 0)
-	matchmakeSession.UserPassword.Value = ""
-
-	common_globals.MatchmakingMutex.RUnlock()
+	commonProtocol.manager.Mutex.RUnlock()
 
 	bResult := types.NewPrimitiveBool(true)
 	pGathering := types.NewAnyDataHolder()
 
 	pGathering.TypeName = types.NewString(gatheringType)
-	pGathering.ObjectData = matchmakeSession.Copy()
+	pGathering.ObjectData = gathering.Copy()
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 

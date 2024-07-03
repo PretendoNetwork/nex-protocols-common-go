@@ -12,7 +12,7 @@ import (
 )
 
 // FindMatchmakeSession finds a matchmake session with the given search matchmake session
-func FindMatchmakeSession(db *sql.DB, connection *nex.PRUDPConnection, searchMatchmakeSession *match_making_types.MatchmakeSession) (*match_making_types.MatchmakeSession, *nex.Error) {
+func FindMatchmakeSession(manager *common_globals.MatchmakingManager, connection *nex.PRUDPConnection, searchMatchmakeSession *match_making_types.MatchmakeSession) (*match_making_types.MatchmakeSession, *nex.Error) {
 	attribs := make([]uint32, searchMatchmakeSession.Attributes.Length())
 	for i, value := range searchMatchmakeSession.Attributes.Slice() {
 		attribs[i] = value.Value
@@ -66,8 +66,8 @@ func FindMatchmakeSession(db *sql.DB, connection *nex.PRUDPConnection, searchMat
 
 	var friendList []uint32
 	// * Prevent access to friend rooms if not implemented
-	if common_globals.GetUserFriendPIDsHandler != nil {
-		friendList = common_globals.GetUserFriendPIDsHandler(connection.PID().LegacyValue())
+	if manager.GetUserFriendPIDs != nil {
+		friendList = manager.GetUserFriendPIDs(connection.PID().LegacyValue())
 	}
 
 	resultMatchmakeSession := match_making_types.NewMatchmakeSession()
@@ -78,7 +78,7 @@ func FindMatchmakeSession(db *sql.DB, connection *nex.PRUDPConnection, searchMat
 	var resultMatchmakeParam []byte
 
 	// * For simplicity, we will only compare the values that exist on a MatchmakeSessionSearchCriteria
-	err := db.QueryRow(searchStatement,
+	err := manager.Database.QueryRow(searchStatement,
 		searchMatchmakeSession.Gathering.MaximumParticipants.Value,
 		searchMatchmakeSession.Gathering.MinimumParticipants.Value,
 		searchMatchmakeSession.GameMode.Value,

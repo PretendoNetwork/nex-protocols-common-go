@@ -32,29 +32,29 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithParamPostpone(err error, 
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
-	common_globals.MatchmakingMutex.Lock()
+	commonProtocol.manager.Mutex.Lock()
 
 	// * A client may disconnect from a session without leaving reliably,
 	// * so let's make sure the client is removed from the session
-	database.EndMatchmakeSessionsParticipation(commonProtocol.db, connection)
+	database.EndMatchmakeSessionsParticipation(commonProtocol.manager, connection)
 
 	commonProtocol.CleanupMatchmakeSessionSearchCriterias(autoMatchmakeParam.LstSearchCriteria)
 
 	resultRange := types.NewResultRange()
 	resultRange.Length.Value = 1
-	resultSessions, nexError := database.FindMatchmakeSessionBySearchCriteria(commonProtocol.db, connection, autoMatchmakeParam.LstSearchCriteria.Slice(), resultRange)
+	resultSessions, nexError := database.FindMatchmakeSessionBySearchCriteria(commonProtocol.manager, connection, autoMatchmakeParam.LstSearchCriteria.Slice(), resultRange)
 	if nexError != nil {
-		common_globals.MatchmakingMutex.Unlock()
+		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
 	}
 
 	var resultSession *match_making_types.MatchmakeSession
 	if len(resultSessions) == 0 {
 		resultSession = autoMatchmakeParam.SourceMatchmakeSession.Copy().(*match_making_types.MatchmakeSession)
-		nexError = database.CreateMatchmakeSession(commonProtocol.db, connection, resultSession)
+		nexError = database.CreateMatchmakeSession(commonProtocol.manager, connection, resultSession)
 		if nexError != nil {
 			common_globals.Logger.Error(nexError.Error())
-			common_globals.MatchmakingMutex.Unlock()
+			commonProtocol.manager.Mutex.Unlock()
 			return nil, nexError
 		}
 	} else {
@@ -62,20 +62,20 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithParamPostpone(err error, 
 
 		// TODO - What should really happen here?
 		if resultSession.UserPasswordEnabled.Value || resultSession.SystemPasswordEnabled.Value {
-			common_globals.MatchmakingMutex.Unlock()
+			commonProtocol.manager.Mutex.Unlock()
 			return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
 		}
 	}
 
-	participants, nexError := match_making_database.JoinGatheringWithParticipants(commonProtocol.db, resultSession.ID.Value, connection, autoMatchmakeParam.AdditionalParticipants.Slice(), autoMatchmakeParam.JoinMessage.Value)
+	participants, nexError := match_making_database.JoinGatheringWithParticipants(commonProtocol.manager, resultSession.ID.Value, connection, autoMatchmakeParam.AdditionalParticipants.Slice(), autoMatchmakeParam.JoinMessage.Value)
 	if nexError != nil {
-		common_globals.MatchmakingMutex.Unlock()
+		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
 	}
 
 	resultSession.ParticipationCount.Value = participants
 
-	common_globals.MatchmakingMutex.Unlock()
+	commonProtocol.manager.Mutex.Unlock()
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 

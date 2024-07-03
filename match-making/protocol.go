@@ -1,8 +1,6 @@
 package matchmaking
 
 import (
-	"database/sql"
-
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
@@ -14,7 +12,7 @@ import (
 type CommonProtocol struct {
 	endpoint                   *nex.PRUDPEndPoint
 	protocol                   match_making.Interface
-	db                         *sql.DB
+	manager                    *common_globals.MatchmakingManager
 	OnAfterUnregisterGathering func(packet nex.PacketInterface, idGathering *types.PrimitiveU32)
 	OnAfterFindBySingleID      func(packet nex.PacketInterface, id *types.PrimitiveU32)
 	OnAfterUpdateSessionURL    func(packet nex.PacketInterface, idGathering *types.PrimitiveU32, strURL *types.String)
@@ -23,19 +21,21 @@ type CommonProtocol struct {
 	OnAfterUpdateSessionHost   func(packet nex.PacketInterface, gid *types.PrimitiveU32, isMigrateOwner *types.PrimitiveBool)
 }
 
-// SetDatabase defines the SQL database to be used by the common protocol
-func (commonProtocol *CommonProtocol) SetDatabase(db *sql.DB) {
+// SetManager defines the matchmaking manager to be used by the common protocol
+func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.MatchmakingManager) {
 	var err error
 
-	commonProtocol.db = db
+	commonProtocol.manager = manager
 
-	_, err = db.Exec(`CREATE SCHEMA IF NOT EXISTS matchmaking`)
+	manager.GetDetailedGatheringByID = database.GetDetailedGatheringByID
+
+	_, err = manager.Database.Exec(`CREATE SCHEMA IF NOT EXISTS matchmaking`)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return
 	}
 
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS matchmaking.gatherings (
+	_, err = manager.Database.Exec(`CREATE TABLE IF NOT EXISTS matchmaking.gatherings (
 		id bigserial PRIMARY KEY,
 		owner_pid numeric(10),
 		host_pid numeric(10),
@@ -56,7 +56,7 @@ func (commonProtocol *CommonProtocol) SetDatabase(db *sql.DB) {
 		return
 	}
 
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS matchmaking.participants (
+	_, err = manager.Database.Exec(`CREATE TABLE IF NOT EXISTS matchmaking.participants (
 		pid numeric(10) PRIMARY KEY,
 		owned_gatherings bigint[] NOT NULL DEFAULT array[]::bigint[],
 		hosted_gatherings bigint[] NOT NULL DEFAULT array[]::bigint[],
@@ -85,9 +85,9 @@ func NewCommonProtocol(protocol match_making.Interface) *CommonProtocol {
 	protocol.SetHandlerUpdateSessionHost(commonProtocol.updateSessionHost)
 
 	endpoint.OnConnectionEnded(func(connection *nex.PRUDPConnection) {
-		common_globals.MatchmakingMutex.Lock()
-		database.DisconnectParticipant(commonProtocol.db, connection)
-		common_globals.MatchmakingMutex.Unlock()
+		commonProtocol.manager.Mutex.Lock()
+		database.DisconnectParticipant(commonProtocol.manager, connection)
+		commonProtocol.manager.Mutex.Unlock()
 	})
 
 	return commonProtocol

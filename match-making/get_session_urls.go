@@ -16,10 +16,10 @@ func (commonProtocol *CommonProtocol) getSessionURLs(err error, packet nex.Packe
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	common_globals.MatchmakingMutex.RLock()
-	gathering, _, participants, _, nexError := database.FindGatheringByID(commonProtocol.db, gid.Value)
+	commonProtocol.manager.Mutex.RLock()
+	gathering, _, participants, _, nexError := database.FindGatheringByID(commonProtocol.manager, gid.Value)
 	if nexError != nil {
-		common_globals.MatchmakingMutex.RUnlock()
+		commonProtocol.manager.Mutex.RUnlock()
 		return nil, nexError
 	}
 
@@ -27,13 +27,13 @@ func (commonProtocol *CommonProtocol) getSessionURLs(err error, packet nex.Packe
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
 	if !slices.Contains(participants, connection.PID().Value()) {
-		common_globals.MatchmakingMutex.RUnlock()
+		commonProtocol.manager.Mutex.RUnlock()
 		return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
 	}
 
 	host := endpoint.FindConnectionByPID(gathering.HostPID.Value())
 
-	common_globals.MatchmakingMutex.RUnlock()
+	commonProtocol.manager.Mutex.RUnlock()
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 

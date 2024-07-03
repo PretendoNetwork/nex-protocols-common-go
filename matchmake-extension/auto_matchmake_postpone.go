@@ -28,11 +28,11 @@ func (commonProtocol *CommonProtocol) autoMatchmakePostpone(err error, packet ne
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
-	common_globals.MatchmakingMutex.Lock()
+	commonProtocol.manager.Mutex.Lock()
 
 	// * A client may disconnect from a session without leaving reliably,
 	// * so let's make sure the client is removed from the session
-	database.EndMatchmakeSessionsParticipation(commonProtocol.db, connection)
+	database.EndMatchmakeSessionsParticipation(commonProtocol.manager, connection)
 
 	var matchmakeSession *match_making_types.MatchmakeSession
 	anyGatheringDataType := anyGathering.TypeName
@@ -41,42 +41,42 @@ func (commonProtocol *CommonProtocol) autoMatchmakePostpone(err error, packet ne
 		matchmakeSession = anyGathering.ObjectData.(*match_making_types.MatchmakeSession)
 	} else {
 		common_globals.Logger.Critical("Non-MatchmakeSession DataType?!")
-		common_globals.MatchmakingMutex.Unlock()
+		commonProtocol.manager.Mutex.Unlock()
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
 	if !common_globals.CheckValidMatchmakeSession(matchmakeSession) {
-		common_globals.MatchmakingMutex.Unlock()
+		commonProtocol.manager.Mutex.Unlock()
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
 	searchMatchmakeSession := matchmakeSession.Copy().(*match_making_types.MatchmakeSession)
 	commonProtocol.CleanupSearchMatchmakeSession(searchMatchmakeSession)
-	resultSession, nexError := database.FindMatchmakeSession(commonProtocol.db, connection, searchMatchmakeSession)
+	resultSession, nexError := database.FindMatchmakeSession(commonProtocol.manager, connection, searchMatchmakeSession)
 	if nexError != nil {
-		common_globals.MatchmakingMutex.Unlock()
+		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
 	}
 
 	if resultSession == nil {
 		resultSession = searchMatchmakeSession.Copy().(*match_making_types.MatchmakeSession)
-		nexError = database.CreateMatchmakeSession(commonProtocol.db, connection, resultSession)
+		nexError = database.CreateMatchmakeSession(commonProtocol.manager, connection, resultSession)
 		if nexError != nil {
 			common_globals.Logger.Error(nexError.Error())
-			common_globals.MatchmakingMutex.Unlock()
+			commonProtocol.manager.Mutex.Unlock()
 			return nil, nexError
 		}
 	}
 
-	participants, nexError := match_making_database.JoinGathering(commonProtocol.db, resultSession.Gathering.ID.Value, connection, 1, message.Value)
+	participants, nexError := match_making_database.JoinGathering(commonProtocol.manager, resultSession.Gathering.ID.Value, connection, 1, message.Value)
 	if nexError != nil {
-		common_globals.MatchmakingMutex.Unlock()
+		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
 	}
 
 	resultSession.ParticipationCount.Value = participants
 
-	common_globals.MatchmakingMutex.Unlock()
+	commonProtocol.manager.Mutex.Unlock()
 
 	matchmakeDataHolder := types.NewAnyDataHolder()
 

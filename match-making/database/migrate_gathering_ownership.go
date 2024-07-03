@@ -1,8 +1,6 @@
 package database
 
 import (
-	"database/sql"
-
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
@@ -12,7 +10,7 @@ import (
 )
 
 // MigrateGatheringOwnership switches the owner of the gathering with a different one
-func MigrateGatheringOwnership(db *sql.DB, connection *nex.PRUDPConnection, gathering *match_making_types.Gathering, participants []uint64) *nex.Error {
+func MigrateGatheringOwnership(manager *common_globals.MatchmakingManager, connection *nex.PRUDPConnection, gathering *match_making_types.Gathering, participants []uint64) *nex.Error {
 	var nexError *nex.Error
 	var uniqueParticipants []uint64 = common_globals.RemoveDuplicates(participants)
 	var newOwner uint64
@@ -25,7 +23,7 @@ func MigrateGatheringOwnership(db *sql.DB, connection *nex.PRUDPConnection, gath
 
 	// * We couldn't find a new owner, so we unregister the gathering
 	if newOwner == 0 {
-		nexError = UnregisterGathering(db, gathering.ID.Value)
+		nexError = UnregisterGathering(manager, gathering.ID.Value)
 		if nexError != nil {
 			return nexError
 		}
@@ -45,7 +43,7 @@ func MigrateGatheringOwnership(db *sql.DB, connection *nex.PRUDPConnection, gath
 	// * Set the new owner
 	gathering.OwnerPID = types.NewPID(newOwner)
 
-	nexError = UpdateSessionHost(db, gathering.ID.Value, gathering.OwnerPID, gathering.HostPID)
+	nexError = UpdateSessionHost(manager, gathering.ID.Value, gathering.OwnerPID, gathering.HostPID)
 	if nexError != nil {
 		return nexError
 	}

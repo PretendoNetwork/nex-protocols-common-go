@@ -1,8 +1,6 @@
 package database
 
 import (
-	"database/sql"
-
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
@@ -14,10 +12,10 @@ import (
 )
 
 // DisconnectParticipant disconnects a participant from all non-persistent gatherings
-func DisconnectParticipant(db *sql.DB, connection *nex.PRUDPConnection) {
+func DisconnectParticipant(manager *common_globals.MatchmakingManager, connection *nex.PRUDPConnection) {
 	var nexError *nex.Error
 
-	rows, err := db.Query(`SELECT id, owner_pid, host_pid, min_participants, max_participants, participation_policy, policy_argument, flags, state, description, type, participants FROM matchmaking.gatherings WHERE $1 = ANY(participants) AND registered=true`, connection.PID().Value())
+	rows, err := manager.Database.Query(`SELECT id, owner_pid, host_pid, min_participants, max_participants, participation_policy, policy_argument, flags, state, description, type, participants FROM matchmaking.gatherings WHERE $1 = ANY(participants) AND registered=true`, connection.PID().Value())
 	if err != nil {
 		common_globals.Logger.Critical(err.Error())
 		return
@@ -74,7 +72,7 @@ func DisconnectParticipant(db *sql.DB, connection *nex.PRUDPConnection) {
 		gathering.Description.Value = description
 
 		// * Since the participant is leaving, override the participant list to avoid sending notifications to them
-		participants, nexError = RemoveParticipantFromGathering(db, gatheringID, connection.PID().Value())
+		participants, nexError = RemoveParticipantFromGathering(manager, gatheringID, connection.PID().Value())
 		if nexError != nil {
 			common_globals.Logger.Error(nexError.Error())
 			continue
@@ -83,7 +81,7 @@ func DisconnectParticipant(db *sql.DB, connection *nex.PRUDPConnection) {
 		if len(participants) == 0 {
 			// * There are no more participants, so we only have to unregister the gathering
 			// * Since the participant is disconnecting, we don't send notification events
-			nexError = UnregisterGathering(db, gatheringID)
+			nexError = UnregisterGathering(manager, gatheringID)
 			if nexError != nil {
 				common_globals.Logger.Error(nexError.Error())
 			}
@@ -96,7 +94,7 @@ func DisconnectParticipant(db *sql.DB, connection *nex.PRUDPConnection) {
 			// * If the flag is not set, delete the session
 			// * More info: https://nintendo-wiki.pretendo.network/docs/nex/protocols/match-making/types#flags
 			if gathering.Flags.PAND(match_making.GatheringFlags.DisconnectChangeOwner) == 0 {
-				nexError = UnregisterGathering(db, gatheringID)
+				nexError = UnregisterGathering(manager, gatheringID)
 				if nexError != nil {
 					common_globals.Logger.Error(nexError.Error())
 					continue
@@ -115,7 +113,7 @@ func DisconnectParticipant(db *sql.DB, connection *nex.PRUDPConnection) {
 				continue
 			}
 
-			nexError = MigrateGatheringOwnership(db, connection, gathering, participants)
+			nexError = MigrateGatheringOwnership(manager, connection, gathering, participants)
 			if nexError != nil {
 				common_globals.Logger.Error(nexError.Error())
 			}

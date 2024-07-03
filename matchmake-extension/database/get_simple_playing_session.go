@@ -10,11 +10,11 @@ import (
 )
 
 // GetSimplePlayingSession returns the simple playing sessions of the given PIDs
-func GetSimplePlayingSession(db *sql.DB, listPID []*types.PID) ([]*match_making_types.SimplePlayingSession, *nex.Error) {
+func GetSimplePlayingSession(manager *common_globals.MatchmakingManager, listPID []*types.PID) ([]*match_making_types.SimplePlayingSession, *nex.Error) {
 	simplePlayingSessions := make([]*match_making_types.SimplePlayingSession, 0)
 	for _, pid := range listPID {
 		simplePlayingSession := match_making_types.NewSimplePlayingSession()
-		err := db.QueryRow(`SELECT
+		err := manager.Database.QueryRow(`SELECT
 		g.id,
 		ms.attribs[1],
 		ms.game_mode

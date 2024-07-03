@@ -19,39 +19,39 @@ func (commonProtocol *CommonProtocol) joinMatchmakeSession(err error, packet nex
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	common_globals.MatchmakingMutex.Lock()
+	commonProtocol.manager.Mutex.Lock()
 
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 	server := endpoint.Server
 
-	joinedMatchmakeSession, _, nexError := database.GetMatchmakeSessionByID(commonProtocol.db, endpoint, gid.Value)
+	joinedMatchmakeSession, _, nexError := database.GetMatchmakeSessionByID(commonProtocol.manager, endpoint, gid.Value)
 	if nexError != nil {
 		common_globals.Logger.Error(nexError.Error())
-		common_globals.MatchmakingMutex.Unlock()
+		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
 	}
 
 	// TODO - Is this the correct error code?
 	if joinedMatchmakeSession.UserPasswordEnabled.Value || joinedMatchmakeSession.SystemPasswordEnabled.Value {
-		common_globals.MatchmakingMutex.Unlock()
+		commonProtocol.manager.Mutex.Unlock()
 		return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
 	}
 
-	nexError = common_globals.CanJoinMatchmakeSession(connection.PID(), joinedMatchmakeSession)
+	nexError = common_globals.CanJoinMatchmakeSession(commonProtocol.manager, connection.PID(), joinedMatchmakeSession)
 	if nexError != nil {
-		common_globals.MatchmakingMutex.Unlock()
+		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
 	}
 
-	_, nexError = match_making_database.JoinGathering(commonProtocol.db, joinedMatchmakeSession.Gathering.ID.Value, connection, 1, strMessage.Value)
+	_, nexError = match_making_database.JoinGathering(commonProtocol.manager, joinedMatchmakeSession.Gathering.ID.Value, connection, 1, strMessage.Value)
 	if nexError != nil {
 		common_globals.Logger.Error(nexError.Error())
-		common_globals.MatchmakingMutex.Unlock()
+		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
 	}
 
-	common_globals.MatchmakingMutex.Unlock()
+	commonProtocol.manager.Mutex.Unlock()
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 

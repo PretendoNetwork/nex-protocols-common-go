@@ -6,12 +6,13 @@ import (
 
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	match_making_types "github.com/PretendoNetwork/nex-protocols-go/v2/match-making/types"
 	pqextended "github.com/PretendoNetwork/pq-extended"
 )
 
 // GetMatchmakeSessionByID gets a matchmake session with the given gathering ID and the system password
-func GetMatchmakeSessionByID(db *sql.DB, endpoint *nex.PRUDPEndPoint, gatheringID uint32) (*match_making_types.MatchmakeSession, string, *nex.Error) {
+func GetMatchmakeSessionByID(manager *common_globals.MatchmakingManager, endpoint *nex.PRUDPEndPoint, gatheringID uint32) (*match_making_types.MatchmakeSession, string, *nex.Error) {
 	resultMatchmakeSession := match_making_types.NewMatchmakeSession()
 	var ownerPID uint64
 	var hostPID uint64
@@ -21,7 +22,7 @@ func GetMatchmakeSessionByID(db *sql.DB, endpoint *nex.PRUDPEndPoint, gatheringI
 	var systemPassword string
 
 	// * For simplicity, we will only compare the values that exist on a MatchmakeSessionSearchCriteria
-	err := db.QueryRow(`SELECT
+	err := manager.Database.QueryRow(`SELECT
 		g.id,
 		g.owner_pid,
 		g.host_pid,

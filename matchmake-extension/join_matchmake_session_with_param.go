@@ -19,43 +19,43 @@ func (commonProtocol *CommonProtocol) joinMatchmakeSessionWithParam(err error, p
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	common_globals.MatchmakingMutex.Lock()
+	commonProtocol.manager.Mutex.Lock()
 
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
-	joinedMatchmakeSession, systemPassword, nexError := database.GetMatchmakeSessionByID(commonProtocol.db, endpoint, joinMatchmakeSessionParam.GID.Value)
+	joinedMatchmakeSession, systemPassword, nexError := database.GetMatchmakeSessionByID(commonProtocol.manager, endpoint, joinMatchmakeSessionParam.GID.Value)
 	if nexError != nil {
 		common_globals.Logger.Error(nexError.Error())
-		common_globals.MatchmakingMutex.Unlock()
+		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
 	}
 
 	// TODO - Are these the correct error codes?
 	if joinedMatchmakeSession.UserPasswordEnabled.Value && !joinMatchmakeSessionParam.StrUserPassword.Equals(joinedMatchmakeSession.UserPassword) {
-		common_globals.MatchmakingMutex.Unlock()
+		commonProtocol.manager.Mutex.Unlock()
 		return nil, nex.NewError(nex.ResultCodes.RendezVous.InvalidPassword, "change_error")
 	}
 
 	if joinedMatchmakeSession.SystemPasswordEnabled.Value && joinMatchmakeSessionParam.StrSystemPassword.Value != systemPassword {
-		common_globals.MatchmakingMutex.Unlock()
+		commonProtocol.manager.Mutex.Unlock()
 		return nil, nex.NewError(nex.ResultCodes.RendezVous.InvalidPassword, "change_error")
 	}
 
-	nexError = common_globals.CanJoinMatchmakeSession(connection.PID(), joinedMatchmakeSession)
+	nexError = common_globals.CanJoinMatchmakeSession(commonProtocol.manager, connection.PID(), joinedMatchmakeSession)
 	if nexError != nil {
-		common_globals.MatchmakingMutex.Unlock()
+		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
 	}
 
-	_, nexError = match_making_database.JoinGatheringWithParticipants(commonProtocol.db, joinedMatchmakeSession.Gathering.ID.Value, connection, joinMatchmakeSessionParam.AdditionalParticipants.Slice(), joinMatchmakeSessionParam.JoinMessage.Value)
+	_, nexError = match_making_database.JoinGatheringWithParticipants(commonProtocol.manager, joinedMatchmakeSession.Gathering.ID.Value, connection, joinMatchmakeSessionParam.AdditionalParticipants.Slice(), joinMatchmakeSessionParam.JoinMessage.Value)
 	if nexError != nil {
 		common_globals.Logger.Error(nexError.Error())
-		common_globals.MatchmakingMutex.Unlock()
+		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
 	}
 
-	common_globals.MatchmakingMutex.Unlock()
+	commonProtocol.manager.Mutex.Unlock()
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 

@@ -18,18 +18,18 @@ func (commonProtocol *CommonProtocol) endParticipation(err error, packet nex.Pac
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	common_globals.MatchmakingMutex.Lock()
+	commonProtocol.manager.Mutex.Lock()
 
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
-	nexError := database.EndGatheringParticipation(commonProtocol.db, idGathering.Value, connection, strMessage.Value)
+	nexError := database.EndGatheringParticipation(commonProtocol.manager, idGathering.Value, connection, strMessage.Value)
 	if nexError != nil {
-		common_globals.MatchmakingMutex.Unlock()
+		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
 	}
 
-	common_globals.MatchmakingMutex.Unlock()
+	commonProtocol.manager.Mutex.Unlock()
 
 	retval := types.NewPrimitiveBool(true)
 

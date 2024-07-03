@@ -18,10 +18,10 @@ func (commonProtocol *CommonProtocol) updateSessionHost(err error, packet nex.Pa
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	common_globals.MatchmakingMutex.Lock()
-	gathering, _, participants, _, nexError := database.FindGatheringByID(commonProtocol.db, gid.Value)
+	commonProtocol.manager.Mutex.Lock()
+	gathering, _, participants, _, nexError := database.FindGatheringByID(commonProtocol.manager, gid.Value)
 	if nexError != nil {
-		common_globals.MatchmakingMutex.Unlock()
+		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
 	}
 
@@ -29,21 +29,21 @@ func (commonProtocol *CommonProtocol) updateSessionHost(err error, packet nex.Pa
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
 	if !slices.Contains(participants, connection.PID().Value()) {
-		common_globals.MatchmakingMutex.Unlock()
+		commonProtocol.manager.Mutex.Unlock()
 		return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
 	}
 
 	// TODO - Should this check for match_making.GatheringFlags.ParticipantsChangeOwner too?
 	if !isMigrateOwner.Value {
-		nexError = database.UpdateSessionHost(commonProtocol.db, gid.Value, gathering.OwnerPID, connection.PID())
+		nexError = database.UpdateSessionHost(commonProtocol.manager, gid.Value, gathering.OwnerPID, connection.PID())
 		if nexError != nil {
-			common_globals.MatchmakingMutex.Unlock()
+			commonProtocol.manager.Mutex.Unlock()
 			return nil, nexError
 		}
 	} else {
-		nexError = database.UpdateSessionHost(commonProtocol.db, gid.Value, connection.PID(), connection.PID())
+		nexError = database.UpdateSessionHost(commonProtocol.manager, gid.Value, connection.PID(), connection.PID())
 		if nexError != nil {
-			common_globals.MatchmakingMutex.Unlock()
+			commonProtocol.manager.Mutex.Unlock()
 			return nil, nexError
 		}
 
@@ -64,7 +64,7 @@ func (commonProtocol *CommonProtocol) updateSessionHost(err error, packet nex.Pa
 		common_globals.SendNotificationEvent(endpoint, oEvent, common_globals.RemoveDuplicates(participants))
 	}
 
-	common_globals.MatchmakingMutex.Unlock()
+	commonProtocol.manager.Mutex.Unlock()
 
 	rmcResponse := nex.NewRMCSuccess(endpoint, nil)
 	rmcResponse.ProtocolID = match_making.ProtocolID

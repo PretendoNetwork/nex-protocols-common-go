@@ -18,13 +18,13 @@ func (commonProtocol *CommonProtocol) browseMatchmakeSession(err error, packet n
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
-	common_globals.MatchmakingMutex.RLock()
+	commonProtocol.manager.Mutex.RLock()
 
 	searchCriterias := []*match_making_types.MatchmakeSessionSearchCriteria{searchCriteria}
 
-	sessions, nexError := database.FindMatchmakeSessionBySearchCriteria(commonProtocol.db, connection, searchCriterias, resultRange)
+	sessions, nexError := database.FindMatchmakeSessionBySearchCriteria(commonProtocol.manager, connection, searchCriterias, resultRange)
 	if nexError != nil {
-		common_globals.MatchmakingMutex.RUnlock()
+		commonProtocol.manager.Mutex.RUnlock()
 		return nil, nexError
 	}
 
@@ -43,7 +43,7 @@ func (commonProtocol *CommonProtocol) browseMatchmakeSession(err error, packet n
 		lstGathering.Append(matchmakeSessionDataHolder)
 	}
 
-	common_globals.MatchmakingMutex.RUnlock()
+	commonProtocol.manager.Mutex.RUnlock()
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 

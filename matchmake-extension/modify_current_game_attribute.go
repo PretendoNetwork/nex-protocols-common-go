@@ -17,33 +17,33 @@ func (commonProtocol *CommonProtocol) modifyCurrentGameAttribute(err error, pack
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
-	common_globals.MatchmakingMutex.Lock()
+	commonProtocol.manager.Mutex.Lock()
 
-	session, _, nexError := database.GetMatchmakeSessionByID(commonProtocol.db, endpoint, gid.Value)
+	session, _, nexError := database.GetMatchmakeSessionByID(commonProtocol.manager, endpoint, gid.Value)
 	if nexError != nil {
-		common_globals.MatchmakingMutex.Unlock()
+		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
 	}
 
 	if !session.Gathering.OwnerPID.Equals(connection.PID()) {
-		common_globals.MatchmakingMutex.Unlock()
+		commonProtocol.manager.Mutex.Unlock()
 		return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
 	}
 
 	index := int(attribIndex.Value)
 
 	if index >= session.Attributes.Length() {
-		common_globals.MatchmakingMutex.Unlock()
+		commonProtocol.manager.Mutex.Unlock()
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidIndex, "change_error")
 	}
 
-	nexError = database.UpdateGameAttribute(commonProtocol.db, gid.Value, attribIndex.Value, newValue.Value)
+	nexError = database.UpdateGameAttribute(commonProtocol.manager, gid.Value, attribIndex.Value, newValue.Value)
 	if nexError != nil {
-		common_globals.MatchmakingMutex.Unlock()
+		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
 	}
 
-	common_globals.MatchmakingMutex.Unlock()
+	commonProtocol.manager.Mutex.Unlock()
 
 	rmcResponse := nex.NewRMCSuccess(endpoint, nil)
 	rmcResponse.ProtocolID = matchmake_extension.ProtocolID

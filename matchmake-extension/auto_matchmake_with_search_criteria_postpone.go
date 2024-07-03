@@ -28,11 +28,11 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithSearchCriteriaPostpone(er
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
-	common_globals.MatchmakingMutex.Lock()
+	commonProtocol.manager.Mutex.Lock()
 
 	// * A client may disconnect from a session without leaving reliably,
 	// * so let's make sure the client is removed from the session
-	database.EndMatchmakeSessionsParticipation(commonProtocol.db, connection)
+	database.EndMatchmakeSessionsParticipation(commonProtocol.manager, connection)
 
 	var matchmakeSession *match_making_types.MatchmakeSession
 
@@ -40,12 +40,12 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithSearchCriteriaPostpone(er
 		matchmakeSession = anyGathering.ObjectData.(*match_making_types.MatchmakeSession)
 	} else {
 		common_globals.Logger.Critical("Non-MatchmakeSession DataType?!")
-		common_globals.MatchmakingMutex.Unlock()
+		commonProtocol.manager.Mutex.Unlock()
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
 	if !common_globals.CheckValidMatchmakeSession(matchmakeSession) {
-		common_globals.MatchmakingMutex.Unlock()
+		commonProtocol.manager.Mutex.Unlock()
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
@@ -53,19 +53,19 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithSearchCriteriaPostpone(er
 
 	resultRange := types.NewResultRange()
 	resultRange.Length.Value = 1
-	resultSessions, nexError := database.FindMatchmakeSessionBySearchCriteria(commonProtocol.db, connection, lstSearchCriteria.Slice(), resultRange)
+	resultSessions, nexError := database.FindMatchmakeSessionBySearchCriteria(commonProtocol.manager, connection, lstSearchCriteria.Slice(), resultRange)
 	if nexError != nil {
-		common_globals.MatchmakingMutex.Unlock()
+		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
 	}
 
 	var resultSession *match_making_types.MatchmakeSession
 	if len(resultSessions) == 0 {
 		resultSession = matchmakeSession.Copy().(*match_making_types.MatchmakeSession)
-		nexError = database.CreateMatchmakeSession(commonProtocol.db, connection, resultSession)
+		nexError = database.CreateMatchmakeSession(commonProtocol.manager, connection, resultSession)
 		if nexError != nil {
 			common_globals.Logger.Error(nexError.Error())
-			common_globals.MatchmakingMutex.Unlock()
+			commonProtocol.manager.Mutex.Unlock()
 			return nil, nexError
 		}
 	} else {
@@ -73,7 +73,7 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithSearchCriteriaPostpone(er
 
 		// TODO - What should really happen here?
 		if resultSession.UserPasswordEnabled.Value || resultSession.SystemPasswordEnabled.Value {
-			common_globals.MatchmakingMutex.Unlock()
+			commonProtocol.manager.Mutex.Unlock()
 			return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
 		}
 	}
@@ -83,15 +83,15 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithSearchCriteriaPostpone(er
 		vacantParticipants = searchCriteria.VacantParticipants.Value
 	}
 
-	participants, nexError := match_making_database.JoinGathering(commonProtocol.db, resultSession.Gathering.ID.Value, connection, vacantParticipants, strMessage.Value)
+	participants, nexError := match_making_database.JoinGathering(commonProtocol.manager, resultSession.Gathering.ID.Value, connection, vacantParticipants, strMessage.Value)
 	if nexError != nil {
-		common_globals.MatchmakingMutex.Unlock()
+		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
 	}
 
 	resultSession.ParticipationCount.Value = participants
 
-	common_globals.MatchmakingMutex.Unlock()
+	commonProtocol.manager.Mutex.Unlock()
 
 	matchmakeDataHolder := types.NewAnyDataHolder()
 

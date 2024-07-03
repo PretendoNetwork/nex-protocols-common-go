@@ -1,7 +1,6 @@
 package database
 
 import (
-	"database/sql"
 	"fmt"
 	"math"
 	"strconv"
@@ -17,14 +16,14 @@ import (
 )
 
 // FindMatchmakeSessionBySearchCriteria finds matchmake sessions with the given search criterias
-func FindMatchmakeSessionBySearchCriteria(db *sql.DB, connection *nex.PRUDPConnection, searchCriterias []*match_making_types.MatchmakeSessionSearchCriteria, resultRange *types.ResultRange) ([]*match_making_types.MatchmakeSession, *nex.Error) {
+func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingManager, connection *nex.PRUDPConnection, searchCriterias []*match_making_types.MatchmakeSessionSearchCriteria, resultRange *types.ResultRange) ([]*match_making_types.MatchmakeSession, *nex.Error) {
 	resultMatchmakeSessions := make([]*match_making_types.MatchmakeSession, 0)
 
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
 	var friendList []uint32
-	if common_globals.GetUserFriendPIDsHandler != nil {
-		friendList = common_globals.GetUserFriendPIDsHandler(connection.PID().LegacyValue())
+	if manager.GetUserFriendPIDs != nil {
+		friendList = manager.GetUserFriendPIDs(connection.PID().LegacyValue())
 	}
 
 	if resultRange.Offset.Value == math.MaxUint32 {
@@ -223,7 +222,7 @@ func FindMatchmakeSessionBySearchCriteria(db *sql.DB, connection *nex.PRUDPConne
 			searchStatement += fmt.Sprintf(` LIMIT %d OFFSET %d`, resultRange.Length.Value - uint32(len(resultMatchmakeSessions)), resultRange.Offset.Value)
 		}
 
-		rows, err := db.Query(searchStatement,
+		rows, err := manager.Database.Query(searchStatement,
 			searchCriteria.ReferGID.Value,
 			searchCriteria.CodeWord.Value,
 			searchCriteria.Attribs.Length(),

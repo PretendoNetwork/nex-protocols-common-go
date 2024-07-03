@@ -26,24 +26,24 @@ func (commonProtocol *CommonProtocol) createMatchmakeSessionWithParam(err error,
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	common_globals.MatchmakingMutex.Lock()
+	commonProtocol.manager.Mutex.Lock()
 
 	// * A client may disconnect from a session without leaving reliably,
 	// * so let's make sure the client is removed from all sessions
-	database.EndMatchmakeSessionsParticipation(commonProtocol.db, connection)
+	database.EndMatchmakeSessionsParticipation(commonProtocol.manager, connection)
 
 	joinedMatchmakeSession := createMatchmakeSessionParam.SourceMatchmakeSession.Copy().(*match_making_types.MatchmakeSession)
-	nexError := database.CreateMatchmakeSession(commonProtocol.db, connection, joinedMatchmakeSession)
+	nexError := database.CreateMatchmakeSession(commonProtocol.manager, connection, joinedMatchmakeSession)
 	if nexError != nil {
 		common_globals.Logger.Error(nexError.Error())
-		common_globals.MatchmakingMutex.Unlock()
+		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
 	}
 
-	participants, nexError := match_making_database.JoinGatheringWithParticipants(commonProtocol.db, joinedMatchmakeSession.Gathering.ID.Value, connection, createMatchmakeSessionParam.AdditionalParticipants.Slice(), createMatchmakeSessionParam.JoinMessage.Value)
+	participants, nexError := match_making_database.JoinGatheringWithParticipants(commonProtocol.manager, joinedMatchmakeSession.Gathering.ID.Value, connection, createMatchmakeSessionParam.AdditionalParticipants.Slice(), createMatchmakeSessionParam.JoinMessage.Value)
 	if nexError != nil {
 		common_globals.Logger.Error(nexError.Error())
-		common_globals.MatchmakingMutex.Unlock()
+		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
 	}
 

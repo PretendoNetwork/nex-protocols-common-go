@@ -25,15 +25,15 @@ func (commonProtocol *CommonProtocol) getSimplePlayingSession(err error, packet 
 		listPID.Append(connection.PID().Copy().(*types.PID))
 	}
 
-	common_globals.MatchmakingMutex.RLock()
+	commonProtocol.manager.Mutex.RLock()
 
-	simplePlayingSessions, nexError := database.GetSimplePlayingSession(commonProtocol.db, listPID.Slice())
+	simplePlayingSessions, nexError := database.GetSimplePlayingSession(commonProtocol.manager, listPID.Slice())
 	if nexError != nil {
-		common_globals.MatchmakingMutex.RUnlock()
+		commonProtocol.manager.Mutex.RUnlock()
 		return nil, nexError
 	}
 
-	common_globals.MatchmakingMutex.RUnlock()
+	commonProtocol.manager.Mutex.RUnlock()
 
 	lstSimplePlayingSession := types.NewList[*match_making_types.SimplePlayingSession]()
 	lstSimplePlayingSession.SetFromData(simplePlayingSessions)

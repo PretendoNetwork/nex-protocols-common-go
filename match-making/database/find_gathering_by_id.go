@@ -6,13 +6,14 @@ import (
 
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	match_making_types "github.com/PretendoNetwork/nex-protocols-go/v2/match-making/types"
 	pqextended "github.com/PretendoNetwork/pq-extended"
 )
 
 // FindGatheringByID finds a gathering on a database with the given ID. Returns the gathering, its type, the participant list and the started time
-func FindGatheringByID(db *sql.DB, id uint32) (*match_making_types.Gathering, string, []uint64, *types.DateTime, *nex.Error) {
-	row := db.QueryRow(`SELECT owner_pid, host_pid, min_participants, max_participants, participation_policy, policy_argument, flags, state, description, type, participants, started_time FROM matchmaking.gatherings WHERE id=$1 AND registered=true`, id)
+func FindGatheringByID(manager *common_globals.MatchmakingManager, id uint32) (*match_making_types.Gathering, string, []uint64, *types.DateTime, *nex.Error) {
+	row := manager.Database.QueryRow(`SELECT owner_pid, host_pid, min_participants, max_participants, participation_policy, policy_argument, flags, state, description, type, participants, started_time FROM matchmaking.gatherings WHERE id=$1 AND registered=true`, id)
 
 	var ownerPID uint64
 	var hostPID uint64

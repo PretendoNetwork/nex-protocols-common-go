@@ -2,18 +2,18 @@ package database
 
 import (
 	"crypto/rand"
-	"database/sql"
 
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	match_making_database "github.com/PretendoNetwork/nex-protocols-common-go/v2/match-making/database"
 	match_making_types "github.com/PretendoNetwork/nex-protocols-go/v2/match-making/types"
 	pqextended "github.com/PretendoNetwork/pq-extended"
 )
 
 // CreateMatchmakeSession creates a new MatchmakeSession on the database. No participants are added
-func CreateMatchmakeSession(db *sql.DB, connection *nex.PRUDPConnection, matchmakeSession *match_making_types.MatchmakeSession) *nex.Error {
-	startedTime, nexError := match_making_database.RegisterGathering(db, connection.PID(), matchmakeSession.Gathering, "MatchmakeSession")
+func CreateMatchmakeSession(manager *common_globals.MatchmakingManager, connection *nex.PRUDPConnection, matchmakeSession *match_making_types.MatchmakeSession) *nex.Error {
+	startedTime, nexError := match_making_database.RegisterGathering(manager, connection.PID(), matchmakeSession.Gathering, "MatchmakeSession")
 	if nexError != nil {
 		return nexError
 	}
@@ -43,7 +43,7 @@ func CreateMatchmakeSession(db *sql.DB, connection *nex.PRUDPConnection, matchma
 	matchmakeSession.SystemPasswordEnabled.Value = false
 	rand.Read(matchmakeSession.SessionKey.Value)
 
-	_, err := db.Exec(`INSERT INTO matchmaking.matchmake_sessions (
+	_, err := manager.Database.Exec(`INSERT INTO matchmaking.matchmake_sessions (
 		id,
 		game_mode,
 		attribs,

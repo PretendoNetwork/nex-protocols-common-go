@@ -13,7 +13,7 @@ import (
 )
 
 // JoinGathering joins participants from the same connection into a gathering. Returns the new number of participants
-func JoinGathering(db *sql.DB, gatheringID uint32, connection *nex.PRUDPConnection, vacantParticipants uint16, joinMessage string) (uint32, *nex.Error) {
+func JoinGathering(manager *common_globals.MatchmakingManager, gatheringID uint32, connection *nex.PRUDPConnection, vacantParticipants uint16, joinMessage string) (uint32, *nex.Error) {
 	// * vacantParticipants represents the total number of participants that are joining (including the main participant)
 	// * Prevent underflow below if vacantParticipants is set to zero
 	if vacantParticipants == 0 {
@@ -24,7 +24,7 @@ func JoinGathering(db *sql.DB, gatheringID uint32, connection *nex.PRUDPConnecti
 	var maxParticipants uint32
 	var flags uint32
 	var participants []uint64
-	err := db.QueryRow(`SELECT owner_pid, max_participants, flags, participants FROM matchmaking.gatherings WHERE id=$1`, gatheringID).Scan(&ownerPID, &maxParticipants, &flags, pqextended.Array(&participants))
+	err := manager.Database.QueryRow(`SELECT owner_pid, max_participants, flags, participants FROM matchmaking.gatherings WHERE id=$1`, gatheringID).Scan(&ownerPID, &maxParticipants, &flags, pqextended.Array(&participants))
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return 0, nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "change_error")
@@ -49,7 +49,7 @@ func JoinGathering(db *sql.DB, gatheringID uint32, connection *nex.PRUDPConnecti
 	}
 
 	// * We have already checked that the gathering exists above, so we don't have to check the rows affected on sql.Result
-	_, err = db.Exec(`UPDATE matchmaking.gatherings SET participants=$1 WHERE id=$2`, pqextended.Array(newParticipants), gatheringID)
+	_, err = manager.Database.Exec(`UPDATE matchmaking.gatherings SET participants=$1 WHERE id=$2`, pqextended.Array(newParticipants), gatheringID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return 0, nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "change_error")

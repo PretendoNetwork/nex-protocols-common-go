@@ -16,10 +16,10 @@ func (commonProtocol *CommonProtocol) unregisterGathering(err error, packet nex.
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	common_globals.MatchmakingMutex.Lock()
-	gathering, _, participants, _, nexError := database.FindGatheringByID(commonProtocol.db, idGathering.Value)
+	commonProtocol.manager.Mutex.Lock()
+	gathering, _, participants, _, nexError := database.FindGatheringByID(commonProtocol.manager, idGathering.Value)
 	if nexError != nil {
-		common_globals.MatchmakingMutex.Unlock()
+		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
 	}
 
@@ -27,13 +27,13 @@ func (commonProtocol *CommonProtocol) unregisterGathering(err error, packet nex.
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
 	if !gathering.OwnerPID.Equals(connection.PID()) {
-		common_globals.MatchmakingMutex.Unlock()
+		commonProtocol.manager.Mutex.Unlock()
 		return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
 	}
 
-	nexError = database.UnregisterGathering(commonProtocol.db, idGathering.Value)
+	nexError = database.UnregisterGathering(commonProtocol.manager, idGathering.Value)
 	if nexError != nil {
-		common_globals.MatchmakingMutex.Unlock()
+		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
 	}
 
@@ -47,7 +47,7 @@ func (commonProtocol *CommonProtocol) unregisterGathering(err error, packet nex.
 
 	common_globals.SendNotificationEvent(endpoint, oEvent, common_globals.RemoveDuplicates(participants))
 
-	common_globals.MatchmakingMutex.Unlock()
+	commonProtocol.manager.Mutex.Unlock()
 
 	retval := types.NewPrimitiveBool(true)
 

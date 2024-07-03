@@ -5,17 +5,18 @@ import (
 
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	match_making_types "github.com/PretendoNetwork/nex-protocols-go/v2/match-making/types"
 	pqextended "github.com/PretendoNetwork/pq-extended"
 )
 
 // GetMatchmakeSessionByGathering gets a matchmake session with the given gathering data
-func GetMatchmakeSessionByGathering(db *sql.DB, endpoint *nex.PRUDPEndPoint, gathering *match_making_types.Gathering, participationCount uint32, startedTime *types.DateTime) (*match_making_types.MatchmakeSession, *nex.Error) {
+func GetMatchmakeSessionByGathering(manager *common_globals.MatchmakingManager, endpoint *nex.PRUDPEndPoint, gathering *match_making_types.Gathering, participationCount uint32, startedTime *types.DateTime) (*match_making_types.MatchmakeSession, *nex.Error) {
 	resultMatchmakeSession := match_making_types.NewMatchmakeSession()
 	var resultAttribs []uint32
 	var resultMatchmakeParam []byte
 
-	err := db.QueryRow(`SELECT
+	err := manager.Database.QueryRow(`SELECT
 		game_mode,
 		attribs,
 		open_participation,

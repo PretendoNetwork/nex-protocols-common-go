@@ -78,7 +78,7 @@ func CheckValidMatchmakeSession(matchmakeSession *match_making_types.MatchmakeSe
 }
 
 // CanJoinMatchmakeSession checks if a PID is allowed to join a matchmake session
-func CanJoinMatchmakeSession(pid *types.PID, matchmakeSession *match_making_types.MatchmakeSession) *nex.Error {
+func CanJoinMatchmakeSession(manager *MatchmakingManager, pid *types.PID, matchmakeSession *match_making_types.MatchmakeSession) *nex.Error {
 	// TODO - Is this the right error?
 	if !matchmakeSession.OpenParticipation.Value {
 		return nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
@@ -87,12 +87,12 @@ func CanJoinMatchmakeSession(pid *types.PID, matchmakeSession *match_making_type
 	// * Only allow friends
 	// TODO - This won't work on Switch!
 	if matchmakeSession.ParticipationPolicy.Value == 98 {
-		if GetUserFriendPIDsHandler == nil {
-			Logger.Warning("Missing GetUserFriendPIDsHandler!")
+		if manager.GetUserFriendPIDs == nil {
+			Logger.Warning("Missing GetUserFriendPIDs!")
 			return nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 		}
 
-		friendList := GetUserFriendPIDsHandler(pid.LegacyValue())
+		friendList := manager.GetUserFriendPIDs(pid.LegacyValue())
 		if !slices.Contains(friendList, matchmakeSession.OwnerPID.LegacyValue()) {
 			return nex.NewError(nex.ResultCodes.RendezVous.NotFriend, "change_error")
 		}
@@ -141,5 +141,7 @@ func SendNotificationEvent(endpoint *nex.PRUDPEndPoint, event *notifications_typ
 		messagePacket.SetPayload(rmcRequestBytes)
 
 		server.Send(messagePacket)
+
+		Logger.Infof("Sent notification event %d from %d to %d", event.Type.Value, event.PIDSource.Value(), pid)
 	}
 }

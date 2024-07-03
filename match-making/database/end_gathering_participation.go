@@ -1,7 +1,6 @@
 package database
 
 import (
-	"database/sql"
 	"slices"
 
 	"github.com/PretendoNetwork/nex-go/v2"
@@ -13,8 +12,8 @@ import (
 )
 
 // EndGatheringParticipation ends the participation of a connection within a gathering and performs any additional handling required
-func EndGatheringParticipation(db *sql.DB, gatheringID uint32, connection *nex.PRUDPConnection, message string) *nex.Error {
-	gathering, gatheringType, participants, _, nexError := FindGatheringByID(db, gatheringID)
+func EndGatheringParticipation(manager *common_globals.MatchmakingManager, gatheringID uint32, connection *nex.PRUDPConnection, message string) *nex.Error {
+	gathering, gatheringType, participants, _, nexError := FindGatheringByID(manager, gatheringID)
 	if nexError != nil {
 		return nexError
 	}
@@ -26,18 +25,18 @@ func EndGatheringParticipation(db *sql.DB, gatheringID uint32, connection *nex.P
 
 	// * If the gathering is a PersistentGathering, only remove the participant from the gathering
 	if gatheringType == "PersistentGathering" {
-		_, nexError = RemoveParticipantFromGathering(db, gatheringID, connection.PID().Value())
+		_, nexError = RemoveParticipantFromGathering(manager, gatheringID, connection.PID().Value())
 		return nexError
 	}
 
-	newParticipants, nexError := RemoveParticipantFromGathering(db, gatheringID, connection.PID().Value())
+	newParticipants, nexError := RemoveParticipantFromGathering(manager, gatheringID, connection.PID().Value())
 	if nexError != nil {
 		return nexError
 	}
 
 	if len(newParticipants) == 0 {
 		// * There are no more participants, so we just unregister the gathering
-		return UnregisterGathering(db, gatheringID)
+		return UnregisterGathering(manager, gatheringID)
 	}
 
 	if connection.PID().Equals(gathering.OwnerPID) {
@@ -45,7 +44,7 @@ func EndGatheringParticipation(db *sql.DB, gatheringID uint32, connection *nex.P
 		// * If the flag is not set, delete the session
 		// * More info: https://nintendo-wiki.pretendo.network/docs/nex/protocols/match-making/types#flags
 		if gathering.Flags.PAND(match_making.GatheringFlags.DisconnectChangeOwner) == 0 {
-			nexError = UnregisterGathering(db, gatheringID)
+			nexError = UnregisterGathering(manager, gatheringID)
 			if nexError != nil {
 				return nexError
 			}
@@ -63,7 +62,7 @@ func EndGatheringParticipation(db *sql.DB, gatheringID uint32, connection *nex.P
 			return nil
 		}
 
-		nexError = MigrateGatheringOwnership(db, connection, gathering, newParticipants)
+		nexError = MigrateGatheringOwnership(manager, connection, gathering, newParticipants)
 		if nexError != nil {
 			return nexError
 		}

@@ -14,12 +14,12 @@ import (
 )
 
 // JoinGatheringWithParticipants joins participants into a gathering. Returns the new number of participants
-func JoinGatheringWithParticipants(db *sql.DB, gatheringID uint32, connection *nex.PRUDPConnection, additionalParticipants []*types.PID, joinMessage string) (uint32, *nex.Error) {
+func JoinGatheringWithParticipants(manager *common_globals.MatchmakingManager, gatheringID uint32, connection *nex.PRUDPConnection, additionalParticipants []*types.PID, joinMessage string) (uint32, *nex.Error) {
 	var ownerPID uint64
 	var maxParticipants uint32
 	var flags uint32
 	var oldParticipants []uint64
-	err := db.QueryRow(`SELECT owner_pid, max_participants, flags, participants FROM matchmaking.gatherings WHERE id=$1`, gatheringID).Scan(&ownerPID, &maxParticipants, &flags, pqextended.Array(&oldParticipants))
+	err := manager.Database.QueryRow(`SELECT owner_pid, max_participants, flags, participants FROM matchmaking.gatherings WHERE id=$1`, gatheringID).Scan(&ownerPID, &maxParticipants, &flags, pqextended.Array(&oldParticipants))
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return 0, nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "change_error")
@@ -44,7 +44,7 @@ func JoinGatheringWithParticipants(db *sql.DB, gatheringID uint32, connection *n
 	participants := append(oldParticipants, newParticipants...)
 
 	// * We have already checked that the gathering exists above, so we don't have to check the rows affected on sql.Result
-	_, err = db.Exec(`UPDATE matchmaking.gatherings SET participants=$1 WHERE id=$2`, pqextended.Array(participants), gatheringID)
+	_, err = manager.Database.Exec(`UPDATE matchmaking.gatherings SET participants=$1 WHERE id=$2`, pqextended.Array(participants), gatheringID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return 0, nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "change_error")

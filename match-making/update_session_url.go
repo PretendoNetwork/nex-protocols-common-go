@@ -16,10 +16,10 @@ func (commonProtocol *CommonProtocol) updateSessionURL(err error, packet nex.Pac
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	common_globals.MatchmakingMutex.Lock()
-	gathering, _, participants, _, nexError := database.FindGatheringByID(commonProtocol.db, idGathering.Value)
+	commonProtocol.manager.Mutex.Lock()
+	gathering, _, participants, _, nexError := database.FindGatheringByID(commonProtocol.manager, idGathering.Value)
 	if nexError != nil {
-		common_globals.MatchmakingMutex.Unlock()
+		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
 	}
 
@@ -27,20 +27,20 @@ func (commonProtocol *CommonProtocol) updateSessionURL(err error, packet nex.Pac
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
 	if !slices.Contains(participants, connection.PID().Value()) {
-		common_globals.MatchmakingMutex.Unlock()
+		commonProtocol.manager.Mutex.Unlock()
 		return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
 	}
 
 	// TODO - Mario Kart 7 seems to set an empty strURL. What does that do if it's actually set?
 
 	// * Only update the host
-	nexError = database.UpdateSessionHost(commonProtocol.db, idGathering.Value, gathering.OwnerPID, connection.PID())
+	nexError = database.UpdateSessionHost(commonProtocol.manager, idGathering.Value, gathering.OwnerPID, connection.PID())
 	if nexError != nil {
-		common_globals.MatchmakingMutex.Unlock()
+		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
 	}
 
-	common_globals.MatchmakingMutex.Unlock()
+	commonProtocol.manager.Mutex.Unlock()
 
 	retval := types.NewPrimitiveBool(true)
 
