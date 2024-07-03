@@ -13,19 +13,24 @@ func (commonProtocol *CommonProtocol) findBySingleID(err error, packet nex.Packe
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	session, ok := common_globals.Sessions[id.Value]
-	if !ok {
-		return nil, nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "change_error")
-	}
-
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
+
+	commonProtocol.manager.Mutex.RLock()
+
+	gathering, gatheringType, nexError := commonProtocol.manager.GetDetailedGatheringByID(commonProtocol.manager, id.Value)
+	if nexError != nil {
+		commonProtocol.manager.Mutex.RUnlock()
+		return nil, nexError
+	}
+
+	commonProtocol.manager.Mutex.RUnlock()
 
 	bResult := types.NewPrimitiveBool(true)
 	pGathering := types.NewAnyDataHolder()
 
-	pGathering.TypeName = types.NewString("MatchmakeSession")
-	pGathering.ObjectData = session.GameMatchmakeSession.Copy()
+	pGathering.TypeName = types.NewString(gatheringType)
+	pGathering.ObjectData = gathering.Copy()
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
