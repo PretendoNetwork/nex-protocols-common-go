@@ -364,6 +364,53 @@ func compareSearchCriteria[T ~uint16 | ~uint32](original T, search string) bool 
 	}
 }
 
+func sendNewParticipant(destination *nex.PRUDPConnection, pidSource *types.PID, gatheringId *types.PrimitiveU32, pidJoined *types.PID, joinMessage *types.String, joinersCount *types.PrimitiveU32) {
+	endpoint := destination.Endpoint().(*nex.PRUDPEndPoint)
+	server := endpoint.Server
+
+	notificationCategory := notifications.NotificationCategories.Participation
+	notificationSubtype := notifications.NotificationSubTypes.Participation.NewParticipant
+
+	oEvent := notifications_types.NewNotificationEvent()
+	oEvent.PIDSource = pidSource
+	oEvent.Type = types.NewPrimitiveU32(notifications.BuildNotificationType(notificationCategory, notificationSubtype))
+	oEvent.Param1 = gatheringId
+	oEvent.Param2 = types.NewPrimitiveU32(pidJoined.LegacyValue()) // TODO - This assumes a legacy client. Will not work on the Switch
+	oEvent.StrParam = joinMessage
+	oEvent.Param3 = joinersCount
+
+	notificationStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
+
+	oEvent.WriteTo(notificationStream)
+
+	notificationRequest := nex.NewRMCRequest(endpoint)
+	notificationRequest.ProtocolID = notifications.ProtocolID
+	notificationRequest.CallID = CurrentMatchmakingCallID.Next()
+	notificationRequest.MethodID = notifications.MethodProcessNotificationEvent
+	notificationRequest.Parameters = notificationStream.Bytes()
+
+	notificationRequestBytes := notificationRequest.Bytes()
+
+	var messagePacket nex.PRUDPPacketInterface
+
+	if destination.DefaultPRUDPVersion == 0 {
+		messagePacket, _ = nex.NewPRUDPPacketV0(server, destination, nil)
+	} else {
+		messagePacket, _ = nex.NewPRUDPPacketV1(server, destination, nil)
+	}
+
+	messagePacket.SetType(constants.DataPacket)
+	messagePacket.AddFlag(constants.PacketFlagNeedsAck)
+	messagePacket.AddFlag(constants.PacketFlagReliable)
+	messagePacket.SetSourceVirtualPortStreamType(destination.StreamType)
+	messagePacket.SetSourceVirtualPortStreamID(endpoint.StreamID)
+	messagePacket.SetDestinationVirtualPortStreamType(destination.StreamType)
+	messagePacket.SetDestinationVirtualPortStreamID(destination.StreamID)
+	messagePacket.SetPayload(notificationRequestBytes)
+
+	server.Send(messagePacket)
+}
+
 // AddPlayersToSession updates the given sessions state to include the provided connection IDs
 // Returns a NEX error code if failed
 func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32, initiatingConnection *nex.PRUDPConnection, joinMessage string) *nex.Error {
@@ -371,196 +418,60 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 		return nex.NewError(nex.ResultCodes.RendezVous.SessionFull, fmt.Sprintf("Gathering %d is full", session.GameMatchmakeSession.Gathering.ID))
 	}
 
+	endpoint := initiatingConnection.Endpoint().(*nex.PRUDPEndPoint)
+	host := endpoint.FindConnectionByID(session.HostConnectionID)
+	if host == nil {
+		return nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "Can't find host")
+	}
+
 	for _, connectedID := range connectionIDs {
 		if session.ConnectionIDs.Has(connectedID) {
 			return nex.NewError(nex.ResultCodes.RendezVous.AlreadyParticipatedGathering, fmt.Sprintf("Connection ID %d is already in gathering %d", connectedID, session.GameMatchmakeSession.Gathering.ID))
+		}
+		connection := endpoint.FindConnectionByID(connectedID)
+		if connection == nil {
+			// TODO - Error here?
+			Logger.Warning("Player not found")
+			continue
+		}
+
+		if session.GameMatchmakeSession.Gathering.Flags.PAND(0xC00) != 0 {
+			// Tell them about you
+			session.ConnectionIDs.Each(func(_ int, currentParticipantID uint32) bool {
+				currentParticipant := endpoint.FindConnectionByID(currentParticipantID)
+				if currentParticipant == nil {
+					// TODO - Error here?
+					Logger.Warning("Player not found")
+					return false
+				}
+
+				sendNewParticipant(currentParticipant, initiatingConnection.PID(), session.GameMatchmakeSession.ID, connection.PID(), types.NewString(joinMessage), types.NewPrimitiveU32(uint32(len(connectionIDs))))
+				return false
+			})
+		} else {
+			// Just tell the host
+			sendNewParticipant(host, initiatingConnection.PID(), session.GameMatchmakeSession.ID, connection.PID(), types.NewString(joinMessage), types.NewPrimitiveU32(uint32(len(connectionIDs))))
 		}
 
 		session.ConnectionIDs.Add(connectedID)
 
 		// Update the participation count with the new connection ID count
 		session.GameMatchmakeSession.ParticipationCount.Value = uint32(session.ConnectionIDs.Size())
-	}
 
-	endpoint := initiatingConnection.Endpoint().(*nex.PRUDPEndPoint)
-	server := endpoint.Server
+		if session.GameMatchmakeSession.Gathering.Flags.PAND(0x800) != 0 {
+			// Tell you about them (including yourself!)
+			session.ConnectionIDs.Each(func(_ int, currentParticipantID uint32) bool {
+				currentParticipant := endpoint.FindConnectionByID(currentParticipantID)
+				if currentParticipant == nil {
+					// TODO - Error here?
+					Logger.Warning("Player not found")
+					return false
+				}
 
-	session.ConnectionIDs.Each(func(_ int, connectionID uint32) bool {
-		target := endpoint.FindConnectionByID(connectionID)
-		if target == nil {
-			// TODO - Error here?
-			Logger.Warning("Player not found")
-			return false
-		}
-
-		notificationCategory := notifications.NotificationCategories.Participation
-		notificationSubtype := notifications.NotificationSubTypes.Participation.NewParticipant
-
-		oEvent := notifications_types.NewNotificationEvent()
-		oEvent.PIDSource = initiatingConnection.PID()
-		oEvent.Type = types.NewPrimitiveU32(notifications.BuildNotificationType(notificationCategory, notificationSubtype))
-		oEvent.Param1 = session.GameMatchmakeSession.ID.Copy().(*types.PrimitiveU32)
-		oEvent.Param2 = types.NewPrimitiveU32(target.PID().LegacyValue()) // TODO - This assumes a legacy client. Will not work on the Switch
-		oEvent.StrParam = types.NewString(joinMessage)
-		oEvent.Param3 = types.NewPrimitiveU32(uint32(len(connectionIDs)))
-
-		notificationStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
-
-		oEvent.WriteTo(notificationStream)
-
-		notificationRequest := nex.NewRMCRequest(endpoint)
-		notificationRequest.ProtocolID = notifications.ProtocolID
-		notificationRequest.CallID = CurrentMatchmakingCallID.Next()
-		notificationRequest.MethodID = notifications.MethodProcessNotificationEvent
-		notificationRequest.Parameters = notificationStream.Bytes()
-
-		notificationRequestBytes := notificationRequest.Bytes()
-
-		var messagePacket nex.PRUDPPacketInterface
-
-		if target.DefaultPRUDPVersion == 0 {
-			messagePacket, _ = nex.NewPRUDPPacketV0(server, target, nil)
-		} else {
-			messagePacket, _ = nex.NewPRUDPPacketV1(server, target, nil)
-		}
-
-		messagePacket.SetType(constants.DataPacket)
-		messagePacket.AddFlag(constants.PacketFlagNeedsAck)
-		messagePacket.AddFlag(constants.PacketFlagReliable)
-		messagePacket.SetSourceVirtualPortStreamType(target.StreamType)
-		messagePacket.SetSourceVirtualPortStreamID(endpoint.StreamID)
-		messagePacket.SetDestinationVirtualPortStreamType(target.StreamType)
-		messagePacket.SetDestinationVirtualPortStreamID(target.StreamID)
-		messagePacket.SetPayload(notificationRequestBytes)
-
-		server.Send(messagePacket)
-
-		return false
-	})
-
-	// * This appears to be correct. Tri-Force Heroes uses 3.9.0,
-	// * and has issues if these notifications are sent.
-	// * Minecraft, however, requires these to be sent
-	// TODO - Check other games both pre and post 3.10.0 and validate
-	if server.LibraryVersions.MatchMaking.GreaterOrEqual("3.10.0") {
-		session.ConnectionIDs.Each(func(_ int, connectionID uint32) bool {
-			target := endpoint.FindConnectionByID(connectionID)
-			if target == nil {
-				// TODO - Error here?
-				Logger.Warning("Player not found")
+				sendNewParticipant(connection, initiatingConnection.PID(), session.GameMatchmakeSession.ID, currentParticipant.PID(), types.NewString(joinMessage), types.NewPrimitiveU32(uint32(len(connectionIDs))))
 				return false
-			}
-
-			notificationCategory := notifications.NotificationCategories.Participation
-			notificationSubtype := notifications.NotificationSubTypes.Participation.NewParticipant
-
-			oEvent := notifications_types.NewNotificationEvent()
-			oEvent.PIDSource = initiatingConnection.PID()
-			oEvent.Type = types.NewPrimitiveU32(notifications.BuildNotificationType(notificationCategory, notificationSubtype))
-			oEvent.Param1 = session.GameMatchmakeSession.ID.Copy().(*types.PrimitiveU32)
-			oEvent.Param2 = types.NewPrimitiveU32(target.PID().LegacyValue()) // TODO - This assumes a legacy client. Will not work on the Switch
-			oEvent.StrParam = types.NewString(joinMessage)
-			oEvent.Param3 = types.NewPrimitiveU32(uint32(len(connectionIDs)))
-
-			notificationStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
-
-			oEvent.WriteTo(notificationStream)
-
-			notificationRequest := nex.NewRMCRequest(endpoint)
-			notificationRequest.ProtocolID = notifications.ProtocolID
-			notificationRequest.CallID = CurrentMatchmakingCallID.Next()
-			notificationRequest.MethodID = notifications.MethodProcessNotificationEvent
-			notificationRequest.Parameters = notificationStream.Bytes()
-
-			notificationRequestBytes := notificationRequest.Bytes()
-
-			var messagePacket nex.PRUDPPacketInterface
-
-			if target.DefaultPRUDPVersion == 0 {
-				messagePacket, _ = nex.NewPRUDPPacketV0(server, initiatingConnection, nil)
-			} else {
-				messagePacket, _ = nex.NewPRUDPPacketV1(server, initiatingConnection, nil)
-			}
-
-			messagePacket.SetType(constants.DataPacket)
-			messagePacket.AddFlag(constants.PacketFlagNeedsAck)
-			messagePacket.AddFlag(constants.PacketFlagReliable)
-			messagePacket.SetSourceVirtualPortStreamType(target.StreamType)
-			messagePacket.SetSourceVirtualPortStreamID(endpoint.StreamID)
-			messagePacket.SetDestinationVirtualPortStreamType(target.StreamType)
-			messagePacket.SetDestinationVirtualPortStreamID(target.StreamID)
-			messagePacket.SetPayload(notificationRequestBytes)
-
-			server.Send(messagePacket)
-
-			return false
-		})
-
-		notificationCategory := notifications.NotificationCategories.Participation
-		notificationSubtype := notifications.NotificationSubTypes.Participation.NewParticipant
-
-		oEvent := notifications_types.NewNotificationEvent()
-		oEvent.PIDSource = initiatingConnection.PID()
-		oEvent.Type = types.NewPrimitiveU32(notifications.BuildNotificationType(notificationCategory, notificationSubtype))
-		oEvent.Param1 = session.GameMatchmakeSession.ID
-		oEvent.Param2 = types.NewPrimitiveU32(initiatingConnection.PID().LegacyValue()) // TODO - This assumes a legacy client. Will not work on the Switch
-		oEvent.StrParam = types.NewString(joinMessage)
-		oEvent.Param3 = types.NewPrimitiveU32(uint32(len(connectionIDs)))
-
-		notificationStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
-
-		oEvent.WriteTo(notificationStream)
-
-		notificationRequest := nex.NewRMCRequest(endpoint)
-		notificationRequest.ProtocolID = notifications.ProtocolID
-		notificationRequest.CallID = CurrentMatchmakingCallID.Next()
-		notificationRequest.MethodID = notifications.MethodProcessNotificationEvent
-		notificationRequest.Parameters = notificationStream.Bytes()
-
-		notificationRequestBytes := notificationRequest.Bytes()
-
-		var messagePacket nex.PRUDPPacketInterface
-
-		if initiatingConnection.DefaultPRUDPVersion == 0 {
-			messagePacket, _ = nex.NewPRUDPPacketV0(server, initiatingConnection, nil)
-		} else {
-			messagePacket, _ = nex.NewPRUDPPacketV1(server, initiatingConnection, nil)
+			})
 		}
-
-		messagePacket.SetType(constants.DataPacket)
-		messagePacket.AddFlag(constants.PacketFlagNeedsAck)
-		messagePacket.AddFlag(constants.PacketFlagReliable)
-		messagePacket.SetSourceVirtualPortStreamType(initiatingConnection.StreamType)
-		messagePacket.SetSourceVirtualPortStreamID(endpoint.StreamID)
-		messagePacket.SetDestinationVirtualPortStreamType(initiatingConnection.StreamType)
-		messagePacket.SetDestinationVirtualPortStreamID(initiatingConnection.StreamID)
-		messagePacket.SetPayload(notificationRequestBytes)
-
-		server.Send(messagePacket)
-
-		target := endpoint.FindConnectionByID(session.OwnerConnectionID)
-		if target == nil {
-			// TODO - Error here?
-			Logger.Warning("Player not found")
-			return nil
-		}
-
-		if target.DefaultPRUDPVersion == 0 {
-			messagePacket, _ = nex.NewPRUDPPacketV0(server, target, nil)
-		} else {
-			messagePacket, _ = nex.NewPRUDPPacketV1(server, target, nil)
-		}
-
-		messagePacket.SetType(constants.DataPacket)
-		messagePacket.AddFlag(constants.PacketFlagNeedsAck)
-		messagePacket.AddFlag(constants.PacketFlagReliable)
-		messagePacket.SetSourceVirtualPortStreamType(target.StreamType)
-		messagePacket.SetSourceVirtualPortStreamID(endpoint.StreamID)
-		messagePacket.SetDestinationVirtualPortStreamType(target.StreamType)
-		messagePacket.SetDestinationVirtualPortStreamID(target.StreamID)
-		messagePacket.SetPayload(notificationRequestBytes)
-
-		server.Send(messagePacket)
 	}
 
 	return nil
