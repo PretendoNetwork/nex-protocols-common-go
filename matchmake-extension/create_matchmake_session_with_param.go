@@ -47,6 +47,8 @@ func (commonProtocol *CommonProtocol) createMatchmakeSessionWithParam(err error,
 		return nil, nexError
 	}
 
+	commonProtocol.manager.Mutex.Unlock()
+
 	joinedMatchmakeSession.ParticipationCount.Value = participants
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
