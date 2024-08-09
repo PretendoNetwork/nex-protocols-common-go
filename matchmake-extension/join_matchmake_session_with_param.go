@@ -59,7 +59,7 @@ func (commonProtocol *CommonProtocol) joinMatchmakeSessionWithParam(err error, p
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
-	joinMatchmakeSessionParam.WriteTo(rmcResponseStream)
+	joinedMatchmakeSession.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
