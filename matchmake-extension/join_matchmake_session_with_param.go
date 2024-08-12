@@ -42,7 +42,12 @@ func (commonProtocol *CommonProtocol) joinMatchmakeSessionWithParam(err error, p
 		return nil, nex.NewError(nex.ResultCodes.RendezVous.InvalidPassword, "change_error")
 	}
 
-	nexError = common_globals.CanJoinMatchmakeSession(commonProtocol.manager, connection.PID(), joinedMatchmakeSession)
+	// * Allow game servers to do their own permissions checks
+	if commonProtocol.CanJoinMatchmakeSession != nil {
+		nexError = commonProtocol.CanJoinMatchmakeSession(commonProtocol.manager, connection.PID(), joinedMatchmakeSession)
+	} else {
+		nexError = common_globals.CanJoinMatchmakeSession(commonProtocol.manager, connection.PID(), joinedMatchmakeSession)
+	}
 	if nexError != nil {
 		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
