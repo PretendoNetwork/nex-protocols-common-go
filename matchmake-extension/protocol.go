@@ -14,6 +14,7 @@ type CommonProtocol struct {
 	endpoint                                         nex.EndpointInterface
 	protocol                                         matchmake_extension.Interface
 	manager                                          *common_globals.MatchmakingManager
+	CanJoinMatchmakeSession                          func(manager *common_globals.MatchmakingManager, pid *types.PID, matchmakeSession *match_making_types.MatchmakeSession) *nex.Error
 	CleanupSearchMatchmakeSession                    func(matchmakeSession *match_making_types.MatchmakeSession)
 	CleanupMatchmakeSessionSearchCriterias           func(searchCriterias *types.List[*match_making_types.MatchmakeSessionSearchCriteria])
 	OnAfterOpenParticipation                         func(packet nex.PacketInterface, gid *types.PrimitiveU32)
