@@ -56,11 +56,91 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.Matchma
 		return
 	}
 
-	_, err = manager.Database.Exec(`CREATE TABLE IF NOT EXISTS matchmaking.participants (
-		pid numeric(10) PRIMARY KEY,
-		owned_gatherings bigint[] NOT NULL DEFAULT array[]::bigint[],
-		hosted_gatherings bigint[] NOT NULL DEFAULT array[]::bigint[],
-		participated_gatherings bigint[] NOT NULL DEFAULT array[]::bigint[]
+	_, err = manager.Database.Exec(`CREATE SCHEMA IF NOT EXISTS tracking`)
+	if err != nil {
+		common_globals.Logger.Error(err.Error())
+		return
+	}
+
+	_, err = manager.Database.Exec(`CREATE TABLE IF NOT EXISTS tracking.register_gathering (
+		id bigserial PRIMARY KEY,
+		date timestamp,
+		source_pid numeric(10),
+		gathering_id bigint
+	)`)
+	if err != nil {
+		common_globals.Logger.Error(err.Error())
+		return
+	}
+
+	_, err = manager.Database.Exec(`CREATE TABLE IF NOT EXISTS tracking.join_gathering (
+		id bigserial PRIMARY KEY,
+		date timestamp,
+		source_pid numeric(10),
+		gathering_id bigint,
+		new_participants numeric(10)[] NOT NULL DEFAULT array[]::numeric(10)[],
+		total_participants numeric(10)[] NOT NULL DEFAULT array[]::numeric(10)[]
+	)`)
+	if err != nil {
+		common_globals.Logger.Error(err.Error())
+		return
+	}
+
+	_, err = manager.Database.Exec(`CREATE TABLE IF NOT EXISTS tracking.leave_gathering (
+		id bigserial PRIMARY KEY,
+		date timestamp,
+		source_pid numeric(10),
+		gathering_id bigint,
+		total_participants numeric(10)[] NOT NULL DEFAULT array[]::numeric(10)[]
+	)`)
+	if err != nil {
+		common_globals.Logger.Error(err.Error())
+		return
+	}
+
+	_, err = manager.Database.Exec(`CREATE TABLE IF NOT EXISTS tracking.disconnect_gathering (
+		id bigserial PRIMARY KEY,
+		date timestamp,
+		source_pid numeric(10),
+		gathering_id bigint,
+		total_participants numeric(10)[] NOT NULL DEFAULT array[]::numeric(10)[]
+	)`)
+	if err != nil {
+		common_globals.Logger.Error(err.Error())
+		return
+	}
+
+	_, err = manager.Database.Exec(`CREATE TABLE IF NOT EXISTS tracking.unregister_gathering (
+		id bigserial PRIMARY KEY,
+		date timestamp,
+		source_pid numeric(10),
+		gathering_id bigint
+	)`)
+	if err != nil {
+		common_globals.Logger.Error(err.Error())
+		return
+	}
+
+	_, err = manager.Database.Exec(`CREATE TABLE IF NOT EXISTS tracking.change_host (
+		id bigserial PRIMARY KEY,
+		date timestamp,
+		source_pid numeric(10),
+		gathering_id bigint,
+		old_host_pid numeric(10),
+		new_host_pid numeric(10)
+	)`)
+	if err != nil {
+		common_globals.Logger.Error(err.Error())
+		return
+	}
+
+	_, err = manager.Database.Exec(`CREATE TABLE IF NOT EXISTS tracking.change_owner (
+		id bigserial PRIMARY KEY,
+		date timestamp,
+		source_pid numeric(10),
+		gathering_id bigint,
+		old_owner_pid numeric(10),
+		new_owner_pid numeric(10)
 	)`)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())

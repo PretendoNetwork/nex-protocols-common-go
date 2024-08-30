@@ -4,6 +4,7 @@ import (
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	"github.com/PretendoNetwork/nex-protocols-common-go/v2/match-making/tracking"
 	match_making "github.com/PretendoNetwork/nex-protocols-go/v2/match-making"
 	match_making_types "github.com/PretendoNetwork/nex-protocols-go/v2/match-making/types"
 	notifications "github.com/PretendoNetwork/nex-protocols-go/v2/notifications"
@@ -78,10 +79,16 @@ func DisconnectParticipant(manager *common_globals.MatchmakingManager, connectio
 			continue
 		}
 
+		nexError = tracking.LogDisconnectGathering(manager.Database, connection.PID(), gatheringID, participants)
+		if nexError != nil {
+			common_globals.Logger.Error(nexError.Error())
+			continue
+		}
+
 		if len(participants) == 0 {
 			// * There are no more participants, so we only have to unregister the gathering
 			// * Since the participant is disconnecting, we don't send notification events
-			nexError = UnregisterGathering(manager, gatheringID)
+			nexError = UnregisterGathering(manager, connection.PID(), gatheringID)
 			if nexError != nil {
 				common_globals.Logger.Error(nexError.Error())
 			}
@@ -94,7 +101,7 @@ func DisconnectParticipant(manager *common_globals.MatchmakingManager, connectio
 			// * If the flag is not set, delete the session
 			// * More info: https://nintendo-wiki.pretendo.network/docs/nex/protocols/match-making/types#flags
 			if gathering.Flags.PAND(match_making.GatheringFlags.DisconnectChangeOwner) == 0 {
-				nexError = UnregisterGathering(manager, gatheringID)
+				nexError = UnregisterGathering(manager, connection.PID(), gatheringID)
 				if nexError != nil {
 					common_globals.Logger.Error(nexError.Error())
 					continue

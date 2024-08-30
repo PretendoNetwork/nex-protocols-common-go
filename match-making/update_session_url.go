@@ -7,6 +7,7 @@ import (
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	"github.com/PretendoNetwork/nex-protocols-common-go/v2/match-making/database"
+	"github.com/PretendoNetwork/nex-protocols-common-go/v2/match-making/tracking"
 	match_making "github.com/PretendoNetwork/nex-protocols-go/v2/match-making"
 )
 
@@ -35,6 +36,12 @@ func (commonProtocol *CommonProtocol) updateSessionURL(err error, packet nex.Pac
 
 	// * Only update the host
 	nexError = database.UpdateSessionHost(commonProtocol.manager, idGathering.Value, gathering.OwnerPID, connection.PID())
+	if nexError != nil {
+		commonProtocol.manager.Mutex.Unlock()
+		return nil, nexError
+	}
+
+	nexError = tracking.LogChangeHost(commonProtocol.manager.Database, connection.PID(), idGathering.Value, gathering.HostPID, connection.PID())
 	if nexError != nil {
 		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError

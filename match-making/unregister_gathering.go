@@ -31,7 +31,7 @@ func (commonProtocol *CommonProtocol) unregisterGathering(err error, packet nex.
 		return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
 	}
 
-	nexError = database.UnregisterGathering(commonProtocol.manager, idGathering.Value)
+	nexError = database.UnregisterGathering(commonProtocol.manager, connection.PID(), idGathering.Value)
 	if nexError != nil {
 		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError

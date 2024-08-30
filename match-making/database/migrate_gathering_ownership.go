@@ -4,6 +4,7 @@ import (
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	"github.com/PretendoNetwork/nex-protocols-common-go/v2/match-making/tracking"
 	match_making_types "github.com/PretendoNetwork/nex-protocols-go/v2/match-making/types"
 	notifications "github.com/PretendoNetwork/nex-protocols-go/v2/notifications"
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/v2/notifications/types"
@@ -23,7 +24,7 @@ func MigrateGatheringOwnership(manager *common_globals.MatchmakingManager, conne
 
 	// * We couldn't find a new owner, so we unregister the gathering
 	if newOwner == 0 {
-		nexError = UnregisterGathering(manager, gathering.ID.Value)
+		nexError = UnregisterGathering(manager, connection.PID(), gathering.ID.Value)
 		if nexError != nil {
 			return nexError
 		}
@@ -40,10 +41,17 @@ func MigrateGatheringOwnership(manager *common_globals.MatchmakingManager, conne
 		return nil
 	}
 
+	oldOwner := gathering.OwnerPID.Copy().(*types.PID)
+
 	// * Set the new owner
 	gathering.OwnerPID = types.NewPID(newOwner)
 
 	nexError = UpdateSessionHost(manager, gathering.ID.Value, gathering.OwnerPID, gathering.HostPID)
+	if nexError != nil {
+		return nexError
+	}
+
+	nexError = tracking.LogChangeOwner(manager.Database, connection.PID(), gathering.ID.Value, oldOwner, gathering.OwnerPID)
 	if nexError != nil {
 		return nexError
 	}

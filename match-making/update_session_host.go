@@ -7,6 +7,7 @@ import (
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	"github.com/PretendoNetwork/nex-protocols-common-go/v2/match-making/database"
+	"github.com/PretendoNetwork/nex-protocols-common-go/v2/match-making/tracking"
 	match_making "github.com/PretendoNetwork/nex-protocols-go/v2/match-making"
 	notifications "github.com/PretendoNetwork/nex-protocols-go/v2/notifications"
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/v2/notifications/types"
@@ -40,8 +41,26 @@ func (commonProtocol *CommonProtocol) updateSessionHost(err error, packet nex.Pa
 			commonProtocol.manager.Mutex.Unlock()
 			return nil, nexError
 		}
+
+		nexError = tracking.LogChangeHost(commonProtocol.manager.Database, connection.PID(), gid.Value, gathering.HostPID, connection.PID())
+		if nexError != nil {
+			commonProtocol.manager.Mutex.Unlock()
+			return nil, nexError
+		}
 	} else {
 		nexError = database.UpdateSessionHost(commonProtocol.manager, gid.Value, connection.PID(), connection.PID())
+		if nexError != nil {
+			commonProtocol.manager.Mutex.Unlock()
+			return nil, nexError
+		}
+
+		nexError = tracking.LogChangeHost(commonProtocol.manager.Database, connection.PID(), gid.Value, gathering.HostPID, connection.PID())
+		if nexError != nil {
+			commonProtocol.manager.Mutex.Unlock()
+			return nil, nexError
+		}
+
+		nexError = tracking.LogChangeOwner(commonProtocol.manager.Database, connection.PID(), gid.Value, gathering.OwnerPID, connection.PID())
 		if nexError != nil {
 			commonProtocol.manager.Mutex.Unlock()
 			return nil, nexError

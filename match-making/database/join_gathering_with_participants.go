@@ -7,6 +7,7 @@ import (
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	"github.com/PretendoNetwork/nex-protocols-common-go/v2/match-making/tracking"
 	match_making "github.com/PretendoNetwork/nex-protocols-go/v2/match-making"
 	notifications "github.com/PretendoNetwork/nex-protocols-go/v2/notifications"
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/v2/notifications/types"
@@ -51,6 +52,11 @@ func JoinGatheringWithParticipants(manager *common_globals.MatchmakingManager, g
 		} else {
 			return 0, nex.NewError(nex.ResultCodes.Core.Unknown, err.Error())
 		}
+	}
+
+	nexError := tracking.LogJoinGathering(manager.Database, connection.PID(), gatheringID, newParticipants, participants)
+	if nexError != nil {
+		return 0, nexError
 	}
 
 	var participantJoinedTargets []uint64

@@ -6,6 +6,7 @@ import (
 
 	"github.com/PretendoNetwork/nex-go/v2"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	"github.com/PretendoNetwork/nex-protocols-common-go/v2/match-making/tracking"
 	match_making "github.com/PretendoNetwork/nex-protocols-go/v2/match-making"
 	notifications "github.com/PretendoNetwork/nex-protocols-go/v2/notifications"
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/v2/notifications/types"
@@ -41,15 +42,17 @@ func JoinGathering(manager *common_globals.MatchmakingManager, gatheringID uint3
 		return 0, nex.NewError(nex.ResultCodes.RendezVous.AlreadyParticipatedGathering, "change_error")
 	}
 
-	var newParticipants []uint64 = participants
+	var newParticipants []uint64
 
 	// * Additional participants are represented by duplicating the main participant PID on the array
 	for range vacantParticipants {
 		newParticipants = append(newParticipants, connection.PID().Value())
 	}
 
+	var totalParticipants []uint64 = append(newParticipants, participants...)
+
 	// * We have already checked that the gathering exists above, so we don't have to check the rows affected on sql.Result
-	_, err = manager.Database.Exec(`UPDATE matchmaking.gatherings SET participants=$1 WHERE id=$2`, pqextended.Array(newParticipants), gatheringID)
+	_, err = manager.Database.Exec(`UPDATE matchmaking.gatherings SET participants=$1 WHERE id=$2`, pqextended.Array(totalParticipants), gatheringID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return 0, nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "change_error")
@@ -58,19 +61,24 @@ func JoinGathering(manager *common_globals.MatchmakingManager, gatheringID uint3
 		}
 	}
 
-	var participatJoinedTargets []uint64
+	nexError := tracking.LogJoinGathering(manager.Database, connection.PID(), gatheringID, newParticipants, totalParticipants)
+	if nexError != nil {
+		return 0, nexError
+	}
+
+	var participantJoinedTargets []uint64
 
 	// * When the VerboseParticipants or VerboseParticipantsEx flags are set, all participant notification events are sent to everyone
 	if flags & (match_making.GatheringFlags.VerboseParticipants | match_making.GatheringFlags.VerboseParticipantsEx) != 0 {
-		participatJoinedTargets = common_globals.RemoveDuplicates(newParticipants)
+		participantJoinedTargets = common_globals.RemoveDuplicates(totalParticipants)
 	} else {
 		// * If the new participant is the same as the owner, then we are creating a new gathering.
 		// * We don't need to send notification events in that case
 		if connection.PID().Value() == ownerPID {
-			return uint32(len(newParticipants)), nil
+			return uint32(len(totalParticipants)), nil
 		}
 
-		participatJoinedTargets = []uint64{ownerPID}
+		participantJoinedTargets = []uint64{ownerPID}
 	}
 
 	notificationCategory := notifications.NotificationCategories.Participation
@@ -82,9 +90,9 @@ func JoinGathering(manager *common_globals.MatchmakingManager, gatheringID uint3
 	oEvent.Param1.Value = gatheringID
 	oEvent.Param2.Value = uint32(connection.PID().LegacyValue()) // TODO - This assumes a legacy client. Will not work on the Switch
 	oEvent.StrParam.Value = joinMessage
-	oEvent.Param3.Value = uint32(len(newParticipants))
+	oEvent.Param3.Value = uint32(len(totalParticipants))
 
-	common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, participatJoinedTargets)
+	common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, participantJoinedTargets)
 
 	// * This flag also sends a recap of all currently connected players on the gathering to the participant that is connecting
 	if flags & match_making.GatheringFlags.VerboseParticipantsEx != 0 {
@@ -99,12 +107,12 @@ func JoinGathering(manager *common_globals.MatchmakingManager, gatheringID uint3
 			oEvent.Param1.Value = gatheringID
 			oEvent.Param2.Value = uint32(participant) // TODO - This assumes a legacy client. Will not work on the Switch
 			oEvent.StrParam.Value = joinMessage
-			oEvent.Param3.Value = uint32(len(newParticipants))
+			oEvent.Param3.Value = uint32(len(totalParticipants))
 
 			// * Send the notification to the joining participant
 			common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, []uint64{connection.PID().Value()})
 		}
 	}
 
-	return uint32(len(newParticipants)), nil
+	return uint32(len(totalParticipants)), nil
 }
