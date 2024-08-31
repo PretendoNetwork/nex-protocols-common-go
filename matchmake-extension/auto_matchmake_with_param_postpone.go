@@ -34,6 +34,15 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithParamPostpone(err error, 
 
 	commonProtocol.manager.Mutex.Lock()
 
+	if autoMatchmakeParam.GIDForParticipationCheck.Value != 0 {
+		// * Check that all new participants are participating in the specified gathering ID
+		nexError := database.CheckGatheringForParticipation(commonProtocol.manager, autoMatchmakeParam.GIDForParticipationCheck.Value, append(autoMatchmakeParam.AdditionalParticipants.Slice(), connection.PID()))
+		if nexError != nil {
+			commonProtocol.manager.Mutex.Unlock()
+			return nil, nexError
+		}
+	}
+
 	// * A client may disconnect from a session without leaving reliably,
 	// * so let's make sure the client is removed from the session
 	database.EndMatchmakeSessionsParticipation(commonProtocol.manager, connection)

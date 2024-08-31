@@ -24,6 +24,15 @@ func (commonProtocol *CommonProtocol) joinMatchmakeSessionWithParam(err error, p
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
+	if joinMatchmakeSessionParam.GIDForParticipationCheck.Value != 0 {
+		// * Check that all new participants are participating in the specified gathering ID
+		nexError := database.CheckGatheringForParticipation(commonProtocol.manager, joinMatchmakeSessionParam.GIDForParticipationCheck.Value, append(joinMatchmakeSessionParam.AdditionalParticipants.Slice(), connection.PID()))
+		if nexError != nil {
+			commonProtocol.manager.Mutex.Unlock()
+			return nil, nexError
+		}
+	}
+
 	joinedMatchmakeSession, systemPassword, nexError := database.GetMatchmakeSessionByID(commonProtocol.manager, endpoint, joinMatchmakeSessionParam.GID.Value)
 	if nexError != nil {
 		common_globals.Logger.Error(nexError.Error())
