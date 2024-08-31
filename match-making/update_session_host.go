@@ -34,7 +34,6 @@ func (commonProtocol *CommonProtocol) updateSessionHost(err error, packet nex.Pa
 		return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
 	}
 
-	// TODO - Should this check for match_making.GatheringFlags.ParticipantsChangeOwner too?
 	if !isMigrateOwner.Value {
 		nexError = database.UpdateSessionHost(commonProtocol.manager, gid.Value, gathering.OwnerPID, connection.PID())
 		if nexError != nil {
@@ -48,6 +47,11 @@ func (commonProtocol *CommonProtocol) updateSessionHost(err error, packet nex.Pa
 			return nil, nexError
 		}
 	} else {
+		if gathering.Flags.PAND(match_making.GatheringFlags.ParticipantsChangeOwner) == 0 {
+			commonProtocol.manager.Mutex.Unlock()
+			return nil, nex.NewError(nex.ResultCodes.RendezVous.InvalidOperation, "change_error")
+		}
+
 		nexError = database.UpdateSessionHost(commonProtocol.manager, gid.Value, connection.PID(), connection.PID())
 		if nexError != nil {
 			commonProtocol.manager.Mutex.Unlock()
