@@ -52,6 +52,7 @@ func FindMatchmakeSession(manager *common_globals.MatchmakingManager, connection
 		WHERE
 		g.registered=true AND
 		g.type='MatchmakeSession' AND
+		g.host_pid <> 0 AND
 		ms.open_participation=true AND
 		array_length(g.participants, 1) < g.max_participants AND
 		ms.user_password_enabled=false AND
@@ -59,10 +60,14 @@ func FindMatchmakeSession(manager *common_globals.MatchmakingManager, connection
 		g.max_participants=$1 AND
 		g.min_participants=$2 AND
 		ms.game_mode=$3 AND
-		ms.attribs=$4 AND
-		ms.matchmake_system_type=$5 AND
-		ms.refer_gid=$6 AND
-		ms.codeword=$7 AND (CASE WHEN g.participation_policy=98 THEN g.owner_pid=ANY($8) ELSE true END)`
+		ms.attribs[1]=$4 AND
+		ms.attribs[3]=$6 AND
+		ms.attribs[4]=$7 AND
+		ms.attribs[5]=$8 AND
+		ms.attribs[6]=$9 AND
+		ms.matchmake_system_type=$10 AND
+		ms.codeword=$11 AND (CASE WHEN g.participation_policy=98 THEN g.owner_pid=ANY($12) ELSE true END)
+		ORDER BY abs($5 - ms.attribs[2])` // * Use "Closest attribute" selection method, guessing from Mario Kart 7
 
 	var friendList []uint32
 	// * Prevent access to friend rooms if not implemented
@@ -82,9 +87,13 @@ func FindMatchmakeSession(manager *common_globals.MatchmakingManager, connection
 		searchMatchmakeSession.Gathering.MaximumParticipants.Value,
 		searchMatchmakeSession.Gathering.MinimumParticipants.Value,
 		searchMatchmakeSession.GameMode.Value,
-		pqextended.Array(attribs),
+		attribs[0],
+		attribs[1],
+		attribs[2],
+		attribs[3],
+		attribs[4],
+		attribs[5],
 		searchMatchmakeSession.MatchmakeSystemType.Value,
-		searchMatchmakeSession.ReferGID.Value,
 		searchMatchmakeSession.CodeWord.Value,
 		pqextended.Array(friendList),
 	).Scan(

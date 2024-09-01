@@ -11,12 +11,13 @@ import (
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	"github.com/PretendoNetwork/nex-protocols-go/v2/globals"
+	"github.com/PretendoNetwork/nex-protocols-go/v2/match-making/constants"
 	match_making_types "github.com/PretendoNetwork/nex-protocols-go/v2/match-making/types"
 	pqextended "github.com/PretendoNetwork/pq-extended"
 )
 
 // FindMatchmakeSessionBySearchCriteria finds matchmake sessions with the given search criterias
-func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingManager, connection *nex.PRUDPConnection, searchCriterias []*match_making_types.MatchmakeSessionSearchCriteria, resultRange *types.ResultRange) ([]*match_making_types.MatchmakeSession, *nex.Error) {
+func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingManager, connection *nex.PRUDPConnection, searchCriterias []*match_making_types.MatchmakeSessionSearchCriteria, resultRange *types.ResultRange, sourceMatchmakeSession *match_making_types.MatchmakeSession) ([]*match_making_types.MatchmakeSession, *nex.Error) {
 	resultMatchmakeSessions := make([]*match_making_types.MatchmakeSession, 0)
 
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
@@ -68,8 +69,10 @@ func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingMan
 			ms.codeword=$2 AND
 			array_length(ms.attribs, 1)=$3 AND
 			(CASE WHEN g.participation_policy=98 THEN g.owner_pid=ANY($4) ELSE true END) AND
-			(CASE WHEN $5=true THEN ms.user_password_enabled=false ELSE true END) AND
-			(CASE WHEN $6=true THEN ms.system_password_enabled=false ELSE true END)`
+			(CASE WHEN $5=true THEN ms.open_participation=true ELSE true END) AND
+			(CASE WHEN $6=true THEN g.host_pid <> 0 ELSE true END) AND
+			(CASE WHEN $7=true THEN ms.user_password_enabled=false ELSE true END) AND
+			(CASE WHEN $8=true THEN ms.system_password_enabled=false ELSE true END)`
 
 		var valid bool = true
 		for i, attrib := range searchCriteria.Attribs.Slice() {
@@ -212,6 +215,60 @@ func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingMan
 			}
 		}
 
+		switch constants.SelectionMethod(searchCriteria.SelectionMethod.Value) {
+		case constants.SelectionMethodRandom:
+			// * Random global
+			searchStatement += ` ORDER BY RANDOM()`
+		case constants.SelectionMethodNearestNeighbor:
+			// * Closest attribute
+			attribute1, err := strconv.ParseUint(searchCriteria.Attribs.Slice()[1].Value, 10, 32)
+			if err != nil {
+				globals.Logger.Error(err.Error())
+				continue
+			}
+
+			searchStatement += fmt.Sprintf(` ORDER BY abs(%d - ms.attribs[2])`, attribute1)
+		case constants.SelectionMethodBroadenRange:
+			// * Ranked
+
+			// TODO - Actually implement ranked matchmaking, using closest attribute at the moment
+			attribute1, err := strconv.ParseUint(searchCriteria.Attribs.Slice()[1].Value, 10, 32)
+			if err != nil {
+				globals.Logger.Error(err.Error())
+				continue
+			}
+
+			searchStatement += fmt.Sprintf(` ORDER BY abs(%d - ms.attribs[2])`, attribute1)
+		case constants.SelectionMethodProgressScore:
+			// * Progress Score
+
+			// * We can only use this when doing auto-matchmake
+			if sourceMatchmakeSession == nil {
+				continue
+			}
+
+			searchStatement += fmt.Sprintf(` ORDER BY abs(%d - ms.progress_score)`, sourceMatchmakeSession.ProgressScore.Value)
+		case constants.SelectionMethodBroadenRangeWithProgressScore:
+			// * Ranked + Progress
+
+			// TODO - Actually implement ranked matchmaking, using closest attribute at the moment
+
+			// * We can only use this when doing auto-matchmake
+			if sourceMatchmakeSession == nil {
+				continue
+			}
+
+			attribute1, err := strconv.ParseUint(searchCriteria.Attribs.Slice()[1].Value, 10, 32)
+			if err != nil {
+				globals.Logger.Error(err.Error())
+				continue
+			}
+
+			// TODO - Should the attribute and the progress score actually weigh the same?
+			searchStatement += fmt.Sprintf(` ORDER BY abs(%d - ms.attribs[2] + %d - ms.progress_score)`, attribute1, sourceMatchmakeSession.ProgressScore.Value)
+		// case constants.SelectionMethodScoreBased: // * According to notes this is related with the MatchmakeParam. TODO - Implement this
+		}
+
 		// * If the ResultRange inside the MatchmakeSessionSearchCriteria is valid (only present on NEX 4.0+), use that
 		// * Otherwise, use the one given as argument
 		if searchCriteria.ResultRange.Length.Value != 0 {
@@ -227,6 +284,8 @@ func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingMan
 			searchCriteria.CodeWord.Value,
 			searchCriteria.Attribs.Length(),
 			pqextended.Array(friendList),
+			searchCriteria.ExcludeLocked.Value,
+			searchCriteria.ExcludeNonHostPID.Value,
 			searchCriteria.ExcludeUserPasswordSet.Value,
 			searchCriteria.ExcludeSystemPasswordSet.Value,
 		)
