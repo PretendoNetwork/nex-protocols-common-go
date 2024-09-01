@@ -64,7 +64,6 @@ func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingMan
 			WHERE
 			g.registered=true AND
 			g.type='MatchmakeSession' AND
-			ms.open_participation=true AND
 			ms.refer_gid=$1 AND
 			ms.codeword=$2 AND
 			array_length(ms.attribs, 1)=$3 AND
