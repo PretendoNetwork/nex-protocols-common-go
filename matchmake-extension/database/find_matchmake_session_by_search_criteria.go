@@ -121,14 +121,14 @@ func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingMan
 					continue
 				}
 
-				searchStatement += fmt.Sprintf(` AND ms.max_participants BETWEEN %d AND %d`, min, max)
+				searchStatement += fmt.Sprintf(` AND g.max_participants BETWEEN %d AND %d`, min, max)
 			} else {
 				value, err := strconv.ParseUint(before, 10, 16)
 				if err != nil {
 					continue
 				}
 
-				searchStatement += fmt.Sprintf(` AND ms.max_participants=%d`, value)
+				searchStatement += fmt.Sprintf(` AND g.max_participants=%d`, value)
 			}
 		}
 
@@ -145,14 +145,14 @@ func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingMan
 					continue
 				}
 
-				searchStatement += fmt.Sprintf(` AND ms.min_participants BETWEEN %d AND %d`, min, max)
+				searchStatement += fmt.Sprintf(` AND g.min_participants BETWEEN %d AND %d`, min, max)
 			} else {
 				value, err := strconv.ParseUint(before, 10, 16)
 				if err != nil {
 					continue
 				}
 
-				searchStatement += fmt.Sprintf(` AND ms.min_participants=%d`, value)
+				searchStatement += fmt.Sprintf(` AND g.min_participants=%d`, value)
 			}
 		}
 
