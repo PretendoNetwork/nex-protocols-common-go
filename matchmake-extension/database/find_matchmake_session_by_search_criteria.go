@@ -75,6 +75,11 @@ func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingMan
 
 		var valid bool = true
 		for i, attrib := range searchCriteria.Attribs.Slice() {
+			// * Ignore attribute 1 here, reserved for the selection method
+			if i == 1 {
+				continue;
+			}
+
 			if attrib.Value != "" {
 				before, after, found := strings.Cut(attrib.Value, ",")
 				if found {
