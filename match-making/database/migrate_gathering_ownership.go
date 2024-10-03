@@ -11,7 +11,7 @@ import (
 )
 
 // MigrateGatheringOwnership switches the owner of the gathering with a different one
-func MigrateGatheringOwnership(manager *common_globals.MatchmakingManager, connection *nex.PRUDPConnection, gathering *match_making_types.Gathering, participants []uint64) *nex.Error {
+func MigrateGatheringOwnership(manager *common_globals.MatchmakingManager, connection *nex.PRUDPConnection, gathering *match_making_types.Gathering, participants []uint64) (uint64, *nex.Error) {
 	var nexError *nex.Error
 	var uniqueParticipants []uint64 = common_globals.RemoveDuplicates(participants)
 	var newOwner uint64
@@ -26,7 +26,7 @@ func MigrateGatheringOwnership(manager *common_globals.MatchmakingManager, conne
 	if newOwner == 0 {
 		nexError = UnregisterGathering(manager, connection.PID(), gathering.ID.Value)
 		if nexError != nil {
-			return nexError
+			return 0, nexError
 		}
 
 		category := notifications.NotificationCategories.GatheringUnregistered
@@ -38,7 +38,7 @@ func MigrateGatheringOwnership(manager *common_globals.MatchmakingManager, conne
 		oEvent.Param1.Value = gathering.ID.Value
 
 		common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, uniqueParticipants)
-		return nil
+		return 0, nil
 	}
 
 	oldOwner := gathering.OwnerPID.Copy().(*types.PID)
@@ -48,12 +48,12 @@ func MigrateGatheringOwnership(manager *common_globals.MatchmakingManager, conne
 
 	nexError = UpdateSessionHost(manager, gathering.ID.Value, gathering.OwnerPID, gathering.HostPID)
 	if nexError != nil {
-		return nexError
+		return 0, nexError
 	}
 
 	nexError = tracking.LogChangeOwner(manager.Database, connection.PID(), gathering.ID.Value, oldOwner, gathering.OwnerPID)
 	if nexError != nil {
-		return nexError
+		return 0, nexError
 	}
 
 	category := notifications.NotificationCategories.OwnershipChanged
@@ -71,5 +71,5 @@ func MigrateGatheringOwnership(manager *common_globals.MatchmakingManager, conne
 	// * oEvent.StrParam = strconv.FormatInt(unixTime.UnixMicro(), 10)
 
 	common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, uniqueParticipants)
-	return nil
+	return newOwner, nil
 }

@@ -45,6 +45,7 @@ func EndGatheringParticipation(manager *common_globals.MatchmakingManager, gathe
 		return UnregisterGathering(manager, connection.PID(), gatheringID)
 	}
 
+	var ownerPID uint64 = gathering.OwnerPID.Value()
 	if connection.PID().Equals(gathering.OwnerPID) {
 		// * This flag tells the server to change the matchmake session owner if they disconnect
 		// * If the flag is not set, delete the session
@@ -68,8 +69,35 @@ func EndGatheringParticipation(manager *common_globals.MatchmakingManager, gathe
 			return nil
 		}
 
-		nexError = MigrateGatheringOwnership(manager, connection, gathering, newParticipants)
+		ownerPID, nexError = MigrateGatheringOwnership(manager, connection, gathering, newParticipants)
 		if nexError != nil {
+			return nexError
+		}
+	}
+
+	// * If the host has disconnected, set the owner as the new host. We can guarantee that the ownerPID is not zero,
+	// * since otherwise the gathering would have been unregistered by MigrateGatheringOwnership
+	if connection.PID().Equals(gathering.HostPID) && ownerPID != 0 {
+		nexError = UpdateSessionHost(manager, gatheringID, types.NewPID(ownerPID), types.NewPID(ownerPID))
+		if nexError != nil {
+			common_globals.Logger.Error(nexError.Error())
+			return nexError
+		}
+
+		category := notifications.NotificationCategories.HostChanged
+		subtype := notifications.NotificationSubTypes.HostChanged.None
+
+		oEvent := notifications_types.NewNotificationEvent()
+		oEvent.PIDSource = connection.PID().Copy().(*types.PID)
+		oEvent.Type.Value = notifications.BuildNotificationType(category, subtype)
+		oEvent.Param1.Value = gatheringID
+
+		// TODO - Should the notification actually be sent to all participants?
+		common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, common_globals.RemoveDuplicates(participants))
+
+		nexError = tracking.LogChangeHost(manager.Database, connection.PID(), gatheringID, gathering.HostPID, types.NewPID(ownerPID))
+		if nexError != nil {
+			common_globals.Logger.Error(nexError.Error())
 			return nexError
 		}
 	}
