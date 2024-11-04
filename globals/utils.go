@@ -141,7 +141,5 @@ func SendNotificationEvent(endpoint *nex.PRUDPEndPoint, event *notifications_typ
 		messagePacket.SetPayload(rmcRequestBytes)
 
 		server.Send(messagePacket)
-
-		Logger.Infof("Sent notification event %d from %d to %d", event.Type.Value, event.PIDSource.Value(), pid)
 	}
 }
