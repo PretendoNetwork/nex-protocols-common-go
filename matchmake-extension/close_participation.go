@@ -4,6 +4,7 @@ import (
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	"github.com/PretendoNetwork/nex-protocols-common-go/v2/matchmake-extension/database"
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/v2/matchmake-extension"
 )
 
@@ -13,19 +14,29 @@ func (commonProtocol *CommonProtocol) closeParticipation(err error, packet nex.P
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	session, ok := common_globals.Sessions[gid.Value]
-	if !ok {
-		return nil, nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "change_error")
-	}
-
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
-	if !session.GameMatchmakeSession.Gathering.OwnerPID.Equals(connection.PID()) {
+	commonProtocol.manager.Mutex.Lock()
+
+	session, _, nexError := database.GetMatchmakeSessionByID(commonProtocol.manager, endpoint, gid.Value)
+	if nexError != nil {
+		commonProtocol.manager.Mutex.Unlock()
+		return nil, nexError
+	}
+
+	if !session.Gathering.OwnerPID.Equals(connection.PID()) {
+		commonProtocol.manager.Mutex.Unlock()
 		return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
 	}
 
-	session.GameMatchmakeSession.OpenParticipation = types.NewPrimitiveBool(false)
+	nexError = database.UpdateParticipation(commonProtocol.manager, gid.Value, false)
+	if nexError != nil {
+		commonProtocol.manager.Mutex.Unlock()
+		return nil, nexError
+	}
+
+	commonProtocol.manager.Mutex.Unlock()
 
 	rmcResponse := nex.NewRMCSuccess(endpoint, nil)
 	rmcResponse.ProtocolID = matchmake_extension.ProtocolID

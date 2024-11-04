@@ -4,6 +4,8 @@ import (
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	match_making_database "github.com/PretendoNetwork/nex-protocols-common-go/v2/match-making/database"
+	"github.com/PretendoNetwork/nex-protocols-common-go/v2/matchmake-extension/database"
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/v2/matchmake-extension"
 )
 
@@ -13,23 +15,48 @@ func (commonProtocol *CommonProtocol) joinMatchmakeSession(err error, packet nex
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	session, ok := common_globals.Sessions[gid.Value]
-	if !ok {
-		return nil, nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "change_error")
+	if len(strMessage.Value) > 256 {
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
+
+	commonProtocol.manager.Mutex.Lock()
 
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 	server := endpoint.Server
 
-	// TODO - More checks here
-	errCode := common_globals.AddPlayersToSession(session, []uint32{connection.ID}, connection, strMessage.Value)
-	if errCode != nil {
-		common_globals.Logger.Error(errCode.Error())
-		return nil, errCode
+	joinedMatchmakeSession, _, nexError := database.GetMatchmakeSessionByID(commonProtocol.manager, endpoint, gid.Value)
+	if nexError != nil {
+		common_globals.Logger.Error(nexError.Error())
+		commonProtocol.manager.Mutex.Unlock()
+		return nil, nexError
 	}
 
-	joinedMatchmakeSession := session.GameMatchmakeSession
+	// TODO - Is this the correct error code?
+	if joinedMatchmakeSession.UserPasswordEnabled.Value || joinedMatchmakeSession.SystemPasswordEnabled.Value {
+		commonProtocol.manager.Mutex.Unlock()
+		return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
+	}
+
+	// * Allow game servers to do their own permissions checks
+	if commonProtocol.CanJoinMatchmakeSession != nil {
+		nexError = commonProtocol.CanJoinMatchmakeSession(commonProtocol.manager, connection.PID(), joinedMatchmakeSession)
+	} else {
+		nexError = common_globals.CanJoinMatchmakeSession(commonProtocol.manager, connection.PID(), joinedMatchmakeSession)
+	}
+	if nexError != nil {
+		commonProtocol.manager.Mutex.Unlock()
+		return nil, nexError
+	}
+
+	_, nexError = match_making_database.JoinGathering(commonProtocol.manager, joinedMatchmakeSession.Gathering.ID.Value, connection, 1, strMessage.Value)
+	if nexError != nil {
+		common_globals.Logger.Error(nexError.Error())
+		commonProtocol.manager.Mutex.Unlock()
+		return nil, nexError
+	}
+
+	commonProtocol.manager.Mutex.Unlock()
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 

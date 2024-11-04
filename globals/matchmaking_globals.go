@@ -1,17 +1,27 @@
 package common_globals
 
 import (
+	"database/sql"
+	"sync"
+
 	"github.com/PretendoNetwork/nex-go/v2"
-	match_making_types "github.com/PretendoNetwork/nex-protocols-go/v2/match-making/types"
+	"github.com/PretendoNetwork/nex-go/v2/types"
 )
 
-type CommonMatchmakeSession struct {
-	GameMatchmakeSession   *match_making_types.MatchmakeSession // * Used by the game, contains the current state of the MatchmakeSession
-	SearchMatchmakeSession *match_making_types.MatchmakeSession // * Used by the server when searching for matches, contains the state of the MatchmakeSession during the search process for easy compares
-	ConnectionIDs          *nex.MutexSlice[uint32]              // * Players in the room, referenced by their connection IDs. This is used instead of the PID in order to ensure we're talking to the correct client (in case of e.g. multiple logins)
+// MatchmakingManager manages a matchmaking instance
+type MatchmakingManager struct {
+	Database                 *sql.DB
+	Endpoint                 *nex.PRUDPEndPoint
+	Mutex                    *sync.RWMutex
+	GetUserFriendPIDs        func(pid uint32) []uint32
+	GetDetailedGatheringByID func(manager *MatchmakingManager, gatheringID uint32) (types.RVType, string, *nex.Error)
 }
 
-var Sessions map[uint32]*CommonMatchmakeSession
-var GetUserFriendPIDsHandler func(pid uint32) []uint32
-var CurrentGatheringID = nex.NewCounter[uint32](0)
-var CurrentMatchmakingCallID = nex.NewCounter[uint32](0)
+// NewMatchmakingManager returns a new MatchmakingManager
+func NewMatchmakingManager(endpoint *nex.PRUDPEndPoint, db *sql.DB) *MatchmakingManager {
+	return &MatchmakingManager{
+		Endpoint: endpoint,
+		Database: db,
+		Mutex:    &sync.RWMutex{},
+	}
+}

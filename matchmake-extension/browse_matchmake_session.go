@@ -1,11 +1,10 @@
 package matchmake_extension
 
 import (
-	"math"
-
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	"github.com/PretendoNetwork/nex-protocols-common-go/v2/matchmake-extension/database"
 	match_making_types "github.com/PretendoNetwork/nex-protocols-go/v2/match-making/types"
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/v2/matchmake-extension"
 )
@@ -19,34 +18,32 @@ func (commonProtocol *CommonProtocol) browseMatchmakeSession(err error, packet n
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
+	commonProtocol.manager.Mutex.RLock()
+
 	searchCriterias := []*match_making_types.MatchmakeSessionSearchCriteria{searchCriteria}
 
-	sessions := common_globals.FindSessionsByMatchmakeSessionSearchCriterias(connection.PID(), searchCriterias, commonProtocol.GameSpecificMatchmakeSessionSearchCriteriaChecks)
-
-	// TODO - Is this right?
-	if resultRange.Offset.Value != math.MaxUint32 {
-		if len(sessions) < int(resultRange.Offset.Value) {
-			return nil, nex.NewError(nex.ResultCodes.Core.InvalidIndex, "change_error")
-		}
-
-		sessions = sessions[resultRange.Offset.Value:]
-	}
-
-
-	if len(sessions) > int(resultRange.Length.Value) {
-		sessions = sessions[:resultRange.Length.Value]
+	sessions, nexError := database.FindMatchmakeSessionBySearchCriteria(commonProtocol.manager, connection, searchCriterias, resultRange, nil)
+	if nexError != nil {
+		commonProtocol.manager.Mutex.RUnlock()
+		return nil, nexError
 	}
 
 	lstGathering := types.NewList[*types.AnyDataHolder]()
 	lstGathering.Type = types.NewAnyDataHolder()
 
 	for _, session := range sessions {
+		// * Scrap session key and user password
+		session.SessionKey.Value = make([]byte, 0)
+		session.UserPassword.Value = ""
+
 		matchmakeSessionDataHolder := types.NewAnyDataHolder()
 		matchmakeSessionDataHolder.TypeName = types.NewString("MatchmakeSession")
-		matchmakeSessionDataHolder.ObjectData = session.GameMatchmakeSession.Copy()
+		matchmakeSessionDataHolder.ObjectData = session.Copy()
 
 		lstGathering.Append(matchmakeSessionDataHolder)
 	}
+
+	commonProtocol.manager.Mutex.RUnlock()
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
