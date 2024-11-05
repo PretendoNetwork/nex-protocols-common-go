@@ -22,6 +22,14 @@ func (commonProtocol *CommonProtocol) browseMatchmakeSession(err error, packet n
 
 	searchCriterias := []*match_making_types.MatchmakeSessionSearchCriteria{searchCriteria}
 
+	lstSearchCriteria := types.NewList[*match_making_types.MatchmakeSessionSearchCriteria]()
+	lstSearchCriteria.Type = match_making_types.NewMatchmakeSessionSearchCriteria()
+	lstSearchCriteria.SetFromData(searchCriterias)
+
+	if commonProtocol.CleanupMatchmakeSessionSearchCriterias != nil {
+		commonProtocol.CleanupMatchmakeSessionSearchCriterias(lstSearchCriteria)
+	}
+
 	sessions, nexError := database.FindMatchmakeSessionBySearchCriteria(commonProtocol.manager, connection, searchCriterias, resultRange, nil)
 	if nexError != nil {
 		commonProtocol.manager.Mutex.RUnlock()
