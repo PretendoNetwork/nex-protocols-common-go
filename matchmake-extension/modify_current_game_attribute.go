@@ -8,7 +8,7 @@ import (
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/v2/matchmake-extension"
 )
 
-func (commonProtocol *CommonProtocol) modifyCurrentGameAttribute(err error, packet nex.PacketInterface, callID uint32, gid *types.PrimitiveU32, attribIndex *types.PrimitiveU32, newValue *types.PrimitiveU32) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) modifyCurrentGameAttribute(err error, packet nex.PacketInterface, callID uint32, gid types.UInt32, attribIndex types.UInt32, newValue types.UInt32) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
@@ -19,7 +19,7 @@ func (commonProtocol *CommonProtocol) modifyCurrentGameAttribute(err error, pack
 
 	commonProtocol.manager.Mutex.Lock()
 
-	session, _, nexError := database.GetMatchmakeSessionByID(commonProtocol.manager, endpoint, gid.Value)
+	session, _, nexError := database.GetMatchmakeSessionByID(commonProtocol.manager, endpoint, uint32(gid))
 	if nexError != nil {
 		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
@@ -30,14 +30,14 @@ func (commonProtocol *CommonProtocol) modifyCurrentGameAttribute(err error, pack
 		return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
 	}
 
-	index := int(attribIndex.Value)
+	index := int(attribIndex)
 
-	if index >= session.Attributes.Length() {
+	if index >= len(session.Attributes) {
 		commonProtocol.manager.Mutex.Unlock()
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidIndex, "change_error")
 	}
 
-	nexError = database.UpdateGameAttribute(commonProtocol.manager, gid.Value, attribIndex.Value, newValue.Value)
+	nexError = database.UpdateGameAttribute(commonProtocol.manager, uint32(gid), uint32(attribIndex), uint32(newValue))
 	if nexError != nil {
 		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError

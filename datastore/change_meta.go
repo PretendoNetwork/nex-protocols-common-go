@@ -7,7 +7,7 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
-func (commonProtocol *CommonProtocol) changeMeta(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreChangeMetaParam) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) changeMeta(err error, packet nex.PacketInterface, callID uint32, param datastore_types.DataStoreChangeMetaParam) (*nex.RMCMessage, *nex.Error) {
 	if commonProtocol.GetObjectInfoByDataID == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataID not defined")
 		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
@@ -47,21 +47,21 @@ func (commonProtocol *CommonProtocol) changeMeta(err error, packet nex.PacketInt
 		return nil, errCode
 	}
 
-	if param.ModifiesFlag.PAND(0x08) != 0 {
+	if uint32(param.ModifiesFlag) & 0x08 != 0 {
 		errCode = commonProtocol.UpdateObjectPeriodByDataIDWithPassword(param.DataID, param.Period, param.UpdatePassword)
 		if errCode != nil {
 			return nil, errCode
 		}
 	}
 
-	if param.ModifiesFlag.PAND(0x10) != 0 {
+	if uint32(param.ModifiesFlag) & 0x10 != 0 {
 		errCode = commonProtocol.UpdateObjectMetaBinaryByDataIDWithPassword(param.DataID, param.MetaBinary, param.UpdatePassword)
 		if errCode != nil {
 			return nil, errCode
 		}
 	}
 
-	if param.ModifiesFlag.PAND(0x80) != 0 {
+	if uint32(param.ModifiesFlag) & 0x80 != 0 {
 		errCode = commonProtocol.UpdateObjectDataTypeByDataIDWithPassword(param.DataID, param.DataType, param.UpdatePassword)
 		if errCode != nil {
 			return nil, errCode

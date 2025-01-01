@@ -8,7 +8,7 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 )
 
-func (commonProtocol *CommonProtocol) requestURLs(err error, packet nex.PacketInterface, callID uint32, cidTarget *types.PrimitiveU32, pidTarget *types.PID) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) requestURLs(err error, packet nex.PacketInterface, callID uint32, cidTarget types.UInt32, pidTarget types.PID) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
@@ -18,9 +18,9 @@ func (commonProtocol *CommonProtocol) requestURLs(err error, packet nex.PacketIn
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
 	// TODO - Is this correct?
-	requestedConnection := endpoint.FindConnectionByID(cidTarget.Value)
+	requestedConnection := endpoint.FindConnectionByID(uint32(cidTarget))
 	if requestedConnection == nil {
-		requestedConnection = endpoint.FindConnectionByPID(pidTarget.Value())
+		requestedConnection = endpoint.FindConnectionByPID(uint64(pidTarget))
 	}
 
 	if requestedConnection == nil {
@@ -29,7 +29,7 @@ func (commonProtocol *CommonProtocol) requestURLs(err error, packet nex.PacketIn
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
-	retval := types.NewPrimitiveBool(true)
+	retval := types.NewBool(true)
 	retval.WriteTo(rmcResponseStream)
 
 	plstURLs := requestedConnection.StationURLs

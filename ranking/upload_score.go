@@ -8,7 +8,7 @@ import (
 	ranking_types "github.com/PretendoNetwork/nex-protocols-go/v2/ranking/types"
 )
 
-func (commonProtocol *CommonProtocol) uploadScore(err error, packet nex.PacketInterface, callID uint32, scoreData *ranking_types.RankingScoreData, uniqueID *types.PrimitiveU64) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) uploadScore(err error, packet nex.PacketInterface, callID uint32, scoreData ranking_types.RankingScoreData, uniqueID types.UInt64) (*nex.RMCMessage, *nex.Error) {
 	if commonProtocol.InsertRankingByPIDAndRankingScoreData == nil {
 		common_globals.Logger.Warning("Ranking::UploadScore missing InsertRankingByPIDAndRankingScoreData!")
 		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")

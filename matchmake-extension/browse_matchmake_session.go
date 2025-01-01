@@ -9,7 +9,7 @@ import (
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/v2/matchmake-extension"
 )
 
-func (commonProtocol *CommonProtocol) browseMatchmakeSession(err error, packet nex.PacketInterface, callID uint32, searchCriteria *match_making_types.MatchmakeSessionSearchCriteria, resultRange *types.ResultRange) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) browseMatchmakeSession(err error, packet nex.PacketInterface, callID uint32, searchCriteria match_making_types.MatchmakeSessionSearchCriteria, resultRange types.ResultRange) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
@@ -20,11 +20,10 @@ func (commonProtocol *CommonProtocol) browseMatchmakeSession(err error, packet n
 
 	commonProtocol.manager.Mutex.RLock()
 
-	searchCriterias := []*match_making_types.MatchmakeSessionSearchCriteria{searchCriteria}
+	searchCriterias := []match_making_types.MatchmakeSessionSearchCriteria{searchCriteria}
 
-	lstSearchCriteria := types.NewList[*match_making_types.MatchmakeSessionSearchCriteria]()
-	lstSearchCriteria.Type = match_making_types.NewMatchmakeSessionSearchCriteria()
-	lstSearchCriteria.SetFromData(searchCriterias)
+	lstSearchCriteria := types.NewList[match_making_types.MatchmakeSessionSearchCriteria]()
+	lstSearchCriteria = searchCriterias
 
 	if commonProtocol.CleanupMatchmakeSessionSearchCriterias != nil {
 		commonProtocol.CleanupMatchmakeSessionSearchCriterias(lstSearchCriteria)
@@ -36,19 +35,18 @@ func (commonProtocol *CommonProtocol) browseMatchmakeSession(err error, packet n
 		return nil, nexError
 	}
 
-	lstGathering := types.NewList[*types.AnyDataHolder]()
-	lstGathering.Type = types.NewAnyDataHolder()
+	lstGathering := types.NewList[types.AnyDataHolder]()
 
 	for _, session := range sessions {
 		// * Scrap session key and user password
-		session.SessionKey.Value = make([]byte, 0)
-		session.UserPassword.Value = ""
+		session.SessionKey = make([]byte, 0)
+		session.UserPassword = ""
 
 		matchmakeSessionDataHolder := types.NewAnyDataHolder()
 		matchmakeSessionDataHolder.TypeName = types.NewString("MatchmakeSession")
 		matchmakeSessionDataHolder.ObjectData = session.Copy()
 
-		lstGathering.Append(matchmakeSessionDataHolder)
+		lstGathering = append(lstGathering, matchmakeSessionDataHolder)
 	}
 
 	commonProtocol.manager.Mutex.RUnlock()

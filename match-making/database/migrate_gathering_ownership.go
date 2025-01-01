@@ -11,12 +11,12 @@ import (
 )
 
 // MigrateGatheringOwnership switches the owner of the gathering with a different one
-func MigrateGatheringOwnership(manager *common_globals.MatchmakingManager, connection *nex.PRUDPConnection, gathering *match_making_types.Gathering, participants []uint64) (uint64, *nex.Error) {
+func MigrateGatheringOwnership(manager *common_globals.MatchmakingManager, connection *nex.PRUDPConnection, gathering match_making_types.Gathering, participants []uint64) (uint64, *nex.Error) {
 	var nexError *nex.Error
 	var uniqueParticipants []uint64 = common_globals.RemoveDuplicates(participants)
 	var newOwner uint64
 	for _, participant := range uniqueParticipants {
-		if participant != gathering.OwnerPID.Value() {
+		if participant != uint64(gathering.OwnerPID) {
 			newOwner = participant
 			break
 		}
@@ -24,7 +24,7 @@ func MigrateGatheringOwnership(manager *common_globals.MatchmakingManager, conne
 
 	// * We couldn't find a new owner, so we unregister the gathering
 	if newOwner == 0 {
-		nexError = UnregisterGathering(manager, connection.PID(), gathering.ID.Value)
+		nexError = UnregisterGathering(manager, connection.PID(), uint32(gathering.ID))
 		if nexError != nil {
 			return 0, nexError
 		}
@@ -33,25 +33,25 @@ func MigrateGatheringOwnership(manager *common_globals.MatchmakingManager, conne
 		subtype := notifications.NotificationSubTypes.GatheringUnregistered.None
 
 		oEvent := notifications_types.NewNotificationEvent()
-		oEvent.PIDSource = connection.PID().Copy().(*types.PID)
-		oEvent.Type.Value = notifications.BuildNotificationType(category, subtype)
-		oEvent.Param1.Value = gathering.ID.Value
+		oEvent.PIDSource = connection.PID().Copy().(types.PID)
+		oEvent.Type = types.NewUInt32(notifications.BuildNotificationType(category, subtype))
+		oEvent.Param1 = gathering.ID
 
 		common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, uniqueParticipants)
 		return 0, nil
 	}
 
-	oldOwner := gathering.OwnerPID.Copy().(*types.PID)
+	oldOwner := gathering.OwnerPID.Copy().(types.PID)
 
 	// * Set the new owner
 	gathering.OwnerPID = types.NewPID(newOwner)
 
-	nexError = UpdateSessionHost(manager, gathering.ID.Value, gathering.OwnerPID, gathering.HostPID)
+	nexError = UpdateSessionHost(manager, uint32(gathering.ID), gathering.OwnerPID, gathering.HostPID)
 	if nexError != nil {
 		return 0, nexError
 	}
 
-	nexError = tracking.LogChangeOwner(manager.Database, connection.PID(), gathering.ID.Value, oldOwner, gathering.OwnerPID)
+	nexError = tracking.LogChangeOwner(manager.Database, connection.PID(), uint32(gathering.ID), oldOwner, gathering.OwnerPID)
 	if nexError != nil {
 		return 0, nexError
 	}
@@ -60,10 +60,10 @@ func MigrateGatheringOwnership(manager *common_globals.MatchmakingManager, conne
 	subtype := notifications.NotificationSubTypes.OwnershipChanged.None
 
 	oEvent := notifications_types.NewNotificationEvent()
-	oEvent.PIDSource = connection.PID().Copy().(*types.PID)
-	oEvent.Type.Value = notifications.BuildNotificationType(category, subtype)
-	oEvent.Param1.Value = gathering.ID.Value
-	oEvent.Param2.Value = uint32(newOwner) // TODO - This assumes a legacy client. Will not work on the Switch
+	oEvent.PIDSource = connection.PID().Copy().(types.PID)
+	oEvent.Type = types.NewUInt32(notifications.BuildNotificationType(category, subtype))
+	oEvent.Param1 = gathering.ID
+	oEvent.Param2 = types.NewUInt32(uint32(newOwner)) // TODO - This assumes a legacy client. Will not work on the Switch
 
 	// TODO - StrParam doesn't have this value on some servers
 	// * https://github.com/kinnay/NintendoClients/issues/101

@@ -11,7 +11,7 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
-func (commonProtocol *CommonProtocol) preparePostObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStorePreparePostParam) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) preparePostObject(err error, packet nex.PacketInterface, callID uint32, param datastore_types.DataStorePreparePostParam) (*nex.RMCMessage, *nex.Error) {
 	if commonProtocol.InitializeObjectByPreparePostParam == nil {
 		common_globals.Logger.Warning("InitializeObjectByPreparePostParam not defined")
 		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
@@ -43,16 +43,13 @@ func (commonProtocol *CommonProtocol) preparePostObject(err error, packet nex.Pa
 	}
 
 	// TODO - Should this be moved to InitializeObjectByPreparePostParam?
-	param.RatingInitParams.Each(func(_ int, ratingInitParamWithSlot *datastore_types.DataStoreRatingInitParamWithSlot) bool {
+	for _ , ratingInitParamWithSlot := range param.RatingInitParams {
 		errCode = commonProtocol.InitializeObjectRatingWithSlot(dataID, ratingInitParamWithSlot)
 		if errCode != nil {
 			common_globals.Logger.Errorf("Error on rating init: %s", errCode.Error())
-
-			return true
+			break
 		}
-
-		return false
-	})
+	}
 
 	if errCode != nil {
 		return nil, errCode
@@ -74,23 +71,19 @@ func (commonProtocol *CommonProtocol) preparePostObject(err error, packet nex.Pa
 
 	pReqPostInfo := datastore_types.NewDataStoreReqPostInfo()
 
-	pReqPostInfo.DataID = types.NewPrimitiveU64(dataID)
+	pReqPostInfo.DataID = types.NewUInt64(dataID)
 	pReqPostInfo.URL = types.NewString(URL.String())
-	pReqPostInfo.RequestHeaders = types.NewList[*datastore_types.DataStoreKeyValue]()
-	pReqPostInfo.FormFields = types.NewList[*datastore_types.DataStoreKeyValue]()
+	pReqPostInfo.RequestHeaders = types.NewList[datastore_types.DataStoreKeyValue]()
+	pReqPostInfo.FormFields = types.NewList[datastore_types.DataStoreKeyValue]()
 	pReqPostInfo.RootCACert = types.NewBuffer(commonProtocol.RootCACert)
-
-	pReqPostInfo.RequestHeaders.Type = datastore_types.NewDataStoreKeyValue()
-	pReqPostInfo.RequestHeaders.SetFromData(requestHeaders)
-
-	pReqPostInfo.FormFields.Type = datastore_types.NewDataStoreKeyValue()
+	pReqPostInfo.RequestHeaders = requestHeaders
 
 	for key, value := range formData {
 		field := datastore_types.NewDataStoreKeyValue()
 		field.Key = types.NewString(key)
 		field.Value = types.NewString(value)
 
-		pReqPostInfo.FormFields.Append(field)
+		pReqPostInfo.FormFields = append(pReqPostInfo.FormFields, field)
 	}
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())

@@ -13,12 +13,12 @@ type CommonProtocol struct {
 	endpoint                   *nex.PRUDPEndPoint
 	protocol                   match_making.Interface
 	manager                    *common_globals.MatchmakingManager
-	OnAfterUnregisterGathering func(packet nex.PacketInterface, idGathering *types.PrimitiveU32)
-	OnAfterFindBySingleID      func(packet nex.PacketInterface, id *types.PrimitiveU32)
-	OnAfterUpdateSessionURL    func(packet nex.PacketInterface, idGathering *types.PrimitiveU32, strURL *types.String)
-	OnAfterUpdateSessionHostV1 func(packet nex.PacketInterface, gid *types.PrimitiveU32)
-	OnAfterGetSessionURLs      func(packet nex.PacketInterface, gid *types.PrimitiveU32)
-	OnAfterUpdateSessionHost   func(packet nex.PacketInterface, gid *types.PrimitiveU32, isMigrateOwner *types.PrimitiveBool)
+	OnAfterUnregisterGathering func(packet nex.PacketInterface, idGathering types.UInt32)
+	OnAfterFindBySingleID      func(packet nex.PacketInterface, id types.UInt32)
+	OnAfterUpdateSessionURL    func(packet nex.PacketInterface, idGathering types.UInt32, strURL types.String)
+	OnAfterUpdateSessionHostV1 func(packet nex.PacketInterface, gid types.UInt32)
+	OnAfterGetSessionURLs      func(packet nex.PacketInterface, gid types.UInt32)
+	OnAfterUpdateSessionHost   func(packet nex.PacketInterface, gid types.UInt32, isMigrateOwner types.Bool)
 }
 
 // SetManager defines the matchmaking manager to be used by the common protocol

@@ -2,6 +2,7 @@ package matchmake_extension
 
 import (
 	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	match_making_database "github.com/PretendoNetwork/nex-protocols-common-go/v2/match-making/database"
 	"github.com/PretendoNetwork/nex-protocols-common-go/v2/matchmake-extension/database"
@@ -10,7 +11,7 @@ import (
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/v2/matchmake-extension"
 )
 
-func (commonProtocol *CommonProtocol) createMatchmakeSessionWithParam(err error, packet nex.PacketInterface, callID uint32, createMatchmakeSessionParam *match_making_types.CreateMatchmakeSessionParam) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) createMatchmakeSessionWithParam(err error, packet nex.PacketInterface, callID uint32, createMatchmakeSessionParam match_making_types.CreateMatchmakeSessionParam) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
@@ -23,15 +24,15 @@ func (commonProtocol *CommonProtocol) createMatchmakeSessionWithParam(err error,
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	if len(createMatchmakeSessionParam.JoinMessage.Value) > 256 {
+	if len(createMatchmakeSessionParam.JoinMessage) > 256 {
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
 	commonProtocol.manager.Mutex.Lock()
 
-	if createMatchmakeSessionParam.GIDForParticipationCheck.Value != 0 {
+	if createMatchmakeSessionParam.GIDForParticipationCheck != 0 {
 		// * Check that all new participants are participating in the specified gathering ID
-		nexError := database.CheckGatheringForParticipation(commonProtocol.manager, createMatchmakeSessionParam.GIDForParticipationCheck.Value, append(createMatchmakeSessionParam.AdditionalParticipants.Slice(), connection.PID()))
+		nexError := database.CheckGatheringForParticipation(commonProtocol.manager, uint32(createMatchmakeSessionParam.GIDForParticipationCheck), append(createMatchmakeSessionParam.AdditionalParticipants, connection.PID()))
 		if nexError != nil {
 			commonProtocol.manager.Mutex.Unlock()
 			return nil, nexError
@@ -42,15 +43,15 @@ func (commonProtocol *CommonProtocol) createMatchmakeSessionWithParam(err error,
 	// * so let's make sure the client is removed from all sessions
 	database.EndMatchmakeSessionsParticipation(commonProtocol.manager, connection)
 
-	joinedMatchmakeSession := createMatchmakeSessionParam.SourceMatchmakeSession.Copy().(*match_making_types.MatchmakeSession)
-	nexError := database.CreateMatchmakeSession(commonProtocol.manager, connection, joinedMatchmakeSession)
+	joinedMatchmakeSession := createMatchmakeSessionParam.SourceMatchmakeSession.Copy().(match_making_types.MatchmakeSession)
+	nexError := database.CreateMatchmakeSession(commonProtocol.manager, connection, &joinedMatchmakeSession)
 	if nexError != nil {
 		common_globals.Logger.Error(nexError.Error())
 		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
 	}
 
-	participants, nexError := match_making_database.JoinGatheringWithParticipants(commonProtocol.manager, joinedMatchmakeSession.Gathering.ID.Value, connection, createMatchmakeSessionParam.AdditionalParticipants.Slice(), createMatchmakeSessionParam.JoinMessage.Value, constants.JoinMatchmakeSessionBehaviorJoinMyself)
+	participants, nexError := match_making_database.JoinGatheringWithParticipants(commonProtocol.manager, uint32(joinedMatchmakeSession.Gathering.ID), connection, createMatchmakeSessionParam.AdditionalParticipants, string(createMatchmakeSessionParam.JoinMessage), constants.JoinMatchmakeSessionBehaviorJoinMyself)
 	if nexError != nil {
 		common_globals.Logger.Error(nexError.Error())
 		commonProtocol.manager.Mutex.Unlock()
@@ -59,7 +60,7 @@ func (commonProtocol *CommonProtocol) createMatchmakeSessionWithParam(err error,
 
 	commonProtocol.manager.Mutex.Unlock()
 
-	joinedMatchmakeSession.ParticipationCount.Value = participants
+	joinedMatchmakeSession.ParticipationCount = types.NewUInt32(participants)
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 

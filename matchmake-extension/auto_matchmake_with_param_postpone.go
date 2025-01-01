@@ -11,7 +11,7 @@ import (
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/v2/matchmake-extension"
 )
 
-func (commonProtocol *CommonProtocol) autoMatchmakeWithParamPostpone(err error, packet nex.PacketInterface, callID uint32, autoMatchmakeParam *match_making_types.AutoMatchmakeParam) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) autoMatchmakeWithParamPostpone(err error, packet nex.PacketInterface, callID uint32, autoMatchmakeParam match_making_types.AutoMatchmakeParam) (*nex.RMCMessage, *nex.Error) {
 	if commonProtocol.CleanupMatchmakeSessionSearchCriterias == nil {
 		common_globals.Logger.Warning("MatchmakeExtension::AutoMatchmakeWithParam_Postpone missing CleanupMatchmakeSessionSearchCriterias!")
 		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
@@ -26,7 +26,7 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithParamPostpone(err error, 
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	if len(autoMatchmakeParam.JoinMessage.Value) > 256 {
+	if len(autoMatchmakeParam.JoinMessage) > 256 {
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
@@ -35,9 +35,9 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithParamPostpone(err error, 
 
 	commonProtocol.manager.Mutex.Lock()
 
-	if autoMatchmakeParam.GIDForParticipationCheck.Value != 0 {
+	if autoMatchmakeParam.GIDForParticipationCheck != 0 {
 		// * Check that all new participants are participating in the specified gathering ID
-		nexError := database.CheckGatheringForParticipation(commonProtocol.manager, autoMatchmakeParam.GIDForParticipationCheck.Value, append(autoMatchmakeParam.AdditionalParticipants.Slice(), connection.PID()))
+		nexError := database.CheckGatheringForParticipation(commonProtocol.manager, uint32(autoMatchmakeParam.GIDForParticipationCheck), append(autoMatchmakeParam.AdditionalParticipants, connection.PID()))
 		if nexError != nil {
 			commonProtocol.manager.Mutex.Unlock()
 			return nil, nexError
@@ -51,17 +51,17 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithParamPostpone(err error, 
 	commonProtocol.CleanupMatchmakeSessionSearchCriterias(autoMatchmakeParam.LstSearchCriteria)
 
 	resultRange := types.NewResultRange()
-	resultRange.Length.Value = 1
-	resultSessions, nexError := database.FindMatchmakeSessionBySearchCriteria(commonProtocol.manager, connection, autoMatchmakeParam.LstSearchCriteria.Slice(), resultRange, autoMatchmakeParam.SourceMatchmakeSession)
+	resultRange.Length = 1
+	resultSessions, nexError := database.FindMatchmakeSessionBySearchCriteria(commonProtocol.manager, connection, autoMatchmakeParam.LstSearchCriteria, resultRange, &autoMatchmakeParam.SourceMatchmakeSession)
 	if nexError != nil {
 		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
 	}
 
-	var resultSession *match_making_types.MatchmakeSession
+	var resultSession match_making_types.MatchmakeSession
 	if len(resultSessions) == 0 {
-		resultSession = autoMatchmakeParam.SourceMatchmakeSession.Copy().(*match_making_types.MatchmakeSession)
-		nexError = database.CreateMatchmakeSession(commonProtocol.manager, connection, resultSession)
+		resultSession = autoMatchmakeParam.SourceMatchmakeSession.Copy().(match_making_types.MatchmakeSession)
+		nexError = database.CreateMatchmakeSession(commonProtocol.manager, connection, &resultSession)
 		if nexError != nil {
 			common_globals.Logger.Error(nexError.Error())
 			commonProtocol.manager.Mutex.Unlock()
@@ -71,19 +71,19 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithParamPostpone(err error, 
 		resultSession = resultSessions[0]
 
 		// TODO - What should really happen here?
-		if resultSession.UserPasswordEnabled.Value || resultSession.SystemPasswordEnabled.Value {
+		if resultSession.UserPasswordEnabled || resultSession.SystemPasswordEnabled {
 			commonProtocol.manager.Mutex.Unlock()
 			return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
 		}
 	}
 
-	participants, nexError := match_making_database.JoinGatheringWithParticipants(commonProtocol.manager, resultSession.ID.Value, connection, autoMatchmakeParam.AdditionalParticipants.Slice(), autoMatchmakeParam.JoinMessage.Value, constants.JoinMatchmakeSessionBehaviorJoinMyself)
+	participants, nexError := match_making_database.JoinGatheringWithParticipants(commonProtocol.manager, uint32(resultSession.ID), connection, autoMatchmakeParam.AdditionalParticipants, string(autoMatchmakeParam.JoinMessage), constants.JoinMatchmakeSessionBehaviorJoinMyself)
 	if nexError != nil {
 		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
 	}
 
-	resultSession.ParticipationCount.Value = participants
+	resultSession.ParticipationCount = types.NewUInt32(participants)
 
 	commonProtocol.manager.Mutex.Unlock()
 

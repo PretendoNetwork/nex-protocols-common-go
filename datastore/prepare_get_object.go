@@ -11,7 +11,7 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
-func (commonProtocol *CommonProtocol) prepareGetObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStorePrepareGetParam) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) prepareGetObject(err error, packet nex.PacketInterface, callID uint32, param datastore_types.DataStorePrepareGetParam) (*nex.RMCMessage, *nex.Error) {
 	if commonProtocol.GetObjectInfoByDataID == nil {
 		common_globals.Logger.Warning("GetObjectInfoByDataID not defined")
 		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
@@ -57,13 +57,11 @@ func (commonProtocol *CommonProtocol) prepareGetObject(err error, packet nex.Pac
 	pReqGetInfo := datastore_types.NewDataStoreReqGetInfo()
 
 	pReqGetInfo.URL = types.NewString(url.String())
-	pReqGetInfo.RequestHeaders = types.NewList[*datastore_types.DataStoreKeyValue]()
-	pReqGetInfo.Size = objectInfo.Size.Copy().(*types.PrimitiveU32)
+	pReqGetInfo.RequestHeaders = types.NewList[datastore_types.DataStoreKeyValue]()
+	pReqGetInfo.Size = objectInfo.Size.Copy().(types.UInt32)
 	pReqGetInfo.RootCACert = types.NewBuffer(commonProtocol.RootCACert)
 	pReqGetInfo.DataID = param.DataID
-
-	pReqGetInfo.RequestHeaders.Type = datastore_types.NewDataStoreKeyValue()
-	pReqGetInfo.RequestHeaders.SetFromData(requestHeaders)
+	pReqGetInfo.RequestHeaders = requestHeaders
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 

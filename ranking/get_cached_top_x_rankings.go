@@ -10,7 +10,7 @@ import (
 	ranking_types "github.com/PretendoNetwork/nex-protocols-go/v2/ranking/types"
 )
 
-func (commonProtocol *CommonProtocol) getCachedTopXRankings(err error, packet nex.PacketInterface, callID uint32, categories *types.List[*types.PrimitiveU32], orderParams *types.List[*ranking_types.RankingOrderParam]) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) getCachedTopXRankings(err error, packet nex.PacketInterface, callID uint32, categories types.List[types.UInt32], orderParams types.List[ranking_types.RankingOrderParam]) (*nex.RMCMessage, *nex.Error) {
 	if commonProtocol.GetRankingsAndCountByCategoryAndRankingOrderParam == nil {
 		common_globals.Logger.Warning("Ranking::GetCachedTopXRankings missing GetRankingsAndCountByCategoryAndRankingOrderParam!")
 		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
@@ -22,23 +22,18 @@ func (commonProtocol *CommonProtocol) getCachedTopXRankings(err error, packet ne
 	}
 
 	// TODO - Is this true?
-	if categories.Length() != orderParams.Length() {
+	if len(categories) != len(orderParams) {
 		return nil, nex.NewError(nex.ResultCodes.Ranking.InvalidArgument, "change_error")
 	}
 
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
-	pResult := types.NewList[*ranking_types.RankingCachedResult]()
+	pResult := types.NewList[ranking_types.RankingCachedResult]()
 
-	pResult.Type = ranking_types.NewRankingCachedResult()
-
-	for i, category := range categories.Slice() {
-		orderParam, err := orderParams.Get(i)
-		if err != nil {
-			common_globals.Logger.Error(err.Error())
-			return nil, nex.NewError(nex.ResultCodes.Ranking.InvalidArgument, "change_error")
-		}
+	for i, category := range categories {
+		// * We already checked that categories and orderParams have the same length
+		orderParam := orderParams[i]
 
 		rankDataList, totalCount, err := commonProtocol.GetRankingsAndCountByCategoryAndRankingOrderParam(category, orderParam)
 		if err != nil {
@@ -46,14 +41,14 @@ func (commonProtocol *CommonProtocol) getCachedTopXRankings(err error, packet ne
 			return nil, nex.NewError(nex.ResultCodes.Ranking.Unknown, "change_error")
 		}
 
-		if totalCount == 0 || rankDataList.Length() == 0 {
+		if totalCount == 0 || len(rankDataList) == 0 {
 			return nil, nex.NewError(nex.ResultCodes.Ranking.NotFound, "change_error")
 		}
 
 		result := ranking_types.NewRankingCachedResult()
 
 		result.RankingResult.RankDataList = rankDataList
-		result.RankingResult.TotalCount = types.NewPrimitiveU32(totalCount)
+		result.RankingResult.TotalCount = types.NewUInt32(totalCount)
 		result.RankingResult.SinceTime = types.NewDateTime(0x1F40420000) // * 2000-01-01T00:00:00.000Z, this is what the real server sends back
 
 		result.CreatedTime = types.NewDateTime(0).Now()
@@ -64,9 +59,9 @@ func (commonProtocol *CommonProtocol) getCachedTopXRankings(err error, packet ne
 		result.ExpiredTime = types.NewDateTime(0).FromTimestamp(time.Now().UTC().Add(time.Minute * time.Duration(5)))
 		// * This is the length Ultimate NES Remix uses
 		// TODO - Does this matter? and are other games different?
-		result.MaxLength = types.NewPrimitiveU8(10)
+		result.MaxLength = types.NewUInt8(10)
 
-		pResult.Append(result)
+		pResult = append(pResult, result)
 	}
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())

@@ -10,14 +10,14 @@ import (
 )
 
 // CheckGatheringForParticipation checks that the given PIDs are participating on the gathering ID
-func CheckGatheringForParticipation(manager *common_globals.MatchmakingManager, gatheringID uint32, participantsCheck []*types.PID) *nex.Error {
+func CheckGatheringForParticipation(manager *common_globals.MatchmakingManager, gatheringID uint32, participantsCheck []types.PID) *nex.Error {
 	_, _, participants, _, err := database.FindGatheringByID(manager, gatheringID)
 	if err != nil {
 		return err
 	}
 
 	for _, participant := range participantsCheck {
-		if !slices.Contains(participants, participant.Value()) {
+		if !slices.Contains(participants, uint64(participant)) {
 			return nex.NewError(nex.ResultCodes.RendezVous.NotParticipatedGathering, "change_error")
 		}
 	}

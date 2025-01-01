@@ -10,7 +10,7 @@ import (
 )
 
 // LogLeaveGathering logs a gathering leave event on the given database
-func LogLeaveGathering(db *sql.DB, pid *types.PID, gatheringID uint32, totalParticipants []uint64) *nex.Error {
+func LogLeaveGathering(db *sql.DB, pid types.PID, gatheringID uint32, totalParticipants []uint64) *nex.Error {
 	eventTime := time.Now().UTC()
 
 	_, err := db.Exec(`INSERT INTO tracking.leave_gathering (
@@ -23,7 +23,7 @@ func LogLeaveGathering(db *sql.DB, pid *types.PID, gatheringID uint32, totalPart
 		$2,
 		$3,
 		$4
-	)`, eventTime, pid.Value(), gatheringID, pqextended.Array(totalParticipants))
+	)`, eventTime, pid, gatheringID, pqextended.Array(totalParticipants))
 	if err != nil {
 		return nex.NewError(nex.ResultCodes.Core.Unknown, err.Error())
 	}

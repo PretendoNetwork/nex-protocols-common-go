@@ -8,7 +8,7 @@ import (
 	nat_traversal "github.com/PretendoNetwork/nex-protocols-go/v2/nat-traversal"
 )
 
-func (commonProtocol *CommonProtocol) requestProbeInitiationExt(err error, packet nex.PacketInterface, callID uint32, targetList *types.List[*types.String], stationToProbe *types.String) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) requestProbeInitiationExt(err error, packet nex.PacketInterface, callID uint32, targetList types.List[types.String], stationToProbe types.String) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
@@ -37,8 +37,8 @@ func (commonProtocol *CommonProtocol) requestProbeInitiationExt(err error, packe
 
 	rmcRequestBytes := rmcRequest.Bytes()
 
-	for _, target := range targetList.Slice() {
-		targetStation := types.NewStationURL(target.Value)
+	for _, target := range targetList {
+		targetStation := types.NewStationURL(target)
 
 		if connectionID, ok := targetStation.RVConnectionID(); ok {
 			target := endpoint.FindConnectionByID(connectionID)

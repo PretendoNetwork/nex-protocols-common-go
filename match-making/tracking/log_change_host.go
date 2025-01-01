@@ -9,7 +9,7 @@ import (
 )
 
 // LogChangeHost logs a host change event on the given database
-func LogChangeHost(db *sql.DB, sourcePID *types.PID, gatheringID uint32, oldHostPID *types.PID, newHostPID *types.PID) *nex.Error {
+func LogChangeHost(db *sql.DB, sourcePID types.PID, gatheringID uint32, oldHostPID types.PID, newHostPID types.PID) *nex.Error {
 	eventTime := time.Now().UTC()
 
 	_, err := db.Exec(`INSERT INTO tracking.change_host (
@@ -24,7 +24,7 @@ func LogChangeHost(db *sql.DB, sourcePID *types.PID, gatheringID uint32, oldHost
 		$3,
 		$4,
 		$5
-	)`, eventTime, sourcePID.Value(), gatheringID, oldHostPID.Value(), newHostPID.Value())
+	)`, eventTime, sourcePID, gatheringID, oldHostPID, newHostPID)
 	if err != nil {
 		return nex.NewError(nex.ResultCodes.Core.Unknown, err.Error())
 	}

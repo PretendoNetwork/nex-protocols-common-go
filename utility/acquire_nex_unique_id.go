@@ -21,7 +21,7 @@ func (commonProtocol *CommonProtocol) acquireNexUniqueID(err error, packet nex.P
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
-	pNexUniqueID := types.NewPrimitiveU64(commonProtocol.GenerateNEXUniqueID())
+	pNexUniqueID := types.NewUInt64(commonProtocol.GenerateNEXUniqueID())
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 

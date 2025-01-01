@@ -12,7 +12,7 @@ import (
 )
 
 // FindGatheringByID finds a gathering on a database with the given ID. Returns the gathering, its type, the participant list and the started time
-func FindGatheringByID(manager *common_globals.MatchmakingManager, id uint32) (*match_making_types.Gathering, string, []uint64, *types.DateTime, *nex.Error) {
+func FindGatheringByID(manager *common_globals.MatchmakingManager, id uint32) (match_making_types.Gathering, string, []uint64, types.DateTime, *nex.Error) {
 	row := manager.Database.QueryRow(`SELECT owner_pid, host_pid, min_participants, max_participants, participation_policy, policy_argument, flags, state, description, type, participants, started_time FROM matchmaking.gatherings WHERE id=$1 AND registered=true`, id)
 
 	var ownerPID uint64
@@ -27,6 +27,8 @@ func FindGatheringByID(manager *common_globals.MatchmakingManager, id uint32) (*
 	var gatheringType string
 	var participants []uint64
 	var startedTime time.Time
+
+	gathering := match_making_types.NewGathering()
 
 	err := row.Scan(
 		&ownerPID,
@@ -44,23 +46,22 @@ func FindGatheringByID(manager *common_globals.MatchmakingManager, id uint32) (*
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, "", nil, nil, nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, err.Error())
+			return gathering, "", nil, types.NewDateTime(0), nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, err.Error())
 		} else {
-			return nil, "", nil, nil, nex.NewError(nex.ResultCodes.Core.Unknown, err.Error())
+			return gathering, "", nil, types.NewDateTime(0), nex.NewError(nex.ResultCodes.Core.Unknown, err.Error())
 		}
 	}
 
-	gathering := match_making_types.NewGathering()
-	gathering.ID.Value = id
+	gathering.ID = types.NewUInt32(id)
 	gathering.OwnerPID = types.NewPID(ownerPID)
 	gathering.HostPID = types.NewPID(hostPID)
-	gathering.MinimumParticipants.Value = minParticipants
-	gathering.MaximumParticipants.Value = maxParticipants
-	gathering.ParticipationPolicy.Value = participationPolicy
-	gathering.PolicyArgument.Value = policyArgument
-	gathering.Flags.Value = flags
-	gathering.State.Value = state
-	gathering.Description.Value = description
+	gathering.MinimumParticipants = types.NewUInt16(minParticipants)
+	gathering.MaximumParticipants = types.NewUInt16(maxParticipants)
+	gathering.ParticipationPolicy = types.NewUInt32(participationPolicy)
+	gathering.PolicyArgument = types.NewUInt32(policyArgument)
+	gathering.Flags = types.NewUInt32(flags)
+	gathering.State = types.NewUInt32(state)
+	gathering.Description = types.NewString(description)
 
 	return gathering, gatheringType, participants, types.NewDateTime(0).FromTimestamp(startedTime), nil
 }

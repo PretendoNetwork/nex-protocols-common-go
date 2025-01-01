@@ -8,13 +8,13 @@ import (
 	match_making_ext "github.com/PretendoNetwork/nex-protocols-go/v2/match-making-ext"
 )
 
-func (commonProtocol *CommonProtocol) endParticipation(err error, packet nex.PacketInterface, callID uint32, idGathering *types.PrimitiveU32, strMessage *types.String) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) endParticipation(err error, packet nex.PacketInterface, callID uint32, idGathering types.UInt32, strMessage types.String) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	if len(strMessage.Value) > 256 {
+	if len(strMessage) > 256 {
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
@@ -23,7 +23,7 @@ func (commonProtocol *CommonProtocol) endParticipation(err error, packet nex.Pac
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
-	nexError := database.EndGatheringParticipation(commonProtocol.manager, idGathering.Value, connection, strMessage.Value)
+	nexError := database.EndGatheringParticipation(commonProtocol.manager, uint32(idGathering), connection, string(strMessage))
 	if nexError != nil {
 		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
@@ -31,7 +31,7 @@ func (commonProtocol *CommonProtocol) endParticipation(err error, packet nex.Pac
 
 	commonProtocol.manager.Mutex.Unlock()
 
-	retval := types.NewPrimitiveBool(true)
+	retval := types.NewBool(true)
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 

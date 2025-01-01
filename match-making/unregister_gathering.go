@@ -10,14 +10,14 @@ import (
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/v2/notifications/types"
 )
 
-func (commonProtocol *CommonProtocol) unregisterGathering(err error, packet nex.PacketInterface, callID uint32, idGathering *types.PrimitiveU32) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) unregisterGathering(err error, packet nex.PacketInterface, callID uint32, idGathering types.UInt32) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
 	commonProtocol.manager.Mutex.Lock()
-	gathering, _, participants, _, nexError := database.FindGatheringByID(commonProtocol.manager, idGathering.Value)
+	gathering, _, participants, _, nexError := database.FindGatheringByID(commonProtocol.manager, uint32(idGathering))
 	if nexError != nil {
 		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
@@ -31,7 +31,7 @@ func (commonProtocol *CommonProtocol) unregisterGathering(err error, packet nex.
 		return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
 	}
 
-	nexError = database.UnregisterGathering(commonProtocol.manager, connection.PID(), idGathering.Value)
+	nexError = database.UnregisterGathering(commonProtocol.manager, connection.PID(), uint32(idGathering))
 	if nexError != nil {
 		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
@@ -41,15 +41,15 @@ func (commonProtocol *CommonProtocol) unregisterGathering(err error, packet nex.
 	subtype := notifications.NotificationSubTypes.GatheringUnregistered.None
 
 	oEvent := notifications_types.NewNotificationEvent()
-	oEvent.PIDSource = connection.PID().Copy().(*types.PID)
-	oEvent.Type.Value = notifications.BuildNotificationType(category, subtype)
-	oEvent.Param1.Value = idGathering.Value
+	oEvent.PIDSource = connection.PID().Copy().(types.PID)
+	oEvent.Type = types.NewUInt32(notifications.BuildNotificationType(category, subtype))
+	oEvent.Param1 = idGathering
 
 	common_globals.SendNotificationEvent(endpoint, oEvent, common_globals.RemoveDuplicates(participants))
 
 	commonProtocol.manager.Mutex.Unlock()
 
-	retval := types.NewPrimitiveBool(true)
+	retval := types.NewBool(true)
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 

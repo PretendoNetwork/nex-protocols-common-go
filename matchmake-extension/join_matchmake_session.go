@@ -9,13 +9,13 @@ import (
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/v2/matchmake-extension"
 )
 
-func (commonProtocol *CommonProtocol) joinMatchmakeSession(err error, packet nex.PacketInterface, callID uint32, gid *types.PrimitiveU32, strMessage *types.String) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) joinMatchmakeSession(err error, packet nex.PacketInterface, callID uint32, gid types.UInt32, strMessage types.String) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	if len(strMessage.Value) > 256 {
+	if len(strMessage) > 256 {
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
@@ -25,7 +25,7 @@ func (commonProtocol *CommonProtocol) joinMatchmakeSession(err error, packet nex
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 	server := endpoint.Server
 
-	joinedMatchmakeSession, _, nexError := database.GetMatchmakeSessionByID(commonProtocol.manager, endpoint, gid.Value)
+	joinedMatchmakeSession, _, nexError := database.GetMatchmakeSessionByID(commonProtocol.manager, endpoint, uint32(gid))
 	if nexError != nil {
 		common_globals.Logger.Error(nexError.Error())
 		commonProtocol.manager.Mutex.Unlock()
@@ -33,7 +33,7 @@ func (commonProtocol *CommonProtocol) joinMatchmakeSession(err error, packet nex
 	}
 
 	// TODO - Is this the correct error code?
-	if joinedMatchmakeSession.UserPasswordEnabled.Value || joinedMatchmakeSession.SystemPasswordEnabled.Value {
+	if joinedMatchmakeSession.UserPasswordEnabled || joinedMatchmakeSession.SystemPasswordEnabled {
 		commonProtocol.manager.Mutex.Unlock()
 		return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
 	}
@@ -49,7 +49,7 @@ func (commonProtocol *CommonProtocol) joinMatchmakeSession(err error, packet nex
 		return nil, nexError
 	}
 
-	_, nexError = match_making_database.JoinGathering(commonProtocol.manager, joinedMatchmakeSession.Gathering.ID.Value, connection, 1, strMessage.Value)
+	_, nexError = match_making_database.JoinGathering(commonProtocol.manager, uint32(joinedMatchmakeSession.Gathering.ID), connection, 1, string(strMessage))
 	if nexError != nil {
 		common_globals.Logger.Error(nexError.Error())
 		commonProtocol.manager.Mutex.Unlock()

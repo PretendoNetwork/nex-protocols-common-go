@@ -7,7 +7,7 @@ import (
 	ranking "github.com/PretendoNetwork/nex-protocols-go/v2/ranking"
 )
 
-func (commonProtocol *CommonProtocol) getCommonData(err error, packet nex.PacketInterface, callID uint32, uniqueID *types.PrimitiveU64) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) getCommonData(err error, packet nex.PacketInterface, callID uint32, uniqueID types.UInt64) (*nex.RMCMessage, *nex.Error) {
 	if commonProtocol.GetCommonData == nil {
 		common_globals.Logger.Warning("Ranking::GetCommonData missing GetCommonData!")
 		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")

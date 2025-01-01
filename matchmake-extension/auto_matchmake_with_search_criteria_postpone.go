@@ -10,7 +10,7 @@ import (
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/v2/matchmake-extension"
 )
 
-func (commonProtocol *CommonProtocol) autoMatchmakeWithSearchCriteriaPostpone(err error, packet nex.PacketInterface, callID uint32, lstSearchCriteria *types.List[*match_making_types.MatchmakeSessionSearchCriteria], anyGathering *types.AnyDataHolder, strMessage *types.String) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) autoMatchmakeWithSearchCriteriaPostpone(err error, packet nex.PacketInterface, callID uint32, lstSearchCriteria types.List[match_making_types.MatchmakeSessionSearchCriteria], anyGathering types.AnyDataHolder, strMessage types.String) (*nex.RMCMessage, *nex.Error) {
 	if commonProtocol.CleanupMatchmakeSessionSearchCriterias == nil {
 		common_globals.Logger.Warning("MatchmakeExtension::AutoMatchmakeWithSearchCriteria_Postpone missing CleanupMatchmakeSessionSearchCriterias!")
 		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
@@ -21,11 +21,11 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithSearchCriteriaPostpone(er
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	if len(strMessage.Value) > 256 {
+	if len(strMessage) > 256 {
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	if lstSearchCriteria.Length() > 2 {
+	if len(lstSearchCriteria) > 2 {
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
@@ -38,10 +38,10 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithSearchCriteriaPostpone(er
 	// * so let's make sure the client is removed from the session
 	database.EndMatchmakeSessionsParticipation(commonProtocol.manager, connection)
 
-	var matchmakeSession *match_making_types.MatchmakeSession
+	var matchmakeSession match_making_types.MatchmakeSession
 
-	if anyGathering.TypeName.Value == "MatchmakeSession" {
-		matchmakeSession = anyGathering.ObjectData.(*match_making_types.MatchmakeSession)
+	if anyGathering.TypeName == "MatchmakeSession" {
+		matchmakeSession = anyGathering.ObjectData.(match_making_types.MatchmakeSession)
 	} else {
 		common_globals.Logger.Critical("Non-MatchmakeSession DataType?!")
 		commonProtocol.manager.Mutex.Unlock()
@@ -56,17 +56,17 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithSearchCriteriaPostpone(er
 	commonProtocol.CleanupMatchmakeSessionSearchCriterias(lstSearchCriteria)
 
 	resultRange := types.NewResultRange()
-	resultRange.Length.Value = 1
-	resultSessions, nexError := database.FindMatchmakeSessionBySearchCriteria(commonProtocol.manager, connection, lstSearchCriteria.Slice(), resultRange, matchmakeSession)
+	resultRange.Length = 1
+	resultSessions, nexError := database.FindMatchmakeSessionBySearchCriteria(commonProtocol.manager, connection, lstSearchCriteria, resultRange, &matchmakeSession)
 	if nexError != nil {
 		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
 	}
 
-	var resultSession *match_making_types.MatchmakeSession
+	var resultSession match_making_types.MatchmakeSession
 	if len(resultSessions) == 0 {
-		resultSession = matchmakeSession.Copy().(*match_making_types.MatchmakeSession)
-		nexError = database.CreateMatchmakeSession(commonProtocol.manager, connection, resultSession)
+		resultSession = matchmakeSession.Copy().(match_making_types.MatchmakeSession)
+		nexError = database.CreateMatchmakeSession(commonProtocol.manager, connection, &resultSession)
 		if nexError != nil {
 			common_globals.Logger.Error(nexError.Error())
 			commonProtocol.manager.Mutex.Unlock()
@@ -76,24 +76,24 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithSearchCriteriaPostpone(er
 		resultSession = resultSessions[0]
 
 		// TODO - What should really happen here?
-		if resultSession.UserPasswordEnabled.Value || resultSession.SystemPasswordEnabled.Value {
+		if resultSession.UserPasswordEnabled || resultSession.SystemPasswordEnabled {
 			commonProtocol.manager.Mutex.Unlock()
 			return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
 		}
 	}
 
 	var vacantParticipants uint16 = 1
-	if searchCriteria, err := lstSearchCriteria.Get(0); err == nil {
-		vacantParticipants = searchCriteria.VacantParticipants.Value
+	if len(lstSearchCriteria) > 0 {
+		vacantParticipants = uint16(lstSearchCriteria[0].VacantParticipants)
 	}
 
-	participants, nexError := match_making_database.JoinGathering(commonProtocol.manager, resultSession.Gathering.ID.Value, connection, vacantParticipants, strMessage.Value)
+	participants, nexError := match_making_database.JoinGathering(commonProtocol.manager, uint32(resultSession.Gathering.ID), connection, vacantParticipants, string(strMessage))
 	if nexError != nil {
 		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
 	}
 
-	resultSession.ParticipationCount.Value = participants
+	resultSession.ParticipationCount = types.NewUInt32(participants)
 
 	commonProtocol.manager.Mutex.Unlock()
 

@@ -9,7 +9,7 @@ import (
 )
 
 // LogUnregisterGathering logs a gathering registration event on the given database
-func LogUnregisterGathering(db *sql.DB, sourcePID *types.PID, gatheringID uint32) *nex.Error {
+func LogUnregisterGathering(db *sql.DB, sourcePID types.PID, gatheringID uint32) *nex.Error {
 	eventTime := time.Now().UTC()
 
 	_, err := db.Exec(`INSERT INTO tracking.unregister_gathering (
@@ -20,7 +20,7 @@ func LogUnregisterGathering(db *sql.DB, sourcePID *types.PID, gatheringID uint32
 		$1,
 		$2,
 		$3
-	)`, eventTime, sourcePID.Value(), gatheringID)
+	)`, eventTime, sourcePID, gatheringID)
 	if err != nil {
 		return nex.NewError(nex.ResultCodes.Core.Unknown, err.Error())
 	}

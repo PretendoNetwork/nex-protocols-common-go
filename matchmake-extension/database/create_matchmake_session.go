@@ -13,14 +13,14 @@ import (
 
 // CreateMatchmakeSession creates a new MatchmakeSession on the database. No participants are added
 func CreateMatchmakeSession(manager *common_globals.MatchmakingManager, connection *nex.PRUDPConnection, matchmakeSession *match_making_types.MatchmakeSession) *nex.Error {
-	startedTime, nexError := match_making_database.RegisterGathering(manager, connection.PID(), matchmakeSession.Gathering, "MatchmakeSession")
+	startedTime, nexError := match_making_database.RegisterGathering(manager, connection.PID(), &matchmakeSession.Gathering, "MatchmakeSession")
 	if nexError != nil {
 		return nexError
 	}
 
-	attribs := make([]uint32, matchmakeSession.Attributes.Length())
-	for i, value := range matchmakeSession.Attributes.Slice() {
-		attribs[i] = value.Value
+	attribs := make([]uint32, len(matchmakeSession.Attributes))
+	for i, value := range matchmakeSession.Attributes {
+		attribs[i] = uint32(value)
 	}
 
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
@@ -28,20 +28,20 @@ func CreateMatchmakeSession(manager *common_globals.MatchmakingManager, connecti
 	matchmakeParam := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
 	srVariant := types.NewVariant()
-	srVariant.TypeID.Value = 3
-	srVariant.Type = types.NewPrimitiveBool(true)
-	matchmakeSession.MatchmakeParam.Params.Set(types.NewString("@SR"), srVariant)
+	srVariant.TypeID = 3
+	srVariant.Type = types.NewBool(true)
+	matchmakeSession.MatchmakeParam.Params["@SR"] = srVariant
 	girVariant := types.NewVariant()
-	girVariant.TypeID.Value = 1
-	girVariant.Type = types.NewPrimitiveS64(3)
-	matchmakeSession.MatchmakeParam.Params.Set(types.NewString("@GIR"), srVariant)
+	girVariant.TypeID = 1
+	girVariant.Type = types.NewInt64(3)
+	matchmakeSession.MatchmakeParam.Params["@GIR"] = girVariant
 
 	matchmakeSession.MatchmakeParam.WriteTo(matchmakeParam)
 
 	matchmakeSession.StartedTime = startedTime
-	matchmakeSession.SessionKey.Value = make([]byte, 32)
-	matchmakeSession.SystemPasswordEnabled.Value = false
-	rand.Read(matchmakeSession.SessionKey.Value)
+	matchmakeSession.SessionKey = make([]byte, 32)
+	matchmakeSession.SystemPasswordEnabled = false
+	rand.Read(matchmakeSession.SessionKey)
 
 	_, err := manager.Database.Exec(`INSERT INTO matchmaking.matchmake_sessions (
 		id,
@@ -76,21 +76,21 @@ func CreateMatchmakeSession(manager *common_globals.MatchmakingManager, connecti
 		$14,
 		$15
 	)`,
-		matchmakeSession.Gathering.ID.Value,
-		matchmakeSession.GameMode.Value,
+		uint32(matchmakeSession.Gathering.ID),
+		uint32(matchmakeSession.GameMode),
 		pqextended.Array(attribs),
-		matchmakeSession.OpenParticipation.Value,
-		matchmakeSession.MatchmakeSystemType.Value,
-		matchmakeSession.ApplicationBuffer.Value,
-		matchmakeSession.ProgressScore.Value,
-		matchmakeSession.SessionKey.Value,
-		matchmakeSession.Option.Value,
+		bool(matchmakeSession.OpenParticipation),
+		uint32(matchmakeSession.MatchmakeSystemType),
+		[]byte(matchmakeSession.ApplicationBuffer),
+		uint32(matchmakeSession.ProgressScore),
+		[]byte(matchmakeSession.SessionKey),
+		uint32(matchmakeSession.Option),
 		matchmakeParam.Bytes(),
-		matchmakeSession.UserPassword.Value,
-		matchmakeSession.ReferGID.Value,
-		matchmakeSession.UserPasswordEnabled.Value,
-		matchmakeSession.SystemPasswordEnabled.Value,
-		matchmakeSession.CodeWord.Value,
+		string(matchmakeSession.UserPassword),
+		uint32(matchmakeSession.ReferGID),
+		bool(matchmakeSession.UserPasswordEnabled),
+		bool(matchmakeSession.SystemPasswordEnabled),
+		string(matchmakeSession.CodeWord),
 	)
 	if err != nil {
 		return nex.NewError(nex.ResultCodes.Core.Unknown, err.Error())
