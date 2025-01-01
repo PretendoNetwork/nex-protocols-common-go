@@ -26,6 +26,8 @@ var onSessionDeletedHandlers []func(gid uint32)
 var onPlayerJoinSessionHandlers []func(gid uint32, cid uint32)
 var onPlayerLeaveSessionHandlers []func(gid uint32, cid uint32, gracefully bool)
 
+var filterFoundCandidateSessions []func(sessions []uint32, connection *nex.PRUDPConnection, searchMatchmakeSession *match_making_types.MatchmakeSession) []uint32
+
 var SessionManagementDebugLog = false
 
 func MakeSessions() {
@@ -73,6 +75,11 @@ func OnPlayerJoinSession(handler func(gid uint32, cid uint32)) {
 // OnPlayerLeaveSession sets a callback that will run just before a connection leaves a session
 func OnPlayerLeaveSession(handler func(gid uint32, cid uint32, gracefully bool)) {
 	onPlayerLeaveSessionHandlers = append(onPlayerLeaveSessionHandlers, handler)
+}
+
+// FilterFoundCandidateSessions sets a callback that filters or reorders the found sessions, with the session mutex already RLocked
+func FilterFoundCandidateSessions(handler func(sessions []uint32, connection *nex.PRUDPConnection, searchMatchmakeSession *match_making_types.MatchmakeSession) []uint32) {
+	filterFoundCandidateSessions = append(filterFoundCandidateSessions, handler)
 }
 
 // GetAvailableGatheringID returns a gathering ID which doesn't belong to any session
@@ -389,7 +396,7 @@ func isSessionHostConnected(session *CommonMatchmakeSession, endpoint *nex.PRUDP
 }
 
 // FindSessionByMatchmakeSession finds a gathering that matches with a MatchmakeSession
-func FindSessionByMatchmakeSession(connection *nex.PRUDPConnection, searchMatchmakeSession *match_making_types.MatchmakeSession) uint32 {
+func FindSessionByMatchmakeSession(connection *nex.PRUDPConnection, searchMatchmakeSession *match_making_types.MatchmakeSession, dirtySearchMatchmakeSession *match_making_types.MatchmakeSession) uint32 {
 	sessionsMutex.RLock()
 	defer sessionsMutex.RUnlock()
 
@@ -414,6 +421,10 @@ func FindSessionByMatchmakeSession(connection *nex.PRUDPConnection, searchMatchm
 		}
 
 		candidateSessionIndexes = append(candidateSessionIndexes, index)
+	}
+
+	for _, handler := range filterFoundCandidateSessions {
+		candidateSessionIndexes = handler(candidateSessionIndexes, connection, dirtySearchMatchmakeSession)
 	}
 
 	// TODO - This whole section assumes legacy clients. None of it will work on the Switch

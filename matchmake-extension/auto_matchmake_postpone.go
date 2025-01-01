@@ -37,8 +37,9 @@ func (commonProtocol *CommonProtocol) autoMatchmakePostpone(err error, packet ne
 	}
 
 	searchMatchmakeSession := matchmakeSession.Copy().(*match_making_types.MatchmakeSession)
+	dirtySearchMatchmakeSession := matchmakeSession.Copy().(*match_making_types.MatchmakeSession)
 	commonProtocol.CleanupSearchMatchmakeSession(searchMatchmakeSession)
-	sessionIndex := common_globals.FindSessionByMatchmakeSession(connection, searchMatchmakeSession)
+	sessionIndex := common_globals.FindSessionByMatchmakeSession(connection, searchMatchmakeSession, dirtySearchMatchmakeSession)
 	var session *common_globals.CommonMatchmakeSession
 
 	if sessionIndex == 0 {
