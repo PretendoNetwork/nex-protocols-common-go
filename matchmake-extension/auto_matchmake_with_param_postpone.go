@@ -32,7 +32,19 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithParamPostpone(err error, 
 	// * This prevents issues from host migration and disconnected notifications.
 	if useAdditionalParticipants {
 		for i, pid := range autoMatchmakeParam.AdditionalParticipants.Slice() {
-			targetConnection := endpoint.FindConnectionByPID(pid.Value())
+			// Try to find the connection ID for the participant
+			// FindConnectionByPID isn't reliable here, so extract it from the gathering they are (hopefully) in
+			var targetConnection *nex.PRUDPConnection
+			oldGathering.ConnectionIDs.Each(func(_ int, id uint32) bool {
+				conn := endpoint.FindConnectionByID(id)
+				if conn == nil || conn.PID().Value() != pid.Value() {
+					return false
+				}
+
+				targetConnection = conn
+				return true
+			})
+
 			if targetConnection == nil || !oldGathering.ConnectionIDs.Has(targetConnection.ID) {
 				// * This code is so early in the matchmaking process so this error can be here
 				return nil, nex.NewError(nex.ResultCodes.RendezVous.NotParticipatedGathering, fmt.Sprintf("Couldn't find connection for participant %v", pid.Value()))
