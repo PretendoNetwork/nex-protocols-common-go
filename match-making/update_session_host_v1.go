@@ -26,8 +26,10 @@ func (commonProtocol *CommonProtocol) updateSessionHostV1(err error, packet nex.
 	}
 
 	session.GameMatchmakeSession.Gathering.HostPID = connection.PID()
+	session.HostConnectionID = connection.ID
 	if session.GameMatchmakeSession.Gathering.Flags.PAND(match_making.GatheringFlags.DisconnectChangeOwner) != 0 {
 		session.GameMatchmakeSession.Gathering.OwnerPID = connection.PID()
+		session.OwnerConnectionID = connection.ID
 	}
 
 	rmcResponse := nex.NewRMCSuccess(endpoint, nil)

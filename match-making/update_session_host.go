@@ -30,6 +30,7 @@ func (commonProtocol *CommonProtocol) updateSessionHost(err error, packet nex.Pa
 	}
 
 	session.GameMatchmakeSession.Gathering.HostPID = connection.PID().Copy().(*types.PID)
+	session.HostConnectionID = connection.ID
 
 	rmcResponse := nex.NewRMCSuccess(endpoint, nil)
 	rmcResponse.ProtocolID = match_making.ProtocolID
@@ -46,6 +47,7 @@ func (commonProtocol *CommonProtocol) updateSessionHost(err error, packet nex.Pa
 
 	originalOwner := session.GameMatchmakeSession.Gathering.OwnerPID
 	session.GameMatchmakeSession.Gathering.OwnerPID = connection.PID().Copy().(*types.PID)
+	session.OwnerConnectionID = connection.ID
 
 	category := notifications.NotificationCategories.OwnershipChanged
 	subtype := notifications.NotificationSubTypes.OwnershipChanged.None

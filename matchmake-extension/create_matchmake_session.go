@@ -31,7 +31,7 @@ func (commonProtocol *CommonProtocol) createMatchmakeSession(err error, packet n
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	session, errCode := common_globals.CreateSessionByMatchmakeSession(matchmakeSession, nil, connection.PID())
+	session, errCode := common_globals.CreateSessionByMatchmakeSession(matchmakeSession, nil, connection)
 	if errCode != nil {
 		common_globals.Logger.Error(errCode.Error())
 		return nil, errCode

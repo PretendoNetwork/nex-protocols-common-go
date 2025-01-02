@@ -28,7 +28,6 @@ func (commonProtocol *CommonProtocol) endParticipation(err error, packet nex.Pac
 	server := endpoint.Server
 
 	matchmakeSession := session.GameMatchmakeSession
-	ownerPID := matchmakeSession.Gathering.OwnerPID
 
 	var deleteSession bool = false
 	if connection.PID().Equals(matchmakeSession.Gathering.OwnerPID) {
@@ -87,7 +86,7 @@ func (commonProtocol *CommonProtocol) endParticipation(err error, packet nex.Pac
 
 	rmcRequestBytes := rmcRequest.Bytes()
 
-	target := endpoint.FindConnectionByPID(ownerPID.Value())
+	target := endpoint.FindConnectionByID(session.OwnerConnectionID)
 	if target == nil {
 		common_globals.Logger.Warning("Owner client not found")
 		return nil, nil

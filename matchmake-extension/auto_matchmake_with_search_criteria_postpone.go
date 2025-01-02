@@ -35,7 +35,7 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithSearchCriteriaPostpone(er
 
 	if len(sessions) == 0 {
 		var errCode *nex.Error
-		session, errCode = common_globals.CreateSessionByMatchmakeSession(matchmakeSession, nil, connection.PID())
+		session, errCode = common_globals.CreateSessionByMatchmakeSession(matchmakeSession, nil, connection)
 		if errCode != nil {
 			common_globals.Logger.Error(errCode.Error())
 			return nil, errCode

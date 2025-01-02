@@ -34,23 +34,14 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithParamPostpone(err error, 
 		for i, pid := range autoMatchmakeParam.AdditionalParticipants.Slice() {
 			// Try to find the connection ID for the participant
 			// FindConnectionByPID isn't reliable here, so extract it from the gathering they are (hopefully) in
-			var targetConnection *nex.PRUDPConnection
-			oldGathering.ConnectionIDs.Each(func(_ int, id uint32) bool {
-				conn := endpoint.FindConnectionByID(id)
-				if conn == nil || conn.PID().Value() != pid.Value() {
-					return false
-				}
+			target := common_globals.FindParticipantConnection(endpoint, pid.Value(), oldGid)
 
-				targetConnection = conn
-				return true
-			})
-
-			if targetConnection == nil || !oldGathering.ConnectionIDs.Has(targetConnection.ID) {
+			if target == nil || !oldGathering.ConnectionIDs.Has(target.ID) {
 				// * This code is so early in the matchmaking process so this error can be here
 				return nil, nex.NewError(nex.ResultCodes.RendezVous.NotParticipatedGathering, fmt.Sprintf("Couldn't find connection for participant %v", pid.Value()))
 			}
 
-			additionalParticipants[i] = targetConnection.ID
+			additionalParticipants[i] = target.ID
 		}
 
 		// * Include the host too!
@@ -68,7 +59,7 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithParamPostpone(err error, 
 
 	if len(sessions) == 0 {
 		var errCode *nex.Error
-		session, errCode = common_globals.CreateSessionByMatchmakeSession(matchmakeSession, nil, connection.PID())
+		session, errCode = common_globals.CreateSessionByMatchmakeSession(matchmakeSession, nil, connection)
 		if errCode != nil {
 			common_globals.Logger.Error(errCode.Error())
 			return nil, errCode

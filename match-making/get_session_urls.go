@@ -21,16 +21,15 @@ func (commonProtocol *CommonProtocol) getSessionURLs(err error, packet nex.Packe
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
-	hostPID := session.GameMatchmakeSession.Gathering.HostPID
-	host := endpoint.FindConnectionByPID(hostPID.Value())
+	host := endpoint.FindConnectionByID(session.HostConnectionID)
 	if host == nil {
 		// * This popped up once during testing. Leaving it noted here in case it becomes a problem.
 		common_globals.Logger.Warning("Host client not found, trying with owner client")
-		host = endpoint.FindConnectionByPID(session.GameMatchmakeSession.Gathering.OwnerPID.Value())
+		host = endpoint.FindConnectionByID(session.OwnerConnectionID)
 		if host == nil {
 			// * This popped up once during testing. Leaving it noted here in case it becomes a problem.
 			common_globals.Logger.Error("Owner client not found")
-			return nil, nex.NewError(nex.ResultCodes.Core.Exception, "change_error")
+			return nil, nex.NewError(nex.ResultCodes.Core.Exception, "Owner client not found")
 		}
 	}
 

@@ -53,6 +53,24 @@ func RemoveConnectionIDFromSession(id uint32, gathering uint32) {
 	}
 }
 
+// FindParticipantConnection searches through a gathering for a connection with a given PID.
+// By only searching the gathering rather than the global connection list (as in FindConnectionByPID) we can get more
+// reliable results.
+func FindParticipantConnection(ep *nex.PRUDPEndPoint, pid uint64, gathering uint32) *nex.PRUDPConnection {
+	var result *nex.PRUDPConnection
+	Sessions[gathering].ConnectionIDs.Each(func(_ int, id uint32) bool {
+		conn := ep.FindConnectionByID(id)
+		if conn == nil || conn.PID().Value() != pid {
+			return false
+		}
+
+		result = conn
+		return true
+	})
+
+	return result
+}
+
 // FindConnectionSession searches for session the given connection ID is connected to
 func FindConnectionSession(id uint32) uint32 {
 	for gatheringID := range Sessions {
@@ -114,9 +132,9 @@ func RemoveConnectionFromAllSessions(connection *nex.PRUDPConnection) {
 
 			rmcRequestBytes := rmcRequest.Bytes()
 
-			target := endpoint.FindConnectionByPID(ownerPID.Value())
+			target := endpoint.FindConnectionByID(session.OwnerConnectionID)
 			if target == nil {
-				Logger.Warning("Target connection not found")
+				Logger.Warningf("Couldn't find owner (%v) for gathering (%v)", ownerPID, session.GameMatchmakeSession.ID)
 				gid = FindConnectionSession(connection.ID)
 				continue
 			}
@@ -146,7 +164,7 @@ func RemoveConnectionFromAllSessions(connection *nex.PRUDPConnection) {
 }
 
 // CreateSessionByMatchmakeSession creates a gathering from a MatchmakeSession
-func CreateSessionByMatchmakeSession(matchmakeSession *match_making_types.MatchmakeSession, searchMatchmakeSession *match_making_types.MatchmakeSession, hostPID *types.PID) (*CommonMatchmakeSession, *nex.Error) {
+func CreateSessionByMatchmakeSession(matchmakeSession *match_making_types.MatchmakeSession, searchMatchmakeSession *match_making_types.MatchmakeSession, host *nex.PRUDPConnection) (*CommonMatchmakeSession, *nex.Error) {
 	sessionIndex := GetAvailableGatheringID()
 	if sessionIndex == 0 {
 		sessionIndex = GetAvailableGatheringID() // * Skip to index 1
@@ -156,11 +174,13 @@ func CreateSessionByMatchmakeSession(matchmakeSession *match_making_types.Matchm
 		SearchMatchmakeSession: searchMatchmakeSession,
 		GameMatchmakeSession:   matchmakeSession,
 		ConnectionIDs:          nex.NewMutexSlice[uint32](),
+		OwnerConnectionID:      host.ID,
+		HostConnectionID:       host.ID,
 	}
 
 	session.GameMatchmakeSession.Gathering.ID = types.NewPrimitiveU32(sessionIndex)
-	session.GameMatchmakeSession.Gathering.OwnerPID = hostPID
-	session.GameMatchmakeSession.Gathering.HostPID = hostPID
+	session.GameMatchmakeSession.Gathering.OwnerPID = host.PID()
+	session.GameMatchmakeSession.Gathering.HostPID = host.PID()
 
 	session.GameMatchmakeSession.StartedTime = types.NewDateTime(0).Now()
 	session.GameMatchmakeSession.SessionKey = types.NewBuffer(make([]byte, 32))
@@ -518,7 +538,7 @@ func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32
 
 		server.Send(messagePacket)
 
-		target := endpoint.FindConnectionByPID(session.GameMatchmakeSession.Gathering.OwnerPID.Value())
+		target := endpoint.FindConnectionByID(session.OwnerConnectionID)
 		if target == nil {
 			// TODO - Error here?
 			Logger.Warning("Player not found")
@@ -565,8 +585,10 @@ func ChangeSessionOwner(currentOwner *nex.PRUDPConnection, gathering uint32, isL
 		// If the current owner is the host and they are leaving, change it by the new owner
 		if session.GameMatchmakeSession.Gathering.HostPID.Equals(currentOwner.PID()) && isLeaving {
 			session.GameMatchmakeSession.Gathering.HostPID = newOwner.PID()
+			session.HostConnectionID = newOwner.ID
 		}
 		session.GameMatchmakeSession.Gathering.OwnerPID = newOwner.PID()
+		session.OwnerConnectionID = newOwner.ID
 		Logger.Infof("Gathering %v now has owner %v, host %v", gathering, session.GameMatchmakeSession.Gathering.OwnerPID, session.GameMatchmakeSession.Gathering.HostPID)
 	} else {
 		return

@@ -27,9 +27,11 @@ func (commonProtocol *CommonProtocol) updateSessionURL(err error, packet nex.Pac
 
 	// * Mario Kart 7 seems to set an empty strURL, so I assume this is what the method does?
 	session.GameMatchmakeSession.Gathering.HostPID = connection.PID().Copy().(*types.PID)
+	session.HostConnectionID = connection.ID
 	if session.GameMatchmakeSession.Gathering.Flags.PAND(match_making.GatheringFlags.DisconnectChangeOwner) != 0 {
 		originalOwner := session.GameMatchmakeSession.Gathering.OwnerPID
 		session.GameMatchmakeSession.Gathering.OwnerPID = connection.PID().Copy().(*types.PID)
+		session.OwnerConnectionID = connection.ID
 
 		category := notifications.NotificationCategories.OwnershipChanged
 		subtype := notifications.NotificationSubTypes.OwnershipChanged.None

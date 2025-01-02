@@ -21,7 +21,7 @@ func (commonProtocol *CommonProtocol) createMatchmakeSessionWithParam(err error,
 	common_globals.RemoveConnectionFromAllSessions(connection)
 
 	joinedMatchmakeSession := createMatchmakeSessionParam.SourceMatchmakeSession.Copy().(*match_making_types.MatchmakeSession)
-	session, errCode := common_globals.CreateSessionByMatchmakeSession(joinedMatchmakeSession, nil, connection.PID())
+	session, errCode := common_globals.CreateSessionByMatchmakeSession(joinedMatchmakeSession, nil, connection)
 	if errCode != nil {
 		common_globals.Logger.Error(errCode.Error())
 		return nil, errCode

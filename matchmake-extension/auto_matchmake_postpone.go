@@ -43,8 +43,8 @@ func (commonProtocol *CommonProtocol) autoMatchmakePostpone(err error, packet ne
 
 	if sessionIndex == 0 {
 		var errCode *nex.Error
-		session, errCode = common_globals.CreateSessionByMatchmakeSession(matchmakeSession, searchMatchmakeSession, connection.PID())
-		if err != nil {
+		session, errCode = common_globals.CreateSessionByMatchmakeSession(matchmakeSession, searchMatchmakeSession, connection)
+		if errCode != nil {
 			common_globals.Logger.Error(errCode.Error())
 			return nil, errCode
 		}
