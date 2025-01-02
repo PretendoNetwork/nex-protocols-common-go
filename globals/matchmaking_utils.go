@@ -45,6 +45,7 @@ func RemoveConnectionIDFromSession(id uint32, gathering uint32) {
 	Sessions[gathering].ConnectionIDs.DeleteAll(id)
 
 	if Sessions[gathering].ConnectionIDs.Size() == 0 {
+		Logger.Infof("Deleting empty gathering %v (RVCID %v left)", gathering, id)
 		delete(Sessions, gathering)
 	} else {
 		// Update the participation count with the new connection ID count
@@ -566,6 +567,7 @@ func ChangeSessionOwner(currentOwner *nex.PRUDPConnection, gathering uint32, isL
 			session.GameMatchmakeSession.Gathering.HostPID = newOwner.PID()
 		}
 		session.GameMatchmakeSession.Gathering.OwnerPID = newOwner.PID()
+		Logger.Infof("Gathering %v now has owner %v, host %v", gathering, session.GameMatchmakeSession.Gathering.OwnerPID, session.GameMatchmakeSession.Gathering.HostPID)
 	} else {
 		return
 	}

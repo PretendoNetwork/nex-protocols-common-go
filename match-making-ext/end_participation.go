@@ -1,6 +1,7 @@
 package match_making_ext
 
 import (
+	"fmt"
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/constants"
 	"github.com/PretendoNetwork/nex-go/v2/types"
@@ -19,7 +20,7 @@ func (commonProtocol *CommonProtocol) endParticipation(err error, packet nex.Pac
 
 	session, ok := common_globals.Sessions[idGathering.Value]
 	if !ok {
-		return nil, nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "change_error")
+		return nil, nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, fmt.Sprintf("EndParticipation: PID %v requested to leave gathering %v, but it doesn't exist", packet.Sender().PID().Value(), idGathering.Value))
 	}
 
 	connection := packet.Sender().(*nex.PRUDPConnection)
@@ -37,13 +38,17 @@ func (commonProtocol *CommonProtocol) endParticipation(err error, packet nex.Pac
 		if matchmakeSession.Gathering.Flags.PAND(match_making.GatheringFlags.DisconnectChangeOwner) == 0 {
 			deleteSession = true
 		} else {
+			common_globals.Logger.Infof("Owner PID %v leaving - attempting owner migration for gathering %v", connection.PID().Value(), idGathering.Value)
 			common_globals.ChangeSessionOwner(connection, idGathering.Value, true)
 		}
 	}
 
 	if deleteSession {
+		// Shouldn't this.. notify the other clients...?
+		common_globals.Logger.Infof("Owner PID %v left - deleting gathering %v", connection.PID().Value(), idGathering.Value)
 		delete(common_globals.Sessions, idGathering.Value)
 	} else {
+		common_globals.Logger.Infof("PID %v left gathering %v", connection.PID().Value(), idGathering.Value)
 		common_globals.RemoveConnectionIDFromSession(connection.ID, idGathering.Value)
 	}
 

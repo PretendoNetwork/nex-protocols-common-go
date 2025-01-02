@@ -1,6 +1,7 @@
 package matchmake_extension
 
 import (
+	"fmt"
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
@@ -34,7 +35,7 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithParamPostpone(err error, 
 			targetConnection := endpoint.FindConnectionByPID(pid.Value())
 			if targetConnection == nil || !oldGathering.ConnectionIDs.Has(targetConnection.ID) {
 				// * This code is so early in the matchmaking process so this error can be here
-				return nil, nex.NewError(nex.ResultCodes.RendezVous.NotParticipatedGathering, "Couldn't find connection")
+				return nil, nex.NewError(nex.ResultCodes.RendezVous.NotParticipatedGathering, fmt.Sprintf("Couldn't find connection for participant %v", pid.Value()))
 			}
 
 			additionalParticipants[i] = targetConnection.ID
