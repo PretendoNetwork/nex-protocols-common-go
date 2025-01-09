@@ -5,6 +5,7 @@ import (
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	match_making "github.com/PretendoNetwork/nex-protocols-go/v2/match-making"
+	match_making_types "github.com/PretendoNetwork/nex-protocols-go/v2/match-making/types"
 )
 
 func (commonProtocol *CommonProtocol) findBySingleID(err error, packet nex.PacketInterface, callID uint32, id types.UInt32) (*nex.RMCMessage, *nex.Error) {
@@ -18,7 +19,7 @@ func (commonProtocol *CommonProtocol) findBySingleID(err error, packet nex.Packe
 
 	commonProtocol.manager.Mutex.RLock()
 
-	gathering, gatheringType, nexError := commonProtocol.manager.GetDetailedGatheringByID(commonProtocol.manager, uint32(id))
+	gathering, _, nexError := commonProtocol.manager.GetDetailedGatheringByID(commonProtocol.manager, uint32(id))
 	if nexError != nil {
 		commonProtocol.manager.Mutex.RUnlock()
 		return nil, nexError
@@ -27,10 +28,8 @@ func (commonProtocol *CommonProtocol) findBySingleID(err error, packet nex.Packe
 	commonProtocol.manager.Mutex.RUnlock()
 
 	bResult := types.NewBool(true)
-	pGathering := types.NewAnyDataHolder()
-
-	pGathering.TypeName = types.NewString(gatheringType)
-	pGathering.ObjectData = gathering.Copy()
+	pGathering := match_making_types.NewGatheringHolder()
+	pGathering.Object = gathering.Copy().(match_making_types.GatheringInterface)
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 

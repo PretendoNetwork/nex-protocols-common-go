@@ -10,7 +10,7 @@ import (
 	database "github.com/PretendoNetwork/nex-protocols-common-go/v2/matchmake-extension/database"
 )
 
-func (commonProtocol *CommonProtocol) autoMatchmakePostpone(err error, packet nex.PacketInterface, callID uint32, anyGathering types.AnyDataHolder, message types.String) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) autoMatchmakePostpone(err error, packet nex.PacketInterface, callID uint32, anyGathering match_making_types.GatheringHolder, message types.String) (*nex.RMCMessage, *nex.Error) {
 	if commonProtocol.CleanupSearchMatchmakeSession == nil {
 		common_globals.Logger.Warning("MatchmakeExtension::AutoMatchmake_Postpone missing CleanupSearchMatchmakeSession!")
 		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
@@ -35,10 +35,9 @@ func (commonProtocol *CommonProtocol) autoMatchmakePostpone(err error, packet ne
 	database.EndMatchmakeSessionsParticipation(commonProtocol.manager, connection)
 
 	var matchmakeSession match_making_types.MatchmakeSession
-	anyGatheringDataType := anyGathering.TypeName
 
-	if anyGatheringDataType == "MatchmakeSession" {
-		matchmakeSession = anyGathering.ObjectData.(match_making_types.MatchmakeSession)
+	if anyGathering.Object.ObjectID().Equals(types.NewString("MatchmakeSession")) {
+		matchmakeSession = anyGathering.Object.(match_making_types.MatchmakeSession)
 	} else {
 		common_globals.Logger.Critical("Non-MatchmakeSession DataType?!")
 		commonProtocol.manager.Mutex.Unlock()
@@ -79,10 +78,8 @@ func (commonProtocol *CommonProtocol) autoMatchmakePostpone(err error, packet ne
 
 	commonProtocol.manager.Mutex.Unlock()
 
-	matchmakeDataHolder := types.NewAnyDataHolder()
-
-	matchmakeDataHolder.TypeName = types.NewString("MatchmakeSession")
-	matchmakeDataHolder.ObjectData = resultSession.Copy()
+	matchmakeDataHolder := match_making_types.NewGatheringHolder()
+	matchmakeDataHolder.Object = resultSession.Copy().(match_making_types.GatheringInterface)
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 

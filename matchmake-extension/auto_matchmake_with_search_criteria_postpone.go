@@ -10,7 +10,7 @@ import (
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/v2/matchmake-extension"
 )
 
-func (commonProtocol *CommonProtocol) autoMatchmakeWithSearchCriteriaPostpone(err error, packet nex.PacketInterface, callID uint32, lstSearchCriteria types.List[match_making_types.MatchmakeSessionSearchCriteria], anyGathering types.AnyDataHolder, strMessage types.String) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) autoMatchmakeWithSearchCriteriaPostpone(err error, packet nex.PacketInterface, callID uint32, lstSearchCriteria types.List[match_making_types.MatchmakeSessionSearchCriteria], anyGathering match_making_types.GatheringHolder, strMessage types.String) (*nex.RMCMessage, *nex.Error) {
 	if commonProtocol.CleanupMatchmakeSessionSearchCriterias == nil {
 		common_globals.Logger.Warning("MatchmakeExtension::AutoMatchmakeWithSearchCriteria_Postpone missing CleanupMatchmakeSessionSearchCriterias!")
 		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
@@ -40,8 +40,8 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithSearchCriteriaPostpone(er
 
 	var matchmakeSession match_making_types.MatchmakeSession
 
-	if anyGathering.TypeName == "MatchmakeSession" {
-		matchmakeSession = anyGathering.ObjectData.(match_making_types.MatchmakeSession)
+	if anyGathering.Object.GatheringObjectID().Equals(types.NewString("MatchmakeSession")) {
+		matchmakeSession = anyGathering.Object.(match_making_types.MatchmakeSession)
 	} else {
 		common_globals.Logger.Critical("Non-MatchmakeSession DataType?!")
 		commonProtocol.manager.Mutex.Unlock()
@@ -97,10 +97,8 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithSearchCriteriaPostpone(er
 
 	commonProtocol.manager.Mutex.Unlock()
 
-	matchmakeDataHolder := types.NewAnyDataHolder()
-
-	matchmakeDataHolder.TypeName = types.NewString("MatchmakeSession")
-	matchmakeDataHolder.ObjectData = resultSession.Copy()
+	matchmakeDataHolder := match_making_types.NewGatheringHolder()
+	matchmakeDataHolder.Object = resultSession.Copy().(match_making_types.GatheringInterface)
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 

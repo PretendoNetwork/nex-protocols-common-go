@@ -12,7 +12,7 @@ type CommonProtocol struct {
 	CreateReportDBRecord func(pid types.PID, reportID types.UInt32, reportData types.QBuffer) error
 	OnAfterRegister      func(packet nex.PacketInterface, vecMyURLs types.List[types.StationURL])
 	OnAfterRequestURLs   func(packet nex.PacketInterface, cidTarget types.UInt32, pidTarget types.PID)
-	OnAfterRegisterEx    func(packet nex.PacketInterface, vecMyURLs types.List[types.StationURL], hCustomData types.AnyDataHolder)
+	OnAfterRegisterEx    func(packet nex.PacketInterface, vecMyURLs types.List[types.StationURL], hCustomData types.DataHolder)
 	OnAfterReplaceURL    func(packet nex.PacketInterface, target types.StationURL, url types.StationURL)
 	OnAfterSendReport    func(packet nex.PacketInterface, reportID types.UInt32, reportData types.QBuffer)
 }

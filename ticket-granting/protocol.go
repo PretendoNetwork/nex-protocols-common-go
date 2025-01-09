@@ -19,7 +19,7 @@ type CommonProtocol struct {
 	SessionKeyLength           int // TODO - Use server SessionKeyLength?
 	SecureServerAccount        *nex.Account
 	OnAfterLogin               func(packet nex.PacketInterface, strUserName types.String)
-	OnAfterLoginEx             func(packet nex.PacketInterface, strUserName types.String, oExtraData types.AnyDataHolder)
+	OnAfterLoginEx             func(packet nex.PacketInterface, strUserName types.String, oExtraData types.DataHolder)
 	OnAfterRequestTicket       func(packet nex.PacketInterface, idSource types.PID, idTarget types.PID)
 }
 

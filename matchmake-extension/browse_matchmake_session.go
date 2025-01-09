@@ -35,16 +35,15 @@ func (commonProtocol *CommonProtocol) browseMatchmakeSession(err error, packet n
 		return nil, nexError
 	}
 
-	lstGathering := types.NewList[types.AnyDataHolder]()
+	lstGathering := types.NewList[match_making_types.GatheringHolder]()
 
 	for _, session := range sessions {
 		// * Scrap session key and user password
 		session.SessionKey = make([]byte, 0)
 		session.UserPassword = ""
 
-		matchmakeSessionDataHolder := types.NewAnyDataHolder()
-		matchmakeSessionDataHolder.TypeName = types.NewString("MatchmakeSession")
-		matchmakeSessionDataHolder.ObjectData = session.Copy()
+		matchmakeSessionDataHolder := match_making_types.NewGatheringHolder()
+		matchmakeSessionDataHolder.Object = session.Copy().(match_making_types.GatheringInterface)
 
 		lstGathering = append(lstGathering, matchmakeSessionDataHolder)
 	}

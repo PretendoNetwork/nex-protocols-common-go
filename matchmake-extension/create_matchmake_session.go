@@ -10,7 +10,7 @@ import (
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/v2/matchmake-extension"
 )
 
-func (commonProtocol *CommonProtocol) createMatchmakeSession(err error, packet nex.PacketInterface, callID uint32, anyGathering types.AnyDataHolder, message types.String, participationCount types.UInt16) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) createMatchmakeSession(err error, packet nex.PacketInterface, callID uint32, anyGathering match_making_types.GatheringHolder, message types.String, participationCount types.UInt16) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
@@ -32,8 +32,8 @@ func (commonProtocol *CommonProtocol) createMatchmakeSession(err error, packet n
 
 	var matchmakeSession match_making_types.MatchmakeSession
 
-	if anyGathering.TypeName == "MatchmakeSession" {
-		matchmakeSession = anyGathering.ObjectData.(match_making_types.MatchmakeSession)
+	if anyGathering.Object.GatheringObjectID().Equals(types.NewString("MatchmakeSession")) {
+		matchmakeSession = anyGathering.Object.(match_making_types.MatchmakeSession)
 	} else {
 		common_globals.Logger.Critical("Non-MatchmakeSession DataType?!")
 		commonProtocol.manager.Mutex.Unlock()
