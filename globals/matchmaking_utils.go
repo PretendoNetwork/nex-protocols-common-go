@@ -613,14 +613,6 @@ func MovePlayersToSession(newSession *CommonMatchmakeSession, connectionIDs []ui
 
 		server.Send(messagePacket)
 
-		// * Remove from old session(s)
-		// * Do it manually instead of RemoveConnectionFromAllSessions to avoid host migration and other confusing
-		// * notifications
-		for gid := FindConnectionSession(target.ID); gid != 0; {
-			RemoveConnectionIDFromSession(target.ID, gid)
-			gid = FindConnectionSession(target.ID)
-		}
-
 		// * Add to new session!
 		err := AddPlayersToSession(newSession, []uint32{target.ID}, initiatingConnection, joinMessage)
 		if err != nil {
