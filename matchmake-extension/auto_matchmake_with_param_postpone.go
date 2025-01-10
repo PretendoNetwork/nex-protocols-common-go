@@ -26,12 +26,12 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithParamPostpone(err error, 
 	useAdditionalParticipants := oldGathering != nil && oldGathering.ConnectionIDs.Has(connection.ID)
 
 	// * Check the other participants are actually in the old session, and note down the connection IDs
-	additionalParticipants := make([]uint32, autoMatchmakeParam.AdditionalParticipants.Length()+1)
+	additionalParticipants := []uint32{connection.ID}
 
 	// * If using additionalParticipants we'll *move* everyone, rather than disconnect/reconnect.
 	// * This prevents issues from host migration and disconnected notifications.
 	if useAdditionalParticipants {
-		for i, pid := range autoMatchmakeParam.AdditionalParticipants.Slice() {
+		for _, pid := range autoMatchmakeParam.AdditionalParticipants.Slice() {
 			// Try to find the connection ID for the participant
 			// FindConnectionByPID isn't reliable here, so extract it from the gathering they are (hopefully) in
 			target := common_globals.FindParticipantConnection(endpoint, pid.Value(), oldGid)
@@ -41,11 +41,8 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithParamPostpone(err error, 
 				return nil, nex.NewError(nex.ResultCodes.RendezVous.NotParticipatedGathering, fmt.Sprintf("Couldn't find connection for participant %v", pid.Value()))
 			}
 
-			additionalParticipants[i] = target.ID
+			additionalParticipants = append(additionalParticipants, target.ID)
 		}
-
-		// * Include the host too!
-		additionalParticipants[len(additionalParticipants)-1] = connection.ID
 	} else {
 		// * A client may disconnect from a session without leaving reliably,
 		// * so let's make sure the client is removed from the session.

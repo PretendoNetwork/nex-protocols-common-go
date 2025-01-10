@@ -364,8 +364,7 @@ func compareSearchCriteria[T ~uint16 | ~uint32](original T, search string) bool 
 	}
 }
 
-func sendNewParticipant(destination *nex.PRUDPConnection, pidSource *types.PID, gatheringId *types.PrimitiveU32, pidJoined *types.PID, joinMessage *types.String, joinersCount *types.PrimitiveU32) {
-	endpoint := destination.Endpoint().(*nex.PRUDPEndPoint)
+func sendNewParticipant(endpoint *nex.PRUDPEndPoint, destinationIDs []uint32, pidSource *types.PID, gatheringId *types.PrimitiveU32, pidJoined *types.PID, joinMessage *types.String, joinersCount *types.PrimitiveU32) {
 	server := endpoint.Server
 
 	notificationCategory := notifications.NotificationCategories.Participation
@@ -391,86 +390,102 @@ func sendNewParticipant(destination *nex.PRUDPConnection, pidSource *types.PID, 
 
 	notificationRequestBytes := notificationRequest.Bytes()
 
-	var messagePacket nex.PRUDPPacketInterface
+	for _, destinationID := range destinationIDs {
+		destination := endpoint.FindConnectionByID(destinationID)
+		if destination == nil {
+			Logger.Warningf("Couldn't notify RVCID %v of %v's join since the connection doesn't exist", destinationID, pidJoined.Value())
+			continue
+		}
 
-	if destination.DefaultPRUDPVersion == 0 {
-		messagePacket, _ = nex.NewPRUDPPacketV0(server, destination, nil)
-	} else {
-		messagePacket, _ = nex.NewPRUDPPacketV1(server, destination, nil)
+		var messagePacket nex.PRUDPPacketInterface
+
+		if destination.DefaultPRUDPVersion == 0 {
+			messagePacket, _ = nex.NewPRUDPPacketV0(server, destination, nil)
+		} else {
+			messagePacket, _ = nex.NewPRUDPPacketV1(server, destination, nil)
+		}
+
+		messagePacket.SetType(constants.DataPacket)
+		messagePacket.AddFlag(constants.PacketFlagNeedsAck)
+		messagePacket.AddFlag(constants.PacketFlagReliable)
+		messagePacket.SetSourceVirtualPortStreamType(destination.StreamType)
+		messagePacket.SetSourceVirtualPortStreamID(endpoint.StreamID)
+		messagePacket.SetDestinationVirtualPortStreamType(destination.StreamType)
+		messagePacket.SetDestinationVirtualPortStreamID(destination.StreamID)
+		messagePacket.SetPayload(notificationRequestBytes)
+
+		server.Send(messagePacket)
+	}
+}
+
+func findConnections(endpoint *nex.PRUDPEndPoint, connectionIDs []uint32) (*nex.Error, map[uint32]*nex.PRUDPConnection) {
+	result := make(map[uint32]*nex.PRUDPConnection, len(connectionIDs))
+
+	for _, connectionID := range connectionIDs {
+		connection := endpoint.FindConnectionByID(connectionID)
+		if connection == nil {
+			// maybe we can kick from the old gathering here instead of bailing entirely
+			return nex.NewError(nex.ResultCodes.RendezVous.UserIsOffline, fmt.Sprintf("Couldn't find connection for RVCID %v", connectionID)), nil
+		}
+
+		result[connectionID] = connection
 	}
 
-	messagePacket.SetType(constants.DataPacket)
-	messagePacket.AddFlag(constants.PacketFlagNeedsAck)
-	messagePacket.AddFlag(constants.PacketFlagReliable)
-	messagePacket.SetSourceVirtualPortStreamType(destination.StreamType)
-	messagePacket.SetSourceVirtualPortStreamID(endpoint.StreamID)
-	messagePacket.SetDestinationVirtualPortStreamType(destination.StreamType)
-	messagePacket.SetDestinationVirtualPortStreamID(destination.StreamID)
-	messagePacket.SetPayload(notificationRequestBytes)
-
-	server.Send(messagePacket)
+	return nil, result
 }
 
 // AddPlayersToSession updates the given sessions state to include the provided connection IDs
 // Returns a NEX error code if failed
-func AddPlayersToSession(session *CommonMatchmakeSession, connectionIDs []uint32, initiatingConnection *nex.PRUDPConnection, joinMessage string) *nex.Error {
-	if (session.ConnectionIDs.Size() + len(connectionIDs)) > int(session.GameMatchmakeSession.Gathering.MaximumParticipants.Value) {
+func AddPlayersToSession(session *CommonMatchmakeSession, newParticipants []uint32, initiatingConnection *nex.PRUDPConnection, joinMessage string) *nex.Error {
+	if (session.ConnectionIDs.Size() + len(newParticipants)) > int(session.GameMatchmakeSession.Gathering.MaximumParticipants.Value) {
 		return nex.NewError(nex.ResultCodes.RendezVous.SessionFull, fmt.Sprintf("Gathering %d is full", session.GameMatchmakeSession.Gathering.ID))
 	}
 
+	initiator := initiatingConnection.PID()
+	gid := session.GameMatchmakeSession.ID
+	joinMsg := types.NewString(joinMessage)
+	joinCount := types.NewPrimitiveU32(1) // * Yes, even for additional participants...
+
 	endpoint := initiatingConnection.Endpoint().(*nex.PRUDPEndPoint)
-	host := endpoint.FindConnectionByID(session.HostConnectionID)
-	if host == nil {
-		return nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "Can't find host")
+	oldParticipants := session.ConnectionIDs.Values()
+	oldParticipants = MoveToFront(oldParticipants, slices.Index(oldParticipants, session.HostConnectionID))
+
+	for _, participant := range newParticipants {
+		if slices.Contains(oldParticipants, participant) {
+			return nex.NewError(nex.ResultCodes.RendezVous.AlreadyParticipatedGathering, fmt.Sprintf("Connection ID %d is already in gathering %d", participant, session.GameMatchmakeSession.Gathering.ID))
+		}
 	}
 
-	for _, connectedID := range connectionIDs {
-		if session.ConnectionIDs.Has(connectedID) {
-			return nex.NewError(nex.ResultCodes.RendezVous.AlreadyParticipatedGathering, fmt.Sprintf("Connection ID %d is already in gathering %d", connectedID, session.GameMatchmakeSession.Gathering.ID))
-		}
-		connection := endpoint.FindConnectionByID(connectedID)
-		if connection == nil {
-			// TODO - Error here?
-			Logger.Warning("Player not found")
-			continue
-		}
+	allParticipants := append(oldParticipants, newParticipants...)
 
-		if session.GameMatchmakeSession.Gathering.Flags.PAND(0xC00) != 0 {
-			// Tell them about you
-			session.ConnectionIDs.Each(func(_ int, currentParticipantID uint32) bool {
-				currentParticipant := endpoint.FindConnectionByID(currentParticipantID)
-				if currentParticipant == nil {
-					// TODO - Error here?
-					Logger.Warning("Player not found")
-					return false
-				}
+	err, connections := findConnections(endpoint, allParticipants)
+	if err != nil {
+		return err
+	}
 
-				sendNewParticipant(currentParticipant, initiatingConnection.PID(), session.GameMatchmakeSession.ID, connection.PID(), types.NewString(joinMessage), types.NewPrimitiveU32(uint32(len(connectionIDs))))
-				return false
-			})
-		} else {
-			// Just tell the host
-			sendNewParticipant(host, initiatingConnection.PID(), session.GameMatchmakeSession.ID, connection.PID(), types.NewString(joinMessage), types.NewPrimitiveU32(uint32(len(connectionIDs))))
-		}
+	// * OK to add - go for it
+	session.ConnectionIDs.Add(newParticipants...)
+	// * Update the participation count with the new connection ID count
+	session.GameMatchmakeSession.ParticipationCount.Value = uint32(session.ConnectionIDs.Size())
 
-		session.ConnectionIDs.Add(connectedID)
+	// * Tell participants about their new friends
+	var targets []uint32
+	if session.GameMatchmakeSession.Gathering.Flags.PAND(match_making.GatheringFlags.VerboseParticipants|match_making.GatheringFlags.VerboseParticipantsEx) != 0 {
+		// * First, tell everyone about new participants. The initiator should be at the top of this list
+		targets = allParticipants
+	} else {
+		// * Just tell the host
+		targets = []uint32{session.HostConnectionID}
+	}
+	for _, participant := range newParticipants {
+		sendNewParticipant(endpoint, targets, initiator, gid, connections[participant].PID(), joinMsg, joinCount)
+	}
 
-		// Update the participation count with the new connection ID count
-		session.GameMatchmakeSession.ParticipationCount.Value = uint32(session.ConnectionIDs.Size())
-
-		if session.GameMatchmakeSession.Gathering.Flags.PAND(0x800) != 0 {
-			// Tell you about them (including yourself!)
-			session.ConnectionIDs.Each(func(_ int, currentParticipantID uint32) bool {
-				currentParticipant := endpoint.FindConnectionByID(currentParticipantID)
-				if currentParticipant == nil {
-					// TODO - Error here?
-					Logger.Warning("Player not found")
-					return false
-				}
-
-				sendNewParticipant(connection, initiatingConnection.PID(), session.GameMatchmakeSession.ID, currentParticipant.PID(), types.NewString(joinMessage), types.NewPrimitiveU32(uint32(len(connectionIDs))))
-				return false
-			})
+	if session.GameMatchmakeSession.Gathering.Flags.PAND(match_making.GatheringFlags.VerboseParticipantsEx) != 0 {
+		// * Next, tell new participants about their old friends. These must come after the new participant notifs.
+		// * The gathering host should be at the top of this list.
+		for _, participant := range oldParticipants {
+			sendNewParticipant(endpoint, newParticipants, initiator, gid, connections[participant].PID(), joinMsg, joinCount)
 		}
 	}
 
@@ -566,6 +581,11 @@ func MovePlayersToSession(newSession *CommonMatchmakeSession, connectionIDs []ui
 	server := endpoint.Server
 
 	for _, connectionID := range connectionIDs {
+		// * Don't tell the host to switch -> they'll get AutoMatchmake response
+		if connectionID == initiatingConnection.ID {
+			continue
+		}
+
 		target := endpoint.FindConnectionByID(connectionID)
 		if target == nil {
 			Logger.Warning("Connection not found")
@@ -612,12 +632,12 @@ func MovePlayersToSession(newSession *CommonMatchmakeSession, connectionIDs []ui
 		messagePacket.SetPayload(rmcRequestBytes)
 
 		server.Send(messagePacket)
+	}
 
-		// * Add to new session!
-		err := AddPlayersToSession(newSession, []uint32{target.ID}, initiatingConnection, joinMessage)
-		if err != nil {
-			return err
-		}
+	// * Add to new session!
+	err := AddPlayersToSession(newSession, connectionIDs, initiatingConnection, joinMessage)
+	if err != nil {
+		return err
 	}
 
 	return nil
