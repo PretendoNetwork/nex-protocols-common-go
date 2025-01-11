@@ -71,7 +71,7 @@ func FindParticipantConnection(ep *nex.PRUDPEndPoint, pid uint64, gathering uint
 	return result
 }
 
-// FindConnectionSession searches for session the given connection ID is connected to
+// FindConnectionSession searches for the first session the given connection ID is connected to
 func FindConnectionSession(id uint32) uint32 {
 	for gatheringID := range Sessions {
 		if Sessions[gatheringID].ConnectionIDs.Has(id) {
@@ -364,14 +364,14 @@ func compareSearchCriteria[T ~uint16 | ~uint32](original T, search string) bool 
 	}
 }
 
-func sendNewParticipant(endpoint *nex.PRUDPEndPoint, destinationIDs []uint32, pidSource *types.PID, gatheringId *types.PrimitiveU32, pidJoined *types.PID, joinMessage *types.String, joinersCount *types.PrimitiveU32) {
+func sendNewParticipant(endpoint *nex.PRUDPEndPoint, destinationIDs []uint32, initiatingConnection *nex.PRUDPConnection, gatheringId *types.PrimitiveU32, pidJoined *types.PID, joinMessage *types.String, joinersCount *types.PrimitiveU32) {
 	server := endpoint.Server
 
 	notificationCategory := notifications.NotificationCategories.Participation
 	notificationSubtype := notifications.NotificationSubTypes.Participation.NewParticipant
 
 	oEvent := notifications_types.NewNotificationEvent()
-	oEvent.PIDSource = pidSource
+	oEvent.PIDSource = initiatingConnection.PID()
 	oEvent.Type = types.NewPrimitiveU32(notifications.BuildNotificationType(notificationCategory, notificationSubtype))
 	oEvent.Param1 = gatheringId
 	oEvent.Param2 = types.NewPrimitiveU32(pidJoined.LegacyValue()) // TODO - This assumes a legacy client. Will not work on the Switch
@@ -414,7 +414,8 @@ func sendNewParticipant(endpoint *nex.PRUDPEndPoint, destinationIDs []uint32, pi
 		messagePacket.SetDestinationVirtualPortStreamID(destination.StreamID)
 		messagePacket.SetPayload(notificationRequestBytes)
 
-		server.Send(messagePacket)
+		//server.Send(messagePacket)
+		initiatingConnection.QueuedOutboundPackets.Add(&messagePacket)
 	}
 }
 
@@ -441,7 +442,6 @@ func AddPlayersToSession(session *CommonMatchmakeSession, newParticipants []uint
 		return nex.NewError(nex.ResultCodes.RendezVous.SessionFull, fmt.Sprintf("Gathering %d is full", session.GameMatchmakeSession.Gathering.ID))
 	}
 
-	initiator := initiatingConnection.PID()
 	gid := session.GameMatchmakeSession.ID
 	joinMsg := types.NewString(joinMessage)
 	joinCount := types.NewPrimitiveU32(1) // * Yes, even for additional participants...
@@ -472,20 +472,20 @@ func AddPlayersToSession(session *CommonMatchmakeSession, newParticipants []uint
 	var targets []uint32
 	if session.GameMatchmakeSession.Gathering.Flags.PAND(match_making.GatheringFlags.VerboseParticipants|match_making.GatheringFlags.VerboseParticipantsEx) != 0 {
 		// * First, tell everyone about new participants. The initiator should be at the top of this list
-		targets = allParticipants
+		targets = slices.DeleteFunc()
 	} else {
 		// * Just tell the host
 		targets = []uint32{session.HostConnectionID}
 	}
 	for _, participant := range newParticipants {
-		sendNewParticipant(endpoint, targets, initiator, gid, connections[participant].PID(), joinMsg, joinCount)
+		sendNewParticipant(endpoint, targets, initiatingConnection, gid, connections[participant].PID(), joinMsg, joinCount)
 	}
 
 	if session.GameMatchmakeSession.Gathering.Flags.PAND(match_making.GatheringFlags.VerboseParticipantsEx) != 0 {
 		// * Next, tell new participants about their old friends. These must come after the new participant notifs.
 		// * The gathering host should be at the top of this list.
 		for _, participant := range oldParticipants {
-			sendNewParticipant(endpoint, newParticipants, initiator, gid, connections[participant].PID(), joinMsg, joinCount)
+			sendNewParticipant(endpoint, newParticipants, initiatingConnection, gid, connections[participant].PID(), joinMsg, joinCount)
 		}
 	}
 
@@ -631,7 +631,7 @@ func MovePlayersToSession(newSession *CommonMatchmakeSession, connectionIDs []ui
 		messagePacket.SetDestinationVirtualPortStreamID(target.StreamID)
 		messagePacket.SetPayload(rmcRequestBytes)
 
-		server.Send(messagePacket)
+		initiatingConnection.QueuedOutboundPackets.Add(&messagePacket)
 	}
 
 	// * Add to new session!

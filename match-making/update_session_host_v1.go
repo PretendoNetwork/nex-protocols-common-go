@@ -21,7 +21,7 @@ func (commonProtocol *CommonProtocol) updateSessionHostV1(err error, packet nex.
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
-	if common_globals.FindConnectionSession(connection.ID) != gid.Value {
+	if !session.ConnectionIDs.Has(connection.ID) {
 		return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
 	}
 
