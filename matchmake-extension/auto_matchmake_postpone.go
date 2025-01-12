@@ -50,7 +50,7 @@ func (commonProtocol *CommonProtocol) autoMatchmakePostpone(err error, packet ne
 	}
 
 	searchMatchmakeSession := matchmakeSession.Copy().(match_making_types.MatchmakeSession)
-	commonProtocol.CleanupSearchMatchmakeSession(searchMatchmakeSession)
+	commonProtocol.CleanupSearchMatchmakeSession(&searchMatchmakeSession)
 	resultSession, nexError := database.FindMatchmakeSession(commonProtocol.manager, connection, searchMatchmakeSession)
 	if nexError != nil {
 		commonProtocol.manager.Mutex.Unlock()
