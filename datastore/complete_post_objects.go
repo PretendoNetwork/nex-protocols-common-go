@@ -9,7 +9,7 @@ import (
 	datastore "github.com/PretendoNetwork/nex-protocols-go/v2/datastore"
 )
 
-func (commonProtocol *CommonProtocol) completePostObjects(err error, packet nex.PacketInterface, callID uint32, dataIDs *types.List[*types.PrimitiveU64]) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) completePostObjects(err error, packet nex.PacketInterface, callID uint32, dataIDs types.List[types.UInt64]) (*nex.RMCMessage, *nex.Error) {
 	if commonProtocol.minIOClient == nil {
 		common_globals.Logger.Warning("MinIOClient not defined")
 		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
@@ -35,7 +35,7 @@ func (commonProtocol *CommonProtocol) completePostObjects(err error, packet nex.
 
 	var errorCode *nex.Error
 
-	dataIDs.Each(func(_ int, dataID *types.PrimitiveU64) bool {
+	for _, dataID := range dataIDs {
 		bucket := commonProtocol.S3Bucket
 		key := fmt.Sprintf("%s/%d.bin", commonProtocol.s3DataKeyBase, dataID)
 
@@ -43,34 +43,28 @@ func (commonProtocol *CommonProtocol) completePostObjects(err error, packet nex.
 		if err != nil {
 			common_globals.Logger.Error(err.Error())
 			errorCode = nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
-
-			return true
+			break
 		}
 
 		objectSizeDB, errCode := commonProtocol.GetObjectSizeByDataID(dataID)
 		if errCode != nil {
 			errorCode = errCode
-
-			return true
+			break
 		}
 
 		if objectSizeS3 != uint64(objectSizeDB) {
 			common_globals.Logger.Errorf("Object with DataID %d did not upload correctly! Mismatched sizes", dataID)
 			// TODO - Is this a good error?
 			errorCode = nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
-
-			return true
+			break
 		}
 
 		errCode = commonProtocol.UpdateObjectUploadCompletedByDataID(dataID, true)
 		if errCode != nil {
 			errorCode = errCode
-
-			return true
+			break
 		}
-
-		return false
-	})
+	}
 
 	if errorCode != nil {
 		return nil, errorCode

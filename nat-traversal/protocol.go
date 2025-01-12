@@ -9,11 +9,11 @@ import (
 type CommonProtocol struct {
 	endpoint                              nex.EndpointInterface
 	protocol                              nat_traversal.Interface
-	OnAfterRequestProbeInitiationExt      func(packet nex.PacketInterface, targetList *types.List[*types.String], stationToProbe *types.String)
-	OnAfterReportNATProperties            func(packet nex.PacketInterface, natmapping *types.PrimitiveU32, natfiltering *types.PrimitiveU32, rtt *types.PrimitiveU32)
-	OnAfterReportNATTraversalResult       func(packet nex.PacketInterface, cid *types.PrimitiveU32, result *types.PrimitiveBool, rtt *types.PrimitiveU32)
+	OnAfterRequestProbeInitiationExt      func(packet nex.PacketInterface, targetList types.List[types.String], stationToProbe types.String)
+	OnAfterReportNATProperties            func(packet nex.PacketInterface, natmapping types.UInt32, natfiltering types.UInt32, rtt types.UInt32)
+	OnAfterReportNATTraversalResult       func(packet nex.PacketInterface, cid types.UInt32, result types.Bool, rtt types.UInt32)
 	OnAfterGetRelaySignatureKey           func(packet nex.PacketInterface)
-	OnAfterReportNATTraversalResultDetail func(packet nex.PacketInterface, cid *types.PrimitiveU32, result *types.PrimitiveBool, detail *types.PrimitiveS32, rtt *types.PrimitiveU32)
+	OnAfterReportNATTraversalResultDetail func(packet nex.PacketInterface, cid types.UInt32, result types.Bool, detail types.Int32, rtt types.UInt32)
 }
 
 // NewCommonProtocol returns a new CommonProtocol

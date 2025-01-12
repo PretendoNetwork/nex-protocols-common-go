@@ -9,8 +9,9 @@ import (
 )
 
 // RegisterGathering registers a new gathering on the databse. No participants are added
-func RegisterGathering(manager *common_globals.MatchmakingManager, pid *types.PID, gathering *match_making_types.Gathering, gatheringType string) (*types.DateTime, *nex.Error) {
+func RegisterGathering(manager *common_globals.MatchmakingManager, pid types.PID, gathering *match_making_types.Gathering, gatheringType string) (types.DateTime, *nex.Error) {
 	startedTime := types.NewDateTime(0).Now()
+	var gatheringID uint32
 
 	err := manager.Database.QueryRow(`INSERT INTO matchmaking.gatherings (
 		owner_pid,
@@ -37,29 +38,31 @@ func RegisterGathering(manager *common_globals.MatchmakingManager, pid *types.PI
 		$10,
 		$11
 	) RETURNING id`,
-		pid.Value(),
-		pid.Value(),
-		gathering.MinimumParticipants.Value,
-		gathering.MaximumParticipants.Value,
-		gathering.ParticipationPolicy.Value,
-		gathering.PolicyArgument.Value,
-		gathering.Flags.Value,
-		gathering.State.Value,
-		gathering.Description.Value,
+		pid,
+		pid,
+		uint16(gathering.MinimumParticipants),
+		uint16(gathering.MaximumParticipants),
+		uint32(gathering.ParticipationPolicy),
+		uint32(gathering.PolicyArgument),
+		uint32(gathering.Flags),
+		uint32(gathering.State),
+		string(gathering.Description),
 		gatheringType,
 		startedTime.Standard(),
-	).Scan(&gathering.ID.Value)
+	).Scan(&gatheringID)
 	if err != nil {
-		return nil, nex.NewError(nex.ResultCodes.Core.Unknown, err.Error())
+		return types.NewDateTime(0), nex.NewError(nex.ResultCodes.Core.Unknown, err.Error())
 	}
 
-	nexError := tracking.LogRegisterGathering(manager.Database, pid, gathering.ID.Value)
+	gathering.ID = types.NewUInt32(gatheringID)
+
+	nexError := tracking.LogRegisterGathering(manager.Database, pid, uint32(gathering.ID))
 	if nexError != nil {
-		return nil, nexError
+		return types.NewDateTime(0), nexError
 	}
 
-	gathering.OwnerPID = pid.Copy().(*types.PID)
-	gathering.HostPID = pid.Copy().(*types.PID)
+	gathering.OwnerPID = pid
+	gathering.HostPID = pid
 
 	return startedTime, nil
 }

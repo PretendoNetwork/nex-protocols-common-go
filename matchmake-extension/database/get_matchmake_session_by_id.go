@@ -12,13 +12,32 @@ import (
 )
 
 // GetMatchmakeSessionByID gets a matchmake session with the given gathering ID and the system password
-func GetMatchmakeSessionByID(manager *common_globals.MatchmakingManager, endpoint *nex.PRUDPEndPoint, gatheringID uint32) (*match_making_types.MatchmakeSession, string, *nex.Error) {
-	resultMatchmakeSession := match_making_types.NewMatchmakeSession()
+func GetMatchmakeSessionByID(manager *common_globals.MatchmakingManager, endpoint *nex.PRUDPEndPoint, gatheringID uint32) (match_making_types.MatchmakeSession, string, *nex.Error) {
 	var ownerPID uint64
 	var hostPID uint64
+	var minimumParticipants uint16
+	var maximumParticipants uint16
+	var participationPolicy uint32
+	var policyArgument uint32
+	var flags uint32
+	var state uint32
+	var description string
+	var participationCount uint32
 	var startedTime time.Time
+	var gameMode uint32
 	var resultAttribs []uint32
+	var openParticipation bool
+	var matchmakeSystemType uint32
+	var applicationBuffer []byte
+	var progressScore uint8
+	var sessionKey []byte
+	var option uint32
 	var resultMatchmakeParam []byte
+	var userPassword string
+	var referGID uint32
+	var userPasswordEnabled bool
+	var systemPasswordEnabled bool
+	var codeWord string
 	var systemPassword string
 
 	// * For simplicity, we will only compare the values that exist on a MatchmakeSessionSearchCriteria
@@ -58,54 +77,79 @@ func GetMatchmakeSessionByID(manager *common_globals.MatchmakingManager, endpoin
 		g.id=$1`,
 		gatheringID,
 	).Scan(
-		&resultMatchmakeSession.Gathering.ID.Value,
+		&gatheringID,
 		&ownerPID,
 		&hostPID,
-		&resultMatchmakeSession.Gathering.MinimumParticipants.Value,
-		&resultMatchmakeSession.Gathering.MaximumParticipants.Value,
-		&resultMatchmakeSession.Gathering.ParticipationPolicy.Value,
-		&resultMatchmakeSession.Gathering.PolicyArgument.Value,
-		&resultMatchmakeSession.Gathering.Flags.Value,
-		&resultMatchmakeSession.Gathering.State.Value,
-		&resultMatchmakeSession.Gathering.Description.Value,
-		&resultMatchmakeSession.ParticipationCount.Value,
+		&minimumParticipants,
+		&maximumParticipants,
+		&participationPolicy,
+		&policyArgument,
+		&flags,
+		&state,
+		&description,
+		&participationCount,
 		&startedTime,
-		&resultMatchmakeSession.GameMode.Value,
+		&gameMode,
 		pqextended.Array(&resultAttribs),
-		&resultMatchmakeSession.OpenParticipation.Value,
-		&resultMatchmakeSession.MatchmakeSystemType.Value,
-		&resultMatchmakeSession.ApplicationBuffer.Value,
-		&resultMatchmakeSession.ProgressScore.Value,
-		&resultMatchmakeSession.SessionKey.Value,
-		&resultMatchmakeSession.Option.Value,
+		&openParticipation,
+		&matchmakeSystemType,
+		&applicationBuffer,
+		&progressScore,
+		&sessionKey,
+		&option,
 		&resultMatchmakeParam,
-		&resultMatchmakeSession.UserPassword.Value,
-		&resultMatchmakeSession.ReferGID.Value,
-		&resultMatchmakeSession.UserPasswordEnabled.Value,
-		&resultMatchmakeSession.SystemPasswordEnabled.Value,
-		&resultMatchmakeSession.CodeWord.Value,
+		&userPassword,
+		&referGID,
+		&userPasswordEnabled,
+		&systemPasswordEnabled,
+		&codeWord,
 		&systemPassword,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, "", nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "change_error")
+			return match_making_types.NewMatchmakeSession(), "", nex.NewError(nex.ResultCodes.RendezVous.SessionVoid, "change_error")
 		} else {
-			return nil, "", nex.NewError(nex.ResultCodes.Core.Unknown, err.Error())
+			return match_making_types.NewMatchmakeSession(), "", nex.NewError(nex.ResultCodes.Core.Unknown, err.Error())
 		}
 	}
 
+	resultMatchmakeSession := match_making_types.NewMatchmakeSession()
+
+	resultMatchmakeSession.Gathering.ID = types.NewUInt32(gatheringID)
 	resultMatchmakeSession.OwnerPID = types.NewPID(ownerPID)
 	resultMatchmakeSession.HostPID = types.NewPID(hostPID)
+	resultMatchmakeSession.Gathering.MinimumParticipants = types.NewUInt16(minimumParticipants)
+	resultMatchmakeSession.Gathering.MaximumParticipants = types.NewUInt16(maximumParticipants)
+	resultMatchmakeSession.Gathering.ParticipationPolicy = types.NewUInt32(participationPolicy)
+	resultMatchmakeSession.Gathering.PolicyArgument = types.NewUInt32(policyArgument)
+	resultMatchmakeSession.Gathering.Flags = types.NewUInt32(flags)
+	resultMatchmakeSession.Gathering.State = types.NewUInt32(state)
+	resultMatchmakeSession.Gathering.Description = types.NewString(description)
+	resultMatchmakeSession.ParticipationCount = types.NewUInt32(participationCount)
 	resultMatchmakeSession.StartedTime = resultMatchmakeSession.StartedTime.FromTimestamp(startedTime)
+	resultMatchmakeSession.GameMode = types.NewUInt32(gameMode)
 
-	attributesSlice := make([]*types.PrimitiveU32, len(resultAttribs))
+	attributesSlice := make([]types.UInt32, len(resultAttribs))
 	for i, value := range resultAttribs {
-		attributesSlice[i] = types.NewPrimitiveU32(value)
+		attributesSlice[i] = types.NewUInt32(value)
 	}
-	resultMatchmakeSession.Attributes.SetFromData(attributesSlice)
+	resultMatchmakeSession.Attributes = attributesSlice
+
+	resultMatchmakeSession.OpenParticipation = types.NewBool(openParticipation)
+	resultMatchmakeSession.MatchmakeSystemType = types.NewUInt32(matchmakeSystemType)
+	resultMatchmakeSession.ApplicationBuffer = applicationBuffer
+	resultMatchmakeSession.ProgressScore = types.NewUInt8(progressScore)
+	resultMatchmakeSession.SessionKey = sessionKey
+	resultMatchmakeSession.Option = types.UInt32(option)
 
 	matchmakeParamBytes := nex.NewByteStreamIn(resultMatchmakeParam, endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 	resultMatchmakeSession.MatchmakeParam.ExtractFrom(matchmakeParamBytes)
+
+	resultMatchmakeSession.UserPassword = types.NewString(userPassword)
+	resultMatchmakeSession.ReferGID = types.NewUInt32(referGID)
+	resultMatchmakeSession.UserPasswordEnabled = types.NewBool(userPasswordEnabled)
+	resultMatchmakeSession.SystemPasswordEnabled = types.NewBool(systemPasswordEnabled)
+	resultMatchmakeSession.CodeWord = types.String(codeWord)
 
 	return resultMatchmakeSession, systemPassword, nil
 }

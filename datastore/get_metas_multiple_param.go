@@ -8,7 +8,7 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
-func (commonProtocol *CommonProtocol) getMetasMultipleParam(err error, packet nex.PacketInterface, callID uint32, params *types.List[*datastore_types.DataStoreGetMetaParam]) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) getMetasMultipleParam(err error, packet nex.PacketInterface, callID uint32, params types.List[datastore_types.DataStoreGetMetaParam]) (*nex.RMCMessage, *nex.Error) {
 	if commonProtocol.GetObjectInfoByPersistenceTargetWithPassword == nil {
 		common_globals.Logger.Warning("GetObjectInfoByPersistenceTargetWithPassword not defined")
 		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
@@ -27,18 +27,15 @@ func (commonProtocol *CommonProtocol) getMetasMultipleParam(err error, packet ne
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
-	pMetaInfo := types.NewList[*datastore_types.DataStoreMetaInfo]()
-	pResults := types.NewList[*types.QResult]()
+	pMetaInfo := types.NewList[datastore_types.DataStoreMetaInfo]()
+	pResults := types.NewList[types.QResult]()
 
-	pMetaInfo.Type = datastore_types.NewDataStoreMetaInfo()
-	pResults.Type = types.NewQResult(0)
-
-	params.Each(func(_ int, param *datastore_types.DataStoreGetMetaParam) bool {
-		var objectInfo *datastore_types.DataStoreMetaInfo
+	for _, param := range params {
+		var objectInfo datastore_types.DataStoreMetaInfo
 		var errCode *nex.Error
 
 		// * Real server ignores PersistenceTarget if DataID is set
-		if param.DataID.Value == 0 {
+		if param.DataID == 0 {
 			objectInfo, errCode = commonProtocol.GetObjectInfoByPersistenceTargetWithPassword(param.PersistenceTarget, param.AccessPassword)
 		} else {
 			objectInfo, errCode = commonProtocol.GetObjectInfoByDataIDWithPassword(param.DataID, param.AccessPassword)
@@ -47,24 +44,22 @@ func (commonProtocol *CommonProtocol) getMetasMultipleParam(err error, packet ne
 		if errCode != nil {
 			objectInfo = datastore_types.NewDataStoreMetaInfo()
 
-			pResults.Append(types.NewQResultError(errCode.ResultCode))
+			pResults = append(pResults, types.NewQResultError(errCode.ResultCode))
 		} else {
 			errCode = commonProtocol.VerifyObjectPermission(objectInfo.OwnerID, connection.PID(), objectInfo.Permission)
 			if errCode != nil {
 				objectInfo = datastore_types.NewDataStoreMetaInfo()
 
-				pResults.Append(types.NewQResultError(errCode.ResultCode))
+				pResults = append(pResults, types.NewQResultError(errCode.ResultCode))
 			} else {
-				pResults.Append(types.NewQResultSuccess(nex.ResultCodes.DataStore.Unknown))
+				pResults = append(pResults, types.NewQResultSuccess(nex.ResultCodes.DataStore.Unknown))
 			}
 
 			objectInfo.FilterPropertiesByResultOption(param.ResultOption)
 		}
 
-		pMetaInfo.Append(objectInfo)
-
-		return false
-	})
+		pMetaInfo = append(pMetaInfo, objectInfo)
+	}
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 

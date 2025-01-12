@@ -8,7 +8,7 @@ import (
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/v2/matchmake-extension"
 )
 
-func (commonProtocol *CommonProtocol) closeParticipation(err error, packet nex.PacketInterface, callID uint32, gid *types.PrimitiveU32) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) closeParticipation(err error, packet nex.PacketInterface, callID uint32, gid types.UInt32) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
@@ -19,7 +19,7 @@ func (commonProtocol *CommonProtocol) closeParticipation(err error, packet nex.P
 
 	commonProtocol.manager.Mutex.Lock()
 
-	session, _, nexError := database.GetMatchmakeSessionByID(commonProtocol.manager, endpoint, gid.Value)
+	session, _, nexError := database.GetMatchmakeSessionByID(commonProtocol.manager, endpoint, uint32(gid))
 	if nexError != nil {
 		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
@@ -30,7 +30,7 @@ func (commonProtocol *CommonProtocol) closeParticipation(err error, packet nex.P
 		return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
 	}
 
-	nexError = database.UpdateParticipation(commonProtocol.manager, gid.Value, false)
+	nexError = database.UpdateParticipation(commonProtocol.manager, uint32(gid), false)
 	if nexError != nil {
 		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError

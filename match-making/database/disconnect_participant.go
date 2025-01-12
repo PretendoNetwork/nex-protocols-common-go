@@ -16,7 +16,7 @@ import (
 func DisconnectParticipant(manager *common_globals.MatchmakingManager, connection *nex.PRUDPConnection) {
 	var nexError *nex.Error
 
-	rows, err := manager.Database.Query(`SELECT id, owner_pid, host_pid, min_participants, max_participants, participation_policy, policy_argument, flags, state, description, type, participants FROM matchmaking.gatherings WHERE $1 = ANY(participants) AND registered=true`, connection.PID().Value())
+	rows, err := manager.Database.Query(`SELECT id, owner_pid, host_pid, min_participants, max_participants, participation_policy, policy_argument, flags, state, description, type, participants FROM matchmaking.gatherings WHERE $1 = ANY(participants) AND registered=true`, connection.PID())
 	if err != nil {
 		common_globals.Logger.Critical(err.Error())
 		return
@@ -61,19 +61,19 @@ func DisconnectParticipant(manager *common_globals.MatchmakingManager, connectio
 		}
 
 		gathering := match_making_types.NewGathering()
-		gathering.ID.Value = gatheringID
+		gathering.ID = types.NewUInt32(gatheringID)
 		gathering.OwnerPID = types.NewPID(ownerPID)
 		gathering.HostPID = types.NewPID(hostPID)
-		gathering.MinimumParticipants.Value = minParticipants
-		gathering.MaximumParticipants.Value = maxParticipants
-		gathering.ParticipationPolicy.Value = participationPolicy
-		gathering.PolicyArgument.Value = policyArgument
-		gathering.Flags.Value = flags
-		gathering.State.Value = state
-		gathering.Description.Value = description
+		gathering.MinimumParticipants = types.NewUInt16(minParticipants)
+		gathering.MaximumParticipants = types.NewUInt16(maxParticipants)
+		gathering.ParticipationPolicy = types.NewUInt32(participationPolicy)
+		gathering.PolicyArgument = types.NewUInt32(policyArgument)
+		gathering.Flags = types.NewUInt32(flags)
+		gathering.State = types.NewUInt32(state)
+		gathering.Description = types.NewString(description)
 
 		// * Since the participant is leaving, override the participant list to avoid sending notifications to them
-		participants, nexError = RemoveParticipantFromGathering(manager, gatheringID, connection.PID().Value())
+		participants, nexError = RemoveParticipantFromGathering(manager, gatheringID, uint64(connection.PID()))
 		if nexError != nil {
 			common_globals.Logger.Error(nexError.Error())
 			continue
@@ -100,7 +100,7 @@ func DisconnectParticipant(manager *common_globals.MatchmakingManager, connectio
 			// * This flag tells the server to change the matchmake session owner if they disconnect
 			// * If the flag is not set, delete the session
 			// * More info: https://nintendo-wiki.pretendo.network/docs/nex/protocols/match-making/types#flags
-			if gathering.Flags.PAND(match_making.GatheringFlags.DisconnectChangeOwner) == 0 {
+			if uint32(gathering.Flags) & match_making.GatheringFlags.DisconnectChangeOwner == 0 {
 				nexError = UnregisterGathering(manager, connection.PID(), gatheringID)
 				if nexError != nil {
 					common_globals.Logger.Error(nexError.Error())
@@ -111,9 +111,9 @@ func DisconnectParticipant(manager *common_globals.MatchmakingManager, connectio
 				subtype := notifications.NotificationSubTypes.GatheringUnregistered.None
 
 				oEvent := notifications_types.NewNotificationEvent()
-				oEvent.PIDSource = connection.PID().Copy().(*types.PID)
-				oEvent.Type.Value = notifications.BuildNotificationType(category, subtype)
-				oEvent.Param1.Value = gatheringID
+				oEvent.PIDSource = connection.PID().Copy().(types.PID)
+				oEvent.Type = types.NewUInt32(notifications.BuildNotificationType(category, subtype))
+				oEvent.Param1 = types.NewUInt32(gatheringID)
 
 				common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, common_globals.RemoveDuplicates(participants))
 
@@ -137,9 +137,9 @@ func DisconnectParticipant(manager *common_globals.MatchmakingManager, connectio
 				subtype := notifications.NotificationSubTypes.HostChanged.None
 
 				oEvent := notifications_types.NewNotificationEvent()
-				oEvent.PIDSource = connection.PID().Copy().(*types.PID)
-				oEvent.Type.Value = notifications.BuildNotificationType(category, subtype)
-				oEvent.Param1.Value = gatheringID
+				oEvent.PIDSource = connection.PID().Copy().(types.PID)
+				oEvent.Type = types.NewUInt32(notifications.BuildNotificationType(category, subtype))
+				oEvent.Param1 = types.NewUInt32(gatheringID)
 
 				// TODO - Should the notification actually be sent to all participants?
 				common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, common_globals.RemoveDuplicates(participants))
@@ -156,18 +156,18 @@ func DisconnectParticipant(manager *common_globals.MatchmakingManager, connectio
 		subtype := notifications.NotificationSubTypes.Participation.Disconnected
 
 		oEvent := notifications_types.NewNotificationEvent()
-		oEvent.PIDSource = connection.PID().Copy().(*types.PID)
-		oEvent.Type = types.NewPrimitiveU32(notifications.BuildNotificationType(category, subtype))
-		oEvent.Param1.Value = gatheringID
-		oEvent.Param2.Value = connection.PID().LegacyValue() // TODO - This assumes a legacy client. Will not work on the Switch
+		oEvent.PIDSource = connection.PID().Copy().(types.PID)
+		oEvent.Type = types.NewUInt32(notifications.BuildNotificationType(category, subtype))
+		oEvent.Param1 = types.NewUInt32(gatheringID)
+		oEvent.Param2 = types.NewUInt32(uint32(connection.PID())) // TODO - This assumes a legacy client. Will not work on the Switch
 
 		var participantEndedTargets []uint64
 
 		// * When the VerboseParticipants or VerboseParticipantsEx flags are set, all participant notification events are sent to everyone
-		if gathering.Flags.PAND(match_making.GatheringFlags.VerboseParticipants | match_making.GatheringFlags.VerboseParticipantsEx) != 0 {
+		if uint32(gathering.Flags) & (match_making.GatheringFlags.VerboseParticipants | match_making.GatheringFlags.VerboseParticipantsEx) != 0 {
 			participantEndedTargets = common_globals.RemoveDuplicates(participants)
 		} else {
-			participantEndedTargets = []uint64{gathering.OwnerPID.Value()}
+			participantEndedTargets = []uint64{uint64(gathering.OwnerPID)}
 		}
 
 		// * Only send the notification event to the owner

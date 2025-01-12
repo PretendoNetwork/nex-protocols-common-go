@@ -29,8 +29,8 @@ func GetDetailedGatheringByID(manager *common_globals.MatchmakingManager, gather
 	}
 
 	// * Scrap session key and user password
-	matchmakeSession.SessionKey.Value = make([]byte, 0)
-	matchmakeSession.UserPassword.Value = ""
+	matchmakeSession.SessionKey = make([]byte, 0)
+	matchmakeSession.UserPassword = ""
 
 	return matchmakeSession, gatheringType, nil
 }

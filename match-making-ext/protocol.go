@@ -11,7 +11,7 @@ type CommonProtocol struct {
 	endpoint                nex.EndpointInterface
 	protocol                match_making_ext.Interface
 	manager                 *common_globals.MatchmakingManager
-	OnAfterEndParticipation func(acket nex.PacketInterface, idGathering *types.PrimitiveU32, strMessage *types.String)
+	OnAfterEndParticipation func(acket nex.PacketInterface, idGathering types.UInt32, strMessage types.String)
 }
 
 // SetManager defines the matchmaking manager to be used by the common protocol

@@ -20,17 +20,17 @@ func EndGatheringParticipation(manager *common_globals.MatchmakingManager, gathe
 	}
 
 	// TODO - Is this the right error?
-	if !slices.Contains(participants, connection.PID().Value()) {
+	if !slices.Contains(participants, uint64(connection.PID())) {
 		return nex.NewError(nex.ResultCodes.RendezVous.NotParticipatedGathering, "change_error")
 	}
 
 	// * If the gathering is a PersistentGathering, only remove the participant from the gathering
 	if gatheringType == "PersistentGathering" {
-		_, nexError = RemoveParticipantFromGathering(manager, gatheringID, connection.PID().Value())
+		_, nexError = RemoveParticipantFromGathering(manager, gatheringID, uint64(connection.PID()))
 		return nexError
 	}
 
-	newParticipants, nexError := RemoveParticipantFromGathering(manager, gatheringID, connection.PID().Value())
+	newParticipants, nexError := RemoveParticipantFromGathering(manager, gatheringID, uint64(connection.PID()))
 	if nexError != nil {
 		return nexError
 	}
@@ -45,12 +45,12 @@ func EndGatheringParticipation(manager *common_globals.MatchmakingManager, gathe
 		return UnregisterGathering(manager, connection.PID(), gatheringID)
 	}
 
-	var ownerPID uint64 = gathering.OwnerPID.Value()
+	var ownerPID uint64 = uint64(gathering.OwnerPID)
 	if connection.PID().Equals(gathering.OwnerPID) {
 		// * This flag tells the server to change the matchmake session owner if they disconnect
 		// * If the flag is not set, delete the session
 		// * More info: https://nintendo-wiki.pretendo.network/docs/nex/protocols/match-making/types#flags
-		if gathering.Flags.PAND(match_making.GatheringFlags.DisconnectChangeOwner) == 0 {
+		if uint32(gathering.Flags) & match_making.GatheringFlags.DisconnectChangeOwner == 0 {
 			nexError = UnregisterGathering(manager, connection.PID(), gatheringID)
 			if nexError != nil {
 				return nexError
@@ -60,9 +60,9 @@ func EndGatheringParticipation(manager *common_globals.MatchmakingManager, gathe
 			subtype := notifications.NotificationSubTypes.GatheringUnregistered.None
 
 			oEvent := notifications_types.NewNotificationEvent()
-			oEvent.PIDSource = connection.PID().Copy().(*types.PID)
-			oEvent.Type.Value = notifications.BuildNotificationType(category, subtype)
-			oEvent.Param1.Value = gatheringID
+			oEvent.PIDSource = connection.PID().Copy().(types.PID)
+			oEvent.Type = types.NewUInt32(notifications.BuildNotificationType(category, subtype))
+			oEvent.Param1 = types.NewUInt32(gatheringID)
 
 			common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, common_globals.RemoveDuplicates(newParticipants))
 
@@ -88,9 +88,9 @@ func EndGatheringParticipation(manager *common_globals.MatchmakingManager, gathe
 		subtype := notifications.NotificationSubTypes.HostChanged.None
 
 		oEvent := notifications_types.NewNotificationEvent()
-		oEvent.PIDSource = connection.PID().Copy().(*types.PID)
-		oEvent.Type.Value = notifications.BuildNotificationType(category, subtype)
-		oEvent.Param1.Value = gatheringID
+		oEvent.PIDSource = connection.PID().Copy().(types.PID)
+		oEvent.Type = types.NewUInt32(notifications.BuildNotificationType(category, subtype))
+		oEvent.Param1 = types.NewUInt32(gatheringID)
 
 		// TODO - Should the notification actually be sent to all participants?
 		common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, common_globals.RemoveDuplicates(participants))
@@ -106,19 +106,19 @@ func EndGatheringParticipation(manager *common_globals.MatchmakingManager, gathe
 	subtype := notifications.NotificationSubTypes.Participation.Ended
 
 	oEvent := notifications_types.NewNotificationEvent()
-	oEvent.PIDSource = connection.PID().Copy().(*types.PID)
-	oEvent.Type = types.NewPrimitiveU32(notifications.BuildNotificationType(category, subtype))
-	oEvent.Param1.Value = gatheringID
-	oEvent.Param2.Value = connection.PID().LegacyValue() // TODO - This assumes a legacy client. Will not work on the Switch
-	oEvent.StrParam.Value = message
+	oEvent.PIDSource = connection.PID().Copy().(types.PID)
+	oEvent.Type = types.NewUInt32(notifications.BuildNotificationType(category, subtype))
+	oEvent.Param1 = types.NewUInt32(gatheringID)
+	oEvent.Param2 = types.NewUInt32(uint32((connection.PID()))) // TODO - This assumes a legacy client. Will not work on the Switch
+	oEvent.StrParam = types.NewString(message)
 
 	var participationEndedTargets []uint64
 
 	// * When the VerboseParticipants or VerboseParticipantsEx flags are set, all participant notification events are sent to everyone
-	if gathering.Flags.PAND(match_making.GatheringFlags.VerboseParticipants | match_making.GatheringFlags.VerboseParticipantsEx) != 0 {
+	if uint32(gathering.Flags) & (match_making.GatheringFlags.VerboseParticipants | match_making.GatheringFlags.VerboseParticipantsEx) != 0 {
 		participationEndedTargets = common_globals.RemoveDuplicates(participants)
 	} else {
-		participationEndedTargets = []uint64{gathering.OwnerPID.Value()}
+		participationEndedTargets = []uint64{uint64(gathering.OwnerPID)}
 	}
 
 	common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, participationEndedTargets)

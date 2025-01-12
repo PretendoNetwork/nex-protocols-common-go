@@ -8,7 +8,7 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
-func (commonProtocol *CommonProtocol) searchObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreSearchParam) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) searchObject(err error, packet nex.PacketInterface, callID uint32, param datastore_types.DataStoreSearchParam) (*nex.RMCMessage, *nex.Error) {
 	if commonProtocol.GetObjectInfosByDataStoreSearchParam == nil {
 		common_globals.Logger.Warning("GetObjectInfosByDataStoreSearchParam not defined")
 		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
@@ -36,8 +36,7 @@ func (commonProtocol *CommonProtocol) searchObject(err error, packet nex.PacketI
 
 	pSearchResult := datastore_types.NewDataStoreSearchResult()
 
-	pSearchResult.Result = types.NewList[*datastore_types.DataStoreMetaInfo]()
-	pSearchResult.Result.Type = datastore_types.NewDataStoreMetaInfo()
+	pSearchResult.Result = types.NewList[datastore_types.DataStoreMetaInfo]()
 
 	for _, object := range objects {
 		errCode = commonProtocol.VerifyObjectPermission(object.OwnerID, connection.PID(), object.Permission)
@@ -50,7 +49,7 @@ func (commonProtocol *CommonProtocol) searchObject(err error, packet nex.PacketI
 
 		object.FilterPropertiesByResultOption(param.ResultOption)
 
-		pSearchResult.Result.Append(object)
+		pSearchResult.Result = append(pSearchResult.Result, object)
 	}
 
 	var totalCountType uint8
@@ -59,7 +58,7 @@ func (commonProtocol *CommonProtocol) searchObject(err error, packet nex.PacketI
 	// * the permissions checks in the
 	// * previous loop will mutate the data
 	// * returned from the database
-	if totalCount == uint32(pSearchResult.Result.Length()) {
+	if totalCount == uint32(len(pSearchResult.Result)) {
 		totalCountType = 0 // * Has no more data. All possible results were returned
 	} else {
 		totalCountType = 1 // * Has more data. Not all possible results were returned
@@ -70,14 +69,14 @@ func (commonProtocol *CommonProtocol) searchObject(err error, packet nex.PacketI
 	// * Only seen in struct revision 3 or
 	// * NEX 4.0+
 	if param.StructureVersion >= 3 || endpoint.LibraryVersions().DataStore.GreaterOrEqual("4.0.0") {
-		if !param.TotalCountEnabled.Value {
+		if !param.TotalCountEnabled {
 			totalCount = 0
 			totalCountType = 3
 		}
 	}
 
-	pSearchResult.TotalCount = types.NewPrimitiveU32(totalCount)
-	pSearchResult.TotalCountType = types.NewPrimitiveU8(totalCountType)
+	pSearchResult.TotalCount = types.NewUInt32(totalCount)
+	pSearchResult.TotalCountType = types.NewUInt8(totalCountType)
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 

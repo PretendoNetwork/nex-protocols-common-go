@@ -13,14 +13,14 @@ import (
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/v2/notifications/types"
 )
 
-func (commonProtocol *CommonProtocol) updateSessionHost(err error, packet nex.PacketInterface, callID uint32, gid *types.PrimitiveU32, isMigrateOwner *types.PrimitiveBool) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) updateSessionHost(err error, packet nex.PacketInterface, callID uint32, gid types.UInt32, isMigrateOwner types.Bool) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
 	commonProtocol.manager.Mutex.Lock()
-	gathering, _, participants, _, nexError := database.FindGatheringByID(commonProtocol.manager, gid.Value)
+	gathering, _, participants, _, nexError := database.FindGatheringByID(commonProtocol.manager, uint32(gid))
 	if nexError != nil {
 		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
@@ -29,42 +29,42 @@ func (commonProtocol *CommonProtocol) updateSessionHost(err error, packet nex.Pa
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
-	if !slices.Contains(participants, connection.PID().Value()) {
+	if !slices.Contains(participants, uint64(connection.PID())) {
 		commonProtocol.manager.Mutex.Unlock()
 		return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
 	}
 
-	if !isMigrateOwner.Value {
-		nexError = database.UpdateSessionHost(commonProtocol.manager, gid.Value, gathering.OwnerPID, connection.PID())
+	if !isMigrateOwner {
+		nexError = database.UpdateSessionHost(commonProtocol.manager, uint32(gid), gathering.OwnerPID, connection.PID())
 		if nexError != nil {
 			commonProtocol.manager.Mutex.Unlock()
 			return nil, nexError
 		}
 
-		nexError = tracking.LogChangeHost(commonProtocol.manager.Database, connection.PID(), gid.Value, gathering.HostPID, connection.PID())
+		nexError = tracking.LogChangeHost(commonProtocol.manager.Database, connection.PID(), uint32(gid), gathering.HostPID, connection.PID())
 		if nexError != nil {
 			commonProtocol.manager.Mutex.Unlock()
 			return nil, nexError
 		}
 	} else {
-		if gathering.Flags.PAND(match_making.GatheringFlags.ParticipantsChangeOwner) == 0 {
+		if uint32(gathering.Flags) & match_making.GatheringFlags.ParticipantsChangeOwner == 0 {
 			commonProtocol.manager.Mutex.Unlock()
 			return nil, nex.NewError(nex.ResultCodes.RendezVous.InvalidOperation, "change_error")
 		}
 
-		nexError = database.UpdateSessionHost(commonProtocol.manager, gid.Value, connection.PID(), connection.PID())
+		nexError = database.UpdateSessionHost(commonProtocol.manager, uint32(gid), connection.PID(), connection.PID())
 		if nexError != nil {
 			commonProtocol.manager.Mutex.Unlock()
 			return nil, nexError
 		}
 
-		nexError = tracking.LogChangeHost(commonProtocol.manager.Database, connection.PID(), gid.Value, gathering.HostPID, connection.PID())
+		nexError = tracking.LogChangeHost(commonProtocol.manager.Database, connection.PID(), uint32(gid), gathering.HostPID, connection.PID())
 		if nexError != nil {
 			commonProtocol.manager.Mutex.Unlock()
 			return nil, nexError
 		}
 
-		nexError = tracking.LogChangeOwner(commonProtocol.manager.Database, connection.PID(), gid.Value, gathering.OwnerPID, connection.PID())
+		nexError = tracking.LogChangeOwner(commonProtocol.manager.Database, connection.PID(), uint32(gid), gathering.OwnerPID, connection.PID())
 		if nexError != nil {
 			commonProtocol.manager.Mutex.Unlock()
 			return nil, nexError
@@ -75,9 +75,9 @@ func (commonProtocol *CommonProtocol) updateSessionHost(err error, packet nex.Pa
 
 		oEvent := notifications_types.NewNotificationEvent()
 		oEvent.PIDSource = connection.PID()
-		oEvent.Type.Value = notifications.BuildNotificationType(category, subtype)
-		oEvent.Param1.Value = gid.Value
-		oEvent.Param2.Value = connection.PID().LegacyValue() // TODO - This assumes a legacy client. Will not work on the Switch
+		oEvent.Type = types.NewUInt32(notifications.BuildNotificationType(category, subtype))
+		oEvent.Param1 = gid
+		oEvent.Param2 = types.NewUInt32(uint32(connection.PID())) // TODO - This assumes a legacy client. Will not work on the Switch
 
 		// TODO - StrParam doesn't have this value on some servers
 		// * https://github.com/kinnay/NintendoClients/issues/101

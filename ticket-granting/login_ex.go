@@ -7,7 +7,7 @@ import (
 	ticket_granting "github.com/PretendoNetwork/nex-protocols-go/v2/ticket-granting"
 )
 
-func (commonProtocol *CommonProtocol) loginEx(err error, packet nex.PacketInterface, callID uint32, strUserName *types.String, oExtraData *types.AnyDataHolder) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) loginEx(err error, packet nex.PacketInterface, callID uint32, strUserName types.String, oExtraData types.DataHolder) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
@@ -18,7 +18,7 @@ func (commonProtocol *CommonProtocol) loginEx(err error, packet nex.PacketInterf
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
-	sourceAccount, errorCode := endpoint.AccountDetailsByUsername(strUserName.Value)
+	sourceAccount, errorCode := endpoint.AccountDetailsByUsername(string(strUserName))
 	if errorCode != nil && errorCode.ResultCode != nex.ResultCodes.RendezVous.InvalidUsername {
 		// * Some other error happened
 		return nil, errorCode
@@ -37,7 +37,7 @@ func (commonProtocol *CommonProtocol) loginEx(err error, packet nex.PacketInterf
 		return nil, errorCode
 	}
 
-	var retval *types.QResult
+	var retval types.QResult
 	pidPrincipal := types.NewPID(0)
 	pbufResponse := types.NewBuffer([]byte{})
 	pConnectionData := types.NewRVConnectionData()
@@ -53,12 +53,10 @@ func (commonProtocol *CommonProtocol) loginEx(err error, packet nex.PacketInterf
 		retval = types.NewQResultSuccess(nex.ResultCodes.Core.Unknown)
 		pidPrincipal = sourceAccount.PID
 		pbufResponse = types.NewBuffer(encryptedTicket)
-		strReturnMsg = commonProtocol.BuildName.Copy().(*types.String)
+		strReturnMsg = commonProtocol.BuildName.Copy().(types.String)
 
-		specialProtocols := types.NewList[*types.PrimitiveU8]()
-
-		specialProtocols.Type = types.NewPrimitiveU8(0)
-		specialProtocols.SetFromData(commonProtocol.SpecialProtocols)
+		specialProtocols := types.NewList[types.UInt8]()
+		specialProtocols = commonProtocol.SpecialProtocols
 
 		pConnectionData.StationURL = commonProtocol.SecureStationURL
 		pConnectionData.SpecialProtocols = specialProtocols

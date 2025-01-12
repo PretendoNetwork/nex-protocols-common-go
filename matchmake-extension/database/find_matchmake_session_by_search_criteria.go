@@ -17,18 +17,18 @@ import (
 )
 
 // FindMatchmakeSessionBySearchCriteria finds matchmake sessions with the given search criterias
-func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingManager, connection *nex.PRUDPConnection, searchCriterias []*match_making_types.MatchmakeSessionSearchCriteria, resultRange *types.ResultRange, sourceMatchmakeSession *match_making_types.MatchmakeSession) ([]*match_making_types.MatchmakeSession, *nex.Error) {
-	resultMatchmakeSessions := make([]*match_making_types.MatchmakeSession, 0)
+func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingManager, connection *nex.PRUDPConnection, searchCriterias []match_making_types.MatchmakeSessionSearchCriteria, resultRange types.ResultRange, sourceMatchmakeSession *match_making_types.MatchmakeSession) ([]match_making_types.MatchmakeSession, *nex.Error) {
+	resultMatchmakeSessions := make([]match_making_types.MatchmakeSession, 0)
 
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
 	var friendList []uint32
 	if manager.GetUserFriendPIDs != nil {
-		friendList = manager.GetUserFriendPIDs(connection.PID().LegacyValue())
+		friendList = manager.GetUserFriendPIDs(uint32(connection.PID()))
 	}
 
-	if resultRange.Offset.Value == math.MaxUint32 {
-		resultRange.Offset.Value = 0
+	if resultRange.Offset == math.MaxUint32 {
+		resultRange.Offset = 0
 	}
 
 	for _, searchCriteria := range searchCriterias {
@@ -74,14 +74,14 @@ func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingMan
 			(CASE WHEN $8=true THEN ms.system_password_enabled=false ELSE true END)`
 
 		var valid bool = true
-		for i, attrib := range searchCriteria.Attribs.Slice() {
+		for i, attrib := range searchCriteria.Attribs {
 			// * Ignore attribute 1 here, reserved for the selection method
 			if i == 1 {
 				continue;
 			}
 
-			if attrib.Value != "" {
-				before, after, found := strings.Cut(attrib.Value, ",")
+			if attrib != "" {
+				before, after, found := strings.Cut(string(attrib), ",")
 				if found {
 					min, err := strconv.ParseUint(before, 10, 32)
 					if err != nil {
@@ -113,8 +113,8 @@ func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingMan
 			continue
 		}
 
-		if searchCriteria.MaxParticipants.Value != "" {
-			before, after, found := strings.Cut(searchCriteria.MaxParticipants.Value, ",")
+		if searchCriteria.MaxParticipants != "" {
+			before, after, found := strings.Cut(string(searchCriteria.MaxParticipants), ",")
 			if found {
 				min, err := strconv.ParseUint(before, 10, 16)
 				if err != nil {
@@ -137,8 +137,8 @@ func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingMan
 			}
 		}
 
-		if searchCriteria.MinParticipants.Value != "" {
-			before, after, found := strings.Cut(searchCriteria.MinParticipants.Value, ",")
+		if searchCriteria.MinParticipants != "" {
+			before, after, found := strings.Cut(string(searchCriteria.MinParticipants), ",")
 			if found {
 				min, err := strconv.ParseUint(before, 10, 16)
 				if err != nil {
@@ -161,8 +161,8 @@ func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingMan
 			}
 		}
 
-		if searchCriteria.GameMode.Value != "" {
-			before, after, found := strings.Cut(searchCriteria.GameMode.Value, ",")
+		if searchCriteria.GameMode != "" {
+			before, after, found := strings.Cut(string(searchCriteria.GameMode), ",")
 			if found {
 				min, err := strconv.ParseUint(before, 10, 32)
 				if err != nil {
@@ -185,8 +185,8 @@ func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingMan
 			}
 		}
 
-		if searchCriteria.MatchmakeSystemType.Value != "" {
-			before, after, found := strings.Cut(searchCriteria.MatchmakeSystemType.Value, ",")
+		if searchCriteria.MatchmakeSystemType != "" {
+			before, after, found := strings.Cut(string(searchCriteria.MatchmakeSystemType), ",")
 			if found {
 				min, err := strconv.ParseUint(before, 10, 32)
 				if err != nil {
@@ -210,22 +210,22 @@ func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingMan
 		}
 
 		// * Filter full sessions if necessary
-		if searchCriteria.VacantOnly.Value {
+		if searchCriteria.VacantOnly {
 			// * Account for the VacantParticipants when searching for sessions (if given)
-			if searchCriteria.VacantParticipants.Value == 0 {
+			if searchCriteria.VacantParticipants == 0 {
 				searchStatement += ` AND array_length(g.participants, 1) + 1 <= g.max_participants`
 			} else {
-				searchStatement += fmt.Sprintf(` AND array_length(g.participants, 1) + %d <= g.max_participants`, searchCriteria.VacantParticipants.Value)
+				searchStatement += fmt.Sprintf(` AND array_length(g.participants, 1) + %d <= g.max_participants`, searchCriteria.VacantParticipants)
 			}
 		}
 
-		switch constants.SelectionMethod(searchCriteria.SelectionMethod.Value) {
+		switch constants.SelectionMethod(searchCriteria.SelectionMethod) {
 		case constants.SelectionMethodRandom:
 			// * Random global
 			searchStatement += ` ORDER BY RANDOM()`
 		case constants.SelectionMethodNearestNeighbor:
 			// * Closest attribute
-			attribute1, err := strconv.ParseUint(searchCriteria.Attribs.Slice()[1].Value, 10, 32)
+			attribute1, err := strconv.ParseUint(string(searchCriteria.Attribs[1]), 10, 32)
 			if err != nil {
 				globals.Logger.Error(err.Error())
 				continue
@@ -236,7 +236,7 @@ func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingMan
 			// * Ranked
 
 			// TODO - Actually implement ranked matchmaking, using closest attribute at the moment
-			attribute1, err := strconv.ParseUint(searchCriteria.Attribs.Slice()[1].Value, 10, 32)
+			attribute1, err := strconv.ParseUint(string(searchCriteria.Attribs[1]), 10, 32)
 			if err != nil {
 				globals.Logger.Error(err.Error())
 				continue
@@ -251,7 +251,7 @@ func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingMan
 				continue
 			}
 
-			searchStatement += fmt.Sprintf(` ORDER BY abs(%d - ms.progress_score)`, sourceMatchmakeSession.ProgressScore.Value)
+			searchStatement += fmt.Sprintf(` ORDER BY abs(%d - ms.progress_score)`, sourceMatchmakeSession.ProgressScore)
 		case constants.SelectionMethodBroadenRangeWithProgressScore:
 			// * Ranked + Progress
 
@@ -262,36 +262,36 @@ func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingMan
 				continue
 			}
 
-			attribute1, err := strconv.ParseUint(searchCriteria.Attribs.Slice()[1].Value, 10, 32)
+			attribute1, err := strconv.ParseUint(string(searchCriteria.Attribs[1]), 10, 32)
 			if err != nil {
 				globals.Logger.Error(err.Error())
 				continue
 			}
 
 			// TODO - Should the attribute and the progress score actually weigh the same?
-			searchStatement += fmt.Sprintf(` ORDER BY abs(%d - ms.attribs[2] + %d - ms.progress_score)`, attribute1, sourceMatchmakeSession.ProgressScore.Value)
+			searchStatement += fmt.Sprintf(` ORDER BY abs(%d - ms.attribs[2] + %d - ms.progress_score)`, attribute1, sourceMatchmakeSession.ProgressScore)
 		// case constants.SelectionMethodScoreBased: // * According to notes this is related with the MatchmakeParam. TODO - Implement this
 		}
 
 		// * If the ResultRange inside the MatchmakeSessionSearchCriteria is valid (only present on NEX 4.0+), use that
 		// * Otherwise, use the one given as argument
-		if searchCriteria.ResultRange.Length.Value != 0 {
-			searchStatement += fmt.Sprintf(` LIMIT %d OFFSET %d`, searchCriteria.ResultRange.Length.Value, searchCriteria.ResultRange.Offset.Value)
+		if searchCriteria.ResultRange.Length != 0 {
+			searchStatement += fmt.Sprintf(` LIMIT %d OFFSET %d`, uint32(searchCriteria.ResultRange.Length), uint32(searchCriteria.ResultRange.Offset))
 		} else {
 			// * Since we use one ResultRange for all searches, limit the total length to the one specified
 			// * but apply the same offset to all queries
-			searchStatement += fmt.Sprintf(` LIMIT %d OFFSET %d`, resultRange.Length.Value - uint32(len(resultMatchmakeSessions)), resultRange.Offset.Value)
+			searchStatement += fmt.Sprintf(` LIMIT %d OFFSET %d`, uint32(resultRange.Length) - uint32(len(resultMatchmakeSessions)), uint32(resultRange.Offset))
 		}
 
 		rows, err := manager.Database.Query(searchStatement,
-			searchCriteria.ReferGID.Value,
-			searchCriteria.CodeWord.Value,
-			searchCriteria.Attribs.Length(),
+			uint32(searchCriteria.ReferGID),
+			string(searchCriteria.CodeWord),
+			len(searchCriteria.Attribs),
 			pqextended.Array(friendList),
-			searchCriteria.ExcludeLocked.Value,
-			searchCriteria.ExcludeNonHostPID.Value,
-			searchCriteria.ExcludeUserPasswordSet.Value,
-			searchCriteria.ExcludeSystemPasswordSet.Value,
+			bool(searchCriteria.ExcludeLocked),
+			bool(searchCriteria.ExcludeNonHostPID),
+			bool(searchCriteria.ExcludeUserPasswordSet),
+			bool(searchCriteria.ExcludeSystemPasswordSet),
 		)
 		if err != nil {
 			globals.Logger.Critical(err.Error())
@@ -299,58 +299,103 @@ func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingMan
 		}
 
 		for rows.Next() {
-			resultMatchmakeSession := match_making_types.NewMatchmakeSession()
+			var gatheringID uint32
 			var ownerPID uint64
 			var hostPID uint64
+			var minimumParticipants uint16
+			var maximumParticipants uint16
+			var participationPolicy uint32
+			var policyArgument uint32
+			var flags uint32
+			var state uint32
+			var description string
+			var participationCount uint32
 			var startedTime time.Time
+			var gameMode uint32
 			var resultAttribs []uint32
+			var openParticipation bool
+			var matchmakeSystemType uint32
+			var applicationBuffer []byte
+			var progressScore uint8
+			var sessionKey []byte
+			var option uint32
 			var resultMatchmakeParam []byte
+			var userPassword string
+			var referGID uint32
+			var userPasswordEnabled bool
+			var systemPasswordEnabled bool
+			var codeWord string
 
 			err = rows.Scan(
-				&resultMatchmakeSession.Gathering.ID.Value,
+				&gatheringID,
 				&ownerPID,
 				&hostPID,
-				&resultMatchmakeSession.Gathering.MinimumParticipants.Value,
-				&resultMatchmakeSession.Gathering.MaximumParticipants.Value,
-				&resultMatchmakeSession.Gathering.ParticipationPolicy.Value,
-				&resultMatchmakeSession.Gathering.PolicyArgument.Value,
-				&resultMatchmakeSession.Gathering.Flags.Value,
-				&resultMatchmakeSession.Gathering.State.Value,
-				&resultMatchmakeSession.Gathering.Description.Value,
-				&resultMatchmakeSession.ParticipationCount.Value,
+				&minimumParticipants,
+				&maximumParticipants,
+				&participationPolicy,
+				&policyArgument,
+				&flags,
+				&state,
+				&description,
+				&participationCount,
 				&startedTime,
-				&resultMatchmakeSession.GameMode.Value,
+				&gameMode,
 				pqextended.Array(&resultAttribs),
-				&resultMatchmakeSession.OpenParticipation.Value,
-				&resultMatchmakeSession.MatchmakeSystemType.Value,
-				&resultMatchmakeSession.ApplicationBuffer.Value,
-				&resultMatchmakeSession.ProgressScore.Value,
-				&resultMatchmakeSession.SessionKey.Value,
-				&resultMatchmakeSession.Option.Value,
+				&openParticipation,
+				&matchmakeSystemType,
+				&applicationBuffer,
+				&progressScore,
+				&sessionKey,
+				&option,
 				&resultMatchmakeParam,
-				&resultMatchmakeSession.UserPassword.Value,
-				&resultMatchmakeSession.ReferGID.Value,
-				&resultMatchmakeSession.UserPasswordEnabled.Value,
-				&resultMatchmakeSession.SystemPasswordEnabled.Value,
-				&resultMatchmakeSession.CodeWord.Value,
+				&userPassword,
+				&referGID,
+				&userPasswordEnabled,
+				&systemPasswordEnabled,
+				&codeWord,
 			)
 			if err != nil {
 				globals.Logger.Critical(err.Error())
 				continue
 			}
 
+			resultMatchmakeSession := match_making_types.NewMatchmakeSession()
+
+			resultMatchmakeSession.Gathering.ID = types.NewUInt32(gatheringID)
 			resultMatchmakeSession.OwnerPID = types.NewPID(ownerPID)
 			resultMatchmakeSession.HostPID = types.NewPID(hostPID)
+			resultMatchmakeSession.Gathering.MinimumParticipants = types.NewUInt16(minimumParticipants)
+			resultMatchmakeSession.Gathering.MaximumParticipants = types.NewUInt16(maximumParticipants)
+			resultMatchmakeSession.Gathering.ParticipationPolicy = types.NewUInt32(participationPolicy)
+			resultMatchmakeSession.Gathering.PolicyArgument = types.NewUInt32(policyArgument)
+			resultMatchmakeSession.Gathering.Flags = types.NewUInt32(flags)
+			resultMatchmakeSession.Gathering.State = types.NewUInt32(state)
+			resultMatchmakeSession.Gathering.Description = types.NewString(description)
+			resultMatchmakeSession.ParticipationCount = types.NewUInt32(participationCount)
 			resultMatchmakeSession.StartedTime = resultMatchmakeSession.StartedTime.FromTimestamp(startedTime)
+			resultMatchmakeSession.GameMode = types.NewUInt32(gameMode)
 
-			attributesSlice := make([]*types.PrimitiveU32, len(resultAttribs))
+			attributesSlice := make([]types.UInt32, len(resultAttribs))
 			for i, value := range resultAttribs {
-				attributesSlice[i] = types.NewPrimitiveU32(value)
+				attributesSlice[i] = types.NewUInt32(value)
 			}
-			resultMatchmakeSession.Attributes.SetFromData(attributesSlice)
+			resultMatchmakeSession.Attributes = attributesSlice
+
+			resultMatchmakeSession.OpenParticipation = types.NewBool(openParticipation)
+			resultMatchmakeSession.MatchmakeSystemType = types.NewUInt32(matchmakeSystemType)
+			resultMatchmakeSession.ApplicationBuffer = applicationBuffer
+			resultMatchmakeSession.ProgressScore = types.NewUInt8(progressScore)
+			resultMatchmakeSession.SessionKey = sessionKey
+			resultMatchmakeSession.Option = types.UInt32(option)
 
 			matchmakeParamBytes := nex.NewByteStreamIn(resultMatchmakeParam, endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 			resultMatchmakeSession.MatchmakeParam.ExtractFrom(matchmakeParamBytes)
+
+			resultMatchmakeSession.UserPassword = types.NewString(userPassword)
+			resultMatchmakeSession.ReferGID = types.NewUInt32(referGID)
+			resultMatchmakeSession.UserPasswordEnabled = types.NewBool(userPasswordEnabled)
+			resultMatchmakeSession.SystemPasswordEnabled = types.NewBool(systemPasswordEnabled)
+			resultMatchmakeSession.CodeWord = types.String(codeWord)
 
 			resultMatchmakeSessions = append(resultMatchmakeSessions, resultMatchmakeSession)
 		}

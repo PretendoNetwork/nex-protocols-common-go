@@ -34,8 +34,8 @@ func RemoveDuplicates[T comparable](sliceList []T) []T {
 }
 
 // CheckValidGathering checks if a Gathering is valid
-func CheckValidGathering(gathering *match_making_types.Gathering) bool {
-	if len(gathering.Description.Value) > 256 {
+func CheckValidGathering(gathering match_making_types.Gathering) bool {
+	if len(gathering.Description) > 256 {
 		return false
 	}
 
@@ -43,34 +43,34 @@ func CheckValidGathering(gathering *match_making_types.Gathering) bool {
 }
 
 // CheckValidMatchmakeSession checks if a MatchmakeSession is valid
-func CheckValidMatchmakeSession(matchmakeSession *match_making_types.MatchmakeSession) bool {
+func CheckValidMatchmakeSession(matchmakeSession match_making_types.MatchmakeSession) bool {
 	if !CheckValidGathering(matchmakeSession.Gathering) {
 		return false
 	}
 
-	if matchmakeSession.Attributes.Length() != 6 {
+	if len(matchmakeSession.Attributes) != 6 {
 		return false
 	}
 
-	if matchmakeSession.ProgressScore.Value > 100 {
+	if matchmakeSession.ProgressScore > 100 {
 		return false
 	}
 
-	if len(matchmakeSession.UserPassword.Value) > 32 {
+	if len(matchmakeSession.UserPassword) > 32 {
 		return false
 	}
 
 	// * Except for UserPassword, all strings must have a length lower than 256
-	if len(matchmakeSession.CodeWord.Value) > 256 {
+	if len(matchmakeSession.CodeWord) > 256 {
 		return false
 	}
 
 	// * All buffers must have a length lower than 512
-	if len(matchmakeSession.ApplicationBuffer.Value) > 512 {
+	if len(matchmakeSession.ApplicationBuffer) > 512 {
 		return false
 	}
 
-	if len(matchmakeSession.SessionKey.Value) > 512 {
+	if len(matchmakeSession.SessionKey) > 512 {
 		return false
 	}
 
@@ -78,22 +78,22 @@ func CheckValidMatchmakeSession(matchmakeSession *match_making_types.MatchmakeSe
 }
 
 // CanJoinMatchmakeSession checks if a PID is allowed to join a matchmake session
-func CanJoinMatchmakeSession(manager *MatchmakingManager, pid *types.PID, matchmakeSession *match_making_types.MatchmakeSession) *nex.Error {
+func CanJoinMatchmakeSession(manager *MatchmakingManager, pid types.PID, matchmakeSession match_making_types.MatchmakeSession) *nex.Error {
 	// TODO - Is this the right error?
-	if !matchmakeSession.OpenParticipation.Value {
+	if !matchmakeSession.OpenParticipation {
 		return nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
 	}
 
 	// * Only allow friends
 	// TODO - This won't work on Switch!
-	if matchmakeSession.ParticipationPolicy.Value == 98 {
+	if matchmakeSession.ParticipationPolicy == 98 {
 		if manager.GetUserFriendPIDs == nil {
 			Logger.Warning("Missing GetUserFriendPIDs!")
 			return nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 		}
 
-		friendList := manager.GetUserFriendPIDs(pid.LegacyValue())
-		if !slices.Contains(friendList, matchmakeSession.OwnerPID.LegacyValue()) {
+		friendList := manager.GetUserFriendPIDs(uint32(pid))
+		if !slices.Contains(friendList, uint32(matchmakeSession.OwnerPID)) {
 			return nex.NewError(nex.ResultCodes.RendezVous.NotFriend, "change_error")
 		}
 	}
@@ -102,7 +102,7 @@ func CanJoinMatchmakeSession(manager *MatchmakingManager, pid *types.PID, matchm
 }
 
 // SendNotificationEvent sends a notification event to the specified targets
-func SendNotificationEvent(endpoint *nex.PRUDPEndPoint, event *notifications_types.NotificationEvent, targets []uint64) {
+func SendNotificationEvent(endpoint *nex.PRUDPEndPoint, event notifications_types.NotificationEvent, targets []uint64) {
 	server := endpoint.Server
 	stream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 

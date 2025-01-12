@@ -8,7 +8,7 @@ import (
 )
 
 // UnregisterGathering unregisters a given gathering on a database
-func UnregisterGathering(manager *common_globals.MatchmakingManager, sourcePID *types.PID, id uint32) *nex.Error {
+func UnregisterGathering(manager *common_globals.MatchmakingManager, sourcePID types.PID, id uint32) *nex.Error {
 	result, err := manager.Database.Exec(`UPDATE matchmaking.gatherings SET registered=false WHERE id=$1`, id)
 	if err != nil {
 		return nex.NewError(nex.ResultCodes.Core.Unknown, err.Error())

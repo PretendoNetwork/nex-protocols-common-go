@@ -9,7 +9,7 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
-func (commonProtocol *CommonProtocol) completePostObject(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStoreCompletePostParam) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) completePostObject(err error, packet nex.PacketInterface, callID uint32, param datastore_types.DataStoreCompletePostParam) (*nex.RMCMessage, *nex.Error) {
 	if commonProtocol.minIOClient == nil {
 		common_globals.Logger.Warning("MinIOClient not defined")
 		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
@@ -51,8 +51,8 @@ func (commonProtocol *CommonProtocol) completePostObject(err error, packet nex.P
 	// * If GetObjectInfoByDataID returns data then that means
 	// * the object has already been marked as uploaded. So do
 	// * nothing
-	objectInfo, _ := commonProtocol.GetObjectInfoByDataID(param.DataID)
-	if objectInfo != nil {
+	_, errCode := commonProtocol.GetObjectInfoByDataID(param.DataID)
+	if errCode == nil {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.PermissionDenied, "change_error")
 	}
 
@@ -62,14 +62,14 @@ func (commonProtocol *CommonProtocol) completePostObject(err error, packet nex.P
 		return nil, errCode
 	}
 
-	if ownerPID != connection.PID().LegacyValue() {
+	if ownerPID != uint32(connection.PID()) {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.PermissionDenied, "change_error")
 	}
 
 	bucket := commonProtocol.S3Bucket
 	key := fmt.Sprintf("%s/%d.bin", commonProtocol.s3DataKeyBase, param.DataID)
 
-	if param.IsSuccess.Value {
+	if param.IsSuccess {
 		objectSizeS3, err := commonProtocol.S3ObjectSize(bucket, key)
 		if err != nil {
 			common_globals.Logger.Error(err.Error())

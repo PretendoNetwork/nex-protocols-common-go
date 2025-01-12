@@ -11,16 +11,16 @@ import (
 
 type CommonProtocol struct {
 	protocol                   ticket_granting.Interface
-	SecureStationURL           *types.StationURL
-	SpecialProtocols           []*types.PrimitiveU8
-	StationURLSpecialProtocols *types.StationURL
-	BuildName                  *types.String
+	SecureStationURL           types.StationURL
+	SpecialProtocols           []types.UInt8
+	StationURLSpecialProtocols types.StationURL
+	BuildName                  types.String
 	allowInsecureLoginMethod   bool
 	SessionKeyLength           int // TODO - Use server SessionKeyLength?
 	SecureServerAccount        *nex.Account
-	OnAfterLogin               func(packet nex.PacketInterface, strUserName *types.String)
-	OnAfterLoginEx             func(packet nex.PacketInterface, strUserName *types.String, oExtraData *types.AnyDataHolder)
-	OnAfterRequestTicket       func(packet nex.PacketInterface, idSource *types.PID, idTarget *types.PID)
+	OnAfterLogin               func(packet nex.PacketInterface, strUserName types.String)
+	OnAfterLoginEx             func(packet nex.PacketInterface, strUserName types.String, oExtraData types.DataHolder)
+	OnAfterRequestTicket       func(packet nex.PacketInterface, idSource types.PID, idTarget types.PID)
 }
 
 func (commonProtocol *CommonProtocol) DisableInsecureLogin() {
@@ -37,7 +37,7 @@ func NewCommonProtocol(protocol ticket_granting.Interface) *CommonProtocol {
 	commonProtocol := &CommonProtocol{
 		protocol:                   protocol,
 		SecureStationURL:           types.NewStationURL("prudp:/"),
-		SpecialProtocols:           make([]*types.PrimitiveU8, 0),
+		SpecialProtocols:           make([]types.UInt8, 0),
 		StationURLSpecialProtocols: types.NewStationURL(""),
 		BuildName:                  types.NewString(""),
 		allowInsecureLoginMethod:   false,

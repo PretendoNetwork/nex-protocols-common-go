@@ -7,7 +7,7 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
-func (commonProtocol *CommonProtocol) postMetaBinary(err error, packet nex.PacketInterface, callID uint32, param *datastore_types.DataStorePreparePostParam) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) postMetaBinary(err error, packet nex.PacketInterface, callID uint32, param datastore_types.DataStorePreparePostParam) (*nex.RMCMessage, *nex.Error) {
 	// * This method looks to function identically to DataStore::PreparePostObject,
 	// * except the only difference being it doesn't return an S3 upload URL. This
 	// * needs to be verified though, as there are other methods in the family such
@@ -41,15 +41,13 @@ func (commonProtocol *CommonProtocol) postMetaBinary(err error, packet nex.Packe
 	}
 
 	// TODO - Should this be moved to InitializeObjectByPreparePostParam?
-	param.RatingInitParams.Each(func(_ int, ratingInitParamWithSlot *datastore_types.DataStoreRatingInitParamWithSlot) bool {
+	for _ , ratingInitParamWithSlot := range param.RatingInitParams {
 		errCode = commonProtocol.InitializeObjectRatingWithSlot(dataID, ratingInitParamWithSlot)
 		if errCode != nil {
 			common_globals.Logger.Errorf("Error code on rating init: %s", errCode.Error())
-			return true
+			break
 		}
-
-		return false
-	})
+	}
 
 	if errCode != nil {
 		return nil, errCode
@@ -57,7 +55,7 @@ func (commonProtocol *CommonProtocol) postMetaBinary(err error, packet nex.Packe
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
-	rmcResponseStream.WritePrimitiveUInt64LE(dataID)
+	rmcResponseStream.WriteUInt64LE(dataID)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 

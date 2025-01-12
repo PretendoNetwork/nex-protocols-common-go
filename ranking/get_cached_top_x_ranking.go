@@ -10,7 +10,7 @@ import (
 	ranking_types "github.com/PretendoNetwork/nex-protocols-go/v2/ranking/types"
 )
 
-func (commonProtocol *CommonProtocol) getCachedTopXRanking(err error, packet nex.PacketInterface, callID uint32, category *types.PrimitiveU32, orderParam *ranking_types.RankingOrderParam) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) getCachedTopXRanking(err error, packet nex.PacketInterface, callID uint32, category types.UInt32, orderParam ranking_types.RankingOrderParam) (*nex.RMCMessage, *nex.Error) {
 	if commonProtocol.GetRankingsAndCountByCategoryAndRankingOrderParam == nil {
 		common_globals.Logger.Warning("Ranking::GetCachedTopXRanking missing GetRankingsAndCountByCategoryAndRankingOrderParam!")
 		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
@@ -30,14 +30,14 @@ func (commonProtocol *CommonProtocol) getCachedTopXRanking(err error, packet nex
 		return nil, nex.NewError(nex.ResultCodes.Ranking.Unknown, "change_error")
 	}
 
-	if totalCount == 0 || rankDataList.Length() == 0 {
+	if totalCount == 0 || len(rankDataList) == 0 {
 		return nil, nex.NewError(nex.ResultCodes.Ranking.NotFound, "change_error")
 	}
 
 	pResult := ranking_types.NewRankingCachedResult()
 
 	pResult.RankingResult.RankDataList = rankDataList
-	pResult.RankingResult.TotalCount = types.NewPrimitiveU32(totalCount)
+	pResult.RankingResult.TotalCount = types.NewUInt32(totalCount)
 	pResult.RankingResult.SinceTime = types.NewDateTime(0x1F40420000) // * 2000-01-01T00:00:00.000Z, this is what the real server sends back
 
 	pResult.CreatedTime = types.NewDateTime(0).Now()
@@ -48,7 +48,7 @@ func (commonProtocol *CommonProtocol) getCachedTopXRanking(err error, packet nex
 	pResult.ExpiredTime = types.NewDateTime(0).FromTimestamp(time.Now().UTC().Add(time.Minute * time.Duration(5)))
 	// * This is the length Ultimate NES Remix uses
 	// TODO - Does this matter? and are other games different?
-	pResult.MaxLength = types.NewPrimitiveU8(10)
+	pResult.MaxLength = types.NewUInt8(10)
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 

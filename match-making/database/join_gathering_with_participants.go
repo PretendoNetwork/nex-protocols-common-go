@@ -16,7 +16,7 @@ import (
 )
 
 // JoinGatheringWithParticipants joins participants into a gathering. Returns the new number of participants
-func JoinGatheringWithParticipants(manager *common_globals.MatchmakingManager, gatheringID uint32, connection *nex.PRUDPConnection, additionalParticipants []*types.PID, joinMessage string, joinMatchmakeSessionBehavior constants.JoinMatchmakeSessionBehavior) (uint32, *nex.Error) {
+func JoinGatheringWithParticipants(manager *common_globals.MatchmakingManager, gatheringID uint32, connection *nex.PRUDPConnection, additionalParticipants []types.PID, joinMessage string, joinMatchmakeSessionBehavior constants.JoinMatchmakeSessionBehavior) (uint32, *nex.Error) {
 	var ownerPID uint64
 	var maxParticipants uint32
 	var flags uint32
@@ -38,20 +38,20 @@ func JoinGatheringWithParticipants(manager *common_globals.MatchmakingManager, g
 
 	// * If joinMatchmakeSessionBehavior is set to 1, we check if the caller is already joined into the session
 	if joinMatchmakeSessionBehavior == constants.JoinMatchmakeSessionBehaviorImAlreadyJoined {
-		if !slices.Contains(oldParticipants, connection.PID().Value()) {
+		if !slices.Contains(oldParticipants, uint64(connection.PID())) {
 			return 0, nex.NewError(nex.ResultCodes.RendezVous.NotParticipatedGathering, "change_error")
 		}
 	} else {
-		if slices.Contains(oldParticipants, connection.PID().Value()) {
+		if slices.Contains(oldParticipants, uint64(connection.PID())) {
 			return 0, nex.NewError(nex.ResultCodes.RendezVous.AlreadyParticipatedGathering, "change_error")
 		}
 
 		// * Only include the caller as a new participant when they aren't joined
-		newParticipants = []uint64{connection.PID().Value()}
+		newParticipants = []uint64{uint64(connection.PID())}
 	}
 
 	for _, participant := range additionalParticipants {
-		newParticipants = append(newParticipants, participant.Value())
+		newParticipants = append(newParticipants, uint64(participant))
 	}
 
 	participants := append(oldParticipants, newParticipants...)
@@ -80,7 +80,7 @@ func JoinGatheringWithParticipants(manager *common_globals.MatchmakingManager, g
 	// * Send the switch SwitchGathering to the new participants first
 	for _, participant := range common_globals.RemoveDuplicates(newParticipants) {
 		// * Don't send the SwitchGathering notification to the participant that requested the join
-		if connection.PID().Value() == uint64(participant) {
+		if uint64(connection.PID()) == participant {
 			continue
 		}
 
@@ -89,9 +89,9 @@ func JoinGatheringWithParticipants(manager *common_globals.MatchmakingManager, g
 
 		oEvent := notifications_types.NewNotificationEvent()
 		oEvent.PIDSource = connection.PID()
-		oEvent.Type.Value = notifications.BuildNotificationType(notificationCategory, notificationSubtype)
-		oEvent.Param1.Value = gatheringID
-		oEvent.Param2.Value = uint32(participant) // TODO - This assumes a legacy client. Will not work on the Switch
+		oEvent.Type = types.NewUInt32(notifications.BuildNotificationType(notificationCategory, notificationSubtype))
+		oEvent.Param1 = types.NewUInt32(gatheringID)
+		oEvent.Param2 = types.NewUInt32(uint32(participant)) // TODO - This assumes a legacy client. Will not work on the Switch
 
 		// * Send the notification to the participant
 		common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, []uint64{participant})
@@ -100,17 +100,17 @@ func JoinGatheringWithParticipants(manager *common_globals.MatchmakingManager, g
 	for _, participant := range newParticipants {
 		// * If the new participant is the same as the owner, then we are creating a new gathering.
 		// * We don't need to send the new participant notification event in that case
-		if flags & (match_making.GatheringFlags.VerboseParticipants | match_making.GatheringFlags.VerboseParticipantsEx) != 0 || connection.PID().Value() != ownerPID {
+		if flags & (match_making.GatheringFlags.VerboseParticipants | match_making.GatheringFlags.VerboseParticipantsEx) != 0 || uint64(connection.PID()) != ownerPID {
 			notificationCategory := notifications.NotificationCategories.Participation
 			notificationSubtype := notifications.NotificationSubTypes.Participation.NewParticipant
 
 			oEvent := notifications_types.NewNotificationEvent()
 			oEvent.PIDSource = connection.PID()
-			oEvent.Type.Value = notifications.BuildNotificationType(notificationCategory, notificationSubtype)
-			oEvent.Param1.Value = gatheringID
-			oEvent.Param2.Value = uint32(participant) // TODO - This assumes a legacy client. Will not work on the Switch
-			oEvent.StrParam.Value = joinMessage
-			oEvent.Param3.Value = uint32(len(participants))
+			oEvent.Type = types.NewUInt32(notifications.BuildNotificationType(notificationCategory, notificationSubtype))
+			oEvent.Param1 = types.NewUInt32(gatheringID)
+			oEvent.Param2 = types.NewUInt32(uint32(participant)) // TODO - This assumes a legacy client. Will not work on the Switch
+			oEvent.StrParam = types.NewString(joinMessage)
+			oEvent.Param3 = types.NewUInt32(uint32(len(participants)))
 
 			common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, participantJoinedTargets)
 		}
@@ -124,11 +124,11 @@ func JoinGatheringWithParticipants(manager *common_globals.MatchmakingManager, g
 
 				oEvent := notifications_types.NewNotificationEvent()
 				oEvent.PIDSource = connection.PID()
-				oEvent.Type.Value = notifications.BuildNotificationType(notificationCategory, notificationSubtype)
-				oEvent.Param1.Value = gatheringID
-				oEvent.Param2.Value = uint32(oldParticipant) // TODO - This assumes a legacy client. Will not work on the Switch
-				oEvent.StrParam.Value = joinMessage
-				oEvent.Param3.Value = uint32(len(participants))
+				oEvent.Type = types.NewUInt32(notifications.BuildNotificationType(notificationCategory, notificationSubtype))
+				oEvent.Param1 = types.NewUInt32(gatheringID)
+				oEvent.Param2 = types.NewUInt32(uint32(oldParticipant)) // TODO - This assumes a legacy client. Will not work on the Switch
+				oEvent.StrParam = types.NewString(joinMessage)
+				oEvent.Param3 = types.NewUInt32(uint32(len(participants)))
 
 				// * Send the notification to the joining participant
 				common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, []uint64{participant})

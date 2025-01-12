@@ -7,7 +7,7 @@ import (
 	ticket_granting "github.com/PretendoNetwork/nex-protocols-go/v2/ticket-granting"
 )
 
-func (commonProtocol *CommonProtocol) login(err error, packet nex.PacketInterface, callID uint32, strUserName *types.String) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) login(err error, packet nex.PacketInterface, callID uint32, strUserName types.String) (*nex.RMCMessage, *nex.Error) {
 	if !commonProtocol.allowInsecureLoginMethod {
 		return nil, nex.NewError(nex.ResultCodes.Authentication.ValidationFailed, "change_error")
 	}
@@ -20,7 +20,7 @@ func (commonProtocol *CommonProtocol) login(err error, packet nex.PacketInterfac
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
-	sourceAccount, errorCode := endpoint.AccountDetailsByUsername(strUserName.Value)
+	sourceAccount, errorCode := endpoint.AccountDetailsByUsername(string(strUserName))
 	if errorCode != nil && errorCode.ResultCode != nex.ResultCodes.RendezVous.InvalidUsername {
 		// * Some other error happened
 		return nil, errorCode
@@ -39,7 +39,7 @@ func (commonProtocol *CommonProtocol) login(err error, packet nex.PacketInterfac
 		return nil, errorCode
 	}
 
-	var retval *types.QResult
+	var retval types.QResult
 	pidPrincipal := types.NewPID(0)
 	pbufResponse := types.NewBuffer([]byte{})
 	pConnectionData := types.NewRVConnectionData()
@@ -55,12 +55,10 @@ func (commonProtocol *CommonProtocol) login(err error, packet nex.PacketInterfac
 		retval = types.NewQResultSuccess(nex.ResultCodes.Core.Unknown)
 		pidPrincipal = sourceAccount.PID
 		pbufResponse = types.NewBuffer(encryptedTicket)
-		strReturnMsg = commonProtocol.BuildName.Copy().(*types.String)
+		strReturnMsg = commonProtocol.BuildName.Copy().(types.String)
 
-		specialProtocols := types.NewList[*types.PrimitiveU8]()
-
-		specialProtocols.Type = types.NewPrimitiveU8(0)
-		specialProtocols.SetFromData(commonProtocol.SpecialProtocols)
+		specialProtocols := types.NewList[types.UInt8]()
+		specialProtocols = commonProtocol.SpecialProtocols
 
 		pConnectionData.StationURL = commonProtocol.SecureStationURL
 		pConnectionData.SpecialProtocols = specialProtocols
