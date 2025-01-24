@@ -13,31 +13,10 @@ import (
 
 // GetMatchmakeSessionByID gets a matchmake session with the given gathering ID and the system password
 func GetMatchmakeSessionByID(manager *common_globals.MatchmakingManager, endpoint *nex.PRUDPEndPoint, gatheringID uint32) (match_making_types.MatchmakeSession, string, *nex.Error) {
-	var ownerPID uint64
-	var hostPID uint64
-	var minimumParticipants uint16
-	var maximumParticipants uint16
-	var participationPolicy uint32
-	var policyArgument uint32
-	var flags uint32
-	var state uint32
-	var description string
-	var participationCount uint32
+	resultMatchmakeSession := match_making_types.NewMatchmakeSession()
 	var startedTime time.Time
-	var gameMode uint32
 	var resultAttribs []uint32
-	var openParticipation bool
-	var matchmakeSystemType uint32
-	var applicationBuffer []byte
-	var progressScore uint8
-	var sessionKey []byte
-	var option uint32
 	var resultMatchmakeParam []byte
-	var userPassword string
-	var referGID uint32
-	var userPasswordEnabled bool
-	var systemPasswordEnabled bool
-	var codeWord string
 	var systemPassword string
 
 	// * For simplicity, we will only compare the values that exist on a MatchmakeSessionSearchCriteria
@@ -77,32 +56,32 @@ func GetMatchmakeSessionByID(manager *common_globals.MatchmakingManager, endpoin
 		g.id=$1`,
 		gatheringID,
 	).Scan(
-		&gatheringID,
-		&ownerPID,
-		&hostPID,
-		&minimumParticipants,
-		&maximumParticipants,
-		&participationPolicy,
-		&policyArgument,
-		&flags,
-		&state,
-		&description,
-		&participationCount,
+		&resultMatchmakeSession.Gathering.ID,
+		&resultMatchmakeSession.Gathering.OwnerPID,
+		&resultMatchmakeSession.Gathering.HostPID,
+		&resultMatchmakeSession.Gathering.MinimumParticipants,
+		&resultMatchmakeSession.Gathering.MaximumParticipants,
+		&resultMatchmakeSession.Gathering.ParticipationPolicy,
+		&resultMatchmakeSession.Gathering.PolicyArgument,
+		&resultMatchmakeSession.Gathering.Flags,
+		&resultMatchmakeSession.Gathering.State,
+		&resultMatchmakeSession.Gathering.Description,
+		&resultMatchmakeSession.ParticipationCount,
 		&startedTime,
-		&gameMode,
+		&resultMatchmakeSession.GameMode,
 		pqextended.Array(&resultAttribs),
-		&openParticipation,
-		&matchmakeSystemType,
-		&applicationBuffer,
-		&progressScore,
-		&sessionKey,
-		&option,
+		&resultMatchmakeSession.OpenParticipation,
+		&resultMatchmakeSession.MatchmakeSystemType,
+		&resultMatchmakeSession.ApplicationBuffer,
+		&resultMatchmakeSession.ProgressScore,
+		&resultMatchmakeSession.SessionKey,
+		&resultMatchmakeSession.Option,
 		&resultMatchmakeParam,
-		&userPassword,
-		&referGID,
-		&userPasswordEnabled,
-		&systemPasswordEnabled,
-		&codeWord,
+		&resultMatchmakeSession.UserPassword,
+		&resultMatchmakeSession.ReferGID,
+		&resultMatchmakeSession.UserPasswordEnabled,
+		&resultMatchmakeSession.SystemPasswordEnabled,
+		&resultMatchmakeSession.CodeWord,
 		&systemPassword,
 	)
 	if err != nil {
@@ -113,21 +92,7 @@ func GetMatchmakeSessionByID(manager *common_globals.MatchmakingManager, endpoin
 		}
 	}
 
-	resultMatchmakeSession := match_making_types.NewMatchmakeSession()
-
-	resultMatchmakeSession.Gathering.ID = types.NewUInt32(gatheringID)
-	resultMatchmakeSession.OwnerPID = types.NewPID(ownerPID)
-	resultMatchmakeSession.HostPID = types.NewPID(hostPID)
-	resultMatchmakeSession.Gathering.MinimumParticipants = types.NewUInt16(minimumParticipants)
-	resultMatchmakeSession.Gathering.MaximumParticipants = types.NewUInt16(maximumParticipants)
-	resultMatchmakeSession.Gathering.ParticipationPolicy = types.NewUInt32(participationPolicy)
-	resultMatchmakeSession.Gathering.PolicyArgument = types.NewUInt32(policyArgument)
-	resultMatchmakeSession.Gathering.Flags = types.NewUInt32(flags)
-	resultMatchmakeSession.Gathering.State = types.NewUInt32(state)
-	resultMatchmakeSession.Gathering.Description = types.NewString(description)
-	resultMatchmakeSession.ParticipationCount = types.NewUInt32(participationCount)
 	resultMatchmakeSession.StartedTime = resultMatchmakeSession.StartedTime.FromTimestamp(startedTime)
-	resultMatchmakeSession.GameMode = types.NewUInt32(gameMode)
 
 	attributesSlice := make([]types.UInt32, len(resultAttribs))
 	for i, value := range resultAttribs {
@@ -135,21 +100,8 @@ func GetMatchmakeSessionByID(manager *common_globals.MatchmakingManager, endpoin
 	}
 	resultMatchmakeSession.Attributes = attributesSlice
 
-	resultMatchmakeSession.OpenParticipation = types.NewBool(openParticipation)
-	resultMatchmakeSession.MatchmakeSystemType = types.NewUInt32(matchmakeSystemType)
-	resultMatchmakeSession.ApplicationBuffer = applicationBuffer
-	resultMatchmakeSession.ProgressScore = types.NewUInt8(progressScore)
-	resultMatchmakeSession.SessionKey = sessionKey
-	resultMatchmakeSession.Option = types.UInt32(option)
-
 	matchmakeParamBytes := nex.NewByteStreamIn(resultMatchmakeParam, endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 	resultMatchmakeSession.MatchmakeParam.ExtractFrom(matchmakeParamBytes)
-
-	resultMatchmakeSession.UserPassword = types.NewString(userPassword)
-	resultMatchmakeSession.ReferGID = types.NewUInt32(referGID)
-	resultMatchmakeSession.UserPasswordEnabled = types.NewBool(userPasswordEnabled)
-	resultMatchmakeSession.SystemPasswordEnabled = types.NewBool(systemPasswordEnabled)
-	resultMatchmakeSession.CodeWord = types.String(codeWord)
 
 	return resultMatchmakeSession, systemPassword, nil
 }

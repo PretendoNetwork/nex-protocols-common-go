@@ -23,30 +23,21 @@ func DisconnectParticipant(manager *common_globals.MatchmakingManager, connectio
 	}
 
 	for rows.Next() {
-		var gatheringID uint32
-		var ownerPID uint64
-		var hostPID uint64
-		var minParticipants uint16
-		var maxParticipants uint16
-		var participationPolicy uint32
-		var policyArgument uint32
-		var flags uint32
-		var state uint32
-		var description string
+		gathering := match_making_types.NewGathering()
 		var gatheringType string
 		var participants []uint64
 
 		err = rows.Scan(
-			&gatheringID,
-			&ownerPID,
-			&hostPID,
-			&minParticipants,
-			&maxParticipants,
-			&participationPolicy,
-			&policyArgument,
-			&flags,
-			&state,
-			&description,
+			&gathering.ID,
+			&gathering.OwnerPID,
+			&gathering.HostPID,
+			&gathering.MinimumParticipants,
+			&gathering.MaximumParticipants,
+			&gathering.ParticipationPolicy,
+			&gathering.PolicyArgument,
+			&gathering.Flags,
+			&gathering.State,
+			&gathering.Description,
 			&gatheringType,
 			pqextended.Array(&participants),
 		)
@@ -56,30 +47,18 @@ func DisconnectParticipant(manager *common_globals.MatchmakingManager, connectio
 		}
 
 		// * If the gathering is a PersistentGathering and the gathering isn't set to leave when disconnecting, ignore and continue
-		if gatheringType == "PersistentGathering" && flags & match_making.GatheringFlags.PersistentGatheringLeaveParticipation == 0 {
+		if gatheringType == "PersistentGathering" && uint32(gathering.Flags) & match_making.GatheringFlags.PersistentGatheringLeaveParticipation == 0 {
 			continue
 		}
 
-		gathering := match_making_types.NewGathering()
-		gathering.ID = types.NewUInt32(gatheringID)
-		gathering.OwnerPID = types.NewPID(ownerPID)
-		gathering.HostPID = types.NewPID(hostPID)
-		gathering.MinimumParticipants = types.NewUInt16(minParticipants)
-		gathering.MaximumParticipants = types.NewUInt16(maxParticipants)
-		gathering.ParticipationPolicy = types.NewUInt32(participationPolicy)
-		gathering.PolicyArgument = types.NewUInt32(policyArgument)
-		gathering.Flags = types.NewUInt32(flags)
-		gathering.State = types.NewUInt32(state)
-		gathering.Description = types.NewString(description)
-
 		// * Since the participant is leaving, override the participant list to avoid sending notifications to them
-		participants, nexError = RemoveParticipantFromGathering(manager, gatheringID, uint64(connection.PID()))
+		participants, nexError = RemoveParticipantFromGathering(manager, uint32(gathering.ID), uint64(connection.PID()))
 		if nexError != nil {
 			common_globals.Logger.Error(nexError.Error())
 			continue
 		}
 
-		nexError = tracking.LogDisconnectGathering(manager.Database, connection.PID(), gatheringID, participants)
+		nexError = tracking.LogDisconnectGathering(manager.Database, connection.PID(), uint32(gathering.ID), participants)
 		if nexError != nil {
 			common_globals.Logger.Error(nexError.Error())
 			continue
@@ -88,7 +67,7 @@ func DisconnectParticipant(manager *common_globals.MatchmakingManager, connectio
 		if len(participants) == 0 {
 			// * There are no more participants, so we only have to unregister the gathering
 			// * Since the participant is disconnecting, we don't send notification events
-			nexError = UnregisterGathering(manager, connection.PID(), gatheringID)
+			nexError = UnregisterGathering(manager, connection.PID(), uint32(gathering.ID))
 			if nexError != nil {
 				common_globals.Logger.Error(nexError.Error())
 			}
@@ -96,12 +75,13 @@ func DisconnectParticipant(manager *common_globals.MatchmakingManager, connectio
 			continue
 		}
 
+		ownerPID := uint64(gathering.OwnerPID)
 		if connection.PID().Equals(gathering.OwnerPID) {
 			// * This flag tells the server to change the matchmake session owner if they disconnect
 			// * If the flag is not set, delete the session
 			// * More info: https://nintendo-wiki.pretendo.network/docs/nex/protocols/match-making/types#flags
 			if uint32(gathering.Flags) & match_making.GatheringFlags.DisconnectChangeOwner == 0 {
-				nexError = UnregisterGathering(manager, connection.PID(), gatheringID)
+				nexError = UnregisterGathering(manager, connection.PID(), uint32(gathering.ID))
 				if nexError != nil {
 					common_globals.Logger.Error(nexError.Error())
 					continue
@@ -113,7 +93,7 @@ func DisconnectParticipant(manager *common_globals.MatchmakingManager, connectio
 				oEvent := notifications_types.NewNotificationEvent()
 				oEvent.PIDSource = connection.PID().Copy().(types.PID)
 				oEvent.Type = types.NewUInt32(notifications.BuildNotificationType(category, subtype))
-				oEvent.Param1 = types.NewUInt32(gatheringID)
+				oEvent.Param1 = gathering.ID
 
 				common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, common_globals.RemoveDuplicates(participants))
 
@@ -129,7 +109,7 @@ func DisconnectParticipant(manager *common_globals.MatchmakingManager, connectio
 		// * If the host has disconnected, set the owner as the new host. We can guarantee that the ownerPID is not zero,
 		// * since otherwise the gathering would have been unregistered by MigrateGatheringOwnership
 		if connection.PID().Equals(gathering.HostPID) && ownerPID != 0 {
-			nexError = UpdateSessionHost(manager, gatheringID, types.NewPID(ownerPID), types.NewPID(ownerPID))
+			nexError = UpdateSessionHost(manager, uint32(gathering.ID), types.NewPID(ownerPID), types.NewPID(ownerPID))
 			if nexError != nil {
 				common_globals.Logger.Error(nexError.Error())
 			} else {
@@ -139,12 +119,12 @@ func DisconnectParticipant(manager *common_globals.MatchmakingManager, connectio
 				oEvent := notifications_types.NewNotificationEvent()
 				oEvent.PIDSource = connection.PID().Copy().(types.PID)
 				oEvent.Type = types.NewUInt32(notifications.BuildNotificationType(category, subtype))
-				oEvent.Param1 = types.NewUInt32(gatheringID)
+				oEvent.Param1 = gathering.ID
 
 				// TODO - Should the notification actually be sent to all participants?
 				common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, common_globals.RemoveDuplicates(participants))
 
-				nexError = tracking.LogChangeHost(manager.Database, connection.PID(), gatheringID, gathering.HostPID, types.NewPID(ownerPID))
+				nexError = tracking.LogChangeHost(manager.Database, connection.PID(), uint32(gathering.ID), gathering.HostPID, types.NewPID(ownerPID))
 				if nexError != nil {
 					common_globals.Logger.Error(nexError.Error())
 					continue
@@ -158,7 +138,7 @@ func DisconnectParticipant(manager *common_globals.MatchmakingManager, connectio
 		oEvent := notifications_types.NewNotificationEvent()
 		oEvent.PIDSource = connection.PID().Copy().(types.PID)
 		oEvent.Type = types.NewUInt32(notifications.BuildNotificationType(category, subtype))
-		oEvent.Param1 = types.NewUInt32(gatheringID)
+		oEvent.Param1 = gathering.ID
 		oEvent.Param2 = types.NewUInt32(uint32(connection.PID())) // TODO - This assumes a legacy client. Will not work on the Switch
 
 		var participantEndedTargets []uint64
