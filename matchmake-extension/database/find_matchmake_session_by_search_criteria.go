@@ -262,15 +262,18 @@ func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingMan
 				continue
 			}
 
-			attribute1, err := strconv.ParseUint(string(searchCriteria.Attribs[1]), 10, 32)
-			if err != nil {
-				globals.Logger.Error(err.Error())
-				continue
+			if searchCriteria.Attribs[1] != "" {
+				attribute1, err := strconv.ParseUint(string(searchCriteria.Attribs[1]), 10, 32)
+				if err != nil {
+					globals.Logger.Error(err.Error())
+					continue
+				}
+
+				// TODO - Should the attribute and the progress score actually weigh the same?
+				searchStatement += fmt.Sprintf(` ORDER BY abs(%d - ms.attribs[2] + %d - ms.progress_score)`, attribute1, sourceMatchmakeSession.ProgressScore)
 			}
 
-			// TODO - Should the attribute and the progress score actually weigh the same?
-			searchStatement += fmt.Sprintf(` ORDER BY abs(%d - ms.attribs[2] + %d - ms.progress_score)`, attribute1, sourceMatchmakeSession.ProgressScore)
-		// case constants.SelectionMethodScoreBased: // * According to notes this is related with the MatchmakeParam. TODO - Implement this
+			// case constants.SelectionMethodScoreBased: // * According to notes this is related with the MatchmakeParam. TODO - Implement this
 		}
 
 		// * If the ResultRange inside the MatchmakeSessionSearchCriteria is valid (only present on NEX 4.0+), use that
