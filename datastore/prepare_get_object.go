@@ -30,10 +30,15 @@ func (commonProtocol *CommonProtocol) prepareGetObject(err error, packet nex.Pac
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
-	bucket := commonProtocol.S3Bucket
-	key := fmt.Sprintf("%s/%d.bin", commonProtocol.s3DataKeyBase, param.DataID)
+	var objectInfo datastore_types.DataStoreMetaInfo
+	var errCode *nex.Error
 
-	objectInfo, errCode := commonProtocol.GetObjectInfoByDataID(param.DataID)
+	// * Real server ignores PersistenceTarget if DataID is set
+	if param.DataID == 0 {
+		objectInfo, errCode = commonProtocol.GetObjectInfoByPersistenceTargetWithPassword(param.PersistenceTarget, param.AccessPassword)
+	} else {
+		objectInfo, errCode = commonProtocol.GetObjectInfoByDataIDWithPassword(param.DataID, param.AccessPassword)
+	}
 	if errCode != nil {
 		return nil, errCode
 	}
@@ -42,6 +47,9 @@ func (commonProtocol *CommonProtocol) prepareGetObject(err error, packet nex.Pac
 	if errCode != nil {
 		return nil, errCode
 	}
+
+	bucket := commonProtocol.S3Bucket
+	key := fmt.Sprintf("%s/%d.bin", commonProtocol.s3DataKeyBase, objectInfo.DataID)
 
 	url, err := commonProtocol.S3Presigner.GetObject(bucket, key, time.Minute*15)
 	if err != nil {
