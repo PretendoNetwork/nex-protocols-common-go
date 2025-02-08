@@ -62,7 +62,10 @@ func (commonProtocol *CommonProtocol) updateNotificationData(err error, packet n
 	if len(friendList) != 0 {
 		var targets []uint64
 		for _, pid := range friendList {
-			targets = append(targets, uint64(pid))
+			// * Only send the notification to friends who are connected
+			if endpoint.FindConnectionByPID(uint64(pid)) != nil {
+				targets = append(targets, uint64(pid))
+			}
 		}
 
 		common_globals.SendNotificationEvent(endpoint, notificationData, targets)
