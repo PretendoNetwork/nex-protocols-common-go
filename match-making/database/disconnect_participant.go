@@ -107,7 +107,7 @@ func DisconnectParticipant(manager *common_globals.MatchmakingManager, connectio
 				continue
 			}
 
-			ownerPID, nexError = MigrateGatheringOwnership(manager, connection, gathering, participants)
+			ownerPID, nexError = MigrateGatheringOwnership(manager, connection, gathering, participants, nil, true)
 			if nexError != nil {
 				common_globals.Logger.Error(nexError.Error())
 			}
