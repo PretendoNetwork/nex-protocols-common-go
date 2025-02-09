@@ -2,7 +2,6 @@ package common_globals
 
 import (
 	"slices"
-	"time"
 
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/constants"
@@ -107,7 +106,7 @@ func CheckValidPersistentGathering(persistentGathering match_making_types.Persis
 	}
 
 	// * Check that the participation dates are within bounds of the current date
-	currentTime := types.NewDateTime(0).FromTimestamp(time.Now().UTC())
+	currentTime := types.NewDateTime(0).Now()
 
 	if persistentGathering.ParticipationStartDate != 0 && persistentGathering.ParticipationStartDate > currentTime {
 		return false
