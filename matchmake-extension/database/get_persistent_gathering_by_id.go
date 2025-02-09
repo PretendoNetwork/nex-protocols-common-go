@@ -33,7 +33,17 @@ func GetPersistentGatheringByID(manager *common_globals.MatchmakingManager, sour
 		pg.attribs,
 		pg.application_buffer,
 		pg.participation_start_date,
-		pg.participation_end_date
+		pg.participation_end_date,
+		(SELECT COUNT(ms.id)
+			FROM matchmaking.matchmake_sessions AS ms
+			INNER JOIN matchmaking.gatherings AS gms ON ms.id = gms.id
+			WHERE gms.registered=true
+			AND ms.matchmake_system_type=5 -- matchmake_system_type=5 is only used in matchmake sessions attached to a persistent gathering
+			AND ms.attribs[1]=g.id) AS matchmake_session_count,
+		COALESCE((SELECT cp.participation_count
+			FROM matchmaking.community_participations AS cp
+			WHERE cp.user_pid=$2
+			AND cp.gathering_id=g.id), 0) AS participation_count
 		FROM matchmaking.gatherings AS g
 		INNER JOIN matchmaking.persistent_gatherings AS pg ON g.id = pg.id
 		WHERE
@@ -41,6 +51,7 @@ func GetPersistentGatheringByID(manager *common_globals.MatchmakingManager, sour
 		g.type='PersistentGathering' AND
 		g.id=$1`,
 		gatheringID,
+		sourcePID,
 	).Scan(
 		&resultPersistentGathering.Gathering.ID,
 		&resultPersistentGathering.Gathering.OwnerPID,
@@ -58,19 +69,11 @@ func GetPersistentGatheringByID(manager *common_globals.MatchmakingManager, sour
 		&resultPersistentGathering.ApplicationBuffer,
 		&resultParticipationStartDate,
 		&resultParticipationEndDate,
+		&resultPersistentGathering.MatchmakeSessionCount,
+		&resultPersistentGathering.ParticipationCount,
 	)
 	if err != nil {
 		return match_making_types.NewPersistentGathering(), nil
-	}
-
-	resultMatchmakeSessionCount, nexError := GetPersistentGatheringSessionCount(manager, uint32(resultPersistentGathering.ID))
-	if nexError != nil {
-		return match_making_types.NewPersistentGathering(), nexError
-	}
-
-	resultParticipationCount, nexError := GetPersistentGatheringParticipationCount(manager, uint32(resultPersistentGathering.ID), uint64(sourcePID))
-	if nexError != nil {
-		return match_making_types.NewPersistentGathering(), nexError
 	}
 
 	attributesSlice := make([]types.UInt32, len(resultAttribs))
@@ -81,8 +84,6 @@ func GetPersistentGatheringByID(manager *common_globals.MatchmakingManager, sour
 
 	resultPersistentGathering.ParticipationStartDate = resultPersistentGathering.ParticipationStartDate.FromTimestamp(resultParticipationStartDate)
 	resultPersistentGathering.ParticipationEndDate = resultPersistentGathering.ParticipationEndDate.FromTimestamp(resultParticipationEndDate)
-	resultPersistentGathering.MatchmakeSessionCount = types.NewUInt32(resultMatchmakeSessionCount)
-	resultPersistentGathering.ParticipationCount = types.NewUInt32(resultParticipationCount)
 
 	return resultPersistentGathering, nil
 }

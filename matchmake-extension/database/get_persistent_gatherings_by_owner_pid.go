@@ -29,7 +29,17 @@ func GetPersistentGatheringsByOwnerPID(manager *common_globals.MatchmakingManage
 		pg.attribs,
 		pg.application_buffer,
 		pg.participation_start_date,
-		pg.participation_end_date
+		pg.participation_end_date,
+		(SELECT COUNT(ms.id)
+			FROM matchmaking.matchmake_sessions AS ms
+			INNER JOIN matchmaking.gatherings AS gms ON ms.id = gms.id
+			WHERE gms.registered=true
+			AND ms.matchmake_system_type=5 -- matchmake_system_type=5 is only used in matchmake sessions attached to a persistent gathering
+			AND ms.attribs[1]=g.id) AS matchmake_session_count,
+		COALESCE((SELECT cp.participation_count
+			FROM matchmaking.community_participations AS cp
+			WHERE cp.user_pid=$4
+			AND cp.gathering_id=g.id), 0) AS participation_count
 		FROM matchmaking.gatherings AS g
 		INNER JOIN matchmaking.persistent_gatherings AS pg ON g.id = pg.id
 		WHERE
@@ -40,6 +50,7 @@ func GetPersistentGatheringsByOwnerPID(manager *common_globals.MatchmakingManage
 		ownerPID,
 		resultRange.Length,
 		resultRange.Offset,
+		sourcePID,
 	)
 	if err != nil {
 		return nil, nex.NewError(nex.ResultCodes.Core.Unknown, err.Error())
@@ -68,21 +79,11 @@ func GetPersistentGatheringsByOwnerPID(manager *common_globals.MatchmakingManage
 			&resultPersistentGathering.ApplicationBuffer,
 			&resultParticipationStartDate,
 			&resultParticipationEndDate,
+			&resultPersistentGathering.MatchmakeSessionCount,
+			&resultPersistentGathering.ParticipationCount,
 		)
 		if err != nil {
 			common_globals.Logger.Critical(err.Error())
-			continue
-		}
-
-		resultMatchmakeSessionCount, nexError := GetPersistentGatheringSessionCount(manager, uint32(resultPersistentGathering.ID))
-		if nexError != nil {
-			common_globals.Logger.Critical(nexError.Error())
-			continue
-		}
-
-		resultParticipationCount, nexError := GetPersistentGatheringParticipationCount(manager, uint32(resultPersistentGathering.ID), uint64(sourcePID))
-		if nexError != nil {
-			common_globals.Logger.Critical(nexError.Error())
 			continue
 		}
 
@@ -94,8 +95,6 @@ func GetPersistentGatheringsByOwnerPID(manager *common_globals.MatchmakingManage
 
 		resultPersistentGathering.ParticipationStartDate = resultPersistentGathering.ParticipationStartDate.FromTimestamp(resultParticipationStartDate)
 		resultPersistentGathering.ParticipationEndDate = resultPersistentGathering.ParticipationEndDate.FromTimestamp(resultParticipationEndDate)
-		resultPersistentGathering.MatchmakeSessionCount = types.NewUInt32(resultMatchmakeSessionCount)
-		resultPersistentGathering.ParticipationCount = types.NewUInt32(resultParticipationCount)
 
 		persistentGatherings = append(persistentGatherings, resultPersistentGathering)
 	}

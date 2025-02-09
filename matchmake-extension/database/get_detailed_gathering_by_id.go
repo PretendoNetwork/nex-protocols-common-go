@@ -37,19 +37,6 @@ func GetDetailedGatheringByID(manager *common_globals.MatchmakingManager, source
 			return nil, "", nexError
 		}
 
-		matchmakeSessionCount, nexError := GetPersistentGatheringSessionCount(manager, gatheringID)
-		if nexError != nil {
-			return nil, "", nexError
-		}
-
-		participationCount, nexError := GetPersistentGatheringParticipationCount(manager, gatheringID, sourcePID)
-		if nexError != nil {
-			return nil, "", nexError
-		}
-
-		persistentGathering.MatchmakeSessionCount = types.NewUInt32(matchmakeSessionCount)
-		persistentGathering.ParticipationCount = types.NewUInt32(participationCount)
-
 		// * Scrap persistent gathering password
 		persistentGathering.Password = ""
 

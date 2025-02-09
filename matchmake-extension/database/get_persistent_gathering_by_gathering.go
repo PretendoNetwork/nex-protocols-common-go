@@ -24,10 +24,21 @@ func GetPersistentGatheringByGathering(manager *common_globals.MatchmakingManage
 		attribs,
 		application_buffer,
 		participation_start_date,
-		participation_end_date
+		participation_end_date,
+		(SELECT COUNT(ms.id)
+			FROM matchmaking.matchmake_sessions AS ms
+			INNER JOIN matchmaking.gatherings AS gms ON ms.id = gms.id
+			WHERE gms.registered=true
+			AND ms.matchmake_system_type=5 -- matchmake_system_type=5 is only used in matchmake sessions attached to a persistent gathering
+			AND ms.attribs[1]=g.id) AS matchmake_session_count,
+		COALESCE((SELECT cp.participation_count
+			FROM matchmaking.community_participations AS cp
+			WHERE cp.user_pid=$2
+			AND cp.gathering_id=g.id), 0) AS participation_count
 		FROM matchmaking.persistent_gatherings
 		WHERE id=$1`,
 		gathering.ID,
+		sourcePID,
 	).Scan(
 		&resultPersistentGathering.CommunityType,
 		&resultPersistentGathering.Password,
@@ -35,6 +46,8 @@ func GetPersistentGatheringByGathering(manager *common_globals.MatchmakingManage
 		&resultPersistentGathering.ApplicationBuffer,
 		&resultParticipationStartDate,
 		&resultParticipationEndDate,
+		&resultPersistentGathering.MatchmakeSessionCount,
+		&resultPersistentGathering.ParticipationCount,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
