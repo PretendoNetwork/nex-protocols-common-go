@@ -38,6 +38,7 @@ type CommonProtocol struct {
 	OnAfterBrowseMatchmakeSession                    func(packet nex.PacketInterface, searchCriteria match_making_types.MatchmakeSessionSearchCriteria, resultRange types.ResultRange)
 	OnAfterJoinMatchmakeSessionEx                    func(packet nex.PacketInterface, gid types.UInt32, strMessage types.String, dontCareMyBlockList types.Bool, participationCount types.UInt16)
 	OnAfterGetSimpleCommunity                        func(packet nex.PacketInterface, gatheringIDList types.List[types.UInt32])
+	OnAfterFindMatchmakeSessionByGatheringIDDetail   func(packet nex.PacketInterface, gid types.UInt32)
 }
 
 // SetDatabase defines the matchmaking manager to be used by the common protocol
@@ -148,6 +149,7 @@ func NewCommonProtocol(protocol matchmake_extension.Interface) *CommonProtocol {
 	protocol.SetHandlerBrowseMatchmakeSession(commonProtocol.browseMatchmakeSession)
 	protocol.SetHandlerJoinMatchmakeSessionEx(commonProtocol.joinMatchmakeSessionEx)
 	protocol.SetHandlerGetSimpleCommunity(commonProtocol.getSimpleCommunity)
+	protocol.SetHandlerFindMatchmakeSessionByGatheringIDDetail(commonProtocol.findMatchmakeSessionByGatheringIDDetail)
 
 	return commonProtocol
 }
