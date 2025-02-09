@@ -42,13 +42,10 @@ func (commonProtocol *CommonProtocol) createCommunity(err error, packet nex.Pack
 		return nil, nexError
 	}
 
-	// TODO - Is this right? Mario Kart 7 sets 0 max participants
-	if community.MaximumParticipants > 0 {
-		_, nexError = match_making_database.JoinGathering(commonProtocol.manager, uint32(community.ID), connection, 1, string(strMessage))
-		if nexError != nil {
-			commonProtocol.manager.Mutex.Unlock()
-			return nil, nexError
-		}
+	_, nexError = match_making_database.JoinGathering(commonProtocol.manager, uint32(community.ID), connection, 1, string(strMessage))
+	if nexError != nil {
+		commonProtocol.manager.Mutex.Unlock()
+		return nil, nexError
 	}
 
 	commonProtocol.manager.Mutex.Unlock()

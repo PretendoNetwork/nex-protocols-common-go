@@ -35,9 +35,9 @@ func (commonProtocol *CommonProtocol) findCommunityByGatheringID(err error, pack
 
 	lstCommunity := types.NewList[match_making_types.PersistentGathering]()
 
-	for _, community := range communities {
+	for i := range communities {
 		// * Scrap persistent gathering password
-		community.Password = ""
+		communities[i].Password = ""
 	}
 
 	lstCommunity = communities

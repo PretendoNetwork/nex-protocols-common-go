@@ -10,8 +10,8 @@ import (
 	pqextended "github.com/PretendoNetwork/pq-extended"
 )
 
-// GetPersistentGatheringsByOwnerPID finds the active persistent gatherings owned by the given owner PID
-func GetPersistentGatheringsByOwnerPID(manager *common_globals.MatchmakingManager, sourcePID types.PID, ownerPID types.PID, resultRange types.ResultRange) ([]match_making_types.PersistentGathering, *nex.Error) {
+// GetPersistentGatheringsByParticipant finds the active persistent gatherings that a user is participating on
+func GetPersistentGatheringsByParticipant(manager *common_globals.MatchmakingManager, sourcePID types.PID, participant types.PID, resultRange types.ResultRange) ([]match_making_types.PersistentGathering, *nex.Error) {
 	persistentGatherings := make([]match_making_types.PersistentGathering, 0)
 	rows, err := manager.Database.Query(`SELECT
 		g.id,
@@ -45,9 +45,9 @@ func GetPersistentGatheringsByOwnerPID(manager *common_globals.MatchmakingManage
 		WHERE
 		g.registered=true AND
 		g.type='PersistentGathering' AND
-		g.owner_pid=$1
+		$1=ANY(g.participants)
 		LIMIT $2 OFFSET $3`,
-		ownerPID,
+		participant,
 		resultRange.Length,
 		resultRange.Offset,
 		sourcePID,

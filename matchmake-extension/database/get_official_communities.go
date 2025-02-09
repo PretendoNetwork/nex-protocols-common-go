@@ -14,6 +14,7 @@ import (
 func GetOfficialCommunities(manager *common_globals.MatchmakingManager, sourcePID types.PID, isAvailableOnly bool, resultRange types.ResultRange) ([]match_making_types.PersistentGathering, *nex.Error) {
 	persistentGatherings := make([]match_making_types.PersistentGathering, 0)
 	currentTime := time.Now().UTC()
+	timeNever := types.NewDateTime(0).Standard()
 	rows, err := manager.Database.Query(`SELECT
 		g.id,
 		g.owner_pid,
@@ -47,13 +48,18 @@ func GetOfficialCommunities(manager *common_globals.MatchmakingManager, sourcePI
 		g.registered=true AND
 		g.type='PersistentGathering' AND
 		pg.community_type=2 AND
-		(CASE WHEN $1 THEN $2 BETWEEN pg.participation_start_date AND pg.participation_end_date ELSE true END)
+		(CASE WHEN $1 THEN
+			(CASE WHEN pg.participation_start_date <> $6 THEN $2 >= pg.participation_start_date ELSE true END)
+			AND
+			(CASE WHEN pg.participation_end_date <> $6 THEN $2 <= pg.participation_end_date ELSE true END)
+			ELSE true END)
 		LIMIT $3 OFFSET $4`,
 		isAvailableOnly,
 		currentTime,
 		uint32(resultRange.Length),
 		uint32(resultRange.Offset),
 		sourcePID,
+		timeNever,
 	)
 	if err != nil {
 		return nil, nex.NewError(nex.ResultCodes.Core.Unknown, err.Error())

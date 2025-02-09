@@ -20,7 +20,7 @@ func (commonProtocol *CommonProtocol) findCommunityByParticipant(err error, pack
 
 	commonProtocol.manager.Mutex.RLock()
 
-	communities, nexError := database.GetPersistentGatheringsByOwnerPID(commonProtocol.manager, connection.PID(), pid, resultRange)
+	communities, nexError := database.GetPersistentGatheringsByParticipant(commonProtocol.manager, connection.PID(), pid, resultRange)
 	if nexError != nil {
 		commonProtocol.manager.Mutex.RUnlock()
 		return nil, nexError
@@ -30,9 +30,9 @@ func (commonProtocol *CommonProtocol) findCommunityByParticipant(err error, pack
 
 	lstCommunity := types.NewList[match_making_types.PersistentGathering]()
 
-	for _, community := range communities {
+	for i := range communities {
 		// * Scrap persistent gathering password
-		community.Password = ""
+		communities[i].Password = ""
 	}
 
 	lstCommunity = communities
