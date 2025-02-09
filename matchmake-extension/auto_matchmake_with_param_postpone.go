@@ -43,10 +43,6 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithParamPostpone(err error, 
 		}
 	}
 
-	// * A client may disconnect from a session without leaving reliably,
-	// * so let's make sure the client is removed from the session
-	database.EndMatchmakeSessionsParticipation(commonProtocol.manager, connection)
-
 	commonProtocol.CleanupMatchmakeSessionSearchCriterias(autoMatchmakeParam.LstSearchCriteria)
 
 	resultRange := types.NewResultRange()
