@@ -11,14 +11,47 @@ import (
 )
 
 // MigrateGatheringOwnership switches the owner of the gathering with a different one
-func MigrateGatheringOwnership(manager *common_globals.MatchmakingManager, connection *nex.PRUDPConnection, gathering match_making_types.Gathering, participants []uint64) (uint64, *nex.Error) {
+func MigrateGatheringOwnership(manager *common_globals.MatchmakingManager, connection *nex.PRUDPConnection, gathering match_making_types.Gathering, participants []uint64, candidates []uint64, disconnect bool) (uint64, *nex.Error) {
 	var nexError *nex.Error
-	var uniqueParticipants []uint64 = common_globals.RemoveDuplicates(participants)
+	var uniqueParticipants []uint64
 	var newOwner uint64
+
+	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
+
+	if len(candidates) != 0 {
+		// * Candidates must be connected
+		for _, candidate := range candidates {
+			if endpoint.FindConnectionByPID(candidate) != nil {
+				uniqueParticipants = append(uniqueParticipants, candidate)
+			}
+		}
+	} else {
+		uniqueParticipants = common_globals.RemoveDuplicates(participants)
+	}
+
+	var previousOwnerFound bool = false
 	for _, participant := range uniqueParticipants {
 		if participant != uint64(gathering.OwnerPID) {
 			newOwner = participant
 			break
+		} else {
+			previousOwnerFound = true
+		}
+	}
+
+	if !disconnect {
+		// * There are no candidates available
+		if len(participants) == 0 && len(candidates) == 0 {
+			return 0, nex.NewError(nex.ResultCodes.RendezVous.NotParticipatedGathering, "change_error")
+		}
+
+		if newOwner == 0 {
+			// * If there were candidates given which weren't the previous owner but no owner was selected, all of them must be offline
+			if len(candidates) != 0 && !previousOwnerFound {
+				return 0, nex.NewError(nex.ResultCodes.RendezVous.UserIsOffline, "change_error")
+			} else {
+				return 0, nil
+			}
 		}
 	}
 
@@ -37,7 +70,7 @@ func MigrateGatheringOwnership(manager *common_globals.MatchmakingManager, conne
 		oEvent.Type = types.NewUInt32(notifications.BuildNotificationType(category, subtype))
 		oEvent.Param1 = gathering.ID
 
-		common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, uniqueParticipants)
+		common_globals.SendNotificationEvent(endpoint, oEvent, uniqueParticipants)
 		return 0, nil
 	}
 
@@ -70,6 +103,6 @@ func MigrateGatheringOwnership(manager *common_globals.MatchmakingManager, conne
 	// * unixTime := time.Now()
 	// * oEvent.StrParam = strconv.FormatInt(unixTime.UnixMicro(), 10)
 
-	common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, uniqueParticipants)
+	common_globals.SendNotificationEvent(endpoint, oEvent, uniqueParticipants)
 	return newOwner, nil
 }
