@@ -35,8 +35,10 @@ func JoinGathering(manager *common_globals.MatchmakingManager, gatheringID uint3
 		}
 	}
 
-	if uint32(len(participants)) + uint32(vacantParticipants) > maxParticipants {
-		return 0, nex.NewError(nex.ResultCodes.RendezVous.SessionFull, "change_error")
+	if maxParticipants != 0 {
+		if uint32(len(participants)) + uint32(vacantParticipants) > maxParticipants {
+			return 0, nex.NewError(nex.ResultCodes.RendezVous.SessionFull, "change_error")
+		}
 	}
 
 	if slices.Contains(participants, uint64(connection.PID())) {
