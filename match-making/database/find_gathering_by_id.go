@@ -43,6 +43,7 @@ func FindGatheringByID(manager *common_globals.MatchmakingManager, id uint32) (m
 	}
 
 	gathering.ID = types.NewUInt32(id)
+	startedDateTime := types.NewDateTime(0)
 
-	return gathering, gatheringType, participants, types.NewDateTime(0).FromTimestamp(startedTime), nil
+	return gathering, gatheringType, participants, startedDateTime.FromTimestamp(startedTime), nil
 }
