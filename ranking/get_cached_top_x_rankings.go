@@ -56,7 +56,7 @@ func (commonProtocol *CommonProtocol) getCachedTopXRankings(err error, packet ne
 		// * It doesn't change, even on subsequent requests, until after the
 		// * ExpiredTime has passed (seemingly what the "cached" means).
 		// * Whether we need to replicate this idk, but in case, here's a note.
-		result.ExpiredTime = types.NewDateTime(0).FromTimestamp(time.Now().UTC().Add(time.Minute * time.Duration(5)))
+		result.ExpiredTime.FromTimestamp(time.Now().UTC().Add(time.Minute * time.Duration(5)))
 		// * This is the length Ultimate NES Remix uses
 		// TODO - Does this matter? and are other games different?
 		result.MaxLength = types.NewUInt8(10)
