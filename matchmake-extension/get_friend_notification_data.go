@@ -48,7 +48,7 @@ func (commonProtocol *CommonProtocol) getFriendNotificationData(err error, packe
 	rmcResponse.MethodID = matchmake_extension.MethodGetFriendNotificationData
 	rmcResponse.CallID = callID
 
-	if commonProtocol.OnAfterUpdateNotificationData != nil {
+	if commonProtocol.OnAfterGetFriendNotificationData != nil {
 		go commonProtocol.OnAfterGetFriendNotificationData(packet, uiType)
 	}
 

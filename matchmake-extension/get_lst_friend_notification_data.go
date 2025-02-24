@@ -53,7 +53,7 @@ func (commonProtocol *CommonProtocol) getlstFriendNotificationData(err error, pa
 	rmcResponse.MethodID = matchmake_extension.MethodGetlstFriendNotificationData
 	rmcResponse.CallID = callID
 
-	if commonProtocol.OnAfterUpdateNotificationData != nil {
+	if commonProtocol.OnAfterGetlstFriendNotificationData != nil {
 		go commonProtocol.OnAfterGetlstFriendNotificationData(packet, lstTypes)
 	}
 
