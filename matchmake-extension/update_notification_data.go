@@ -1,6 +1,8 @@
 package matchmake_extension
 
 import (
+	"unicode/utf8"
+
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
@@ -22,8 +24,9 @@ func (commonProtocol *CommonProtocol) updateNotificationData(err error, packet n
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	// * All strings must have a length lower than 256
-	if len(strParam) > 256 {
+	// * All strings must have a length lower than 256.
+	// * Kid Icarus: Uprising sends strings with UTF-8 bytes longer than 256, so I assume this should count the runes instead
+	if utf8.RuneCountInString(string(strParam)) > 256 {
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
