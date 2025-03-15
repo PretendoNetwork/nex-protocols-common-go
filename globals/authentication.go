@@ -106,6 +106,10 @@ func DecryptToken(encryptedToken []byte, aesKey []byte) (*NEXToken, *nex.Error) 
 	expectedChecksum := binary.BigEndian.Uint32(encryptedToken[0:4])
 	encryptedBody := encryptedToken[4:]
 
+	if len(encryptedBody) % aes.BlockSize != 0 {
+		return nil, nex.NewError(nex.ResultCodes.Authentication.ValidationFailed, fmt.Sprintf("Encrypted body has invalid size %d", len(encryptedBody)))
+	}
+
 	decrypted := make([]byte, len(encryptedBody))
 	iv := make([]byte, 16)
 	mode := cipher.NewCBCDecrypter(block, iv)
