@@ -60,7 +60,7 @@ func ValidatePretendoLoginData(pid types.PID, loginData types.DataHolder, aesKey
 
 	// Check for NEX token type
 	if decryptedToken.TokenType != 3 {
-		return nex.NewError(nex.ResultCodes.Authentication.ValidationFailed, "Token expired")
+		return nex.NewError(nex.ResultCodes.Authentication.ValidationFailed, "Invalid token type")
 	}
 
 	// Expire time is in milliseconds
