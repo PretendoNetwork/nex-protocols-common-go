@@ -26,9 +26,9 @@ func (commonProtocol *CommonProtocol) DisableInsecureRegister() {
 	commonProtocol.allowInsecureRegisterMethod = false
 }
 
-// EnableInsecureRegister enables the insecure Register method. Do not enable this on friends or NEX 1 games
+// EnableInsecureRegister enables the insecure Register method. Do not enable this on NEX 1 games
 func (commonProtocol *CommonProtocol) EnableInsecureRegister() {
-	common_globals.Logger.Warning("Insecure Register has been enabled. This MUST NOT be enabled on friends or NEX 1 games or with EnableInsecureLogin at the same time. Use with caution!")
+	common_globals.Logger.Warning("Insecure Register has been enabled. This MUST NOT be enabled on NEX 1 games or with EnableInsecureLogin at the same time except on friends. Use with caution!")
 	commonProtocol.allowInsecureRegisterMethod = true
 }
 
