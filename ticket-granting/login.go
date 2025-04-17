@@ -8,35 +8,34 @@ import (
 )
 
 func (commonProtocol *CommonProtocol) login(err error, packet nex.PacketInterface, callID uint32, strUserName types.String) (*nex.RMCMessage, *nex.Error) {
-	if !commonProtocol.allowInsecureLoginMethod {
-		return nil, nex.NewError(nex.ResultCodes.Authentication.ValidationFailed, "change_error")
-	}
-
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, err.Error())
 	}
 
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
-	sourceAccount, errorCode := endpoint.AccountDetailsByUsername(string(strUserName))
-	if errorCode != nil && errorCode.ResultCode != nex.ResultCodes.RendezVous.InvalidUsername {
-		// * Some other error happened
-		return nil, errorCode
+	var errorCode *nex.Error
+
+	if !commonProtocol.allowInsecureLoginMethod {
+		common_globals.Logger.Error("TicketGranting::Login blocked")
+		errorCode = nex.NewError(nex.ResultCodes.Authentication.ValidationFailed, "TicketGranting::Login blocked")
 	}
 
-	targetAccount, errorCode := endpoint.AccountDetailsByUsername(commonProtocol.SecureServerAccount.Username)
-	if errorCode != nil && errorCode.ResultCode != nex.ResultCodes.RendezVous.InvalidUsername {
-		// * Some other error happened
-		return nil, errorCode
+	var sourceAccount *nex.Account
+	if errorCode == nil {
+		sourceAccount, errorCode = endpoint.AccountDetailsByUsername(string(strUserName))
 	}
 
-	encryptedTicket, errorCode := generateTicket(sourceAccount, targetAccount, commonProtocol.SessionKeyLength, endpoint)
+	var targetAccount *nex.Account
+	if errorCode == nil {
+		targetAccount, errorCode = endpoint.AccountDetailsByUsername(commonProtocol.SecureServerAccount.Username)
+	}
 
-	if errorCode != nil && errorCode.ResultCode != nex.ResultCodes.RendezVous.InvalidUsername {
-		// * Some other error happened
-		return nil, errorCode
+	var encryptedTicket []byte
+	if errorCode == nil {
+		encryptedTicket, errorCode = generateTicket(sourceAccount, targetAccount, commonProtocol.SessionKeyLength, endpoint)
 	}
 
 	var retval types.QResult
@@ -45,11 +44,8 @@ func (commonProtocol *CommonProtocol) login(err error, packet nex.PacketInterfac
 	pConnectionData := types.NewRVConnectionData()
 	strReturnMsg := types.NewString("")
 
-	// * From the wiki:
-	// *
-	// * "If the username does not exist, the %retval% field is set to
-	// * RendezVous::InvalidUsername and the other fields are left blank."
-	if errorCode != nil && errorCode.ResultCode == nex.ResultCodes.RendezVous.InvalidUsername {
+	// * If any errors are triggered, return them in %retval%
+	if errorCode != nil {
 		retval = types.NewQResultError(errorCode.ResultCode)
 	} else {
 		retval = types.NewQResultSuccess(nex.ResultCodes.Core.Unknown)

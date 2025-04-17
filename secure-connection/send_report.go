@@ -16,7 +16,7 @@ func (commonProtocol *CommonProtocol) sendReport(err error, packet nex.PacketInt
 
 	if err != nil {
 		common_globals.Logger.Critical(err.Error())
-		return nil, nex.NewError(nex.ResultCodes.Core.Unknown, "change_error")
+		return nil, nex.NewError(nex.ResultCodes.Core.Unknown, err.Error())
 	}
 
 	connection := packet.Sender()
