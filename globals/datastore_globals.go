@@ -5,9 +5,13 @@ import (
 	"database/sql"
 	"fmt"
 	"net/url"
+	"slices"
 	"time"
 
 	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/types"
+	datastore_constants "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/constants"
+	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 	"github.com/minio/minio-go/v7"
 )
 
@@ -121,9 +125,10 @@ func NewMinIOPresigner(minioClient *minio.Client) *MinIOPresigner {
 
 // DataStoreManager manages a DataStore instance
 type DataStoreManager struct {
-	Database *sql.DB
-	Endpoint *nex.PRUDPEndPoint
-	S3       *S3
+	Database          *sql.DB
+	Endpoint          *nex.PRUDPEndPoint
+	S3                *S3
+	GetUserFriendPIDs func(pid uint32) []uint32
 }
 
 // SetS3Config sets the S3 config for the DataStoreManager.
@@ -135,6 +140,81 @@ func (dsm *DataStoreManager) SetS3Config(bucket, keyBase string, presigner S3Pre
 		KeyBase:   keyBase,
 		Presigner: presigner,
 	}
+}
+
+// VerifyObjectAccessPermission verifies that a request can access a given object
+func (dsm DataStoreManager) VerifyObjectAccessPermission(requesterPID types.PID, metaInfo datastore_types.DataStoreMetaInfo, objectAccessPassword, requesterAccessPassword types.UInt64) *nex.Error {
+	return dsm.VerifyObjectPermission(metaInfo.OwnerID, requesterPID, metaInfo.Permission, objectAccessPassword, requesterAccessPassword)
+}
+
+// VerifyObjectUpdatePermission verifies that a request can update a given object
+func (dsm DataStoreManager) VerifyObjectUpdatePermission(requesterPID types.PID, metaInfo datastore_types.DataStoreMetaInfo, objectUpdatePassword, requesterUpdatePassword types.UInt64) *nex.Error {
+	return dsm.VerifyObjectPermission(metaInfo.OwnerID, requesterPID, metaInfo.DelPermission, objectUpdatePassword, requesterUpdatePassword)
+}
+
+// VerifyObjectPermission verifies that a given set of permissions is allowed
+func (dsm DataStoreManager) VerifyObjectPermission(ownerPID, requesterPID types.PID, permission datastore_types.DataStorePermission, objectPassword, requesterPassword types.UInt64) *nex.Error {
+	if permission.Permission > types.UInt8(datastore_constants.PermissionSpecifiedFriend) {
+		return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
+	}
+
+	// * If a password is provided, and is correct, then bypass
+	// * permissions checks
+	if uint64(requesterPassword) != datastore_constants.InvalidPassword && requesterPassword == objectPassword {
+		return nil
+	}
+
+	// * Owner can always interact with their own objects
+	if ownerPID.Equals(requesterPID) {
+		return nil
+	}
+
+	// * Standard permission checks
+	var err *nex.Error
+
+	if permission.Permission == types.UInt8(datastore_constants.PermissionPublic) {
+		return nil
+	}
+
+	if permission.Permission == types.UInt8(datastore_constants.PermissionFriend) {
+		// TODO - This assumes a legacy client. Will not work on the Switch
+		friendsList := dsm.GetUserFriendPIDs(uint32(ownerPID))
+
+		if !slices.Contains(friendsList, uint32(requesterPID)) {
+			err = nex.NewError(nex.ResultCodes.DataStore.PermissionDenied, "change_error")
+		}
+	}
+
+	if permission.Permission == types.UInt8(datastore_constants.PermissionSpecified) {
+		if !permission.RecipientIDs.Contains(requesterPID) {
+			err = nex.NewError(nex.ResultCodes.DataStore.PermissionDenied, "change_error")
+		}
+	}
+
+	if permission.Permission == types.UInt8(datastore_constants.PermissionPrivate) {
+		if !ownerPID.Equals(requesterPID) {
+			err = nex.NewError(nex.ResultCodes.DataStore.PermissionDenied, "change_error")
+		}
+	}
+
+	if permission.Permission == types.UInt8(datastore_constants.PermissionSpecifiedFriend) {
+		// TODO - This assumes a legacy client. Will not work on the Switch
+		friendsList := dsm.GetUserFriendPIDs(uint32(ownerPID))
+
+		if !slices.Contains(friendsList, uint32(requesterPID)) {
+			err = nex.NewError(nex.ResultCodes.DataStore.PermissionDenied, "change_error")
+		}
+
+		if !permission.RecipientIDs.Contains(requesterPID) {
+			err = nex.NewError(nex.ResultCodes.DataStore.PermissionDenied, "change_error")
+		}
+	}
+
+	if err != nil && uint64(requesterPassword) != datastore_constants.InvalidPassword {
+		err = nex.NewError(nex.ResultCodes.DataStore.InvalidPassword, "change_error")
+	}
+
+	return err
 }
 
 // NewDataStoreManager returns a new DataStoreManager
