@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"slices"
+	"strconv"
 	"time"
 
 	"github.com/PretendoNetwork/nex-go/v2"
@@ -215,6 +216,135 @@ func (dsm DataStoreManager) VerifyObjectPermission(ownerPID, requesterPID types.
 	}
 
 	return err
+}
+
+// ValidateExtraData validates the `extraData` list seen in
+// `DataStorePreparePostParam`, `DataStorePrepareUpdateParam`,
+// and `DataStorePrepareGetParam`.
+//
+// NOTE: UNOFFICIAL BEHAVIOR! THIS USES HEURISTICS BASED ON HOW SEVERAL
+// GAMES CREATE THIS DATA. THE OFFICIAL SERVERS DID NOT VALIDATE THIS
+// DATA AT ALL, WE DO SO FOR SANITY AND SAFETY!
+func (dsm DataStoreManager) ValidateExtraData(extraData types.List[types.String]) *nex.Error {
+	// * These checks are based on observed behaviour in
+	// * Animal Crossing: New Leaf (3DS) and Xenoblade (Wii U).
+	// *
+	// * `extraData` seems to contain data about the device
+	// * type and region? Unsure what the real purpose of
+	// * this data is. The structure of `extraData` seems
+	// * consistent across multiple games, however.
+	// *
+	// * Some notes on the structure as seen in
+	// * `nn::nex::DataStoreLogicServerClient::CreateExtraData`
+	// * from Xenoblade on the Wii U (3DS handles parts slightly different):
+	// *
+	// * - The 1st element is the platform ("CTR" for the 3DS (all models), "WUP" for the Wii U)
+	// * - The 2nd element is the "platform region" number. CFG_Region on the 3DS, MCPRegion on Wii U.
+	// *   Gotten from `SCIGetPlatformRegion` on Wii U, likely `CFGU_SecureInfoGetRegion` on 3DS?
+	// * - The 3rd element is the "platform region" name. This takes the platform region number
+	// *   from the 2nd element and finds it's corresponding string name. For example, "3" on 3DS
+	// *   would use "AUS" here, and 64 on Wii U would use "TWN" here. If the number is not valid,
+	// *   the string "Invalid" is used
+	// * - The 4th element is the "platform country" number. It comes from `SCIGetCafeCountry` on
+	// *   Wii U and seems to line up with the standard region IDs
+	// *   (https://nintendo-wiki.pretendo.network/docs/misc/region-ids)
+	// * - The 5th element is the "platform country" code. It comes from `SCIGetCountryCodeA2(cafe_country)`
+	// *   on Wii U and is just the ISO A2 country code. For example country code 110 (UK) would
+	// *   map to "GB". Seems to line up with the `X-Nintendo-Country` NNAS header
+	// * - The 6th element is always empty. AC:NL dumps have nothing here, and Xenoblade has no
+	// *   code to populate it. Maybe it's reserved for something? Idk
+	// * - Every string has a max length length of 8 characters ("Invalid" is 7 characters, plus the null byte)
+	// *
+	// * Example from Animal Crossing: New Leaf:
+	// *
+	// * extraData (List<String> length 6)
+	// * 	extraData[0] (String): CTR
+	// * 	extraData[1] (String): 2
+	// * 	extraData[2] (String): EUR
+	// * 	extraData[3] (String): 110
+	// * 	extraData[4] (String): GB
+	// * 	extraData[5] (String):
+
+	// * `extraData` was added in NEX 3.5. If empty, assume
+	// * legacy client and ignore it
+	if len(extraData) == 0 {
+		return nil
+	}
+
+	// * Always 6 elements in length
+	if len(extraData) != 6 {
+		return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "invalid extraData, not 6 elements")
+	}
+
+	// * The max size of a string here is always 7.
+	// * The game allocates 8 bytes, but the last
+	// * is reserved for the trailing null byte
+	for _, str := range extraData {
+		if len(str) > 7 {
+			return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "invalid extraData, string too long")
+		}
+	}
+
+	// * The 3DS and Wii U use different platform region IDs
+	platformRegionIDs := map[string]map[string]int{
+		"CTR": { // * CFG_Region https://github.com/devkitPro/libctru/blob/4dcc4cc65468fa6a28733ddeabdd650c6dda7f41/libctru/include/3ds/services/cfgu.h#L9
+			"JPN": 0,
+			"USA": 1,
+			"EUR": 2,
+			"AUS": 3,
+			"CHN": 4,
+			"KOR": 5,
+			"TWN": 6,
+		},
+		"WUP": { // * MCPRegion https://github.com/devkitPro/wut/blob/b35e595a6e4b69225a8e014046944d9157248513/include/coreinit/mcp.h#L87
+			"Invalid": 0, // * Not seen in MCPRegion, but seen in Xenoblade on Wii U
+			"JPN":     1,
+			"USA":     2,
+			"EUR":     4,
+			"AUS":     8, // * Not seen in MCPRegion, but seen in Xenoblade on Wii U
+			"CHN":     16,
+			"KOR":     32,
+			"TWN":     64,
+		},
+	}
+
+	platform := string(extraData[0])
+	platformRegionIDStr := string(extraData[1])
+	platformRegionName := string(extraData[2])
+
+	// TODO - Based on decomp of Xenoblade, it looks like some of these fields CAN be empty
+	//        if something goes wrong. Empty fields are not currently supported
+
+	if _, ok := platformRegionIDs[platform]; !ok {
+		return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "invalid extraData, invalid platform type")
+	}
+
+	platformRegionID, err := strconv.Atoi(platformRegionIDStr)
+	if err != nil {
+		return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "invalid extraData, platform region ID not a number")
+	}
+
+	if _, ok := platformRegionIDs[platform][platformRegionName]; !ok {
+		return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "invalid extraData, invalid platform region name")
+	}
+
+	if platformRegionIDs[platform][platformRegionName] != platformRegionID {
+		return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "invalid extraData, platform ID in data does not match region name")
+	}
+
+	// * extraData[3] is the numeric "region ID" (top-level). There are thousands of these.
+	// * For example, the string "110" represents the UK (country code GB).
+	// * See https://nintendo-wiki.pretendo.network/docs/misc/region-ids
+	// * for a full list
+	// TODO - Verify extraData[3]. Too many to check right now
+
+	// * extraData[4] is the A2 country code for the region in extraData[3].
+	// * For example, if extraData[3] is "110" then extraData[4] is "GB"
+	// TODO - Verify extraData[4]. Cannot do so until extraData[3] is also checked
+
+	// * extraData[5] is always empty? Might be reserved, no checks for now
+
+	return nil
 }
 
 // NewDataStoreManager returns a new DataStoreManager

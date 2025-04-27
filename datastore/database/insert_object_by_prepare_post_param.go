@@ -133,6 +133,10 @@ func InsertObjectByPreparePostParam(manager *common_globals.DataStoreManager, ow
 		return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with too many RatingInitParams")
 	}
 
+	if err := manager.ValidateExtraData(param.ExtraData); err != nil {
+		return 0, nil
+	}
+
 	var dataID uint64
 
 	sortedTags := make([]string, 0, len(param.Tags))
