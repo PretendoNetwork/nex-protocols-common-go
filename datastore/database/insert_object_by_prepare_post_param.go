@@ -3,7 +3,6 @@ package database
 import (
 	"math/rand/v2"
 	"slices"
-	"sort"
 	"time"
 
 	"github.com/PretendoNetwork/nex-go/v2"
@@ -137,21 +136,6 @@ func InsertObjectByPreparePostParam(manager *common_globals.DataStoreManager, ow
 		return 0, nil
 	}
 
-	var dataID uint64
-
-	sortedTags := make([]string, 0, len(param.Tags))
-	for i := range param.Tags {
-		sortedTags = append(sortedTags, string(param.Tags[i]))
-	}
-
-	// * Tags get re-ordered in alphabetical order
-	sort.Strings(sortedTags)
-
-	extraData := make([]string, 0, len(param.ExtraData))
-	for i := range param.Tags {
-		extraData = append(extraData, string(param.ExtraData[i]))
-	}
-
 	needsReview := (param.Flag & types.UInt32(datastore_constants.DataFlagNeedReview)) != 0
 	updateExpirationOnReference := (param.Flag & types.UInt32(datastore_constants.DataFlagPeriodFromLastReferred)) != 0
 	useReadLock := (param.Flag & types.UInt32(datastore_constants.DataFlagUseReadLock)) != 0
@@ -183,6 +167,8 @@ func InsertObjectByPreparePostParam(manager *common_globals.DataStoreManager, ow
 	if param.PersistenceInitParam.PersistenceSlotID != types.UInt16(datastore_constants.InvalidPersistenceSlotID) {
 		expirationDate = time.Date(9999, time.December, 31, 0, 0, 0, 0, time.UTC)
 	}
+
+	var dataID uint64
 
 	err := manager.Database.QueryRow(`INSERT INTO datastore.objects (
 		owner,
@@ -253,9 +239,9 @@ func InsertObjectByPreparePostParam(manager *common_globals.DataStoreManager, ow
 		param.Flag,
 		param.Period,
 		param.ReferDataID,
-		pq.Array(sortedTags),
+		pq.Array(param.Tags),
 		param.PersistenceInitParam.PersistenceSlotID,
-		pq.Array(extraData),
+		pq.Array(param.ExtraData),
 		needsReview,
 		updateExpirationOnReference,
 		useReadLock,
