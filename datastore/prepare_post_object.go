@@ -28,6 +28,11 @@ func (commonProtocol *CommonProtocol) preparePostObject(err error, packet nex.Pa
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
+	notUseFileServer := (param.Flag & types.UInt32(datastore_constants.DataFlagNotUseFileServer)) != 0
+	if notUseFileServer {
+		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "PreparePostObject cannot be used with DataFlagNotUseFileServer")
+	}
+
 	dataID, errCode := database.InsertObjectByPreparePostParam(manager, connection.PID(), param)
 	if errCode != nil {
 		common_globals.Logger.Errorf("Error on object init: %s", errCode.Error())
