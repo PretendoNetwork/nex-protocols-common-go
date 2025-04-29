@@ -10,13 +10,13 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
-func GetChangeMetaObjectInfoByDataID(manager *common_globals.DataStoreManager, dataID types.UInt64) (datastore_types.DataStoreMetaInfo, types.UInt64, *nex.Error) {
+func GetAccessObjectInfoByDataID(manager *common_globals.DataStoreManager, dataID types.UInt64) (datastore_types.DataStoreMetaInfo, types.UInt64, *nex.Error) {
 	var metaInfo datastore_types.DataStoreMetaInfo
 	var creationDate time.Time
 	var updateDate time.Time
 	var lastReferenceDate time.Time
 	var expirationDate time.Time
-	var updatePassword types.UInt64
+	var accessPassword types.UInt64
 
 	err := manager.Database.QueryRow(`
 		SELECT
@@ -40,7 +40,7 @@ func GetChangeMetaObjectInfoByDataID(manager *common_globals.DataStoreManager, d
 			last_reference_date,
 			expiration_date,
 			tags,
-			update_password
+			access_password
 		FROM datastore.objects
 		WHERE data_id=$1`, dataID).Scan(
 		&metaInfo.DataID,
@@ -63,16 +63,16 @@ func GetChangeMetaObjectInfoByDataID(manager *common_globals.DataStoreManager, d
 		&lastReferenceDate,
 		&expirationDate,
 		&metaInfo.Tags,
-		&updatePassword,
+		&accessPassword,
 	)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return metaInfo, updatePassword, nex.NewError(nex.ResultCodes.DataStore.NotFound, err.Error())
+			return metaInfo, accessPassword, nex.NewError(nex.ResultCodes.DataStore.NotFound, err.Error())
 		}
 
 		// TODO - Send more specific errors?
-		return metaInfo, updatePassword, nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
+		return metaInfo, accessPassword, nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
 	}
 
 	metaInfo.CreatedTime.FromTimestamp(creationDate)
@@ -80,5 +80,5 @@ func GetChangeMetaObjectInfoByDataID(manager *common_globals.DataStoreManager, d
 	metaInfo.ReferredTime.FromTimestamp(lastReferenceDate)
 	metaInfo.ExpireTime.FromTimestamp(expirationDate)
 
-	return metaInfo, updatePassword, nil
+	return metaInfo, accessPassword, nil
 }

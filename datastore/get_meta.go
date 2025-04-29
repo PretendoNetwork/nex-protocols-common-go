@@ -25,9 +25,9 @@ func (commonProtocol *CommonProtocol) getMeta(err error, packet nex.PacketInterf
 	var errCode *nex.Error
 
 	if param.PersistenceTarget.OwnerID != 0 {
-		metaInfo, accessPassword, errCode = database.GetGetMetaObjectInfoByPersistenceTarget(manager, param.PersistenceTarget)
+		metaInfo, accessPassword, errCode = database.GetAccessObjectInfoByPersistenceTarget(manager, param.PersistenceTarget)
 	} else if param.DataID != types.UInt64(datastore_constants.InvalidDataID) {
-		metaInfo, accessPassword, errCode = database.GetGetMetaObjectInfoByDataID(manager, param.DataID)
+		metaInfo, accessPassword, errCode = database.GetAccessObjectInfoByDataID(manager, param.DataID)
 	} else {
 		// * If both the PersistenceTarget and DataID are not set, bail
 		errCode = nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
