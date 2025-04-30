@@ -14,7 +14,7 @@ func GetObjectRatingsByDataID(manager *common_globals.DataStoreManager, dataID t
 	rows, err := manager.Database.Query(`
 		SELECT
 			rs.slot,
-			COALESCE(SUM(r.value), 0) AS total_value,
+			COALESCE(SUM(r.value), 0) + rs.initial_value AS total_value,
 			COUNT(r.id) AS rating_count,
 			rs.initial_value
 		FROM
