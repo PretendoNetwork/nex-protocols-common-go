@@ -50,6 +50,15 @@ func (commonProtocol *CommonProtocol) prepareGetObject(err error, packet nex.Pac
 		return nil, errCode
 	}
 
+	// * The owner of an object can always view their objects, but normal users cannot
+	if metaInfo.Status != types.UInt8(datastore_constants.DataStatusNone) && metaInfo.OwnerID != connection.PID() {
+		if metaInfo.Status == types.UInt8(datastore_constants.DataStatusPending) {
+			return nil, nex.NewError(nex.ResultCodes.DataStore.UnderReviewing, "change_error")
+		}
+
+		return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
+	}
+
 	notUseFileServer := (metaInfo.Flag & types.UInt32(datastore_constants.DataFlagNotUseFileServer)) != 0
 	if notUseFileServer {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "PrepareGetObject cannot be used with DataFlagNotUseFileServer")
