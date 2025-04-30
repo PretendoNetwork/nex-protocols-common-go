@@ -38,6 +38,13 @@ func (commonProtocol *CommonProtocol) changeMeta(err error, packet nex.PacketInt
 		return nil, errCode
 	}
 
+	// TODO - Move this to VerifyObjectUpdatePermission?
+	// * Objects in the DataID range 900,000-999,999 are special
+	if metaInfo.DataID < 1000000 {
+		// * Unsure if this is the correct error, but it feels right
+		return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "change_error")
+	}
+
 	errCode = manager.VerifyObjectUpdatePermission(connection.PID(), metaInfo, updatePassword, param.UpdatePassword)
 	if errCode != nil {
 		return nil, errCode
