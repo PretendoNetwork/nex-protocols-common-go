@@ -144,6 +144,46 @@ func InsertObjectByPreparePostParam(manager *common_globals.DataStoreManager, ow
 	notUseFileServer := (param.Flag & types.UInt32(datastore_constants.DataFlagNotUseFileServer)) != 0
 	needUploadCompletion := (param.Flag & types.UInt32(datastore_constants.DataFlagNeedCompletion)) != 0
 
+	// * I believe the useReadLock flag is related to the "lockId" seen
+	// * on DataStorePrepareGetParamV1, DataStorePrepareGetParam and
+	// * DataStoreTouchObjectParam. My hunch is that this is related
+	// * to locking down the download of an object from the file server
+	// * based on the field/flag names and how similar they are to each
+	// * other, as well as the contexts in when they are used
+	// *
+	// * My thinking:
+	// *
+	// * 1. "lockId" is ONLY ever referenced in methods related to
+	// *    downloading an object from the file server
+	// * 2. The "lockId" is never exposed by the server, so I believe
+	// *    it is set by the client and then saved by the server later
+	// * 3. In other protocols, like Ranking, sometimes settings are
+	// *    defined on the first call of a method. For example in
+	// *    the Ranking protocol the order (ascending/descending) of
+	// *    which rankings are returned in GetRanking is not configured
+	// *    until the first call to UploadScore is made. When the first
+	// *    call to UploadScore is made, the server sets the order of
+	// *    rankings to use what was in RankingScoreData.orderBy
+	// * 4. Since other protocols do not set certain settings until
+	// *    a client calls the method for the first time, and since
+	// *    the "lockId" is only seen in client requests, I believe
+	// *    that the objects "lockId" is configured the first time
+	// *    the client sends either a DataStorePrepareGetParamV1,
+	// *    DataStorePrepareGetParam or DataStoreTouchObjectParam
+	// * 5. Logically then, assuming the above is correct, it would
+	// *    make sense that the "lockId" would act like a password,
+	// *    preventing users who do not have the "lockId" from
+	// *    downloading the object data from the file server. This
+	// *    could have real legitimate uses, such as displaying an
+	// *    objects metadata (by having access permissions set to public)
+	// *    but blocking the download of the objects data from the
+	// *    file server until a condition is met. This could be used
+	// *    for things like player-owned item shops, letting players
+	// *    display goods to the public but only allowing downloads
+	// *    once another player has bought an item and the seller has
+	// *    communicated the "lockId" (either manually or automatically
+	// *    via the games implementation)
+
 	status := datastore_constants.DataStatusNone
 	if needsReview {
 		status = datastore_constants.DataStatusPending
