@@ -10,7 +10,7 @@ import (
 func GetObjectRatingsByDataID(manager *common_globals.DataStoreManager, dataID types.UInt64) (types.List[datastore_types.DataStoreRatingInfoWithSlot], *nex.Error) {
 	ratings := types.NewList[datastore_types.DataStoreRatingInfoWithSlot]()
 
-	// TODO - If the total value goes above or below int64 min/max, it needs to be rounded to either the mix/max
+	// TODO - If the total value goes above or below int64 min/max, it needs to be rounded to either the min/max
 	rows, err := manager.Database.Query(`
 		SELECT
 			rs.slot,
