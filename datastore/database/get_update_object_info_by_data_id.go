@@ -2,7 +2,6 @@ package database
 
 import (
 	"database/sql"
-	"time"
 
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
@@ -12,10 +11,6 @@ import (
 
 func GetUpdateObjectInfoByDataID(manager *common_globals.DataStoreManager, dataID types.UInt64) (datastore_types.DataStoreMetaInfo, types.UInt64, *nex.Error) {
 	var metaInfo datastore_types.DataStoreMetaInfo
-	var creationDate time.Time
-	var updateDate time.Time
-	var lastReferenceDate time.Time
-	var expirationDate time.Time
 	var updatePassword types.UInt64
 
 	err := manager.Database.QueryRow(`
@@ -53,15 +48,15 @@ func GetUpdateObjectInfoByDataID(manager *common_globals.DataStoreManager, dataI
 		&metaInfo.Permission.RecipientIDs,
 		&metaInfo.DelPermission.Permission,
 		&metaInfo.DelPermission.RecipientIDs,
-		&creationDate,
-		&updateDate,
+		&metaInfo.CreatedTime,
+		&metaInfo.UpdatedTime,
 		&metaInfo.Period,
 		&metaInfo.Status,
 		&metaInfo.ReferredCnt,
 		&metaInfo.ReferDataID,
 		&metaInfo.Flag,
-		&lastReferenceDate,
-		&expirationDate,
+		&metaInfo.ReferredTime,
+		&metaInfo.ExpireTime,
 		&metaInfo.Tags,
 		&updatePassword,
 	)
@@ -74,11 +69,6 @@ func GetUpdateObjectInfoByDataID(manager *common_globals.DataStoreManager, dataI
 		// TODO - Send more specific errors?
 		return metaInfo, updatePassword, nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
 	}
-
-	metaInfo.CreatedTime.FromTimestamp(creationDate)
-	metaInfo.UpdatedTime.FromTimestamp(updateDate)
-	metaInfo.ReferredTime.FromTimestamp(lastReferenceDate)
-	metaInfo.ExpireTime.FromTimestamp(expirationDate)
 
 	return metaInfo, updatePassword, nil
 }
