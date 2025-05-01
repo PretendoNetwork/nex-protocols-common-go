@@ -201,12 +201,14 @@ func NewCommonProtocol(protocol datastore.Interface) *CommonProtocol {
 		protocol: protocol,
 	}
 
+	// TODO - Reorder this by method ID
 	protocol.SetHandlerGetMeta(commonProtocol.getMeta)
 	protocol.SetHandlerPreparePostObject(commonProtocol.preparePostObject)
 	protocol.SetHandlerPrepareGetObject(commonProtocol.prepareGetObject)
 	protocol.SetHandlerCompletePostObject(commonProtocol.completePostObject)
 	protocol.SetHandlerChangeMeta(commonProtocol.changeMeta)
 	protocol.SetHandlerGetPasswordInfo(commonProtocol.getPasswordInfo)
+	protocol.SetHandlerGetPasswordInfos(commonProtocol.getPasswordInfos)
 
 	return commonProtocol
 }

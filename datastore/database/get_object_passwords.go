@@ -16,6 +16,9 @@ func GetObjectPasswords(manager *common_globals.DataStoreManager, caller types.P
 		return passwordInfos, results, nil
 	}
 
+	// * Return a row even if the data_id is invalid
+	// * or if the caller is not the owner. Validated
+	// * later
 	rows, err := manager.Database.Query(`
 		SELECT
 			input.data_id,
@@ -34,7 +37,7 @@ func GetObjectPasswords(manager *common_globals.DataStoreManager, caller types.P
 		int(nex.ResultCodes.DataStore.NotFound),
 		int(caller),
 		int(nex.ResultCodes.DataStore.OperationNotAllowed),
-		int(nex.ResultCodes.DataStore.Unknown),
+		int(nex.ResultCodes.DataStore.Unknown), // * Used here to indicate a success
 		pq.Array(dataIDs),
 	)
 	if err != nil {
