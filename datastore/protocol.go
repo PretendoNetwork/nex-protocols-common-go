@@ -68,25 +68,25 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.DataSto
 	// * by just setting them all to 0 at response time, for accuracy sake
 	// TODO - Store every object version as it's own row, or keep a single row?
 	_, err = manager.Database.Exec(`CREATE TABLE IF NOT EXISTS datastore.objects (
-		data_id bigint NOT NULL DEFAULT nextval('datastore.object_data_id_seq') PRIMARY KEY,
-		version int NOT NULL DEFAULT 1, -- This is technically a uint16, but Postgres only stores 2 byte numbers up to 32,767
+		data_id numeric(20) NOT NULL DEFAULT nextval('datastore.object_data_id_seq') PRIMARY KEY,
+		version numeric(10) NOT NULL DEFAULT 1,
 		deleted boolean NOT NULL DEFAULT FALSE,
-		owner bigint, -- Wii U/3DS clients only need a uint32, but account for Switch clients just in case
+		owner numeric(20), -- Wii U/3DS clients only need a uint32, but the Switch uses uint64 PIDs
 
 		-- Data set in DataStorePreparePostParam/DataStorePreparePostParamV1
-		size int,
+		size numeric(10),
 		name text,
-		data_type int,
+		data_type numeric(5),
 		meta_binary bytea,
-		access_permission int,
-		access_permission_recipients int[],
-		update_permission int,
-		update_permission_recipients int[],
-		raw_flags int,
-		expiration_days int,
-		refer_data_id bigint,
+		access_permission numeric(3),
+		access_permission_recipients numeric(20)[],
+		update_permission numeric(3),
+		update_permission_recipients numeric(20)[],
+		raw_flags numeric(10),
+		expiration_days numeric(5), -- this can only be between 0-365, but is sent as a uint16
+		refer_data_id numeric(10), -- this is another data_id, but it can ONLY use the uint32 space
 		tags text[],
-		persistence_slot_id int,
+		persistence_slot_id numeric(5),
 		extra_data text[],
 
 		-- Decoded raw_flags
@@ -100,10 +100,10 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.DataSto
 		need_upload_completion boolean NOT NULL DEFAULT FALSE,
 
 		-- System/internal fields
-		status int,
-		access_password bigint,
-		update_password bigint,
-		reference_count bigint NOT NULL DEFAULT 0,
+		status numeric(3), -- this can only be between 1-5, but allocate enough space anyway
+		access_password numeric(20),
+		update_password numeric(20),
+		reference_count numeric(10) NOT NULL DEFAULT 0,
 		creation_date timestamp DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
 		update_date timestamp DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
 		true_update_date timestamp DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
@@ -119,9 +119,9 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.DataSto
 	// * Object persistence is handled at the user level,
 	// * not the object level
 	_, err = manager.Database.Exec(`CREATE TABLE datastore.persistence_slots (
-		pid bigint,
-		slot int,
-		data_id bigint REFERENCES datastore.objects(data_id),
+		pid numeric(20),
+		slot numeric(5), -- can technically only be 0-15, but sent as a uint16
+		data_id numeric(20) REFERENCES datastore.objects(data_id),
 		delete_last_object boolean NOT NULL DEFAULT FALSE,
 		PRIMARY KEY (pid, slot)
 	)`)
@@ -131,18 +131,18 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.DataSto
 	}
 
 	_, err = manager.Database.Exec(`CREATE TABLE datastore.rating_settings (
-		data_id bigint NOT NULL REFERENCES datastore.objects(data_id),
+		data_id numeric(20) NOT NULL REFERENCES datastore.objects(data_id),
 
 		-- Data set in DataStoreRatingInitParamWithSlot
-		slot int,
-		raw_flags int,
-		raw_internal_flags int,
-		minimum_value int,
-		maximum_value int,
-		initial_value bigint,
-		lock_type int,
-		lock_period_duration int,
-		lock_period_hour int,
+		slot numeric(3), -- can technically only be 0-15, but allocate enough space anyway
+		raw_flags numeric(3),
+		raw_internal_flags numeric(3),
+		minimum_value numeric(10),
+		maximum_value numeric(10),
+		initial_value numeric(20),
+		lock_type numeric(3), -- can technically only be 0-3, but allocate enough space anyway
+		lock_period_duration numeric(5),
+		lock_period_hour numeric(3), -- can technically only hold 2 digits, but allocate enough space anyway
 
 		-- Decoded raw_flags
 		-- Only supports stock flags, custom flags must be handled separately
@@ -164,10 +164,10 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.DataSto
 
 	_, err = manager.Database.Exec(`CREATE TABLE datastore.ratings (
 		id serial PRIMARY KEY,
-		data_id bigint,
-		slot int,
-		pid bigint,
-		value int,
+		data_id numeric(20),
+		slot numeric(3),
+		pid numeric(20),
+		value numeric(20),
 		created_at timestamp DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
 		updated_at timestamp DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
 		FOREIGN KEY (data_id, slot) REFERENCES datastore.rating_settings(data_id, slot)
@@ -177,11 +177,10 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.DataSto
 		return
 	}
 
-	// TODO - Unused for now
 	_, err = manager.Database.Exec(`CREATE TABLE datastore.rating_locks (
-		pid bigint,
-		data_id bigint,
-		slot int,
+		pid numeric(20),
+		data_id numeric(20),
+		slot numeric(3),
 		locked_until timestamp,
 		PRIMARY KEY (pid, data_id, slot),
 		FOREIGN KEY (data_id, slot) REFERENCES datastore.rating_settings(data_id, slot)
