@@ -186,6 +186,10 @@ func (dsm DataStoreManager) verifyObjectPermission(ownerPID, requesterPID types.
 	}
 
 	if permission.Permission == types.UInt8(datastore_constants.PermissionFriend) {
+		if dsm.GetUserFriendPIDs == nil {
+			return nex.NewError(nex.ResultCodes.DataStore.PermissionDenied, "change_error")
+		}
+
 		// TODO - This assumes a legacy client. Will not work on the Switch
 		friendsList := dsm.GetUserFriendPIDs(uint32(ownerPID))
 
@@ -207,6 +211,10 @@ func (dsm DataStoreManager) verifyObjectPermission(ownerPID, requesterPID types.
 	}
 
 	if permission.Permission == types.UInt8(datastore_constants.PermissionSpecifiedFriend) {
+		if dsm.GetUserFriendPIDs == nil {
+			return nex.NewError(nex.ResultCodes.DataStore.PermissionDenied, "change_error")
+		}
+
 		// TODO - This assumes a legacy client. Will not work on the Switch
 		friendsList := dsm.GetUserFriendPIDs(uint32(ownerPID))
 
