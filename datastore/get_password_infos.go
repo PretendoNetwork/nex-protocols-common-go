@@ -6,12 +6,17 @@ import (
 	"github.com/PretendoNetwork/nex-protocols-common-go/v2/datastore/database"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	datastore "github.com/PretendoNetwork/nex-protocols-go/v2/datastore"
+	datastore_constants "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/constants"
 )
 
 func (commonProtocol *CommonProtocol) getPasswordInfos(err error, packet nex.PacketInterface, callID uint32, dataIDs types.List[types.UInt64]) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
+	}
+
+	if len(dataIDs) > int(datastore_constants.BatchProcessingCapacity) {
+		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 	}
 
 	manager := commonProtocol.manager
