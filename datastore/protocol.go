@@ -100,6 +100,7 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.DataSto
 		need_upload_completion boolean NOT NULL DEFAULT FALSE,
 
 		-- System/internal fields
+		lock_id numeric(10),
 		status smallint, -- this can only be between 1-5, but allocate enough space anyway
 		access_password numeric(20),
 		update_password numeric(20),
