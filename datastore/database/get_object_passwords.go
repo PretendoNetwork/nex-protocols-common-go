@@ -34,10 +34,10 @@ func GetObjectPasswords(manager *common_globals.DataStoreManager, caller types.P
 		LEFT JOIN datastore.objects o ON input.data_id = o.data_id
 		ORDER BY input.data_id
 	`,
-		int(nex.ResultCodes.DataStore.NotFound),
-		int(caller),
-		int(nex.ResultCodes.DataStore.OperationNotAllowed),
-		int(nex.ResultCodes.DataStore.Unknown), // * Used here to indicate a success
+		nex.ResultCodes.DataStore.NotFound,
+		caller,
+		nex.ResultCodes.DataStore.OperationNotAllowed,
+		nex.ResultCodes.DataStore.Unknown, // * Used here to indicate a success
 		pq.Array(dataIDs),
 	)
 	if err != nil {
