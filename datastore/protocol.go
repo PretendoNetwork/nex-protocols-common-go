@@ -76,17 +76,17 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.DataSto
 		-- Data set in DataStorePreparePostParam/DataStorePreparePostParamV1
 		size numeric(10),
 		name text,
-		data_type numeric(5),
+		data_type int,
 		meta_binary bytea,
-		access_permission numeric(3),
+		access_permission smallint,
 		access_permission_recipients numeric(20)[],
-		update_permission numeric(3),
+		update_permission smallint,
 		update_permission_recipients numeric(20)[],
 		raw_flags numeric(10),
-		expiration_days numeric(5), -- this can only be between 0-365, but is sent as a uint16
+		expiration_days int, -- this can only be between 0-365, but is sent as a uint16
 		refer_data_id numeric(10), -- this is another data_id, but it can ONLY use the uint32 space
 		tags text[],
-		persistence_slot_id numeric(5),
+		persistence_slot_id int,
 		extra_data text[],
 
 		-- Decoded raw_flags
@@ -100,7 +100,7 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.DataSto
 		need_upload_completion boolean NOT NULL DEFAULT FALSE,
 
 		-- System/internal fields
-		status numeric(3), -- this can only be between 1-5, but allocate enough space anyway
+		status smallint, -- this can only be between 1-5, but allocate enough space anyway
 		access_password numeric(20),
 		update_password numeric(20),
 		reference_count numeric(10) NOT NULL DEFAULT 0,
@@ -120,7 +120,7 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.DataSto
 	// * not the object level
 	_, err = manager.Database.Exec(`CREATE TABLE datastore.persistence_slots (
 		pid numeric(20),
-		slot numeric(5), -- can technically only be 0-15, but sent as a uint16
+		slot int, -- can technically only be 0-15, but sent as a uint16
 		data_id numeric(20) REFERENCES datastore.objects(data_id),
 		delete_last_object boolean NOT NULL DEFAULT FALSE,
 		PRIMARY KEY (pid, slot)
@@ -134,15 +134,15 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.DataSto
 		data_id numeric(20) NOT NULL REFERENCES datastore.objects(data_id),
 
 		-- Data set in DataStoreRatingInitParamWithSlot
-		slot numeric(3), -- can technically only be 0-15, but allocate enough space anyway
-		raw_flags numeric(3),
-		raw_internal_flags numeric(3),
+		slot smallint, -- can technically only be 0-15, but allocate enough space anyway
+		raw_flags smallint,
+		raw_internal_flags smallint,
 		minimum_value numeric(10),
 		maximum_value numeric(10),
 		initial_value numeric(20),
-		lock_type numeric(3), -- can technically only be 0-3, but allocate enough space anyway
-		lock_period_duration numeric(5),
-		lock_period_hour numeric(3), -- can technically only hold 2 digits, but allocate enough space anyway
+		lock_type smallint, -- can technically only be 0-3, but allocate enough space anyway
+		lock_period_duration int,
+		lock_period_hour smallint, -- can technically only hold 2 digits, but allocate enough space anyway
 
 		-- Decoded raw_flags
 		-- Only supports stock flags, custom flags must be handled separately
@@ -165,7 +165,7 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.DataSto
 	_, err = manager.Database.Exec(`CREATE TABLE datastore.ratings (
 		id serial PRIMARY KEY,
 		data_id numeric(20),
-		slot numeric(3),
+		slot smallint,
 		pid numeric(20),
 		value numeric(20),
 		created_at timestamp DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
@@ -180,7 +180,7 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.DataSto
 	_, err = manager.Database.Exec(`CREATE TABLE datastore.rating_locks (
 		pid numeric(20),
 		data_id numeric(20),
-		slot numeric(3),
+		slot smallint,
 		locked_until timestamp,
 		PRIMARY KEY (pid, data_id, slot),
 		FOREIGN KEY (data_id, slot) REFERENCES datastore.rating_settings(data_id, slot)
