@@ -28,6 +28,8 @@ func (commonProtocol *CommonProtocol) prepareGetObject(err error, packet nex.Pac
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
+	// TODO - Add rollback for when error occurs
+
 	var metaInfo datastore_types.DataStoreMetaInfo
 	var accessPassword types.UInt64
 	var errCode *nex.Error

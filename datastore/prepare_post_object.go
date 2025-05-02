@@ -28,6 +28,8 @@ func (commonProtocol *CommonProtocol) preparePostObject(err error, packet nex.Pa
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
+	// TODO - Add rollback for when error occurs
+
 	notUseFileServer := (param.Flag & types.UInt32(datastore_constants.DataFlagNotUseFileServer)) != 0
 	if notUseFileServer {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "PreparePostObject cannot be used with DataFlagNotUseFileServer")
