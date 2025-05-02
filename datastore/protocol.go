@@ -210,6 +210,7 @@ func NewCommonProtocol(protocol datastore.Interface) *CommonProtocol {
 	protocol.SetHandlerGetPasswordInfo(commonProtocol.getPasswordInfo)
 	protocol.SetHandlerGetPasswordInfos(commonProtocol.getPasswordInfos)
 	protocol.SetHandlerCompletePostObjects(commonProtocol.completePostObjects)
+	protocol.SetHandlerDeleteObject(commonProtocol.deleteObject)
 
 	return commonProtocol
 }
