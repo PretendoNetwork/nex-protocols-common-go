@@ -18,7 +18,7 @@ func GetObjectRatingsByDataID(manager *common_globals.DataStoreManager, dataID t
 			COUNT(r.id) AS rating_count,
 			rs.initial_value
 		FROM
-			datastore.rating_settings rs
+			datastore.rating_settings AS rs
 		LEFT JOIN
 			datastore.ratings r ON rs.data_id = r.data_id AND rs.slot = r.slot
 		WHERE
