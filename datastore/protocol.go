@@ -10,7 +10,7 @@ import (
 )
 
 type CommonProtocol struct {
-	endpoint                     *nex.PRUDPEndPoint
+	endpoint                     nex.EndpointInterface
 	protocol                     datastore.Interface
 	manager                      *common_globals.DataStoreManager
 	OnAfterDeleteObject          func(packet nex.PacketInterface, param datastore_types.DataStoreDeleteParam)
@@ -193,7 +193,7 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.DataSto
 
 // NewCommonProtocol returns a new CommonProtocol
 func NewCommonProtocol(protocol datastore.Interface) *CommonProtocol {
-	endpoint := protocol.Endpoint().(*nex.PRUDPEndPoint)
+	endpoint := protocol.Endpoint()
 
 	commonProtocol := &CommonProtocol{
 		endpoint: endpoint,
