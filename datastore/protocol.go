@@ -203,6 +203,7 @@ func NewCommonProtocol(protocol datastore.Interface) *CommonProtocol {
 
 	// TODO - Reorder this by method ID
 	protocol.SetHandlerGetMeta(commonProtocol.getMeta)
+	protocol.SetHandlerGetMetas(commonProtocol.getMetas)
 	protocol.SetHandlerPreparePostObject(commonProtocol.preparePostObject)
 	protocol.SetHandlerPrepareGetObject(commonProtocol.prepareGetObject)
 	protocol.SetHandlerCompletePostObject(commonProtocol.completePostObject)
