@@ -42,7 +42,7 @@ func (commonProtocol *CommonProtocol) getMeta(err error, packet nex.PacketInterf
 		return nil, errCode
 	}
 
-	pMetaInfo, errCode := database.GetObjectMetaInfoByDataIDWithResultOption(manager, param.DataID, param.ResultOption)
+	pMetaInfo, errCode := database.GetObjectMetaInfoByDataIDWithResultOption(manager, metaInfo.DataID, param.ResultOption)
 	if errCode != nil {
 		return nil, errCode
 	}
