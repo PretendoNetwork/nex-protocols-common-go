@@ -218,6 +218,7 @@ func NewCommonProtocol(protocol datastore.Interface) *CommonProtocol {
 	protocol.SetHandlerPrepareGetObjectV1(commonProtocol.prepareGetObjectV1)
 	protocol.SetHandlerPreparePostObjectV1(commonProtocol.preparePostObjectV1)
 	protocol.SetHandlerCompletePostObjectV1(commonProtocol.completePostObjectV1)
+	protocol.SetHandlerChangeMetaV1(commonProtocol.changeMetaV1)
 
 	return commonProtocol
 }
