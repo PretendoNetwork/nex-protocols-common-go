@@ -73,6 +73,8 @@ func (commonProtocol *CommonProtocol) changeMetasV1(err error, packet nex.Packet
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
 			continue
 		}
+
+		pResults = append(pResults, types.NewQResultSuccess(nex.ResultCodes.DataStore.Unknown))
 	}
 
 	rmcResponse := nex.NewRMCSuccess(endpoint, nil)

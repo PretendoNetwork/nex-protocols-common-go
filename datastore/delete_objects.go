@@ -54,6 +54,8 @@ func (commonProtocol *CommonProtocol) deleteObjects(err error, packet nex.Packet
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
 			continue
 		}
+
+		pResults = append(pResults, types.NewQResultSuccess(nex.ResultCodes.DataStore.Unknown))
 	}
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
