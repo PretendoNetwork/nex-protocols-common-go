@@ -216,6 +216,7 @@ func NewCommonProtocol(protocol datastore.Interface) *CommonProtocol {
 	protocol.SetHandlerDeleteObjects(commonProtocol.deleteObjects)
 	protocol.SetHandlerPostMetaBinary(commonProtocol.postMetaBinary)
 	protocol.SetHandlerPrepareGetObjectV1(commonProtocol.prepareGetObjectV1)
+	protocol.SetHandlerPreparePostObjectV1(commonProtocol.preparePostObjectV1)
 
 	return commonProtocol
 }
