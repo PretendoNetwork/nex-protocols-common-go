@@ -70,6 +70,9 @@ func (commonProtocol *CommonProtocol) getMetasMultipleParam(err error, packet ne
 			pResults = append(pResults, invalidResult.Copy().(types.QResult))
 			continue
 		}
+
+		pMetaInfo = append(pMetaInfo, metaInfo)
+		pResults = append(pResults, types.NewQResultSuccess(nex.ResultCodes.DataStore.Unknown))
 	}
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
