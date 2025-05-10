@@ -66,7 +66,10 @@ func (commonProtocol *CommonProtocol) prepareGetObject(err error, packet nex.Pac
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "PrepareGetObject cannot be used with DataFlagNotUseFileServer")
 	}
 
-	database.UpdateObjectReferenceData(manager, metaInfo.DataID)
+	errCode = database.UpdateObjectReferenceData(manager, metaInfo.DataID)
+	if errCode != nil {
+		return nil, errCode
+	}
 
 	version, errCode := database.GetObjectLatestVersionNumber(manager, metaInfo.DataID)
 	if errCode != nil {
