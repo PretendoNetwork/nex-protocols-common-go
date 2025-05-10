@@ -223,6 +223,7 @@ func NewCommonProtocol(protocol datastore.Interface) *CommonProtocol {
 	protocol.SetHandlerChangeMetas(commonProtocol.changeMetas)
 	protocol.SetHandlerGetSpecificMeta(commonProtocol.getSpecificMeta)
 	protocol.SetHandlerGetSpecificMetaV1(commonProtocol.getSpecificMetaV1)
+	protocol.SetHandlerTouchObject(commonProtocol.touchObject)
 
 	return commonProtocol
 }
