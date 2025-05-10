@@ -228,6 +228,7 @@ func NewCommonProtocol(protocol datastore.Interface) *CommonProtocol {
 	protocol.SetHandlerPostMetaBinariesWithDataID(commonProtocol.stubPostMetaBinariesWithDataID)
 	protocol.SetHandlerPrepareUpdateObject(commonProtocol.prepareUpdateObject)
 	protocol.SetHandlerCompleteUpdateObject(commonProtocol.completeUpdateObject)
+	protocol.SetHandlerGetPersistenceInfo(commonProtocol.getPersistenceInfo)
 
 	return commonProtocol
 }
