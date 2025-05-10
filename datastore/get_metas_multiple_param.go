@@ -26,8 +26,7 @@ func (commonProtocol *CommonProtocol) getMetasMultipleParam(err error, packet ne
 
 	pMetaInfo := types.NewList[datastore_types.DataStoreMetaInfo]()
 	pResults := types.NewList[types.QResult]()
-	invalidMetaInfo := datastore_types.NewDataStoreMetaInfo()                 // * Quick hack to get a zeroed struct
-	invalidResult := types.NewQResultError(nex.ResultCodes.DataStore.Unknown) // TODO - Temp. Customize this per error
+	invalidMetaInfo := datastore_types.NewDataStoreMetaInfo() // * Quick hack to get a zeroed struct
 
 	// * param.DataID and param.PersistenceTarget are ignored here
 	for _, param := range params {
@@ -46,28 +45,28 @@ func (commonProtocol *CommonProtocol) getMetasMultipleParam(err error, packet ne
 
 		if errCode != nil {
 			pMetaInfo = append(pMetaInfo, invalidMetaInfo.Copy().(datastore_types.DataStoreMetaInfo))
-			pResults = append(pResults, invalidResult.Copy().(types.QResult))
+			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
 			continue
 		}
 
 		errCode = manager.VerifyObjectAccessPermission(connection.PID(), metaInfo, accessPassword, param.AccessPassword)
 		if errCode != nil {
 			pMetaInfo = append(pMetaInfo, invalidMetaInfo.Copy().(datastore_types.DataStoreMetaInfo))
-			pResults = append(pResults, invalidResult.Copy().(types.QResult))
+			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
 			continue
 		}
 
 		metaInfo, errCode = database.GetObjectMetaInfoByDataIDWithResultOption(manager, metaInfo.DataID, param.ResultOption)
 		if errCode != nil {
 			pMetaInfo = append(pMetaInfo, invalidMetaInfo.Copy().(datastore_types.DataStoreMetaInfo))
-			pResults = append(pResults, invalidResult.Copy().(types.QResult))
+			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
 			continue
 		}
 
 		// * The owner of an object can always view their objects, but normal users cannot
 		if metaInfo.Status != types.UInt8(datastore_constants.DataStatusNone) && metaInfo.OwnerID != connection.PID() {
 			pMetaInfo = append(pMetaInfo, invalidMetaInfo.Copy().(datastore_types.DataStoreMetaInfo))
-			pResults = append(pResults, invalidResult.Copy().(types.QResult))
+			pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.NotFound))
 			continue
 		}
 
