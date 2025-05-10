@@ -229,6 +229,7 @@ func NewCommonProtocol(protocol datastore.Interface) *CommonProtocol {
 	protocol.SetHandlerPrepareUpdateObject(commonProtocol.prepareUpdateObject)
 	protocol.SetHandlerCompleteUpdateObject(commonProtocol.completeUpdateObject)
 	protocol.SetHandlerGetPersistenceInfo(commonProtocol.getPersistenceInfo)
+	protocol.SetHandlerGetPersistenceInfos(commonProtocol.getPersistenceInfos)
 
 	return commonProtocol
 }
