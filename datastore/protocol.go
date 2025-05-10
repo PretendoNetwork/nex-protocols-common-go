@@ -225,6 +225,7 @@ func NewCommonProtocol(protocol datastore.Interface) *CommonProtocol {
 	protocol.SetHandlerGetSpecificMetaV1(commonProtocol.getSpecificMetaV1)
 	protocol.SetHandlerTouchObject(commonProtocol.touchObject)
 	protocol.SetHandlerPostMetaBinaryWithDataID(commonProtocol.stubPostMetaBinaryWithDataID)
+	protocol.SetHandlerPostMetaBinariesWithDataID(commonProtocol.stubPostMetaBinariesWithDataID)
 
 	return commonProtocol
 }
