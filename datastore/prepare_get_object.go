@@ -61,6 +61,8 @@ func (commonProtocol *CommonProtocol) prepareGetObject(err error, packet nex.Pac
 		return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
 	}
 
+	// TODO - Check param.LockID. See InsertObjectByPreparePostParam for notes on read locks
+
 	notUseFileServer := (metaInfo.Flag & types.UInt32(datastore_constants.DataFlagNotUseFileServer)) != 0
 	if notUseFileServer {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "PrepareGetObject cannot be used with DataFlagNotUseFileServer")

@@ -55,6 +55,8 @@ func (commonProtocol *CommonProtocol) touchObject(err error, packet nex.PacketIn
 		return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
 	}
 
+	// TODO - Check param.LockID. See InsertObjectByPreparePostParam for notes on read locks
+
 	errCode = database.UpdateObjectReferenceData(manager, metaInfo.DataID)
 	if errCode != nil {
 		return nil, errCode
