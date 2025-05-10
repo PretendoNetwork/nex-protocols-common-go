@@ -32,7 +32,7 @@ func (commonProtocol *CommonProtocol) getMetas(err error, packet nex.PacketInter
 	for _, dataID := range dataIDs {
 		metaInfo, accessPassword, errCode := database.GetAccessObjectInfoByDataID(manager, dataID)
 		if errCode != nil {
-			pMetaInfo = append(pMetaInfo, invalidMetaInfo.Copy().(datastore_types.DataStoreMetaInfo))
+			pMetaInfo = append(pMetaInfo, invalidMetaInfo)
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
 			continue
 		}
@@ -41,21 +41,21 @@ func (commonProtocol *CommonProtocol) getMetas(err error, packet nex.PacketInter
 		// * THIS SHOULD REALLY ONLY BE CALLED WITHOUT A PASSWORD SET
 		errCode = manager.VerifyObjectAccessPermission(connection.PID(), metaInfo, accessPassword, param.AccessPassword)
 		if errCode != nil {
-			pMetaInfo = append(pMetaInfo, invalidMetaInfo.Copy().(datastore_types.DataStoreMetaInfo))
+			pMetaInfo = append(pMetaInfo, invalidMetaInfo)
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
 			continue
 		}
 
 		metaInfo, errCode = database.GetObjectMetaInfoByDataIDWithResultOption(manager, dataID, param.ResultOption)
 		if errCode != nil {
-			pMetaInfo = append(pMetaInfo, invalidMetaInfo.Copy().(datastore_types.DataStoreMetaInfo))
+			pMetaInfo = append(pMetaInfo, invalidMetaInfo)
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
 			continue
 		}
 
 		// * The owner of an object can always view their objects, but normal users cannot
 		if metaInfo.Status != types.UInt8(datastore_constants.DataStatusNone) && metaInfo.OwnerID != connection.PID() {
-			pMetaInfo = append(pMetaInfo, invalidMetaInfo.Copy().(datastore_types.DataStoreMetaInfo))
+			pMetaInfo = append(pMetaInfo, invalidMetaInfo)
 			pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.NotFound))
 			continue
 		}

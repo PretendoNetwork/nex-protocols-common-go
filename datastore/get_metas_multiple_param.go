@@ -44,28 +44,28 @@ func (commonProtocol *CommonProtocol) getMetasMultipleParam(err error, packet ne
 		}
 
 		if errCode != nil {
-			pMetaInfo = append(pMetaInfo, invalidMetaInfo.Copy().(datastore_types.DataStoreMetaInfo))
+			pMetaInfo = append(pMetaInfo, invalidMetaInfo)
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
 			continue
 		}
 
 		errCode = manager.VerifyObjectAccessPermission(connection.PID(), metaInfo, accessPassword, param.AccessPassword)
 		if errCode != nil {
-			pMetaInfo = append(pMetaInfo, invalidMetaInfo.Copy().(datastore_types.DataStoreMetaInfo))
+			pMetaInfo = append(pMetaInfo, invalidMetaInfo)
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
 			continue
 		}
 
 		metaInfo, errCode = database.GetObjectMetaInfoByDataIDWithResultOption(manager, metaInfo.DataID, param.ResultOption)
 		if errCode != nil {
-			pMetaInfo = append(pMetaInfo, invalidMetaInfo.Copy().(datastore_types.DataStoreMetaInfo))
+			pMetaInfo = append(pMetaInfo, invalidMetaInfo)
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
 			continue
 		}
 
 		// * The owner of an object can always view their objects, but normal users cannot
 		if metaInfo.Status != types.UInt8(datastore_constants.DataStatusNone) && metaInfo.OwnerID != connection.PID() {
-			pMetaInfo = append(pMetaInfo, invalidMetaInfo.Copy().(datastore_types.DataStoreMetaInfo))
+			pMetaInfo = append(pMetaInfo, invalidMetaInfo)
 			pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.NotFound))
 			continue
 		}
