@@ -50,21 +50,21 @@ func (commonProtocol *CommonProtocol) postMetaBinary(err error, packet nex.Packe
 	// TODO - Should this be moved inside InsertObjectByPreparePostParam?
 	if param.PersistenceInitParam.PersistenceSlotID != types.UInt16(datastore_constants.InvalidPersistenceSlotID) {
 		slot := param.PersistenceInitParam.PersistenceSlotID
-		oldDataID, deleteObject, err := database.GetPerpetuatedObject(manager, connection.PID(), slot)
+		oldDataID, err := database.GetPerpetuatedObjectID(manager, connection.PID(), slot)
 		if err != nil {
 			common_globals.Logger.Errorf("Error on persisting object: %s", err.Error())
 			return nil, err
 		}
 
 		if oldDataID != datastore_constants.InvalidDataID {
-			err := database.UnperpetuateObjectByDataID(manager, oldDataID, deleteObject)
+			err := database.UnperpetuateObjectByDataID(manager, oldDataID, param.PersistenceInitParam.DeleteLastObject)
 			if err != nil {
 				common_globals.Logger.Errorf("Error on unperpetuating object: %s", err.Error())
 				return nil, err
 			}
 		}
 
-		err = database.PerpetuateObject(manager, connection.PID(), param.PersistenceInitParam, dataID)
+		err = database.PerpetuateObject(manager, connection.PID(), param.PersistenceInitParam.PersistenceSlotID, dataID)
 		if err != nil {
 			common_globals.Logger.Errorf("Error on perpetuating object: %s", err.Error())
 			return nil, err

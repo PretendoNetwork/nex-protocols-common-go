@@ -6,30 +6,25 @@ import (
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
-	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
-func PerpetuateObject(manager *common_globals.DataStoreManager, ownerPID types.PID, persistenceInitParam datastore_types.DataStorePersistenceInitParam, dataID uint64) *nex.Error {
+func PerpetuateObject(manager *common_globals.DataStoreManager, ownerPID types.PID, slot types.UInt16, dataID uint64) *nex.Error {
 	// * Assumes the slot is already available and has
 	// * been cleared of any previous objects prior, and
 	// * that the object is not in another slot already
 	_, err := manager.Database.Exec(`INSERT INTO datastore.persistence_slots (
 		pid,
 		slot,
-		data_id,
-		delete_last_object
+		data_id
 	) VALUES (
 		$1,
 		$2,
 		$3,
 		$4
-	) ON CONFLICT (pid, slot) DO UPDATE SET
-		data_id = EXCLUDED.data_id,
-		delete_last_object = EXCLUDED.delete_last_object`,
+	) ON CONFLICT (pid, slot) DO UPDATE SET data_id = EXCLUDED.data_id`,
 		ownerPID,
-		persistenceInitParam.PersistenceSlotID,
+		slot,
 		dataID,
-		persistenceInitParam.DeleteLastObject,
 	)
 
 	if err != nil {

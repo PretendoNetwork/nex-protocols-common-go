@@ -7,7 +7,6 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	datastore "github.com/PretendoNetwork/nex-protocols-go/v2/datastore"
 	datastore_constants "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/constants"
-	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
 func (commonProtocol *CommonProtocol) perpetuateObject(err error, packet nex.PacketInterface, callID uint32, persistenceSlotID types.UInt16, dataID types.UInt64, deleteLastObject types.Bool) (*nex.RMCMessage, *nex.Error) {
@@ -36,25 +35,23 @@ func (commonProtocol *CommonProtocol) perpetuateObject(err error, packet nex.Pac
 		return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "change_error")
 	}
 
-	oldDataID, _, errCode := database.GetPerpetuatedObject(manager, connection.PID(), persistenceSlotID)
+	// TODO - All of this can probably be done in a single SQL query
+
+	oldDataID, errCode := database.GetPerpetuatedObjectID(manager, connection.PID(), persistenceSlotID)
 	if errCode != nil {
 		common_globals.Logger.Errorf("Error on persisting object: %s", errCode.Error())
 		return nil, errCode
 	}
 
 	if oldDataID != datastore_constants.InvalidDataID {
-		errCode := database.UnperpetuateObjectByDataID(manager, oldDataID, bool(deleteLastObject))
+		errCode := database.UnperpetuateObjectByDataID(manager, oldDataID, deleteLastObject)
 		if errCode != nil {
 			common_globals.Logger.Errorf("Error on unperpetuating object: %s", errCode.Error())
 			return nil, errCode
 		}
 	}
 
-	persistenceInitParam := datastore_types.NewDataStorePersistenceInitParam()
-	persistenceInitParam.PersistenceSlotID = persistenceSlotID
-	persistenceInitParam.DeleteLastObject = deleteLastObject
-
-	errCode = database.PerpetuateObject(manager, connection.PID(), persistenceInitParam, uint64(dataID))
+	errCode = database.PerpetuateObject(manager, connection.PID(), persistenceSlotID, uint64(dataID))
 	if errCode != nil {
 		common_globals.Logger.Errorf("Error on perpetuating object: %s", errCode.Error())
 		return nil, errCode

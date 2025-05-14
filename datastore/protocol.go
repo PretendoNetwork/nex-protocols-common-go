@@ -123,7 +123,6 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.DataSto
 		pid numeric(20),
 		slot int, -- can technically only be 0-15, but sent as a uint16
 		data_id numeric(20) REFERENCES datastore.objects(data_id),
-		delete_last_object boolean NOT NULL DEFAULT FALSE,
 		PRIMARY KEY (pid, slot)
 	)`)
 	if err != nil {

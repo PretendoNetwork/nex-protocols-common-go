@@ -4,10 +4,11 @@ import (
 	"time"
 
 	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 )
 
-func UnperpetuateObjectByDataID(manager *common_globals.DataStoreManager, dataID uint64, deleteObject bool) *nex.Error {
+func UnperpetuateObjectByDataID(manager *common_globals.DataStoreManager, dataID uint64, deleteObject types.Bool) *nex.Error {
 	var err error
 
 	if deleteObject {

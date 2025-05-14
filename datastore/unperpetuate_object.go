@@ -25,14 +25,14 @@ func (commonProtocol *CommonProtocol) unperpetuateObject(err error, packet nex.P
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 	}
 
-	oldDataID, _, errCode := database.GetPerpetuatedObject(manager, connection.PID(), persistenceSlotID)
+	oldDataID, errCode := database.GetPerpetuatedObjectID(manager, connection.PID(), persistenceSlotID)
 	if errCode != nil {
 		common_globals.Logger.Errorf("Error on persisting object: %s", errCode.Error())
 		return nil, errCode
 	}
 
 	if oldDataID != datastore_constants.InvalidDataID {
-		errCode := database.UnperpetuateObjectByDataID(manager, oldDataID, bool(deleteLastObject))
+		errCode := database.UnperpetuateObjectByDataID(manager, oldDataID, deleteLastObject)
 		if errCode != nil {
 			common_globals.Logger.Errorf("Error on unperpetuating object: %s", errCode.Error())
 			return nil, errCode
