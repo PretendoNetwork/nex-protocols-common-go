@@ -232,6 +232,7 @@ func NewCommonProtocol(protocol datastore.Interface) *CommonProtocol {
 	protocol.SetHandlerPerpetuateObject(commonProtocol.perpetuateObject)
 	protocol.SetHandlerUnperpetuateObject(commonProtocol.unperpetuateObject)
 	protocol.SetHandlerPrepareGetObjectOrMetaBinary(commonProtocol.prepareGetObjectOrMetaBinary)
+	protocol.SetHandlerGetObjectInfos(commonProtocol.getObjectInfos) // TODO - Fix this methods type in protocols lib
 
 	return commonProtocol
 }
