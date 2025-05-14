@@ -230,6 +230,7 @@ func NewCommonProtocol(protocol datastore.Interface) *CommonProtocol {
 	protocol.SetHandlerCompleteUpdateObject(commonProtocol.completeUpdateObject)
 	protocol.SetHandlerGetPersistenceInfo(commonProtocol.getPersistenceInfo)
 	protocol.SetHandlerGetPersistenceInfos(commonProtocol.getPersistenceInfos)
+	protocol.SetHandlerPerpetuateObject(commonProtocol.perpetuateObject)
 
 	return commonProtocol
 }
