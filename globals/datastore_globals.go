@@ -134,10 +134,11 @@ type DataStoreManager struct {
 	// * Some games may need to customize this behavior.
 	// * Set as fields so they can be modified by the caller
 
-	VerifyObjectAccessPermission func(requesterPID types.PID, metaInfo datastore_types.DataStoreMetaInfo, objectAccessPassword, requesterAccessPassword types.UInt64) *nex.Error
-	VerifyObjectUpdatePermission func(requesterPID types.PID, metaInfo datastore_types.DataStoreMetaInfo, objectUpdatePassword, requesterUpdatePassword types.UInt64) *nex.Error
-	VerifyObjectPermission       func(ownerPID, requesterPID types.PID, permission datastore_types.DataStorePermission, objectPassword, requesterPassword types.UInt64) *nex.Error
-	ValidateExtraData            func(extraData types.List[types.String]) *nex.Error
+	VerifyObjectAccessPermission  func(requesterPID types.PID, metaInfo datastore_types.DataStoreMetaInfo, objectAccessPassword, requesterAccessPassword types.UInt64) *nex.Error
+	VerifyObjectUpdatePermission  func(requesterPID types.PID, metaInfo datastore_types.DataStoreMetaInfo, objectUpdatePassword, requesterUpdatePassword types.UInt64) *nex.Error
+	VerifyObjectPermission        func(ownerPID, requesterPID types.PID, permission datastore_types.DataStorePermission, objectPassword, requesterPassword types.UInt64) *nex.Error
+	ValidateExtraData             func(extraData types.List[types.String]) *nex.Error
+	CalculateRatingExpirationTime func(settings datastore_types.DataStoreRatingInitParam) time.Time
 }
 
 // SetS3Config sets the S3 config for the DataStoreManager.
@@ -363,6 +364,84 @@ func (dsm DataStoreManager) validateExtraData(extraData types.List[types.String]
 	return nil
 }
 
+// calculateRatingExpirationTime is the default implementation that calculates the
+// expiration time for object rating slot rating locks
+func (dsm DataStoreManager) calculateRatingExpirationTime(settings datastore_types.DataStoreRatingInitParam) time.Time {
+	now := time.Now().UTC()
+
+	if settings.LockType == types.UInt8(datastore_constants.RatingLockInterval) {
+		// * RATING_LOCK_INTERVAL treats PeriodDuration as a number of seconds
+		// * that the user should be locked for
+		return now.Add(time.Duration(settings.PeriodDuration) * time.Second)
+	}
+
+	if settings.LockType == types.UInt8(datastore_constants.RatingLockPeriod) {
+		// * RATING_LOCK_PERIOD treats PeriodDuration as the day of the week/month
+		// * the lock should expire, and PeriodHour as the time of that day.
+		// *
+		// * If period is RATING_LOCK_PERIOD_DAY1, expire on the 1st of the
+		// * following month.
+		// *
+		// * If period is anything else, period denotes the day of the week
+		// * the period expires, where the week is ALWAYS the following week.
+		// * Meaning, if period is RATING_LOCK_PERIOD_WED and a rating is made
+		// * on Tuesday, the rating would NOT expire the following day, it would
+		// * expire in 8 days. Weeks are Monday-Sunday, so if period is
+		// * RATING_LOCK_PERIOD_MON and a rating is made on Sunday, the lock WILL
+		// * expire the following day (as that is a new week)
+		period := datastore_constants.RatingLockPeriodDay(settings.PeriodDuration)
+		hour := time.Duration(settings.PeriodHour) * time.Hour
+		year := now.Year()
+		month := now.Month()
+
+		// * Special case, period is the 1st day of the following month
+		if period == datastore_constants.RatingLockPeriodDay1 {
+			if month == time.December {
+				year++
+				month = time.January
+			} else {
+				month++
+			}
+
+			return time.Date(year, month, 1, 0, 0, 0, 0, time.UTC).Add(hour)
+		}
+
+		// * Period is a day of the week of the following week
+		var expiresWeekday time.Weekday
+		switch period {
+		case datastore_constants.RatingLockPeriodMon:
+			expiresWeekday = time.Monday
+		case datastore_constants.RatingLockPeriodTue:
+			expiresWeekday = time.Tuesday
+		case datastore_constants.RatingLockPeriodWed:
+			expiresWeekday = time.Wednesday
+		case datastore_constants.RatingLockPeriodThu:
+			expiresWeekday = time.Thursday
+		case datastore_constants.RatingLockPeriodFri:
+			expiresWeekday = time.Friday
+		case datastore_constants.RatingLockPeriodSat:
+			expiresWeekday = time.Saturday
+		case datastore_constants.RatingLockPeriodSun:
+			expiresWeekday = time.Sunday
+		}
+
+		// * Go starts weeks with Sunday, but in NEX a week
+		// * starts with Monday. Remap the values to reflect
+		// * this, and then calculate the number of days into
+		// * the following week we need to offset the expiration
+		// * time by
+		createdRemapped := (int(now.Weekday()) + 6) % 7
+		expiresRemapped := (int(expiresWeekday) + 6) % 7
+		daysUntil := (7 - createdRemapped) + expiresRemapped
+
+		return time.Date(year, month, now.Day(), 0, 0, 0, 0, time.UTC).AddDate(0, 0, daysUntil).Add(hour)
+	}
+
+	// * RATING_LOCK_PERMANENT logically locks the user out forever
+	// * by just setting the expiration time to an impossible date
+	return time.Date(9999, time.December, 31, 0, 0, 0, 0, time.UTC)
+}
+
 // NewDataStoreManager returns a new DataStoreManager
 func NewDataStoreManager(endpoint *nex.PRUDPEndPoint, db *sql.DB) *DataStoreManager {
 	dsm := &DataStoreManager{
@@ -374,6 +453,7 @@ func NewDataStoreManager(endpoint *nex.PRUDPEndPoint, db *sql.DB) *DataStoreMana
 	dsm.VerifyObjectUpdatePermission = dsm.verifyObjectUpdatePermission
 	dsm.VerifyObjectPermission = dsm.verifyObjectPermission
 	dsm.ValidateExtraData = dsm.validateExtraData
+	dsm.CalculateRatingExpirationTime = dsm.calculateRatingExpirationTime
 
 	return dsm
 }
