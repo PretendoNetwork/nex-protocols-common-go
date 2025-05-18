@@ -111,6 +111,8 @@ func (commonProtocol *CommonProtocol) rateObject(err error, packet nex.PacketInt
 		}
 	}
 
+	// TODO - Create a log here manually, or continue to manually create logs at runtime?
+
 	var pRating datastore_types.DataStoreRatingInfo
 
 	if fetchRatings {

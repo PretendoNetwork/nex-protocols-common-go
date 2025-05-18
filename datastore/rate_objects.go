@@ -181,6 +181,8 @@ func (commonProtocol *CommonProtocol) rateObjects(err error, packet nex.PacketIn
 		}
 
 		pResults = append(pResults, types.NewQResultSuccess(nex.ResultCodes.DataStore.Unknown))
+
+		// TODO - Create a log here manually, or continue to manually create logs at runtime?
 	}
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())

@@ -237,6 +237,7 @@ func NewCommonProtocol(protocol datastore.Interface) *CommonProtocol {
 	protocol.SetHandlerRateObjects(commonProtocol.rateObjects)
 	protocol.SetHandlerGetRating(commonProtocol.getRating)
 	protocol.SetHandlerGetRatings(commonProtocol.getRatings)
+	protocol.SetHandlerGetRatingWithLog(commonProtocol.getRatingWithLog)
 
 	return commonProtocol
 }
