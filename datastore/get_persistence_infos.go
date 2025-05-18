@@ -63,7 +63,7 @@ func (commonProtocol *CommonProtocol) getPersistenceInfos(err error, packet nex.
 		persistenceInfo.DataID = metaInfo.DataID
 
 		pPersistenceInfo = append(pPersistenceInfo, persistenceInfo)
-		pResults = append(pResults, types.NewQResultSuccess(nex.ResultCodes.DataStore.UnderReviewing))
+		pResults = append(pResults, types.NewQResultSuccess(nex.ResultCodes.DataStore.Unknown))
 	}
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
