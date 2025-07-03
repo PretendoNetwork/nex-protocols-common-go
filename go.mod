@@ -9,6 +9,7 @@ require (
 	github.com/PretendoNetwork/nex-protocols-go/v2 v2.2.1
 	github.com/PretendoNetwork/plogger-go v1.1.0
 	github.com/PretendoNetwork/pq-extended v1.0.0
+	github.com/lib/pq v1.10.9
 	github.com/minio/minio-go/v7 v7.0.90
 )
 
@@ -23,7 +24,6 @@ require (
 	github.com/jwalton/go-supportscolor v1.2.0 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.10 // indirect
-	github.com/lib/pq v1.10.9 // indirect
 	github.com/lxzan/gws v1.8.8 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect

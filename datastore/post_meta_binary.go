@@ -2,55 +2,73 @@ package datastore
 
 import (
 	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/types"
+	"github.com/PretendoNetwork/nex-protocols-common-go/v2/datastore/database"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	datastore "github.com/PretendoNetwork/nex-protocols-go/v2/datastore"
+	datastore_constants "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/constants"
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
 func (commonProtocol *CommonProtocol) postMetaBinary(err error, packet nex.PacketInterface, callID uint32, param datastore_types.DataStorePreparePostParam) (*nex.RMCMessage, *nex.Error) {
-	// * This method looks to function identically to DataStore::PreparePostObject,
-	// * except the only difference being it doesn't return an S3 upload URL. This
-	// * needs to be verified though, as there are other methods in the family such
-	// * as DataStore::PostMetaBinaryWithDataID which make less sense in this context,
-	// * unless those are just used to *update* a meta binary? Or maybe the DataID in
-	// * those methods is a pre-allocated DataID from the server? Needs more testing
-
-	if commonProtocol.InitializeObjectByPreparePostParam == nil {
-		common_globals.Logger.Warning("InitializeObjectByPreparePostParam not defined")
-		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
-	}
-
-	if commonProtocol.InitializeObjectRatingWithSlot == nil {
-		common_globals.Logger.Warning("InitializeObjectRatingWithSlot not defined")
-		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
-	}
+	// * This method functions identically to DataStore::PreparePostObject, except
+	// * these objects do not use the file server. This is a more light-weight,
+	// * and faster, way to manage "files" that are sufficently small
 
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
 	}
 
+	manager := commonProtocol.manager
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
-	// TODO - Need to verify what param.PersistenceInitParam.DeleteLastObject really means. It's often set to true even when it wouldn't make sense
-	dataID, errCode := commonProtocol.InitializeObjectByPreparePostParam(connection.PID(), param)
+	if param.Size != 0 {
+		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
+	}
+
+	// * Server sets this if not set already
+	notUseFileServer := (param.Flag & types.UInt32(datastore_constants.DataFlagNotUseFileServer)) != 0
+	if !notUseFileServer {
+		param.Flag |= types.UInt32(datastore_constants.DataFlagNotUseFileServer)
+	}
+
+	dataID, errCode := database.InsertObjectByPreparePostParam(manager, connection.PID(), param)
 	if errCode != nil {
-		common_globals.Logger.Errorf("Error code on object init: %s", errCode.Error())
+		common_globals.Logger.Errorf("Error on object init: %s", errCode.Error())
 		return nil, errCode
 	}
 
-	// TODO - Should this be moved to InitializeObjectByPreparePostParam?
-	for _ , ratingInitParamWithSlot := range param.RatingInitParams {
-		errCode = commonProtocol.InitializeObjectRatingWithSlot(dataID, ratingInitParamWithSlot)
-		if errCode != nil {
-			common_globals.Logger.Errorf("Error code on rating init: %s", errCode.Error())
-			break
+	// TODO - Should this be moved inside InsertObjectByPreparePostParam?
+	errCode = database.InsertObjectRatingSettings(manager, dataID, param.RatingInitParams)
+	if errCode != nil {
+		common_globals.Logger.Errorf("Error on rating init: %s", errCode.Error())
+		return nil, errCode
+	}
+
+	// TODO - Should this be moved inside InsertObjectByPreparePostParam?
+	if param.PersistenceInitParam.PersistenceSlotID != types.UInt16(datastore_constants.InvalidPersistenceSlotID) {
+		slot := param.PersistenceInitParam.PersistenceSlotID
+		oldDataID, err := database.GetPerpetuatedObjectID(manager, connection.PID(), slot)
+		if err != nil {
+			common_globals.Logger.Errorf("Error on persisting object: %s", err.Error())
+			return nil, err
 		}
-	}
 
-	if errCode != nil {
-		return nil, errCode
+		if oldDataID != datastore_constants.InvalidDataID {
+			err := database.UnperpetuateObjectByDataID(manager, oldDataID, param.PersistenceInitParam.DeleteLastObject)
+			if err != nil {
+				common_globals.Logger.Errorf("Error on unperpetuating object: %s", err.Error())
+				return nil, err
+			}
+		}
+
+		err = database.PerpetuateObject(manager, connection.PID(), param.PersistenceInitParam.PersistenceSlotID, dataID)
+		if err != nil {
+			common_globals.Logger.Errorf("Error on perpetuating object: %s", err.Error())
+			return nil, err
+		}
 	}
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())

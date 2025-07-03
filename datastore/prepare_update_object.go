@@ -2,6 +2,7 @@ package datastore
 
 import (
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/PretendoNetwork/nex-go/v2"
@@ -13,7 +14,7 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
-func (commonProtocol *CommonProtocol) preparePostObject(err error, packet nex.PacketInterface, callID uint32, param datastore_types.DataStorePreparePostParam) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) prepareUpdateObject(err error, packet nex.PacketInterface, callID uint32, param datastore_types.DataStorePrepareUpdateParam) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
@@ -30,59 +31,63 @@ func (commonProtocol *CommonProtocol) preparePostObject(err error, packet nex.Pa
 
 	// TODO - Add rollback for when error occurs
 
-	notUseFileServer := (param.Flag & types.UInt32(datastore_constants.DataFlagNotUseFileServer)) != 0
+	if param.DataID == types.UInt64(datastore_constants.InvalidDataID) {
+		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
+	}
+
+	// TODO - Move this to VerifyObjectUpdatePermission?
+	// * Objects in the DataID range 900,000-999,999 are special
+	if param.DataID < 1000000 {
+		// * Unsure if this is the correct error, but it feels right
+		return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "change_error")
+	}
+
+	metaInfo, updatePassword, errCode := database.GetUpdateObjectInfoByDataID(manager, param.DataID)
+	if errCode != nil {
+		return nil, errCode
+	}
+
+	errCode = manager.VerifyObjectUpdatePermission(connection.PID(), metaInfo, updatePassword, param.UpdatePassword)
+	if errCode != nil {
+		return nil, errCode
+	}
+
+	// * If the object is pending or rejected, only the owner can interact with it
+	if metaInfo.OwnerID != connection.PID() && (metaInfo.Status == types.UInt8(datastore_constants.DataStatusPending) || metaInfo.Status == types.UInt8(datastore_constants.DataStatusRejected)) {
+		return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
+	}
+
+	notUseFileServer := (metaInfo.Flag & types.UInt32(datastore_constants.DataFlagNotUseFileServer)) != 0
 	if notUseFileServer {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "PreparePostObject cannot be used with DataFlagNotUseFileServer")
+		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "PrepareUpdateObject cannot be used with DataFlagNotUseFileServer")
 	}
 
-	dataID, errCode := database.InsertObjectByPreparePostParam(manager, connection.PID(), param)
+	newVersion, errCode := database.UpdateObjectByPrepareUpdateParam(manager, param, metaInfo)
 	if errCode != nil {
-		common_globals.Logger.Errorf("Error on object init: %s", errCode.Error())
 		return nil, errCode
 	}
 
-	// TODO - Should this be moved inside InsertObjectByPreparePostParam?
-	errCode = database.InsertObjectRatingSettings(manager, dataID, param.RatingInitParams)
-	if errCode != nil {
-		common_globals.Logger.Errorf("Error on rating init: %s", errCode.Error())
-		return nil, errCode
-	}
-
-	// TODO - Should this be moved inside InsertObjectByPreparePostParam?
-	if param.PersistenceInitParam.PersistenceSlotID != types.UInt16(datastore_constants.InvalidPersistenceSlotID) {
-		slot := param.PersistenceInitParam.PersistenceSlotID
-		oldDataID, err := database.GetPerpetuatedObjectID(manager, connection.PID(), slot)
-		if err != nil {
-			common_globals.Logger.Errorf("Error on persisting object: %s", err.Error())
-			return nil, err
-		}
-
-		if oldDataID != datastore_constants.InvalidDataID {
-			err := database.UnperpetuateObjectByDataID(manager, oldDataID, param.PersistenceInitParam.DeleteLastObject)
-			if err != nil {
-				common_globals.Logger.Errorf("Error on unperpetuating object: %s", err.Error())
-				return nil, err
-			}
-		}
-
-		err = database.PerpetuateObject(manager, connection.PID(), param.PersistenceInitParam.PersistenceSlotID, dataID)
-		if err != nil {
-			common_globals.Logger.Errorf("Error on perpetuating object: %s", err.Error())
-			return nil, err
+	// * NEX 3.0.0 bumped versions from uint16 to uint32.
+	// * Older clients can't handle larger numbers
+	// TODO - Check this before inserting into the database
+	if endpoint.LibraryVersions().DataStore.Major < 3 {
+		if newVersion > math.MaxUint16 {
+			// * OverCapacity is definitely not the correct error here, but it sounds nice
+			return nil, nex.NewError(nex.ResultCodes.DataStore.OverCapacity, "change_error")
 		}
 	}
 
-	// * Format "DataID_Version", where "Version" always starts at 1
-	key := fmt.Sprintf("%020d_%010d.bin", dataID, 1)
+	// * Format "DataID_Version"
+	key := fmt.Sprintf("%020d_%010d.bin", param.DataID, newVersion)
 	postData, err := manager.S3.PresignPost(key, time.Minute*15)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "Failed to sign post request")
 	}
 
-	pReqPostInfo := datastore_types.NewDataStoreReqPostInfo()
+	pReqPostInfo := datastore_types.NewDataStoreReqUpdateInfo()
 
-	pReqPostInfo.DataID = types.NewUInt64(dataID)
+	pReqPostInfo.Version = newVersion
 	pReqPostInfo.URL = types.NewString(postData.URL.String())
 	pReqPostInfo.RequestHeaders = types.NewList[datastore_types.DataStoreKeyValue]()
 	pReqPostInfo.FormFields = types.NewList[datastore_types.DataStoreKeyValue]()
@@ -112,12 +117,8 @@ func (commonProtocol *CommonProtocol) preparePostObject(err error, packet nex.Pa
 
 	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
 	rmcResponse.ProtocolID = datastore.ProtocolID
-	rmcResponse.MethodID = datastore.MethodPreparePostObject
+	rmcResponse.MethodID = datastore.MethodPrepareUpdateObject
 	rmcResponse.CallID = callID
-
-	if commonProtocol.OnAfterPreparePostObject != nil {
-		go commonProtocol.OnAfterPreparePostObject(packet, param)
-	}
 
 	return rmcResponse, nil
 }

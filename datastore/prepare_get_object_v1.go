@@ -13,7 +13,7 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
-func (commonProtocol *CommonProtocol) prepareGetObject(err error, packet nex.PacketInterface, callID uint32, param datastore_types.DataStorePrepareGetParam) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) prepareGetObjectV1(err error, packet nex.PacketInterface, callID uint32, param datastore_types.DataStorePrepareGetParamV1) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
@@ -30,24 +30,18 @@ func (commonProtocol *CommonProtocol) prepareGetObject(err error, packet nex.Pac
 
 	// TODO - Add rollback for when error occurs
 
-	var metaInfo datastore_types.DataStoreMetaInfo
-	var accessPassword types.UInt64
-	var errCode *nex.Error
-
-	if param.PersistenceTarget.OwnerID != 0 {
-		metaInfo, accessPassword, errCode = database.GetAccessObjectInfoByPersistenceTarget(manager, param.PersistenceTarget)
-	} else if param.DataID != types.UInt64(datastore_constants.InvalidDataID) {
-		metaInfo, accessPassword, errCode = database.GetAccessObjectInfoByDataID(manager, param.DataID)
-	} else {
-		// * If both the PersistenceTarget and DataID are not set, bail
-		errCode = nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
+	if param.DataID == types.UInt32(datastore_constants.InvalidDataID) {
+		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 	}
 
+	// * V1 has no persistence target
+	metaInfo, accessPassword, errCode := database.GetAccessObjectInfoByDataID(manager, types.UInt64(param.DataID))
 	if errCode != nil {
 		return nil, errCode
 	}
 
-	errCode = manager.VerifyObjectAccessPermission(connection.PID(), metaInfo, accessPassword, param.AccessPassword)
+	// * V1 has no access password
+	errCode = manager.VerifyObjectAccessPermission(connection.PID(), metaInfo, accessPassword, 0)
 	if errCode != nil {
 		return nil, errCode
 	}
@@ -65,7 +59,7 @@ func (commonProtocol *CommonProtocol) prepareGetObject(err error, packet nex.Pac
 
 	notUseFileServer := (metaInfo.Flag & types.UInt32(datastore_constants.DataFlagNotUseFileServer)) != 0
 	if notUseFileServer {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "PrepareGetObject cannot be used with DataFlagNotUseFileServer")
+		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "PrepareGetObjectV1 cannot be used with DataFlagNotUseFileServer")
 	}
 
 	errCode = database.UpdateObjectReferenceData(manager, metaInfo.DataID)
@@ -85,13 +79,12 @@ func (commonProtocol *CommonProtocol) prepareGetObject(err error, packet nex.Pac
 		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "Failed to sign post request")
 	}
 
-	pReqGetInfo := datastore_types.NewDataStoreReqGetInfo()
+	pReqGetInfo := datastore_types.NewDataStoreReqGetInfoV1()
 
 	pReqGetInfo.URL = types.NewString(getData.URL.String())
 	pReqGetInfo.RequestHeaders = types.NewList[datastore_types.DataStoreKeyValue]()
 	pReqGetInfo.Size = metaInfo.Size
 	pReqGetInfo.RootCACert = types.NewBuffer(getData.RootCACert)
-	pReqGetInfo.DataID = metaInfo.DataID
 
 	for key, value := range getData.RequestHeaders {
 		header := datastore_types.NewDataStoreKeyValue()
@@ -109,12 +102,8 @@ func (commonProtocol *CommonProtocol) prepareGetObject(err error, packet nex.Pac
 
 	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
 	rmcResponse.ProtocolID = datastore.ProtocolID
-	rmcResponse.MethodID = datastore.MethodPrepareGetObject
+	rmcResponse.MethodID = datastore.MethodPrepareGetObjectV1
 	rmcResponse.CallID = callID
-
-	if commonProtocol.OnAfterPrepareGetObject != nil {
-		go commonProtocol.OnAfterPrepareGetObject(packet, param)
-	}
 
 	return rmcResponse, nil
 }

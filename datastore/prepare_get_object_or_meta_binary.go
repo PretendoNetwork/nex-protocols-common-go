@@ -2,6 +2,7 @@ package datastore
 
 import (
 	"fmt"
+	"math"
 	"time"
 
 	nex "github.com/PretendoNetwork/nex-go/v2"
@@ -13,7 +14,7 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
-func (commonProtocol *CommonProtocol) prepareGetObject(err error, packet nex.PacketInterface, callID uint32, param datastore_types.DataStorePrepareGetParam) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) prepareGetObjectOrMetaBinary(err error, packet nex.PacketInterface, callID uint32, param datastore_types.DataStorePrepareGetParam) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
@@ -61,13 +62,6 @@ func (commonProtocol *CommonProtocol) prepareGetObject(err error, packet nex.Pac
 		return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
 	}
 
-	// TODO - Check param.LockID. See InsertObjectByPreparePostParam for notes on read locks
-
-	notUseFileServer := (metaInfo.Flag & types.UInt32(datastore_constants.DataFlagNotUseFileServer)) != 0
-	if notUseFileServer {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "PrepareGetObject cannot be used with DataFlagNotUseFileServer")
-	}
-
 	errCode = database.UpdateObjectReferenceData(manager, metaInfo.DataID)
 	if errCode != nil {
 		return nil, errCode
@@ -78,38 +72,61 @@ func (commonProtocol *CommonProtocol) prepareGetObject(err error, packet nex.Pac
 		return nil, errCode
 	}
 
-	key := fmt.Sprintf("%020d_%010d.bin", metaInfo.DataID, version)
-	getData, err := manager.S3.PresignGet(key, time.Minute*15)
-	if err != nil {
-		common_globals.Logger.Error(err.Error())
-		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "Failed to sign post request")
-	}
+	// TODO - Check param.LockID. See InsertObjectByPreparePostParam for notes on read locks
 
+	notUseFileServer := (metaInfo.Flag & types.UInt32(datastore_constants.DataFlagNotUseFileServer)) != 0
 	pReqGetInfo := datastore_types.NewDataStoreReqGetInfo()
+	pReqGetAdditionalMeta := datastore_types.NewDataStoreReqGetAdditionalMeta()
 
-	pReqGetInfo.URL = types.NewString(getData.URL.String())
-	pReqGetInfo.RequestHeaders = types.NewList[datastore_types.DataStoreKeyValue]()
-	pReqGetInfo.Size = metaInfo.Size
-	pReqGetInfo.RootCACert = types.NewBuffer(getData.RootCACert)
-	pReqGetInfo.DataID = metaInfo.DataID
+	// * If the object uses the file server, populate pReqGetInfo.
+	// * If the object does not use the file server, populate pReqGetAdditionalMeta.
+	// * Functions as a way to ge the information needed to download an object in
+	// * a single RMC call
+	// TODO - Populate pReqGetAdditionalMeta anyway? Not sure what harm it would do, if any
 
-	for key, value := range getData.RequestHeaders {
-		header := datastore_types.NewDataStoreKeyValue()
-		header.Key = types.NewString(key)
-		header.Value = types.NewString(value)
+	if notUseFileServer {
+		if version > math.MaxUint16 {
+			// * OverCapacity is definitely not the correct error here, but it sounds nice
+			return nil, nex.NewError(nex.ResultCodes.DataStore.OverCapacity, "change_error")
+		}
 
-		pReqGetInfo.RequestHeaders = append(pReqGetInfo.RequestHeaders, header)
+		pReqGetAdditionalMeta.OwnerID = metaInfo.OwnerID
+		pReqGetAdditionalMeta.DataType = metaInfo.DataType
+		pReqGetAdditionalMeta.Version = types.UInt16(version)
+		pReqGetAdditionalMeta.MetaBinary = metaInfo.MetaBinary
+	} else {
+		key := fmt.Sprintf("%020d_%010d.bin", metaInfo.DataID, version)
+		getData, err := manager.S3.PresignGet(key, time.Minute*15)
+		if err != nil {
+			common_globals.Logger.Error(err.Error())
+			return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "Failed to sign post request")
+		}
+
+		pReqGetInfo.URL = types.NewString(getData.URL.String())
+		pReqGetInfo.RequestHeaders = types.NewList[datastore_types.DataStoreKeyValue]()
+		pReqGetInfo.Size = metaInfo.Size
+		pReqGetInfo.RootCACert = types.NewBuffer(getData.RootCACert)
+		pReqGetInfo.DataID = metaInfo.DataID
+
+		for key, value := range getData.RequestHeaders {
+			header := datastore_types.NewDataStoreKeyValue()
+			header.Key = types.NewString(key)
+			header.Value = types.NewString(value)
+
+			pReqGetInfo.RequestHeaders = append(pReqGetInfo.RequestHeaders, header)
+		}
 	}
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
 	pReqGetInfo.WriteTo(rmcResponseStream)
+	pReqGetAdditionalMeta.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
 	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
 	rmcResponse.ProtocolID = datastore.ProtocolID
-	rmcResponse.MethodID = datastore.MethodPrepareGetObject
+	rmcResponse.MethodID = datastore.MethodPrepareGetObjectOrMetaBinary
 	rmcResponse.CallID = callID
 
 	if commonProtocol.OnAfterPrepareGetObject != nil {

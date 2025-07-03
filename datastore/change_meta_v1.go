@@ -2,13 +2,15 @@ package datastore
 
 import (
 	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/types"
 	"github.com/PretendoNetwork/nex-protocols-common-go/v2/datastore/database"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	datastore "github.com/PretendoNetwork/nex-protocols-go/v2/datastore"
+	datastore_constants "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/constants"
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
-func (commonProtocol *CommonProtocol) deleteObject(err error, packet nex.PacketInterface, callID uint32, param datastore_types.DataStoreDeleteParam) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) changeMetaV1(err error, packet nex.PacketInterface, callID uint32, param datastore_types.DataStoreChangeMetaParamV1) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
@@ -18,7 +20,12 @@ func (commonProtocol *CommonProtocol) deleteObject(err error, packet nex.PacketI
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
-	metaInfo, updatePassword, errCode := database.GetUpdateObjectInfoByDataID(manager, param.DataID)
+	if param.DataID == types.UInt64(datastore_constants.InvalidDataID) {
+		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
+	}
+
+	// * V1 has no persistence target
+	metaInfo, updatePassword, errCode := database.GetUpdateObjectInfoByDataID(manager, types.UInt64(param.DataID))
 	if errCode != nil {
 		return nil, errCode
 	}
@@ -35,14 +42,19 @@ func (commonProtocol *CommonProtocol) deleteObject(err error, packet nex.PacketI
 		return nil, errCode
 	}
 
-	errCode = database.DeleteObject(manager, param.DataID)
+	// * If the object is pending or rejected, only the owner can interact with it
+	if metaInfo.OwnerID != connection.PID() && (metaInfo.Status == types.UInt8(datastore_constants.DataStatusPending) || metaInfo.Status == types.UInt8(datastore_constants.DataStatusRejected)) {
+		return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
+	}
+
+	errCode = database.UpdateObjectMetadataV1(manager, metaInfo, param)
 	if errCode != nil {
 		return nil, errCode
 	}
 
 	rmcResponse := nex.NewRMCSuccess(endpoint, nil)
 	rmcResponse.ProtocolID = datastore.ProtocolID
-	rmcResponse.MethodID = datastore.MethodDeleteObject
+	rmcResponse.MethodID = datastore.MethodChangeMetaV1
 	rmcResponse.CallID = callID
 
 	return rmcResponse, nil
