@@ -42,10 +42,10 @@ func (commonProtocol *CommonProtocol) getRanking(err error, packet nex.PacketInt
 
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
-	callerPid := principalID
+	callerPID := principalID
 	// * 0 = "own ranking"
-	if callerPid == 0 {
-		callerPid = connection.PID()
+	if callerPID == 0 {
+		callerPID = connection.PID()
 	}
 
 	var rankDataList types.List[ranking_types.RankingRankData]
@@ -55,14 +55,14 @@ func (commonProtocol *CommonProtocol) getRanking(err error, packet nex.PacketInt
 	case constants.RankingModeRange:
 		rankDataList, totalCount, err = commonProtocol.GetRankingsAndCountByCategoryAndRankingOrderParam(category, orderParam)
 	case constants.RankingModeNear:
-		rankDataList, totalCount, err = commonProtocol.GetNearbyRankingsAndCountByCategoryAndRankingOrderParam(callerPid, category, orderParam)
+		rankDataList, totalCount, err = commonProtocol.GetNearbyRankingsAndCountByCategoryAndRankingOrderParam(callerPID, category, orderParam)
 	case constants.RankingModeFriendRange:
-		rankDataList, totalCount, err = commonProtocol.GetFriendsRankingsAndCountByCategoryAndRankingOrderParam(callerPid, category, orderParam)
+		rankDataList, totalCount, err = commonProtocol.GetFriendsRankingsAndCountByCategoryAndRankingOrderParam(callerPID, category, orderParam)
 	case constants.RankingModeFriendNear:
-		rankDataList, totalCount, err = commonProtocol.GetNearbyFriendsRankingsAndCountByCategoryAndRankingOrderParam(callerPid, category, orderParam)
+		rankDataList, totalCount, err = commonProtocol.GetNearbyFriendsRankingsAndCountByCategoryAndRankingOrderParam(callerPID, category, orderParam)
 	case constants.RankingModeUser:
 	default:
-		rankDataList, totalCount, err = commonProtocol.GetOwnRankingByCategoryAndRankingOrderParam(callerPid, category, orderParam)
+		rankDataList, totalCount, err = commonProtocol.GetOwnRankingByCategoryAndRankingOrderParam(callerPID, category, orderParam)
 	}
 
 	if err != nil {
