@@ -41,7 +41,7 @@ func (commonProtocol *CommonProtocol) prepareGetObjectV1(err error, packet nex.P
 	}
 
 	// * V1 has no access password
-	errCode = manager.VerifyObjectAccessPermission(connection.PID(), metaInfo, accessPassword, 0)
+	errCode = manager.VerifyObjectAccessPermission(*manager, connection.PID(), metaInfo, accessPassword, 0)
 	if errCode != nil {
 		return nil, errCode
 	}

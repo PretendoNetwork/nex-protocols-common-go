@@ -33,7 +33,7 @@ func (commonProtocol *CommonProtocol) getRating(err error, packet nex.PacketInte
 		return nil, errCode
 	}
 
-	errCode = manager.VerifyObjectAccessPermission(connection.PID(), metaInfo, objectAccessPassword, accessPassword)
+	errCode = manager.VerifyObjectAccessPermission(*manager, connection.PID(), metaInfo, objectAccessPassword, accessPassword)
 	if errCode != nil {
 		return nil, errCode
 	}

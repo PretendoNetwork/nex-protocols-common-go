@@ -73,7 +73,7 @@ func (commonProtocol *CommonProtocol) rateObjects(err error, packet nex.PacketIn
 			continue
 		}
 
-		errCode = manager.VerifyObjectAccessPermission(connection.PID(), metaInfo, accessPassword, param.AccessPassword)
+		errCode = manager.VerifyObjectAccessPermission(*manager, connection.PID(), metaInfo, accessPassword, param.AccessPassword)
 		if errCode != nil {
 			pRatings = append(pRatings, invalidRatingInfo)
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))

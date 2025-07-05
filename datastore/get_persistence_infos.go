@@ -43,7 +43,7 @@ func (commonProtocol *CommonProtocol) getPersistenceInfos(err error, packet nex.
 		}
 
 		// * Anyone with access permissions can view this, but they don't allow a password to be sent
-		errCode = manager.VerifyObjectAccessPermission(connection.PID(), metaInfo, accessPassword, 0)
+		errCode = manager.VerifyObjectAccessPermission(*manager, connection.PID(), metaInfo, accessPassword, 0)
 		if errCode != nil {
 			pPersistenceInfo = append(pPersistenceInfo, invalidPersistenceInfo)
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))

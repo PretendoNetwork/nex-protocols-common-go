@@ -8,7 +8,7 @@ import (
 )
 
 func LockUserRatings(manager *common_globals.DataStoreManager, dataID types.UInt64, slot types.UInt8, pid types.PID, settings datastore_types.DataStoreRatingInitParam) *nex.Error {
-	expirationDate := manager.CalculateRatingExpirationTime(settings)
+	expirationDate := manager.CalculateRatingExpirationTime(*manager, settings)
 
 	// TODO - Check rows affected?
 	_, err := manager.Database.Exec(`

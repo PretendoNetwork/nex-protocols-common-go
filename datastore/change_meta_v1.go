@@ -37,7 +37,7 @@ func (commonProtocol *CommonProtocol) changeMetaV1(err error, packet nex.PacketI
 		return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "change_error")
 	}
 
-	errCode = manager.VerifyObjectUpdatePermission(connection.PID(), metaInfo, updatePassword, param.UpdatePassword)
+	errCode = manager.VerifyObjectUpdatePermission(*manager, connection.PID(), metaInfo, updatePassword, param.UpdatePassword)
 	if errCode != nil {
 		return nil, errCode
 	}

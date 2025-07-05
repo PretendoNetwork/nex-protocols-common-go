@@ -31,7 +31,7 @@ func (commonProtocol *CommonProtocol) getPersistenceInfo(err error, packet nex.P
 	}
 
 	// * Anyone with access permissions can view this, but they don't allow a password to be sent
-	errCode = manager.VerifyObjectAccessPermission(connection.PID(), metaInfo, accessPassword, 0)
+	errCode = manager.VerifyObjectAccessPermission(*manager, connection.PID(), metaInfo, accessPassword, 0)
 	if errCode != nil {
 		return nil, errCode
 	}

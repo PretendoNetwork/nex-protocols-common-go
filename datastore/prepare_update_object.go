@@ -47,7 +47,7 @@ func (commonProtocol *CommonProtocol) prepareUpdateObject(err error, packet nex.
 		return nil, errCode
 	}
 
-	errCode = manager.VerifyObjectUpdatePermission(connection.PID(), metaInfo, updatePassword, param.UpdatePassword)
+	errCode = manager.VerifyObjectUpdatePermission(*manager, connection.PID(), metaInfo, updatePassword, param.UpdatePassword)
 	if errCode != nil {
 		return nil, errCode
 	}
@@ -79,7 +79,7 @@ func (commonProtocol *CommonProtocol) prepareUpdateObject(err error, packet nex.
 
 	notifyAccessRecipientsOnUpdate := (metaInfo.Flag & types.UInt32(datastore_constants.DataFlagUseNotificationOnUpdate)) != 0
 	if notifyAccessRecipientsOnUpdate {
-		recipientIDs, errCode := manager.GetNotificationRecipients(metaInfo.OwnerID, metaInfo.Permission)
+		recipientIDs, errCode := manager.GetNotificationRecipients(*manager, metaInfo.OwnerID, metaInfo.Permission)
 		if errCode != nil {
 			common_globals.Logger.Errorf("Error on getting notification recipients: %s", errCode.Error())
 			return nil, errCode

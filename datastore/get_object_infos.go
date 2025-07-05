@@ -47,7 +47,7 @@ func (commonProtocol *CommonProtocol) getObjectInfos(err error, packet nex.Packe
 			continue
 		}
 
-		errCode = manager.VerifyObjectAccessPermission(connection.PID(), metaInfo, accessPassword, 0)
+		errCode = manager.VerifyObjectAccessPermission(*manager, connection.PID(), metaInfo, accessPassword, 0)
 		if errCode != nil {
 			pInfos = append(pInfos, invalidReqGetInfo)
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
