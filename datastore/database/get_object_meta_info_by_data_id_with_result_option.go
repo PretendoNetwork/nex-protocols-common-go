@@ -68,7 +68,7 @@ func GetObjectMetaInfoByDataIDWithResultOption(manager *common_globals.DataStore
 
 	if populateMetaBinary {
 		columns = append(columns, "meta_binary")
-		outs = append(outs, pq.Array(&metaInfo.MetaBinary))
+		outs = append(outs, &metaInfo.MetaBinary)
 	}
 
 	if populateRecipientIDs {
