@@ -261,6 +261,7 @@ func NewCommonProtocol(protocol datastore.Interface) *CommonProtocol {
 	protocol.SetHandlerGetNotificationURL(commonProtocol.getNotificationURL)
 	protocol.SetHandlerGetNewArrivedNotifications(commonProtocol.getNewArrivedNotfications)
 	protocol.SetHandlerGetNewArrivedNotificationsV1(commonProtocol.getNewArrivedNotficationsV1)
+	protocol.SetHandlerSearchObject(commonProtocol.searchObject)
 
 	return commonProtocol
 }
