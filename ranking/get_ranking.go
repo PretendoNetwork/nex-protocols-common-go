@@ -10,31 +10,6 @@ import (
 )
 
 func (commonProtocol *CommonProtocol) getRanking(err error, packet nex.PacketInterface, callID uint32, rankingMode types.UInt8, category types.UInt32, orderParam ranking_types.RankingOrderParam, uniqueID types.UInt64, principalID types.PID) (*nex.RMCMessage, *nex.Error) {
-	if commonProtocol.GetRankingsAndCountByCategoryAndRankingOrderParam == nil {
-		common_globals.Logger.Warning("Ranking::GetRanking missing GetRankingsAndCountByCategoryAndRankingOrderParam!")
-		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
-	}
-
-	if commonProtocol.GetNearbyRankingsAndCountByCategoryAndRankingOrderParam == nil {
-		common_globals.Logger.Warning("Ranking::GetRanking missing GetNearbyRankingsAndCountByCategoryAndRankingOrderParam!")
-		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
-	}
-
-	if commonProtocol.GetFriendsRankingsAndCountByCategoryAndRankingOrderParam == nil {
-		common_globals.Logger.Warning("Ranking::GetRanking missing GetFriendsRankingsAndCountByCategoryAndRankingOrderParam!")
-		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
-	}
-
-	if commonProtocol.GetNearbyFriendsRankingsAndCountByCategoryAndRankingOrderParam == nil {
-		common_globals.Logger.Warning("Ranking::GetRanking missing GetNearbyFriendsRankingsAndCountByCategoryAndRankingOrderParam!")
-		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
-	}
-
-	if commonProtocol.GetOwnRankingByCategoryAndRankingOrderParam == nil {
-		common_globals.Logger.Warning("Ranking::GetRanking missing GetOwnRankingByCategoryAndRankingOrderParam!")
-		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
-	}
-
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.Ranking.InvalidArgument, "change_error")
@@ -53,15 +28,40 @@ func (commonProtocol *CommonProtocol) getRanking(err error, packet nex.PacketInt
 
 	switch constants.RankingMode(rankingMode) {
 	case constants.RankingModeRange:
+		if commonProtocol.GetRankingsAndCountByCategoryAndRankingOrderParam == nil {
+			common_globals.Logger.Warning("Ranking::GetRanking missing GetRankingsAndCountByCategoryAndRankingOrderParam!")
+			return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
+		}
+
 		rankDataList, totalCount, err = commonProtocol.GetRankingsAndCountByCategoryAndRankingOrderParam(category, orderParam)
 	case constants.RankingModeNear:
+		if commonProtocol.GetNearbyRankingsAndCountByCategoryAndRankingOrderParam == nil {
+			common_globals.Logger.Warning("Ranking::GetRanking missing GetNearbyRankingsAndCountByCategoryAndRankingOrderParam!")
+			return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
+		}
+
 		rankDataList, totalCount, err = commonProtocol.GetNearbyRankingsAndCountByCategoryAndRankingOrderParam(callerPID, category, orderParam)
 	case constants.RankingModeFriendRange:
+		if commonProtocol.GetFriendsRankingsAndCountByCategoryAndRankingOrderParam == nil {
+			common_globals.Logger.Warning("Ranking::GetRanking missing GetFriendsRankingsAndCountByCategoryAndRankingOrderParam!")
+			return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
+		}
+
 		rankDataList, totalCount, err = commonProtocol.GetFriendsRankingsAndCountByCategoryAndRankingOrderParam(callerPID, category, orderParam)
 	case constants.RankingModeFriendNear:
+		if commonProtocol.GetNearbyFriendsRankingsAndCountByCategoryAndRankingOrderParam == nil {
+			common_globals.Logger.Warning("Ranking::GetRanking missing GetNearbyFriendsRankingsAndCountByCategoryAndRankingOrderParam!")
+			return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
+		}
+
 		rankDataList, totalCount, err = commonProtocol.GetNearbyFriendsRankingsAndCountByCategoryAndRankingOrderParam(callerPID, category, orderParam)
 	case constants.RankingModeUser:
 	default:
+		if commonProtocol.GetOwnRankingByCategoryAndRankingOrderParam == nil {
+			common_globals.Logger.Warning("Ranking::GetRanking missing GetOwnRankingByCategoryAndRankingOrderParam!")
+			return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
+		}
+
 		rankDataList, totalCount, err = commonProtocol.GetOwnRankingByCategoryAndRankingOrderParam(callerPID, category, orderParam)
 	}
 
