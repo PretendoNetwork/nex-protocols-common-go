@@ -240,6 +240,7 @@ func NewCommonProtocol(protocol datastore.Interface) *CommonProtocol {
 	protocol.SetHandlerGetRatingWithLog(commonProtocol.getRatingWithLog)
 	protocol.SetHandlerResetRating(commonProtocol.resetRating)
 	protocol.SetHandlerResetRatings(commonProtocol.resetRatings) // TODO - Fix this methods type in protocols lib
+	protocol.SetHandlerSearchObject(commonProtocol.searchObject)
 
 	return commonProtocol
 }
