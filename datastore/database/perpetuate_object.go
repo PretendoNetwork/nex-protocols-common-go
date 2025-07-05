@@ -19,8 +19,7 @@ func PerpetuateObject(manager *common_globals.DataStoreManager, ownerPID types.P
 	) VALUES (
 		$1,
 		$2,
-		$3,
-		$4
+		$3
 	) ON CONFLICT (pid, slot) DO UPDATE SET data_id = EXCLUDED.data_id`,
 		ownerPID,
 		slot,
