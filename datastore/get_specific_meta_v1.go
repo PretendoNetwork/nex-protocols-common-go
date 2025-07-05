@@ -41,7 +41,7 @@ func (commonProtocol *CommonProtocol) getSpecificMetaV1(err error, packet nex.Pa
 			return nil, errCode
 		}
 
-		errCode = manager.VerifyObjectAccessPermission(connection.PID(), metaInfo, accessPassword, 0)
+		errCode = manager.VerifyObjectAccessPermission(*manager, connection.PID(), metaInfo, accessPassword, 0)
 		if errCode != nil {
 			return nil, errCode
 		}

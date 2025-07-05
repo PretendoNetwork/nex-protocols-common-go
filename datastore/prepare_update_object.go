@@ -47,7 +47,7 @@ func (commonProtocol *CommonProtocol) prepareUpdateObject(err error, packet nex.
 		return nil, errCode
 	}
 
-	errCode = manager.VerifyObjectUpdatePermission(connection.PID(), metaInfo, updatePassword, param.UpdatePassword)
+	errCode = manager.VerifyObjectUpdatePermission(*manager, connection.PID(), metaInfo, updatePassword, param.UpdatePassword)
 	if errCode != nil {
 		return nil, errCode
 	}

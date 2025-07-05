@@ -47,7 +47,7 @@ func (commonProtocol *CommonProtocol) getRatings(err error, packet nex.PacketInt
 			continue
 		}
 
-		errCode = manager.VerifyObjectAccessPermission(connection.PID(), metaInfo, objectAccessPassword, accessPassword)
+		errCode = manager.VerifyObjectAccessPermission(*manager, connection.PID(), metaInfo, objectAccessPassword, accessPassword)
 		if errCode != nil {
 			pRatings = append(pRatings, invalidRatingInfoWithSlot)
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))

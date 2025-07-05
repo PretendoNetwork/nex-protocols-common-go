@@ -33,7 +33,7 @@ func (commonProtocol *CommonProtocol) resetRating(err error, packet nex.PacketIn
 		return nil, errCode
 	}
 
-	errCode = manager.VerifyObjectUpdatePermission(connection.PID(), metaInfo, objectUpdatePassword, updatePassword)
+	errCode = manager.VerifyObjectUpdatePermission(*manager, connection.PID(), metaInfo, objectUpdatePassword, updatePassword)
 	if errCode != nil {
 		return nil, errCode
 	}

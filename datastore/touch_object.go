@@ -41,7 +41,7 @@ func (commonProtocol *CommonProtocol) touchObject(err error, packet nex.PacketIn
 		return nil, errCode
 	}
 
-	errCode = manager.VerifyObjectAccessPermission(connection.PID(), metaInfo, accessPassword, param.AccessPassword)
+	errCode = manager.VerifyObjectAccessPermission(*manager, connection.PID(), metaInfo, accessPassword, param.AccessPassword)
 	if errCode != nil {
 		return nil, errCode
 	}

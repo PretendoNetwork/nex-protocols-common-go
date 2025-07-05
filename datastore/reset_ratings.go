@@ -40,7 +40,7 @@ func (commonProtocol *CommonProtocol) resetRatings(err error, packet nex.PacketI
 			continue
 		}
 
-		errCode = manager.VerifyObjectUpdatePermission(connection.PID(), metaInfo, objectUpdatePassword, 0)
+		errCode = manager.VerifyObjectUpdatePermission(*manager, connection.PID(), metaInfo, objectUpdatePassword, 0)
 		if errCode != nil {
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
 			continue

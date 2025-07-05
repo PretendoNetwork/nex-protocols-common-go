@@ -67,7 +67,7 @@ func (commonProtocol *CommonProtocol) changeMetas(err error, packet nex.PacketIn
 			continue
 		}
 
-		errCode = manager.VerifyObjectUpdatePermission(connection.PID(), metaInfo, updatePassword, param.UpdatePassword)
+		errCode = manager.VerifyObjectUpdatePermission(*manager, connection.PID(), metaInfo, updatePassword, param.UpdatePassword)
 		if errCode != nil {
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
 			continue

@@ -39,7 +39,7 @@ func (commonProtocol *CommonProtocol) getMetas(err error, packet nex.PacketInter
 
 		// * NOTE: IF THE PASSWORD IS SET, THIS WILL NOT WORK FOR MULTIPLE OBJECTS!
 		// * THIS SHOULD REALLY ONLY BE CALLED WITHOUT A PASSWORD SET
-		errCode = manager.VerifyObjectAccessPermission(connection.PID(), metaInfo, accessPassword, param.AccessPassword)
+		errCode = manager.VerifyObjectAccessPermission(*manager, connection.PID(), metaInfo, accessPassword, param.AccessPassword)
 		if errCode != nil {
 			pMetaInfo = append(pMetaInfo, invalidMetaInfo)
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
