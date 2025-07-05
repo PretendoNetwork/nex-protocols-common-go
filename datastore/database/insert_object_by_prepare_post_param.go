@@ -205,8 +205,8 @@ func InsertObjectByPreparePostParam(manager *common_globals.DataStoreManager, ow
 	// * Using an objects password will bypass
 	// * certain permission checks, do not give
 	// * these out freely
-	accessPassword := rand.Uint64()
-	updatePassword := rand.Uint64()
+	accessPassword := rand.Uint64() & ^uint64(1<<63)
+	updatePassword := rand.Uint64() & ^uint64(1<<63)
 
 	// * Persistent objects are set to never expire
 	expirationDate := time.Now().UTC().Add(time.Duration(param.Period) * 24 * time.Hour)
