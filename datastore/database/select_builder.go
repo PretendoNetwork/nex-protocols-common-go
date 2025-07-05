@@ -2,7 +2,10 @@ package database
 
 import (
 	"fmt"
+	"github.com/lib/pq"
 	"strings"
+
+	"github.com/wk8/go-ordered-map/v2"
 )
 
 // SelectBuilder is an SQL `SELECT` statement builder.
@@ -12,7 +15,7 @@ import (
 type SelectBuilder struct {
 	table     string
 	columns   []string
-	where     map[string]string
+	where     *orderedmap.OrderedMap[string, string]
 	lastWhere string
 	params    []any
 	limit     int
@@ -42,7 +45,24 @@ func (sb *SelectBuilder) And(field string) *SelectBuilder {
 // Uses the last set key from either `Where` or `And`
 func (sb *SelectBuilder) Is(value any) *SelectBuilder {
 	sb.params = append(sb.params, value)
-	sb.where[sb.lastWhere] = "=?" // * Placeholder value. Gets replaced with $N in sb.Build
+	sb.where.Set(sb.lastWhere, "=?") // * Placeholder value. ? Gets replaced with $N in sb.Build
+	return sb
+}
+
+// IsAnyOf adds a new `key=ANY(value)` statement for the WHERE clause.
+// Uses the last set key from either `Where` or `And`
+// Please make sure to provide a slice!
+func (sb *SelectBuilder) IsAnyOf(value any) *SelectBuilder {
+	sb.params = append(sb.params, pq.Array(value))
+	sb.where.Set(sb.lastWhere, "=ANY(?)") // * Placeholder value. ? Gets replaced with $N in sb.Build
+	return sb
+}
+
+// ArrayContains adds a new `key ?? ARRAY[value]` statement for the WHERE clause.
+// Uses the last set key from either `Where` or `And`
+func (sb *SelectBuilder) ArrayContains(value any) *SelectBuilder {
+	sb.params = append(sb.params, []any{value})
+	sb.where.Set(sb.lastWhere, "&&?") // * Placeholder value. ? Gets replaced with $N in sb.Build
 	return sb
 }
 
@@ -69,7 +89,9 @@ func (sb SelectBuilder) Build() (string, []any, error) {
 	allParams := make([]any, 0)
 	paramIndex := 1
 
-	for k, v := range sb.where {
+	for pair := sb.where.Oldest(); pair != nil; pair = pair.Next() {
+		k, v := pair.Key, pair.Value
+
 		paramName := fmt.Sprintf("$%d", paramIndex)
 		whereClause := strings.Replace(v, "?", paramName, 1)
 		whereStatements = append(whereStatements, fmt.Sprintf("%s%s", k, whereClause))
@@ -106,7 +128,7 @@ func (sb SelectBuilder) Build() (string, []any, error) {
 func Select(columns ...string) *SelectBuilder {
 	sb := &SelectBuilder{
 		columns: make([]string, 0),
-		where:   make(map[string]string),
+		where:   orderedmap.New[string, string](),
 		params:  make([]any, 0),
 	}
 
