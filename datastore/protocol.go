@@ -119,7 +119,7 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.DataSto
 
 	// * Object persistence is handled at the user level,
 	// * not the object level
-	_, err = manager.Database.Exec(`CREATE TABLE datastore.persistence_slots (
+	_, err = manager.Database.Exec(`CREATE TABLE IF NOT EXISTS datastore.persistence_slots (
 		pid numeric(20),
 		slot int, -- can technically only be 0-15, but sent as a uint16
 		data_id numeric(20) REFERENCES datastore.objects(data_id),
@@ -130,7 +130,7 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.DataSto
 		return
 	}
 
-	_, err = manager.Database.Exec(`CREATE TABLE datastore.rating_settings (
+	_, err = manager.Database.Exec(`CREATE TABLE IF NOT EXISTS datastore.rating_settings (
 		data_id numeric(20) NOT NULL REFERENCES datastore.objects(data_id),
 
 		-- Data set in DataStoreRatingInitParamWithSlot
@@ -162,7 +162,7 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.DataSto
 		return
 	}
 
-	_, err = manager.Database.Exec(`CREATE TABLE datastore.ratings (
+	_, err = manager.Database.Exec(`CREATE TABLE IF NOT EXISTS datastore.ratings (
 		id serial PRIMARY KEY,
 		data_id numeric(20),
 		slot smallint,
@@ -177,7 +177,7 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.DataSto
 		return
 	}
 
-	_, err = manager.Database.Exec(`CREATE TABLE datastore.rating_locks (
+	_, err = manager.Database.Exec(`CREATE TABLE IF NOT EXISTS datastore.rating_locks (
 		pid numeric(20),
 		data_id numeric(20),
 		slot smallint,
