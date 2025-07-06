@@ -1,8 +1,6 @@
 package database
 
 import (
-	"database/sql"
-
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
@@ -10,14 +8,15 @@ import (
 )
 
 // GetPlayingSession returns the playing sessions of the given PIDs
-func GetPlayingSession(manager *common_globals.MatchmakingManager, listPID []types.PID) ([]match_making_types.PlayingSession, *nex.Error) {
+func GetPlayingSession(manager *common_globals.MatchmakingManager, listPID types.List[types.PID]) (types.List[match_making_types.PlayingSession], *nex.Error) {
 	playingSessions := make([]match_making_types.PlayingSession, 0)
 	for _, pid := range listPID {
-		playingSession := match_making_types.NewPlayingSession()
-		resultMatchmakeSession := match_making_types.NewMatchmakeSession()
-		var resultMatchmakeParam []byte
+		if len(playingSessions) >= 1000 { // * MAX_MATCHMAKE_SESSION_BY_PARTICIPANT
+			break
+		}
 
-		err := manager.Database.QueryRow(`SELECT
+		// TODO - Handle user blocks when implemented
+		rows, err := manager.Database.Query(`SELECT
 			g.id,
 			g.owner_pid,
 			g.host_pid,
@@ -47,46 +46,62 @@ func GetPlayingSession(manager *common_globals.MatchmakingManager, listPID []typ
 		WHERE
 		g.registered=true AND
 		g.type='MatchmakeSession' AND
-		$1=ANY(g.participants)`, pid).Scan(
-			&resultMatchmakeSession.Gathering.ID,
-			&resultMatchmakeSession.Gathering.OwnerPID,
-			&resultMatchmakeSession.Gathering.HostPID,
-			&resultMatchmakeSession.Gathering.MinimumParticipants,
-			&resultMatchmakeSession.Gathering.MaximumParticipants,
-			&resultMatchmakeSession.Gathering.ParticipationPolicy,
-			&resultMatchmakeSession.Gathering.PolicyArgument,
-			&resultMatchmakeSession.Gathering.Flags,
-			&resultMatchmakeSession.Gathering.State,
-			&resultMatchmakeSession.Gathering.Description,
-			&resultMatchmakeSession.ParticipationCount,
-			&resultMatchmakeSession.StartedTime,
-			&resultMatchmakeSession.GameMode,
-			&resultMatchmakeSession.Attributes,
-			&resultMatchmakeSession.OpenParticipation,
-			&resultMatchmakeSession.MatchmakeSystemType,
-			&resultMatchmakeSession.ApplicationBuffer,
-			&resultMatchmakeSession.ProgressScore,
-			&resultMatchmakeSession.Option,
-			&resultMatchmakeParam,
-			&resultMatchmakeSession.ReferGID,
-			&resultMatchmakeSession.UserPasswordEnabled,
-			&resultMatchmakeSession.SystemPasswordEnabled,
-			&resultMatchmakeSession.CodeWord,
-		)
+		$1=ANY(g.participants)`, pid)
 		if err != nil {
-			if err != sql.ErrNoRows {
-				common_globals.Logger.Critical(err.Error())
-			}
+			common_globals.Logger.Critical(err.Error())
 			continue
 		}
 
-		matchmakeParamBytes := nex.NewByteStreamIn(resultMatchmakeParam, manager.Endpoint.LibraryVersions(), manager.Endpoint.ByteStreamSettings())
-		resultMatchmakeSession.MatchmakeParam.ExtractFrom(matchmakeParamBytes)
+		for rows.Next() {
+			if len(playingSessions) >= 1000 { // * MAX_MATCHMAKE_SESSION_BY_PARTICIPANT
+				break
+			}
 
-		playingSession.PrincipalID = pid
-		playingSession.Gathering.Object = resultMatchmakeSession
+			playingSession := match_making_types.NewPlayingSession()
+			resultMatchmakeSession := match_making_types.NewMatchmakeSession()
+			var resultMatchmakeParam []byte
 
-		playingSessions = append(playingSessions, playingSession)
+			err = rows.Scan(
+				&resultMatchmakeSession.Gathering.ID,
+				&resultMatchmakeSession.Gathering.OwnerPID,
+				&resultMatchmakeSession.Gathering.HostPID,
+				&resultMatchmakeSession.Gathering.MinimumParticipants,
+				&resultMatchmakeSession.Gathering.MaximumParticipants,
+				&resultMatchmakeSession.Gathering.ParticipationPolicy,
+				&resultMatchmakeSession.Gathering.PolicyArgument,
+				&resultMatchmakeSession.Gathering.Flags,
+				&resultMatchmakeSession.Gathering.State,
+				&resultMatchmakeSession.Gathering.Description,
+				&resultMatchmakeSession.ParticipationCount,
+				&resultMatchmakeSession.StartedTime,
+				&resultMatchmakeSession.GameMode,
+				&resultMatchmakeSession.Attributes,
+				&resultMatchmakeSession.OpenParticipation,
+				&resultMatchmakeSession.MatchmakeSystemType,
+				&resultMatchmakeSession.ApplicationBuffer,
+				&resultMatchmakeSession.ProgressScore,
+				&resultMatchmakeSession.Option,
+				&resultMatchmakeParam,
+				&resultMatchmakeSession.ReferGID,
+				&resultMatchmakeSession.UserPasswordEnabled,
+				&resultMatchmakeSession.SystemPasswordEnabled,
+				&resultMatchmakeSession.CodeWord,
+			)
+			if err != nil {
+				common_globals.Logger.Critical(err.Error())
+				continue
+			}
+
+			matchmakeParamBytes := nex.NewByteStreamIn(resultMatchmakeParam, manager.Endpoint.LibraryVersions(), manager.Endpoint.ByteStreamSettings())
+			resultMatchmakeSession.MatchmakeParam.ExtractFrom(matchmakeParamBytes)
+
+			playingSession.PrincipalID = pid
+			playingSession.Gathering.Object = resultMatchmakeSession
+
+			playingSessions = append(playingSessions, playingSession)
+		}
+
+		rows.Close()
 	}
 
 	return playingSessions, nil
