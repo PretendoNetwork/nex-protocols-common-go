@@ -6,8 +6,10 @@ import (
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/constants"
 	"github.com/PretendoNetwork/nex-go/v2/types"
+	message_delivery "github.com/PretendoNetwork/nex-protocols-go/v2/message-delivery"
 	match_making_constants "github.com/PretendoNetwork/nex-protocols-go/v2/match-making/constants"
 	match_making_types "github.com/PretendoNetwork/nex-protocols-go/v2/match-making/types"
+	messaging_types "github.com/PretendoNetwork/nex-protocols-go/v2/messaging/types"
 	notifications "github.com/PretendoNetwork/nex-protocols-go/v2/notifications"
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/v2/notifications/types"
 )
@@ -32,6 +34,11 @@ func RemoveDuplicates[T comparable](sliceList []T) []T {
 		}
 	}
 	return list
+}
+
+// ResizeString resizes the string with the specified length in characters (runes)
+func ResizeString(str string, length int) string {
+	return string([]rune(str)[:length])
 }
 
 // CheckValidGathering checks if a Gathering is valid
@@ -143,6 +150,22 @@ func CanJoinMatchmakeSession(manager *MatchmakingManager, pid types.PID, matchma
 	return nil
 }
 
+// GetUserMessageRecipientData returns the recipient ID and the recipient type of a message
+func GetUserMessageRecipientData(libraryVersion *nex.LibraryVersion, userMessage messaging_types.UserMessage) (types.UInt64, types.UInt32) {
+	if libraryVersion.GreaterOrEqual("4.0.0") {
+		switch userMessage.MessageRecipient.UIRecipientType {
+		case 1:
+			return types.UInt64(userMessage.MessageRecipient.PrincipalID), userMessage.MessageRecipient.UIRecipientType
+		case 2:
+			return types.UInt64(userMessage.MessageRecipient.GatheringID), userMessage.MessageRecipient.UIRecipientType
+		default:
+			return 0, userMessage.MessageRecipient.UIRecipientType // * Unknown
+		}
+	}
+
+	return types.UInt64(userMessage.IDRecipient), userMessage.UIRecipientType
+}
+
 // SendNotificationEvent sends a notification event to the specified targets
 func SendNotificationEvent(endpoint *nex.PRUDPEndPoint, event notifications_types.NotificationEvent, targets []uint64) {
 	server := endpoint.Server
@@ -165,6 +188,43 @@ func SendNotificationEvent(endpoint *nex.PRUDPEndPoint, event notifications_type
 			continue
 		}
 
+		var messagePacket nex.PRUDPPacketInterface
+
+		if target.DefaultPRUDPVersion == 0 {
+			messagePacket, _ = nex.NewPRUDPPacketV0(server, target, nil)
+		} else {
+			messagePacket, _ = nex.NewPRUDPPacketV1(server, target, nil)
+		}
+
+		messagePacket.SetType(constants.DataPacket)
+		messagePacket.AddFlag(constants.PacketFlagNeedsAck)
+		messagePacket.AddFlag(constants.PacketFlagReliable)
+		messagePacket.SetSourceVirtualPortStreamType(target.StreamType)
+		messagePacket.SetSourceVirtualPortStreamID(endpoint.StreamID)
+		messagePacket.SetDestinationVirtualPortStreamType(target.StreamType)
+		messagePacket.SetDestinationVirtualPortStreamID(target.StreamID)
+		messagePacket.SetPayload(rmcRequestBytes)
+
+		server.Send(messagePacket)
+	}
+}
+
+// SendMessage sends a message to the specified targets
+func SendMessage(endpoint *nex.PRUDPEndPoint, message types.DataHolder, targets []*nex.PRUDPConnection) {
+	server := endpoint.Server
+	stream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
+
+	message.WriteTo(stream)
+
+	rmcRequest := nex.NewRMCRequest(endpoint)
+	rmcRequest.ProtocolID = message_delivery.ProtocolID
+	rmcRequest.CallID = OutgoingCallID.Next()
+	rmcRequest.MethodID = message_delivery.MethodDeliverMessage
+	rmcRequest.Parameters = stream.Bytes()
+
+	rmcRequestBytes := rmcRequest.Bytes()
+
+	for _, target := range targets {
 		var messagePacket nex.PRUDPPacketInterface
 
 		if target.DefaultPRUDPVersion == 0 {
