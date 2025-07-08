@@ -56,13 +56,15 @@ func (commonProtocol *CommonProtocol) getRanking(err error, packet nex.PacketInt
 
 		rankDataList, totalCount, err = commonProtocol.GetNearbyFriendsRankingsAndCountByCategoryAndRankingOrderParam(callerPID, category, orderParam)
 	case constants.RankingModeUser:
-	default:
 		if commonProtocol.GetOwnRankingByCategoryAndRankingOrderParam == nil {
 			common_globals.Logger.Warning("Ranking::GetRanking missing GetOwnRankingByCategoryAndRankingOrderParam!")
 			return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
 		}
 
 		rankDataList, totalCount, err = commonProtocol.GetOwnRankingByCategoryAndRankingOrderParam(callerPID, category, orderParam)
+	default:
+		common_globals.Logger.Errorf("Unknown RankingMode %v!", rankingMode)
+		return nil, nex.NewError(nex.ResultCodes.Ranking.InvalidArgument, "Unknown RankingMode")
 	}
 
 	if err != nil {
