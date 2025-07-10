@@ -13,7 +13,7 @@ import (
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/v2/notifications/types"
 )
 
-func (commonProtocol *CommonProtocol) updateNotificationData(err error, packet nex.PacketInterface, callID uint32, uiType types.UInt32, uiParam1 types.UInt32, uiParam2 types.UInt32, strParam types.String) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) updateNotificationData(err error, packet nex.PacketInterface, callID uint32, uiType types.UInt32, uiParam1 types.UInt64, uiParam2 types.UInt64, strParam types.String) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, err.Error())

@@ -15,6 +15,7 @@ func (commonProtocol *CommonProtocol) login(err error, packet nex.PacketInterfac
 
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
+	server := endpoint.Server
 
 	var errorCode *nex.Error
 
@@ -61,7 +62,7 @@ func (commonProtocol *CommonProtocol) login(err error, packet nex.PacketInterfac
 		pConnectionData.StationURLSpecialProtocols = commonProtocol.StationURLSpecialProtocols
 		pConnectionData.Time = types.NewDateTime(0).Now()
 
-		if endpoint.LibraryVersions().Main.GreaterOrEqual("v3.5.0") {
+		if server.LibraryVersions.Main.GreaterOrEqual("3.5.0") {
 			pConnectionData.StructureVersion = 1
 		}
 	}

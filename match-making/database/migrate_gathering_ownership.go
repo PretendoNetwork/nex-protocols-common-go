@@ -34,8 +34,8 @@ func MigrateGatheringOwnership(manager *common_globals.MatchmakingManager, conne
 
 		oEvent := notifications_types.NewNotificationEvent()
 		oEvent.PIDSource = connection.PID().Copy().(types.PID)
-		oEvent.Type = types.NewUInt32(notifications.BuildNotificationType(category, subtype))
-		oEvent.Param1 = gathering.ID
+		oEvent.Type = types.UInt32(notifications.BuildNotificationType(category, subtype))
+		oEvent.Param1 = types.UInt64(gathering.ID)
 
 		common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, uniqueParticipants)
 		return 0, nil
@@ -62,8 +62,8 @@ func MigrateGatheringOwnership(manager *common_globals.MatchmakingManager, conne
 	oEvent := notifications_types.NewNotificationEvent()
 	oEvent.PIDSource = connection.PID().Copy().(types.PID)
 	oEvent.Type = types.NewUInt32(notifications.BuildNotificationType(category, subtype))
-	oEvent.Param1 = gathering.ID
-	oEvent.Param2 = types.NewUInt32(uint32(newOwner)) // TODO - This assumes a legacy client. Will not work on the Switch
+	oEvent.Param1 = types.UInt64(gathering.ID)
+	oEvent.Param2 = types.UInt64(newOwner)
 
 	// TODO - StrParam doesn't have this value on some servers
 	// * https://github.com/kinnay/NintendoClients/issues/101

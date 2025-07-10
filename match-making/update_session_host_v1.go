@@ -35,7 +35,7 @@ func (commonProtocol *CommonProtocol) updateSessionHostV1(err error, packet nex.
 		return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
 	}
 
-	if uint32(gathering.Flags) & match_making.GatheringFlags.ParticipantsChangeOwner == 0 {
+	if uint32(gathering.Flags)&match_making.GatheringFlags.ParticipantsChangeOwner == 0 {
 		nexError = database.UpdateSessionHost(commonProtocol.manager, uint32(gid), gathering.OwnerPID, connection.PID())
 		if nexError != nil {
 			commonProtocol.manager.Mutex.Unlock()
@@ -71,9 +71,9 @@ func (commonProtocol *CommonProtocol) updateSessionHostV1(err error, packet nex.
 
 		oEvent := notifications_types.NewNotificationEvent()
 		oEvent.PIDSource = connection.PID()
-		oEvent.Type = types.NewUInt32(notifications.BuildNotificationType(category, subtype))
-		oEvent.Param1 = gid
-		oEvent.Param2 = types.NewUInt32(uint32(connection.PID())) // TODO - This assumes a legacy client. Will not work on the Switch
+		oEvent.Type = types.UInt32(notifications.BuildNotificationType(category, subtype))
+		oEvent.Param1 = types.UInt64(gid)
+		oEvent.Param2 = types.UInt64(connection.PID())
 
 		// TODO - StrParam doesn't have this value on some servers
 		// * https://github.com/kinnay/NintendoClients/issues/101
