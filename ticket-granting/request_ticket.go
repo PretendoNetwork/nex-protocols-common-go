@@ -15,6 +15,7 @@ func (commonProtocol *CommonProtocol) requestTicket(err error, packet nex.Packet
 
 	connection := packet.Sender()
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
+	server := endpoint.Server
 
 	sourceAccount, errorCode := endpoint.AccountDetailsByPID(idSource)
 
@@ -32,6 +33,9 @@ func (commonProtocol *CommonProtocol) requestTicket(err error, packet nex.Packet
 	retval := types.NewQResultSuccess(nex.ResultCodes.Core.Unknown)
 	bufResponse := types.NewBuffer(encryptedTicket)
 
+	// TODO - Does pSourceKey need to be set for anything?
+	pSourceKey := types.NewString("")
+
 	if errorCode != nil {
 		retval = types.NewQResultError(errorCode.ResultCode)
 		bufResponse = types.NewBuffer([]byte{})
@@ -41,6 +45,10 @@ func (commonProtocol *CommonProtocol) requestTicket(err error, packet nex.Packet
 
 	retval.WriteTo(rmcResponseStream)
 	bufResponse.WriteTo(rmcResponseStream)
+
+	if server.LibraryVersions.Main.GreaterOrEqual("4.0.0") {
+		pSourceKey.WriteTo(rmcResponseStream)
+	}
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 

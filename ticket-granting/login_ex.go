@@ -20,6 +20,7 @@ func (commonProtocol *CommonProtocol) loginEx(err error, packet nex.PacketInterf
 
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
+	server := endpoint.Server
 
 	sourceAccount, errorCode := endpoint.AccountDetailsByUsername(string(strUserName))
 
@@ -44,6 +45,9 @@ func (commonProtocol *CommonProtocol) loginEx(err error, packet nex.PacketInterf
 	pConnectionData := types.NewRVConnectionData()
 	strReturnMsg := types.NewString("")
 
+	// TODO - Does pSourceKey need to be set for anything?
+	pSourceKey := types.NewString("")
+
 	// * If any errors are triggered, return them in %retval%
 	if errorCode != nil {
 		common_globals.Logger.Error(errorCode.Message)
@@ -62,7 +66,7 @@ func (commonProtocol *CommonProtocol) loginEx(err error, packet nex.PacketInterf
 		pConnectionData.StationURLSpecialProtocols = commonProtocol.StationURLSpecialProtocols
 		pConnectionData.Time = types.NewDateTime(0).Now()
 
-		if endpoint.LibraryVersions().Main.GreaterOrEqual("v3.5.0") {
+		if server.LibraryVersions.Main.GreaterOrEqual("3.5.0") {
 			pConnectionData.StructureVersion = 1
 		}
 	}
@@ -74,6 +78,10 @@ func (commonProtocol *CommonProtocol) loginEx(err error, packet nex.PacketInterf
 	pbufResponse.WriteTo(rmcResponseStream)
 	pConnectionData.WriteTo(rmcResponseStream)
 	strReturnMsg.WriteTo(rmcResponseStream)
+
+	if server.LibraryVersions.Main.GreaterOrEqual("4.0.0") {
+		pSourceKey.WriteTo(rmcResponseStream)
+	}
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 

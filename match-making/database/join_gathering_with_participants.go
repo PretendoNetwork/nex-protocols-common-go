@@ -5,11 +5,11 @@ import (
 	"slices"
 
 	"github.com/PretendoNetwork/nex-go/v2"
-	"github.com/PretendoNetwork/nex-protocols-go/v2/match-making/constants"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	"github.com/PretendoNetwork/nex-protocols-common-go/v2/match-making/tracking"
 	match_making "github.com/PretendoNetwork/nex-protocols-go/v2/match-making"
+	"github.com/PretendoNetwork/nex-protocols-go/v2/match-making/constants"
 	notifications "github.com/PretendoNetwork/nex-protocols-go/v2/notifications"
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/v2/notifications/types"
 	pqextended "github.com/PretendoNetwork/pq-extended"
@@ -30,7 +30,7 @@ func JoinGatheringWithParticipants(manager *common_globals.MatchmakingManager, g
 		}
 	}
 
-	if uint32(len(oldParticipants) + 1 + len(additionalParticipants)) > maxParticipants {
+	if uint32(len(oldParticipants)+1+len(additionalParticipants)) > maxParticipants {
 		return 0, nex.NewError(nex.ResultCodes.RendezVous.SessionFull, "change_error")
 	}
 
@@ -71,7 +71,7 @@ func JoinGatheringWithParticipants(manager *common_globals.MatchmakingManager, g
 	var participantJoinedTargets []uint64
 
 	// * When the VerboseParticipants or the VerboseParticipantsEx flags are set, all participant notification events are sent to everyone
-	if flags & (match_making.GatheringFlags.VerboseParticipants | match_making.GatheringFlags.VerboseParticipantsEx) != 0 {
+	if flags&(match_making.GatheringFlags.VerboseParticipants|match_making.GatheringFlags.VerboseParticipantsEx) != 0 {
 		participantJoinedTargets = common_globals.RemoveDuplicates(participants)
 	} else {
 		participantJoinedTargets = []uint64{ownerPID}
@@ -89,9 +89,9 @@ func JoinGatheringWithParticipants(manager *common_globals.MatchmakingManager, g
 
 		oEvent := notifications_types.NewNotificationEvent()
 		oEvent.PIDSource = connection.PID()
-		oEvent.Type = types.NewUInt32(notifications.BuildNotificationType(notificationCategory, notificationSubtype))
-		oEvent.Param1 = types.NewUInt32(gatheringID)
-		oEvent.Param2 = types.NewUInt32(uint32(participant)) // TODO - This assumes a legacy client. Will not work on the Switch
+		oEvent.Type = types.UInt32(notifications.BuildNotificationType(notificationCategory, notificationSubtype))
+		oEvent.Param1 = types.UInt64(gatheringID)
+		oEvent.Param2 = types.UInt64(participant)
 
 		// * Send the notification to the participant
 		common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, []uint64{participant})
@@ -100,23 +100,23 @@ func JoinGatheringWithParticipants(manager *common_globals.MatchmakingManager, g
 	for _, participant := range newParticipants {
 		// * If the new participant is the same as the owner, then we are creating a new gathering.
 		// * We don't need to send the new participant notification event in that case
-		if flags & (match_making.GatheringFlags.VerboseParticipants | match_making.GatheringFlags.VerboseParticipantsEx) != 0 || uint64(connection.PID()) != ownerPID {
+		if flags&(match_making.GatheringFlags.VerboseParticipants|match_making.GatheringFlags.VerboseParticipantsEx) != 0 || uint64(connection.PID()) != ownerPID {
 			notificationCategory := notifications.NotificationCategories.Participation
 			notificationSubtype := notifications.NotificationSubTypes.Participation.NewParticipant
 
 			oEvent := notifications_types.NewNotificationEvent()
 			oEvent.PIDSource = connection.PID()
-			oEvent.Type = types.NewUInt32(notifications.BuildNotificationType(notificationCategory, notificationSubtype))
-			oEvent.Param1 = types.NewUInt32(gatheringID)
-			oEvent.Param2 = types.NewUInt32(uint32(participant)) // TODO - This assumes a legacy client. Will not work on the Switch
+			oEvent.Type = types.UInt32(notifications.BuildNotificationType(notificationCategory, notificationSubtype))
+			oEvent.Param1 = types.UInt64(gatheringID)
+			oEvent.Param2 = types.UInt64(participant)
 			oEvent.StrParam = types.NewString(joinMessage)
-			oEvent.Param3 = types.NewUInt32(uint32(len(participants)))
+			oEvent.Param3 = types.UInt64(len(participants))
 
 			common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, participantJoinedTargets)
 		}
 
 		// * This flag also sends a recap of all currently connected players on the gathering to the participant that is connecting
-		if flags & match_making.GatheringFlags.VerboseParticipantsEx != 0 {
+		if flags&match_making.GatheringFlags.VerboseParticipantsEx != 0 {
 			// TODO - Should this actually be deduplicated?
 			for _, oldParticipant := range common_globals.RemoveDuplicates(oldParticipants) {
 				notificationCategory := notifications.NotificationCategories.Participation
@@ -124,11 +124,11 @@ func JoinGatheringWithParticipants(manager *common_globals.MatchmakingManager, g
 
 				oEvent := notifications_types.NewNotificationEvent()
 				oEvent.PIDSource = connection.PID()
-				oEvent.Type = types.NewUInt32(notifications.BuildNotificationType(notificationCategory, notificationSubtype))
-				oEvent.Param1 = types.NewUInt32(gatheringID)
-				oEvent.Param2 = types.NewUInt32(uint32(oldParticipant)) // TODO - This assumes a legacy client. Will not work on the Switch
+				oEvent.Type = types.UInt32(notifications.BuildNotificationType(notificationCategory, notificationSubtype))
+				oEvent.Param1 = types.UInt64(gatheringID)
+				oEvent.Param2 = types.UInt64(oldParticipant)
 				oEvent.StrParam = types.NewString(joinMessage)
-				oEvent.Param3 = types.NewUInt32(uint32(len(participants)))
+				oEvent.Param3 = types.UInt64(len(participants))
 
 				// * Send the notification to the joining participant
 				common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, []uint64{participant})
