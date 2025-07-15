@@ -93,7 +93,7 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.Matchma
 
 	_, err = manager.Database.Exec(`CREATE TABLE IF NOT EXISTS matchmaking.community_participations (
 		id bigserial PRIMARY KEY,
-		user_pid numeric(10),
+		user_pid numeric(20),
 		gathering_id bigint,
 		participation_count bigint,
 		UNIQUE (user_pid, gathering_id)
@@ -105,10 +105,10 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.Matchma
 
 	_, err = manager.Database.Exec(`CREATE TABLE IF NOT EXISTS matchmaking.notifications (
 		id bigserial PRIMARY KEY,
-		source_pid numeric(10),
+		source_pid numeric(20),
 		type bigint,
-		param_1 numeric(10),
-		param_2 numeric(10),
+		param_1 numeric(20),
+		param_2 numeric(20),
 		param_str text,
 		active boolean NOT NULL DEFAULT true,
 		UNIQUE (source_pid, type)
@@ -121,7 +121,7 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.Matchma
 	_, err = manager.Database.Exec(`CREATE TABLE IF NOT EXISTS tracking.participate_community (
 		id bigserial PRIMARY KEY,
 		date timestamp,
-		source_pid numeric(10),
+		source_pid numeric(20),
 		community_gid bigint,
 		gathering_id bigint,
 		participation_count bigint
@@ -134,7 +134,7 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.Matchma
 	_, err = manager.Database.Exec(`CREATE TABLE IF NOT EXISTS tracking.notification_data (
 		id bigserial PRIMARY KEY,
 		date timestamp,
-		source_pid numeric(10),
+		source_pid numeric(20),
 		type bigint,
 		param_1 bigint,
 		param_2 bigint,
