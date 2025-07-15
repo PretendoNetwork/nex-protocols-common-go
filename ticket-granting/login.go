@@ -34,9 +34,14 @@ func (commonProtocol *CommonProtocol) login(err error, packet nex.PacketInterfac
 		targetAccount, errorCode = endpoint.AccountDetailsByUsername(commonProtocol.SecureServerAccount.Username)
 	}
 
+	if errorCode == nil && sourceAccount.RequiresTokenAuth {
+		common_globals.Logger.Error("TicketGranting::Login blocked")
+		errorCode = nex.NewError(nex.ResultCodes.Authentication.ValidationFailed, "TicketGranting::Login blocked")
+	}
+
 	var encryptedTicket []byte
 	if errorCode == nil {
-		encryptedTicket, errorCode = generateTicket(sourceAccount, targetAccount, commonProtocol.SessionKeyLength, endpoint)
+		encryptedTicket, errorCode = generateTicket(sourceAccount, targetAccount, nil, commonProtocol.SessionKeyLength, endpoint)
 	}
 
 	var retval types.QResult

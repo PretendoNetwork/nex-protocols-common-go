@@ -17,6 +17,8 @@ func (commonProtocol *CommonProtocol) requestTicket(err error, packet nex.Packet
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 	server := endpoint.Server
 
+	var errorCode *nex.Error
+
 	sourceAccount, errorCode := endpoint.AccountDetailsByPID(idSource)
 
 	var targetAccount *nex.Account
@@ -24,16 +26,19 @@ func (commonProtocol *CommonProtocol) requestTicket(err error, packet nex.Packet
 		targetAccount, errorCode = endpoint.AccountDetailsByPID(idTarget)
 	}
 
+	if errorCode == nil && sourceAccount.RequiresTokenAuth {
+		common_globals.Logger.Error("TicketGranting::RequestTicket blocked")
+		errorCode = nex.NewError(nex.ResultCodes.Authentication.ValidationFailed, "TicketGranting::RequestTicket blocked")
+	}
+
 	var encryptedTicket []byte
 	if errorCode == nil {
-		encryptedTicket, errorCode = generateTicket(sourceAccount, targetAccount, commonProtocol.SessionKeyLength, endpoint)
+		encryptedTicket, errorCode = generateTicket(sourceAccount, targetAccount, nil, commonProtocol.SessionKeyLength, endpoint)
 	}
 
 	// * If any errors are triggered, return them in %retval%
 	retval := types.NewQResultSuccess(nex.ResultCodes.Core.Unknown)
 	bufResponse := types.NewBuffer(encryptedTicket)
-
-	// TODO - Does pSourceKey need to be set for anything?
 	pSourceKey := types.NewString("")
 
 	if errorCode != nil {

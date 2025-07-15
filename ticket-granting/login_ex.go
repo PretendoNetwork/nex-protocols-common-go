@@ -1,6 +1,8 @@
 package ticket_granting
 
 import (
+	"fmt"
+
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
@@ -34,9 +36,14 @@ func (commonProtocol *CommonProtocol) loginEx(err error, packet nex.PacketInterf
 		targetAccount, errorCode = endpoint.AccountDetailsByUsername(commonProtocol.SecureServerAccount.Username)
 	}
 
+	var sourceKey []byte
+	if errorCode == nil && sourceAccount.RequiresTokenAuth {
+		sourceKey, errorCode = commonProtocol.SourceKeyFromToken(sourceAccount, oExtraData)
+	}
+
 	var encryptedTicket []byte
 	if errorCode == nil {
-		encryptedTicket, errorCode = generateTicket(sourceAccount, targetAccount, commonProtocol.SessionKeyLength, endpoint)
+		encryptedTicket, errorCode = generateTicket(sourceAccount, targetAccount, sourceKey, commonProtocol.SessionKeyLength, endpoint)
 	}
 
 	var retval types.QResult
@@ -44,8 +51,6 @@ func (commonProtocol *CommonProtocol) loginEx(err error, packet nex.PacketInterf
 	pbufResponse := types.NewBuffer([]byte{})
 	pConnectionData := types.NewRVConnectionData()
 	strReturnMsg := types.NewString("")
-
-	// TODO - Does pSourceKey need to be set for anything?
 	pSourceKey := types.NewString("")
 
 	// * If any errors are triggered, return them in %retval%
@@ -57,6 +62,10 @@ func (commonProtocol *CommonProtocol) loginEx(err error, packet nex.PacketInterf
 		pidPrincipal = sourceAccount.PID
 		pbufResponse = types.NewBuffer(encryptedTicket)
 		strReturnMsg = commonProtocol.BuildName.Copy().(types.String)
+
+		if server.LibraryVersions.Main.GreaterOrEqual("4.0.0") && sourceKey != nil {
+			pSourceKey = types.String(fmt.Sprintf("%x", sourceKey))
+		}
 
 		specialProtocols := types.NewList[types.UInt8]()
 		specialProtocols = commonProtocol.SpecialProtocols
