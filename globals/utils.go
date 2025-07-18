@@ -168,12 +168,14 @@ func SendNotificationEvent(endpoint *nex.PRUDPEndPoint, event notifications_type
 		var messagePacket nex.PRUDPPacketInterface
 
 		switch target.DefaultPRUDPVersion {
-		case 2:
-			messagePacket, _ = nex.NewPRUDPPacketLite(server, target, nil)
+		case 0:
+			messagePacket, _ = nex.NewPRUDPPacketV0(server, target, nil)
 		case 1:
 			messagePacket, _ = nex.NewPRUDPPacketV1(server, target, nil)
+		case 2:
+			messagePacket, _ = nex.NewPRUDPPacketLite(server, target, nil)
 		default:
-			messagePacket, _ = nex.NewPRUDPPacketV0(server, target, nil)
+			Logger.Errorf("PRUDP version %d is not supported", target.DefaultPRUDPVersion)
 		}
 
 		messagePacket.SetType(constants.DataPacket)
