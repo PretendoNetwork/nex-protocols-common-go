@@ -67,8 +67,7 @@ func (commonProtocol *CommonProtocol) loginEx(err error, packet nex.PacketInterf
 			pSourceKey = types.String(fmt.Sprintf("%x", sourceKey))
 		}
 
-		specialProtocols := types.NewList[types.UInt8]()
-		specialProtocols = commonProtocol.SpecialProtocols
+		specialProtocols := types.List[types.UInt8](commonProtocol.SpecialProtocols)
 
 		pConnectionData.StationURL = commonProtocol.SecureStationURL
 		pConnectionData.SpecialProtocols = specialProtocols

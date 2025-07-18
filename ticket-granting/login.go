@@ -59,8 +59,7 @@ func (commonProtocol *CommonProtocol) login(err error, packet nex.PacketInterfac
 		pbufResponse = types.NewBuffer(encryptedTicket)
 		strReturnMsg = commonProtocol.BuildName.Copy().(types.String)
 
-		specialProtocols := types.NewList[types.UInt8]()
-		specialProtocols = commonProtocol.SpecialProtocols
+		specialProtocols := types.List[types.UInt8](commonProtocol.SpecialProtocols)
 
 		pConnectionData.StationURL = commonProtocol.SecureStationURL
 		pConnectionData.SpecialProtocols = specialProtocols
