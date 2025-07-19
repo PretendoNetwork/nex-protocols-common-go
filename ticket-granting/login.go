@@ -36,7 +36,7 @@ func (commonProtocol *CommonProtocol) login(err error, packet nex.PacketInterfac
 
 	if errorCode == nil && sourceAccount.RequiresTokenAuth {
 		common_globals.Logger.Error("Source account requires token authentication")
-		errorCode = nex.NewError(nex.ResultCodes.Authentication.ValidationFailed, "TicketGranting::Login, source account requires token authentication")
+		errorCode = nex.NewError(nex.ResultCodes.Authentication.ValidationFailed, "Source account requires token authentication")
 	}
 
 	var encryptedTicket []byte
