@@ -1,7 +1,7 @@
 package ticket_granting
 
 import (
-	"fmt"
+	"encoding/hex"
 
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
@@ -64,7 +64,7 @@ func (commonProtocol *CommonProtocol) loginEx(err error, packet nex.PacketInterf
 		strReturnMsg = commonProtocol.BuildName.Copy().(types.String)
 
 		if server.LibraryVersions.Main.GreaterOrEqual("4.0.0") && sourceKey != nil {
-			pSourceKey = types.String(fmt.Sprintf("%x", sourceKey))
+			pSourceKey = types.String(hex.EncodeToString(sourceKey))
 		}
 
 		specialProtocols := types.List[types.UInt8](commonProtocol.SpecialProtocols)
