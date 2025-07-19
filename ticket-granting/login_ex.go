@@ -1,6 +1,8 @@
 package ticket_granting
 
 import (
+	"encoding/hex"
+
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
@@ -20,6 +22,7 @@ func (commonProtocol *CommonProtocol) loginEx(err error, packet nex.PacketInterf
 
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
+	server := endpoint.Server
 
 	sourceAccount, errorCode := endpoint.AccountDetailsByUsername(string(strUserName))
 
@@ -33,9 +36,14 @@ func (commonProtocol *CommonProtocol) loginEx(err error, packet nex.PacketInterf
 		targetAccount, errorCode = endpoint.AccountDetailsByUsername(commonProtocol.SecureServerAccount.Username)
 	}
 
+	var sourceKey []byte
+	if errorCode == nil && sourceAccount.RequiresTokenAuth {
+		sourceKey, errorCode = commonProtocol.SourceKeyFromToken(sourceAccount, oExtraData)
+	}
+
 	var encryptedTicket []byte
 	if errorCode == nil {
-		encryptedTicket, errorCode = generateTicket(sourceAccount, targetAccount, commonProtocol.SessionKeyLength, endpoint)
+		encryptedTicket, errorCode = generateTicket(sourceAccount, targetAccount, sourceKey, commonProtocol.SessionKeyLength, endpoint)
 	}
 
 	var retval types.QResult
@@ -43,6 +51,7 @@ func (commonProtocol *CommonProtocol) loginEx(err error, packet nex.PacketInterf
 	pbufResponse := types.NewBuffer([]byte{})
 	pConnectionData := types.NewRVConnectionData()
 	strReturnMsg := types.NewString("")
+	pSourceKey := types.NewString("")
 
 	// * If any errors are triggered, return them in %retval%
 	if errorCode != nil {
@@ -54,15 +63,18 @@ func (commonProtocol *CommonProtocol) loginEx(err error, packet nex.PacketInterf
 		pbufResponse = types.NewBuffer(encryptedTicket)
 		strReturnMsg = commonProtocol.BuildName.Copy().(types.String)
 
-		specialProtocols := types.NewList[types.UInt8]()
-		specialProtocols = commonProtocol.SpecialProtocols
+		if server.LibraryVersions.Main.GreaterOrEqual("4.0.0") && sourceKey != nil {
+			pSourceKey = types.String(hex.EncodeToString(sourceKey))
+		}
+
+		specialProtocols := types.List[types.UInt8](commonProtocol.SpecialProtocols)
 
 		pConnectionData.StationURL = commonProtocol.SecureStationURL
 		pConnectionData.SpecialProtocols = specialProtocols
 		pConnectionData.StationURLSpecialProtocols = commonProtocol.StationURLSpecialProtocols
 		pConnectionData.Time = types.NewDateTime(0).Now()
 
-		if endpoint.LibraryVersions().Main.GreaterOrEqual("v3.5.0") {
+		if server.LibraryVersions.Main.GreaterOrEqual("3.5.0") {
 			pConnectionData.StructureVersion = 1
 		}
 	}
@@ -74,6 +86,10 @@ func (commonProtocol *CommonProtocol) loginEx(err error, packet nex.PacketInterf
 	pbufResponse.WriteTo(rmcResponseStream)
 	pConnectionData.WriteTo(rmcResponseStream)
 	strReturnMsg.WriteTo(rmcResponseStream)
+
+	if server.LibraryVersions.Main.GreaterOrEqual("4.0.0") {
+		pSourceKey.WriteTo(rmcResponseStream)
+	}
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
