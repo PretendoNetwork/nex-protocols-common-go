@@ -189,6 +189,24 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.DataSto
 		common_globals.Logger.Error(err.Error())
 		return
 	}
+
+	_, err = manager.Database.Exec(`CREATE TABLE datastore.notifications (
+		-- Postgres sequences of type numeric are not supported, so use bigserial instead
+		-- See: https://www.postgresql.org/docs/current/sql-createsequence.html
+		id bigserial PRIMARY KEY,
+		read boolean NOT NULL DEFAULT FALSE,
+		recipient_id numeric(20),
+		data_id numeric(20), -- can be 0 so we don't add a reference
+
+		-- The following fields are used for tracking purposes
+		sender_pid numeric(20),
+		creation_date timestamp DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
+		read_date timestamp
+	)`)
+	if err != nil {
+		common_globals.Logger.Error(err.Error())
+		return
+	}
 }
 
 // NewCommonProtocol returns a new CommonProtocol
@@ -240,6 +258,9 @@ func NewCommonProtocol(protocol datastore.Interface) *CommonProtocol {
 	protocol.SetHandlerGetRatingWithLog(commonProtocol.getRatingWithLog)
 	protocol.SetHandlerResetRating(commonProtocol.resetRating)
 	protocol.SetHandlerResetRatings(commonProtocol.resetRatings) // TODO - Fix this methods type in protocols lib
+	protocol.SetHandlerGetNotificationURL(commonProtocol.getNotificationURL)
+	protocol.SetHandlerGetNewArrivedNotifications(commonProtocol.getNewArrivedNotfications)
+	protocol.SetHandlerGetNewArrivedNotificationsV1(commonProtocol.getNewArrivedNotficationsV1)
 
 	return commonProtocol
 }
