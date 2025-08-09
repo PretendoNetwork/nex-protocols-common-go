@@ -38,10 +38,6 @@ func (commonProtocol *CommonProtocol) createMatchmakeSessionWithParam(err error,
 		}
 	}
 
-	// * A client may disconnect from a session without leaving reliably,
-	// * so let's make sure the client is removed from all sessions
-	database.EndMatchmakeSessionsParticipation(commonProtocol.manager, connection)
-
 	joinedMatchmakeSession := createMatchmakeSessionParam.SourceMatchmakeSession.Copy().(match_making_types.MatchmakeSession)
 	nexError := database.CreateMatchmakeSession(commonProtocol.manager, connection, &joinedMatchmakeSession)
 	if nexError != nil {
