@@ -88,7 +88,7 @@ func (commonProtocol *CommonProtocol) prepareUpdateObject(err error, packet nex.
 		for _, recipientID := range recipientIDs {
 			errCode := database.SendNotification(manager, uint64(metaInfo.DataID), recipientID, connection.PID())
 			if errCode != nil {
-				common_globals.Logger.Errorf("Error on sending notification: %s", err.Error())
+				common_globals.Logger.Errorf("Error on sending notification: %s", errCode.Error())
 				return nil, errCode
 			}
 		}

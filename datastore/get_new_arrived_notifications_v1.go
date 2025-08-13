@@ -30,6 +30,7 @@ func (commonProtocol *CommonProtocol) getNewArrivedNotficationsV1(err error, pac
 	}
 
 	// * Convert types.List[datastore_types.DataStoreNotification] to types.List[datastore_types.DataStoreNotificationV1]
+	// TODO - Handle case where the data ID is bigger than the maximum supported on a uint32
 	pResult := make(types.List[datastore_types.DataStoreNotificationV1], len(pResultRaw))
 	for i, notification := range pResultRaw {
 		pResult[i].NotificationID = notification.NotificationID
@@ -45,7 +46,7 @@ func (commonProtocol *CommonProtocol) getNewArrivedNotficationsV1(err error, pac
 
 	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
 	rmcResponse.ProtocolID = datastore.ProtocolID
-	rmcResponse.MethodID = datastore.MethodGetNewArrivedNotifications
+	rmcResponse.MethodID = datastore.MethodGetNewArrivedNotificationsV1
 	rmcResponse.CallID = callID
 
 	return rmcResponse, nil
