@@ -72,7 +72,7 @@ func (commonProtocol *CommonProtocol) prepareGetObjectV1(err error, packet nex.P
 		return nil, errCode
 	}
 
-	key := fmt.Sprintf("%020d_%010d.bin", metaInfo.DataID, version)
+	key := fmt.Sprintf("objects/%020d_%010d.bin", metaInfo.DataID, version)
 	getData, err := manager.S3.PresignGet(key, time.Minute*15)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())

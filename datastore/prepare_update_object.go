@@ -95,7 +95,7 @@ func (commonProtocol *CommonProtocol) prepareUpdateObject(err error, packet nex.
 	}
 
 	// * Format "DataID_Version"
-	key := fmt.Sprintf("%020d_%010d.bin", param.DataID, newVersion)
+	key := fmt.Sprintf("objects/%020d_%010d.bin", param.DataID, newVersion)
 	postData, err := manager.S3.PresignPost(key, time.Minute*15)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())

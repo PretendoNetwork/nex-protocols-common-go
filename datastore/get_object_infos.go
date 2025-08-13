@@ -84,7 +84,7 @@ func (commonProtocol *CommonProtocol) getObjectInfos(err error, packet nex.Packe
 			continue
 		}
 
-		key := fmt.Sprintf("%020d_%010d.bin", metaInfo.DataID, version)
+		key := fmt.Sprintf("objects/%020d_%010d.bin", metaInfo.DataID, version)
 		getData, err := manager.S3.PresignGet(key, time.Minute*15)
 		if err != nil {
 			pInfos = append(pInfos, invalidReqGetInfo)

@@ -26,9 +26,9 @@ func SendNotification(manager *common_globals.DataStoreManager, dataID uint64, r
 		return nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
 	}
 
-	key := fmt.Sprintf("%s/%020d.bin", manager.S3.NotifyKeyBase, recipientID)
+	key := fmt.Sprintf("%s/notifications/%020d.bin", manager.S3.KeyBase, recipientID)
 	data := fmt.Sprintf("%d,%d,%d", notificationID, recipientID, manager.NotifyTimestamp)
-	err = manager.S3.Presigner.PutObject(manager.S3.Bucket, key, data)
+	err = manager.S3.Manager.PutObject(manager.S3.Bucket, key, data)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nex.NewError(nex.ResultCodes.DataStore.Unknown, "Failed to put notifier")

@@ -37,12 +37,12 @@ type S3PostObjectData struct {
 	RootCACert     []byte
 }
 
-// S3Presigner defines the required methods for
+// S3Manager defines the required methods for
 // interacting with the S3 storage server through
 // presigned requests
-type S3Presigner interface {
-	GetObject(bucket, key string, lifetime time.Duration) (*S3GetObjectData, error)
-	PostObject(bucket, key string, lifetime time.Duration) (*S3PostObjectData, error)
+type S3Manager interface {
+	PresignGetObject(bucket, key string, lifetime time.Duration) (*S3GetObjectData, error)
+	PresignPostObject(bucket, key string, lifetime time.Duration) (*S3PostObjectData, error)
 	PutObject(bucket, key, data string) error
 }
 
@@ -50,38 +50,31 @@ type S3Presigner interface {
 type S3 struct {
 	Bucket        string
 	KeyBase       string
-	NotifyKeyBase string
-	Presigner     S3Presigner
+	Manager       S3Manager
 }
 
 // PresignGet creates a presigned GET request for a given object
 func (s3 S3) PresignGet(key string, lifetime time.Duration) (*S3GetObjectData, error) {
 	key = fmt.Sprintf("%s/%s", s3.KeyBase, key)
-	return s3.Presigner.GetObject(s3.Bucket, key, lifetime)
+	return s3.Manager.PresignGetObject(s3.Bucket, key, lifetime)
 }
 
 // PresignGet creates a presigned POST request to upload a new object
 func (s3 S3) PresignPost(key string, lifetime time.Duration) (*S3PostObjectData, error) {
 	key = fmt.Sprintf("%s/%s", s3.KeyBase, key)
-	return s3.Presigner.PostObject(s3.Bucket, key, lifetime)
+	return s3.Manager.PresignPostObject(s3.Bucket, key, lifetime)
 }
 
-// PresignNotify creates a presigned GET request for a given notifier
-func (s3 S3) PresignNotify(key string, lifetime time.Duration) (*S3GetObjectData, error) {
-	key = fmt.Sprintf("%s/%s", s3.NotifyKeyBase, key)
-	return s3.Presigner.GetObject(s3.Bucket, key, lifetime)
-}
-
-// MinIOPresigner is an S3Presigner using MinIO as
+// MinIOManager is an S3Manager using MinIO as
 // the S3 storage server
-type MinIOPresigner struct {
+type MinIOManager struct {
 	minioClient *minio.Client
 }
 
-// GetObject generates the MinIO presigned GET request data
-func (mp MinIOPresigner) GetObject(bucket, key string, lifetime time.Duration) (*S3GetObjectData, error) {
+// PresignGetObject generates the MinIO presigned GET request data
+func (mm MinIOManager) PresignGetObject(bucket, key string, lifetime time.Duration) (*S3GetObjectData, error) {
 	reqParams := make(url.Values)
-	url, err := mp.minioClient.PresignedGetObject(context.Background(), bucket, key, lifetime, reqParams)
+	url, err := mm.minioClient.PresignedGetObject(context.Background(), bucket, key, lifetime, reqParams)
 	if err != nil {
 		return nil, err
 	}
@@ -94,8 +87,8 @@ func (mp MinIOPresigner) GetObject(bucket, key string, lifetime time.Duration) (
 	}, nil
 }
 
-// PostObject generates the MinIO presigned POST request data
-func (mp MinIOPresigner) PostObject(bucket, key string, lifetime time.Duration) (*S3PostObjectData, error) {
+// PresignPostObject generates the MinIO presigned POST request data
+func (mm MinIOManager) PresignPostObject(bucket, key string, lifetime time.Duration) (*S3PostObjectData, error) {
 	policy := minio.NewPostPolicy()
 
 	err := policy.SetBucket(bucket)
@@ -113,7 +106,7 @@ func (mp MinIOPresigner) PostObject(bucket, key string, lifetime time.Duration) 
 		return nil, err
 	}
 
-	url, formData, err := mp.minioClient.PresignedPostPolicy(context.Background(), policy)
+	url, formData, err := mm.minioClient.PresignedPostPolicy(context.Background(), policy)
 	if err != nil {
 		return nil, err
 	}
@@ -127,9 +120,9 @@ func (mp MinIOPresigner) PostObject(bucket, key string, lifetime time.Duration) 
 }
 
 // PutObject puts the given data into MinIO
-func (mp MinIOPresigner) PutObject(bucket, key, data string) error {
+func (mm MinIOManager) PutObject(bucket, key, data string) error {
 	reader := strings.NewReader(data)
-	_, err := mp.minioClient.PutObject(context.Background(), bucket, key, reader, int64(reader.Size()), minio.PutObjectOptions{})
+	_, err := mm.minioClient.PutObject(context.Background(), bucket, key, reader, int64(reader.Size()), minio.PutObjectOptions{})
 	if err != nil {
 		return err
 	}
@@ -137,9 +130,9 @@ func (mp MinIOPresigner) PutObject(bucket, key, data string) error {
 	return nil
 }
 
-// NewMinIOPresigner returns a new MinIOPresigner
-func NewMinIOPresigner(minioClient *minio.Client) *MinIOPresigner {
-	return &MinIOPresigner{
+// NewMinIOManager returns a new MinIOManager
+func NewMinIOManager(minioClient *minio.Client) *MinIOManager {
+	return &MinIOManager{
 		minioClient: minioClient,
 	}
 }
@@ -166,12 +159,11 @@ type DataStoreManager struct {
 // SetS3Config sets the S3 config for the DataStoreManager.
 //
 // Only one bucket can be configured at a time
-func (dsm *DataStoreManager) SetS3Config(bucket, keyBase, notifyKeyBase string, presigner S3Presigner) {
+func (dsm *DataStoreManager) SetS3Config(bucket, keyBase string, manager S3Manager) {
 	dsm.S3 = &S3{
 		Bucket:        bucket,
 		KeyBase:       keyBase,
-		NotifyKeyBase: notifyKeyBase,
-		Presigner:     presigner,
+		Manager:       manager,
 	}
 }
 

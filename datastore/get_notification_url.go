@@ -24,8 +24,8 @@ func (commonProtocol *CommonProtocol) getNotificationURL(err error, packet nex.P
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
-	key := fmt.Sprintf("%020d.bin", connection.PID())
-	getData, err := manager.S3.PresignNotify(key, time.Hour*24*7) // * 1 week
+	key := fmt.Sprintf("notifications/%020d.bin", connection.PID())
+	getData, err := manager.S3.PresignGet(key, time.Hour*24*7) // * 1 week
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "Failed to sign get request")
