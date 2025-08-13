@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/PretendoNetwork/nex-go/v2"
@@ -36,43 +37,44 @@ type S3PostObjectData struct {
 	RootCACert     []byte
 }
 
-// S3Presigner defines the required methods for
+// S3Manager defines the required methods for
 // interacting with the S3 storage server through
 // presigned requests
-type S3Presigner interface {
-	GetObject(bucket, key string, lifetime time.Duration) (*S3GetObjectData, error)
-	PostObject(bucket, key string, lifetime time.Duration) (*S3PostObjectData, error)
+type S3Manager interface {
+	PresignGetObject(bucket, key string, lifetime time.Duration) (*S3GetObjectData, error)
+	PresignPostObject(bucket, key string, lifetime time.Duration) (*S3PostObjectData, error)
+	PutObject(bucket, key, data string) error
 }
 
 // S3 represents an S3 configuration for a specific bucket
 type S3 struct {
-	Bucket    string
-	KeyBase   string
-	Presigner S3Presigner
+	Bucket        string
+	KeyBase       string
+	Manager       S3Manager
 }
 
 // PresignGet creates a presigned GET request for a given object
 func (s3 S3) PresignGet(key string, lifetime time.Duration) (*S3GetObjectData, error) {
 	key = fmt.Sprintf("%s/%s", s3.KeyBase, key)
-	return s3.Presigner.GetObject(s3.Bucket, key, lifetime)
+	return s3.Manager.PresignGetObject(s3.Bucket, key, lifetime)
 }
 
 // PresignGet creates a presigned POST request to upload a new object
 func (s3 S3) PresignPost(key string, lifetime time.Duration) (*S3PostObjectData, error) {
 	key = fmt.Sprintf("%s/%s", s3.KeyBase, key)
-	return s3.Presigner.PostObject(s3.Bucket, key, lifetime)
+	return s3.Manager.PresignPostObject(s3.Bucket, key, lifetime)
 }
 
-// MinIOPresigner is an S3Presigner using MinIO as
+// MinIOManager is an S3Manager using MinIO as
 // the S3 storage server
-type MinIOPresigner struct {
+type MinIOManager struct {
 	minioClient *minio.Client
 }
 
-// GetObject generates the MinIO presigned GET request data
-func (mp MinIOPresigner) GetObject(bucket, key string, lifetime time.Duration) (*S3GetObjectData, error) {
+// PresignGetObject generates the MinIO presigned GET request data
+func (mm MinIOManager) PresignGetObject(bucket, key string, lifetime time.Duration) (*S3GetObjectData, error) {
 	reqParams := make(url.Values)
-	url, err := mp.minioClient.PresignedGetObject(context.Background(), bucket, key, lifetime, reqParams)
+	url, err := mm.minioClient.PresignedGetObject(context.Background(), bucket, key, lifetime, reqParams)
 	if err != nil {
 		return nil, err
 	}
@@ -85,8 +87,8 @@ func (mp MinIOPresigner) GetObject(bucket, key string, lifetime time.Duration) (
 	}, nil
 }
 
-// PostObject generates the MinIO presigned POST request data
-func (mp MinIOPresigner) PostObject(bucket, key string, lifetime time.Duration) (*S3PostObjectData, error) {
+// PresignPostObject generates the MinIO presigned POST request data
+func (mm MinIOManager) PresignPostObject(bucket, key string, lifetime time.Duration) (*S3PostObjectData, error) {
 	policy := minio.NewPostPolicy()
 
 	err := policy.SetBucket(bucket)
@@ -104,7 +106,7 @@ func (mp MinIOPresigner) PostObject(bucket, key string, lifetime time.Duration) 
 		return nil, err
 	}
 
-	url, formData, err := mp.minioClient.PresignedPostPolicy(context.Background(), policy)
+	url, formData, err := mm.minioClient.PresignedPostPolicy(context.Background(), policy)
 	if err != nil {
 		return nil, err
 	}
@@ -117,9 +119,20 @@ func (mp MinIOPresigner) PostObject(bucket, key string, lifetime time.Duration) 
 	}, nil
 }
 
-// NewMinIOPresigner returns a new MinIOPresigner
-func NewMinIOPresigner(minioClient *minio.Client) *MinIOPresigner {
-	return &MinIOPresigner{
+// PutObject puts the given data into MinIO
+func (mm MinIOManager) PutObject(bucket, key, data string) error {
+	reader := strings.NewReader(data)
+	_, err := mm.minioClient.PutObject(context.Background(), bucket, key, reader, int64(reader.Size()), minio.PutObjectOptions{})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// NewMinIOManager returns a new MinIOManager
+func NewMinIOManager(minioClient *minio.Client) *MinIOManager {
+	return &MinIOManager{
 		minioClient: minioClient,
 	}
 }
@@ -130,6 +143,7 @@ type DataStoreManager struct {
 	Endpoint          *nex.PRUDPEndPoint
 	S3                *S3
 	GetUserFriendPIDs func(pid uint32) []uint32
+	NotifyTimestamp   uint64
 
 	// * Some games may need to customize this behavior.
 	// * Set as fields so they can be modified by the caller
@@ -139,16 +153,17 @@ type DataStoreManager struct {
 	VerifyObjectPermission        func(ownerPID, requesterPID types.PID, permission datastore_types.DataStorePermission, objectPassword, requesterPassword types.UInt64) *nex.Error
 	ValidateExtraData             func(extraData types.List[types.String]) *nex.Error
 	CalculateRatingExpirationTime func(settings datastore_types.DataStoreRatingInitParam) time.Time
+	GetNotificationRecipients     func(ownerPID types.PID, permission datastore_types.DataStorePermission) (types.List[types.PID], *nex.Error)
 }
 
 // SetS3Config sets the S3 config for the DataStoreManager.
 //
 // Only one bucket can be configured at a time
-func (dsm *DataStoreManager) SetS3Config(bucket, keyBase string, presigner S3Presigner) {
+func (dsm *DataStoreManager) SetS3Config(bucket, keyBase string, manager S3Manager) {
 	dsm.S3 = &S3{
-		Bucket:    bucket,
-		KeyBase:   keyBase,
-		Presigner: presigner,
+		Bucket:        bucket,
+		KeyBase:       keyBase,
+		Manager:       manager,
 	}
 }
 
@@ -442,6 +457,44 @@ func (dsm DataStoreManager) calculateRatingExpirationTime(settings datastore_typ
 	return time.Date(9999, time.December, 31, 0, 0, 0, 0, time.UTC)
 }
 
+// getNotificationRecipients is the default implementation that returns
+// the access recipients of an object to which notifications should be sent
+func (dsm DataStoreManager) getNotificationRecipients(ownerPID types.PID, permission datastore_types.DataStorePermission) (types.List[types.PID], *nex.Error) {
+	var recipientIDs types.List[types.PID]
+
+	// TODO - What should happen in other permission types?
+	if permission.Permission == types.UInt8(datastore_constants.PermissionFriend) {
+		if dsm.GetUserFriendPIDs == nil {
+			return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
+		}
+
+		// TODO - This assumes a legacy client. Will not work on the Switch
+		friendsList := dsm.GetUserFriendPIDs(uint32(ownerPID))
+
+		recipientIDs = make(types.List[types.PID], len(friendsList))
+		for i, friendPID := range friendsList {
+			recipientIDs[i] = types.PID(friendPID)
+		}
+	} else if permission.Permission == types.UInt8(datastore_constants.PermissionSpecified) {
+		recipientIDs = permission.RecipientIDs
+	} else if permission.Permission == types.UInt8(datastore_constants.PermissionSpecifiedFriend) {
+		if dsm.GetUserFriendPIDs == nil {
+			return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
+		}
+
+		// TODO - This assumes a legacy client. Will not work on the Switch
+		friendsList := dsm.GetUserFriendPIDs(uint32(ownerPID))
+
+		for _, friendPID := range friendsList {
+			if permission.RecipientIDs.Contains(types.PID(friendPID)) {
+				recipientIDs = append(recipientIDs, types.PID(friendPID))
+			}
+		}
+	}
+
+	return recipientIDs, nil
+}
+
 // NewDataStoreManager returns a new DataStoreManager
 func NewDataStoreManager(endpoint *nex.PRUDPEndPoint, db *sql.DB) *DataStoreManager {
 	dsm := &DataStoreManager{
@@ -454,6 +507,7 @@ func NewDataStoreManager(endpoint *nex.PRUDPEndPoint, db *sql.DB) *DataStoreMana
 	dsm.VerifyObjectPermission = dsm.verifyObjectPermission
 	dsm.ValidateExtraData = dsm.validateExtraData
 	dsm.CalculateRatingExpirationTime = dsm.calculateRatingExpirationTime
+	dsm.GetNotificationRecipients = dsm.getNotificationRecipients
 
 	return dsm
 }
