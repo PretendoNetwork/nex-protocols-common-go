@@ -18,21 +18,21 @@ func GetNewArrivedNotifications(manager *common_globals.DataStoreManager, recipi
 	var pResult types.List[datastore_types.DataStoreNotification]
 	var pHasNext types.Bool = false
 
-	// * Get the full count so we can determine if we are giving all notifications
-	var notificationsCount uint64
-	err = manager.Database.QueryRow(`SELECT COUNT(id) FROM datastore.notifications WHERE recipient_id = $1 AND read IS NOT TRUE`, recipientID).Scan(&notificationsCount)
+	// * Add 1 to the limit to check for more notifications remaining
+	rows, err := manager.Database.Query(`SELECT id, data_id FROM datastore.notifications WHERE recipient_id = $1 AND read IS NOT TRUE LIMIT $2+1`, recipientID, param.Limit)
 	if err != nil {
 		// TODO - Send more specific errors?
 		return nil, false, nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
 	}
 
-	rows, err := manager.Database.Query(`SELECT id, data_id FROM datastore.notifications WHERE recipient_id = $1 AND read IS NOT TRUE LIMIT $2`, recipientID, param.Limit)
-	if err != nil {
-		// TODO - Send more specific errors?
-		return nil, false, nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
-	}
+	defer rows.Close()
 
 	for rows.Next() {
+		if len(pResult) == int(param.Limit) {
+			pHasNext = true
+			break
+		}
+
 		var notification datastore_types.DataStoreNotification
 		err = rows.Scan(&notification.NotificationID, &notification.DataID)
 		if err != nil {
@@ -41,12 +41,6 @@ func GetNewArrivedNotifications(manager *common_globals.DataStoreManager, recipi
 		}
 
 		pResult = append(pResult, notification)
-	}
-
-	rows.Close()
-
-	if notificationsCount > uint64(len(pResult)) {
-		pHasNext = true
 	}
 
 	return pResult, pHasNext, nil
