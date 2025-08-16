@@ -15,6 +15,9 @@ func (commonProtocol *CommonProtocol) requestTicket(err error, packet nex.Packet
 
 	connection := packet.Sender()
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
+	server := endpoint.Server
+
+	var errorCode *nex.Error
 
 	sourceAccount, errorCode := endpoint.AccountDetailsByPID(idSource)
 
@@ -23,14 +26,20 @@ func (commonProtocol *CommonProtocol) requestTicket(err error, packet nex.Packet
 		targetAccount, errorCode = endpoint.AccountDetailsByPID(idTarget)
 	}
 
+	if errorCode == nil && sourceAccount.RequiresTokenAuth {
+		common_globals.Logger.Error("Source account requires token authentication")
+		errorCode = nex.NewError(nex.ResultCodes.Authentication.ValidationFailed, "Source account requires token authentication")
+	}
+
 	var encryptedTicket []byte
 	if errorCode == nil {
-		encryptedTicket, errorCode = generateTicket(sourceAccount, targetAccount, commonProtocol.SessionKeyLength, endpoint)
+		encryptedTicket, errorCode = generateTicket(sourceAccount, targetAccount, nil, commonProtocol.SessionKeyLength, endpoint)
 	}
 
 	// * If any errors are triggered, return them in %retval%
 	retval := types.NewQResultSuccess(nex.ResultCodes.Core.Unknown)
 	bufResponse := types.NewBuffer(encryptedTicket)
+	pSourceKey := types.NewString("")
 
 	if errorCode != nil {
 		retval = types.NewQResultError(errorCode.ResultCode)
@@ -41,6 +50,10 @@ func (commonProtocol *CommonProtocol) requestTicket(err error, packet nex.Packet
 
 	retval.WriteTo(rmcResponseStream)
 	bufResponse.WriteTo(rmcResponseStream)
+
+	if server.LibraryVersions.Main.GreaterOrEqual("4.0.0") {
+		pSourceKey.WriteTo(rmcResponseStream)
+	}
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 

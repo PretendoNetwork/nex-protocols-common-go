@@ -47,7 +47,7 @@ func (commonProtocol *CommonProtocol) updateSessionHost(err error, packet nex.Pa
 			return nil, nexError
 		}
 	} else {
-		if uint32(gathering.Flags) & match_making.GatheringFlags.ParticipantsChangeOwner == 0 {
+		if uint32(gathering.Flags)&match_making.GatheringFlags.ParticipantsChangeOwner == 0 {
 			commonProtocol.manager.Mutex.Unlock()
 			return nil, nex.NewError(nex.ResultCodes.RendezVous.InvalidOperation, "change_error")
 		}
@@ -75,9 +75,9 @@ func (commonProtocol *CommonProtocol) updateSessionHost(err error, packet nex.Pa
 
 		oEvent := notifications_types.NewNotificationEvent()
 		oEvent.PIDSource = connection.PID()
-		oEvent.Type = types.NewUInt32(notifications.BuildNotificationType(category, subtype))
-		oEvent.Param1 = gid
-		oEvent.Param2 = types.NewUInt32(uint32(connection.PID())) // TODO - This assumes a legacy client. Will not work on the Switch
+		oEvent.Type = types.UInt32(notifications.BuildNotificationType(category, subtype))
+		oEvent.Param1 = types.UInt64(gid)
+		oEvent.Param2 = types.UInt64(connection.PID())
 
 		// TODO - StrParam doesn't have this value on some servers
 		// * https://github.com/kinnay/NintendoClients/issues/101

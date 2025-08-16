@@ -49,10 +49,15 @@ func (commonProtocol *CommonProtocol) requestProbeInitiationExt(err error, packe
 
 			var messagePacket nex.PRUDPPacketInterface
 
-			if target.DefaultPRUDPVersion == 0 {
+			switch target.DefaultPRUDPVersion {
+			case 0:
 				messagePacket, _ = nex.NewPRUDPPacketV0(server, target, nil)
-			} else {
+			case 1:
 				messagePacket, _ = nex.NewPRUDPPacketV1(server, target, nil)
+			case 2:
+				messagePacket, _ = nex.NewPRUDPPacketLite(server, target, nil)
+			default:
+				common_globals.Logger.Errorf("PRUDP version %d is not supported", target.DefaultPRUDPVersion)
 			}
 
 			messagePacket.SetType(constants.DataPacket)

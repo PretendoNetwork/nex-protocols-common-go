@@ -15,6 +15,7 @@ func (commonProtocol *CommonProtocol) login(err error, packet nex.PacketInterfac
 
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
+	server := endpoint.Server
 
 	var errorCode *nex.Error
 
@@ -33,9 +34,14 @@ func (commonProtocol *CommonProtocol) login(err error, packet nex.PacketInterfac
 		targetAccount, errorCode = endpoint.AccountDetailsByUsername(commonProtocol.SecureServerAccount.Username)
 	}
 
+	if errorCode == nil && sourceAccount.RequiresTokenAuth {
+		common_globals.Logger.Error("Source account requires token authentication")
+		errorCode = nex.NewError(nex.ResultCodes.Authentication.ValidationFailed, "Source account requires token authentication")
+	}
+
 	var encryptedTicket []byte
 	if errorCode == nil {
-		encryptedTicket, errorCode = generateTicket(sourceAccount, targetAccount, commonProtocol.SessionKeyLength, endpoint)
+		encryptedTicket, errorCode = generateTicket(sourceAccount, targetAccount, nil, commonProtocol.SessionKeyLength, endpoint)
 	}
 
 	var retval types.QResult
@@ -53,15 +59,14 @@ func (commonProtocol *CommonProtocol) login(err error, packet nex.PacketInterfac
 		pbufResponse = types.NewBuffer(encryptedTicket)
 		strReturnMsg = commonProtocol.BuildName.Copy().(types.String)
 
-		specialProtocols := types.NewList[types.UInt8]()
-		specialProtocols = commonProtocol.SpecialProtocols
+		specialProtocols := types.List[types.UInt8](commonProtocol.SpecialProtocols)
 
 		pConnectionData.StationURL = commonProtocol.SecureStationURL
 		pConnectionData.SpecialProtocols = specialProtocols
 		pConnectionData.StationURLSpecialProtocols = commonProtocol.StationURLSpecialProtocols
 		pConnectionData.Time = types.NewDateTime(0).Now()
 
-		if endpoint.LibraryVersions().Main.GreaterOrEqual("v3.5.0") {
+		if server.LibraryVersions.Main.GreaterOrEqual("3.5.0") {
 			pConnectionData.StructureVersion = 1
 		}
 	}

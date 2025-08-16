@@ -8,12 +8,15 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 )
 
-func generateTicket(source, target *nex.Account, sessionKeyLength int, endpoint *nex.PRUDPEndPoint) ([]byte, *nex.Error) {
+func generateTicket(source, target *nex.Account, sourceKey []byte, sessionKeyLength int, endpoint *nex.PRUDPEndPoint) ([]byte, *nex.Error) {
 	if source == nil || target == nil {
 		return []byte{}, nex.NewError(nex.ResultCodes.Authentication.Unknown, "Source or target account is nil")
 	}
 
-	sourceKey := nex.DeriveKerberosKey(source.PID, []byte(source.Password))
+	if sourceKey == nil {
+		sourceKey = nex.DeriveKerberosKey(source.PID, []byte(source.Password))
+	}
+
 	targetKey := nex.DeriveKerberosKey(target.PID, []byte(target.Password))
 	sessionKey := make([]byte, sessionKeyLength)
 
