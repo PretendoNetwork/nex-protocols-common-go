@@ -27,8 +27,8 @@ func (commonProtocol *CommonProtocol) requestTicket(err error, packet nex.Packet
 	}
 
 	if errorCode == nil && sourceAccount.RequiresTokenAuth {
-		common_globals.Logger.Error("TicketGranting::RequestTicket blocked")
-		errorCode = nex.NewError(nex.ResultCodes.Authentication.ValidationFailed, "TicketGranting::RequestTicket blocked")
+		common_globals.Logger.Error("Source account requires token authentication")
+		errorCode = nex.NewError(nex.ResultCodes.Authentication.ValidationFailed, "Source account requires token authentication")
 	}
 
 	var encryptedTicket []byte
