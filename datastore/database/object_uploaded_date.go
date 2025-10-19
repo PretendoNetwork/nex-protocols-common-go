@@ -24,3 +24,19 @@ func ObjectCreationDate(manager *common_globals.DataStoreManager, dataID types.U
 
 	return creationDate, nil
 }
+
+func ObjectUpdatedDate(manager *common_globals.DataStoreManager, dataID types.UInt64) (time.Time, *nex.Error) {
+	var updatedDate time.Time
+
+	err := manager.Database.QueryRow(`SELECT update_date FROM datastore.objects WHERE data_id=$1`, dataID).Scan(&updatedDate)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return updatedDate, nex.NewError(nex.ResultCodes.DataStore.NotFound, err.Error())
+		}
+
+		// TODO - Send more specific errors?
+		return updatedDate, nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
+	}
+
+	return updatedDate, nil
+}

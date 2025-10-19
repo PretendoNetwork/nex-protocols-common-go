@@ -26,15 +26,15 @@ func (commonProtocol *CommonProtocol) completeUpdateObject(err error, packet nex
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 	}
 
-	creationDate, errCode := database.ObjectCreationDate(manager, param.DataID)
+	updatedDate, errCode := database.ObjectUpdatedDate(manager, param.DataID)
 	if errCode != nil {
 		return nil, errCode
 	}
 
 	// * If 3 hours pass and the upload was not completed, object
 	// * is removed. Simulating this removal by just bailing
-	if time.Now().UTC().Sub(creationDate) >= 3*time.Hour {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
+	if time.Now().UTC().Sub(updatedDate) >= 3*time.Hour {
+		return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "Upload timeout")
 	}
 
 	// * Users besides the owner are allowed to call PrepareUpdateObject
@@ -50,15 +50,6 @@ func (commonProtocol *CommonProtocol) completeUpdateObject(err error, packet nex
 	}
 
 	if objectOwner != connection.PID() {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "change_error")
-	}
-
-	objectEnabled, errCode := database.ObjectEnabled(manager, param.DataID)
-	if errCode != nil {
-		return nil, errCode
-	}
-
-	if objectEnabled {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "change_error")
 	}
 

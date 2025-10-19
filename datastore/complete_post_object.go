@@ -28,7 +28,7 @@ func (commonProtocol *CommonProtocol) completePostObject(err error, packet nex.P
 	// * If 3 hours pass and the upload was not completed, object
 	// * is removed. Simulating this removal by just bailing
 	if time.Now().UTC().Sub(creationDate) >= 3*time.Hour {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
+		return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "Upload timeout")
 	}
 
 	objectOwner, errCode := database.ObjectOwner(manager, param.DataID)
