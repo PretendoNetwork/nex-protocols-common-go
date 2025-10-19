@@ -11,14 +11,9 @@ import (
 )
 
 func (commonProtocol *CommonProtocol) autoMatchmakeWithParamPostpone(err error, packet nex.PacketInterface, callID uint32, autoMatchmakeParam match_making_types.AutoMatchmakeParam) (*nex.RMCMessage, *nex.Error) {
-	if commonProtocol.CleanupMatchmakeSessionSearchCriterias == nil {
-		common_globals.Logger.Warning("MatchmakeExtension::AutoMatchmakeWithParam_Postpone missing CleanupMatchmakeSessionSearchCriterias!")
-		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
-	}
-
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, err.Error())
 	}
 
 	if !common_globals.CheckValidMatchmakeSession(autoMatchmakeParam.SourceMatchmakeSession) {
@@ -47,7 +42,9 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithParamPostpone(err error, 
 	// * so let's make sure the client is removed from the session
 	database.EndMatchmakeSessionsParticipation(commonProtocol.manager, connection)
 
-	commonProtocol.CleanupMatchmakeSessionSearchCriterias(autoMatchmakeParam.LstSearchCriteria)
+	if commonProtocol.CleanupMatchmakeSessionSearchCriterias != nil {
+		commonProtocol.CleanupMatchmakeSessionSearchCriterias(autoMatchmakeParam.LstSearchCriteria)
+	}
 
 	resultRange := types.NewResultRange()
 	resultRange.Length = 1

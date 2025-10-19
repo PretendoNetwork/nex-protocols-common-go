@@ -10,14 +10,9 @@ import (
 )
 
 func (commonProtocol *CommonProtocol) autoMatchmakePostpone(err error, packet nex.PacketInterface, callID uint32, anyGathering match_making_types.GatheringHolder, message types.String) (*nex.RMCMessage, *nex.Error) {
-	if commonProtocol.CleanupSearchMatchmakeSession == nil {
-		common_globals.Logger.Warning("MatchmakeExtension::AutoMatchmake_Postpone missing CleanupSearchMatchmakeSession!")
-		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
-	}
-
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, err.Error())
 	}
 
 	if len(message) > 256 {
@@ -49,7 +44,11 @@ func (commonProtocol *CommonProtocol) autoMatchmakePostpone(err error, packet ne
 	}
 
 	searchMatchmakeSession := matchmakeSession.Copy().(match_making_types.MatchmakeSession)
-	commonProtocol.CleanupSearchMatchmakeSession(&searchMatchmakeSession)
+
+	if commonProtocol.CleanupSearchMatchmakeSession != nil {
+		commonProtocol.CleanupSearchMatchmakeSession(&searchMatchmakeSession)
+	}
+
 	resultSession, nexError := database.FindMatchmakeSession(commonProtocol.manager, connection, searchMatchmakeSession)
 	if nexError != nil {
 		commonProtocol.manager.Mutex.Unlock()

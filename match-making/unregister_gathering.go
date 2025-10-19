@@ -43,7 +43,7 @@ func (commonProtocol *CommonProtocol) unregisterGathering(err error, packet nex.
 	oEvent := notifications_types.NewNotificationEvent()
 	oEvent.PIDSource = connection.PID().Copy().(types.PID)
 	oEvent.Type = types.NewUInt32(notifications.BuildNotificationType(category, subtype))
-	oEvent.Param1 = idGathering
+	oEvent.Param1 = types.UInt64(idGathering)
 
 	common_globals.SendNotificationEvent(endpoint, oEvent, common_globals.RemoveDuplicates(participants))
 
