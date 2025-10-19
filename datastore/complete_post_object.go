@@ -40,15 +40,6 @@ func (commonProtocol *CommonProtocol) completePostObject(err error, packet nex.P
 		return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "change_error")
 	}
 
-	objectEnabled, errCode := database.ObjectEnabled(manager, param.DataID)
-	if errCode != nil {
-		return nil, errCode
-	}
-
-	if objectEnabled {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "change_error")
-	}
-
 	// * Note: The official servers do not seem to validate this against S3.
 	// *       Because of this, we do not either. But it might be something
 	// *       to add later if it becomes a problem
