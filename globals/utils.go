@@ -136,7 +136,26 @@ func CanJoinMatchmakeSession(manager *MatchmakingManager, pid types.PID, matchma
 
 		friendList := manager.GetUserFriendPIDs(uint32(pid))
 		if !slices.Contains(friendList, uint32(matchmakeSession.OwnerPID)) {
-			return nex.NewError(nex.ResultCodes.RendezVous.NotFriend, "change_error")
+			return nex.NewError(nex.ResultCodes.RendezVous.NotFriend, "Joiner is not friends with owner")
+		}
+	}
+
+	return nil
+}
+
+// CanJoinCommunity checks if a PID is allowed to join a community
+func CanJoinCommunity(manager *MatchmakingManager, pid types.PID, persistentGathering match_making_types.PersistentGathering) *nex.Error {
+	// * Only allow friends
+	// TODO - This won't work on Switch!
+	if persistentGathering.ParticipationPolicy == 98 {
+		if manager.GetUserFriendPIDs == nil {
+			Logger.Warning("Missing GetUserFriendPIDs!")
+			return nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
+		}
+
+		friendList := manager.GetUserFriendPIDs(uint32(pid))
+		if !slices.Contains(friendList, uint32(persistentGathering.OwnerPID)) {
+			return nex.NewError(nex.ResultCodes.RendezVous.NotFriend, "Joiner is not friends with owner")
 		}
 	}
 

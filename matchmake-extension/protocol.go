@@ -42,6 +42,7 @@ type CommonProtocol struct {
 	OnAfterUpdateNotificationData                  func(packet nex.PacketInterface, uiType types.UInt32, uiParam1 types.UInt64, uiParam2 types.UInt64, strParam types.String)
 	OnAfterGetFriendNotificationData               func(packet nex.PacketInterface, uiType types.Int32)
 	OnAfterGetlstFriendNotificationData            func(packet nex.PacketInterface, lstTypes types.List[types.UInt32])
+	OnAfterJoinCommunity                           func(packet nex.PacketInterface, gid types.UInt32, strMessage types.String, strPassword types.String)
 }
 
 // SetDatabase defines the matchmaking manager to be used by the common protocol
@@ -194,6 +195,7 @@ func NewCommonProtocol(protocol matchmake_extension.Interface) *CommonProtocol {
 	protocol.SetHandlerUpdateNotificationData(commonProtocol.updateNotificationData)
 	protocol.SetHandlerGetFriendNotificationData(commonProtocol.getFriendNotificationData)
 	protocol.SetHandlerGetlstFriendNotificationData(commonProtocol.getlstFriendNotificationData)
+	protocol.SetHandlerJoinCommunity(commonProtocol.joinCommunity)
 
 	endpoint.OnConnectionEnded(func(connection *nex.PRUDPConnection) {
 		commonProtocol.manager.Mutex.Lock()
