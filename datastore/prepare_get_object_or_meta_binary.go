@@ -95,7 +95,7 @@ func (commonProtocol *CommonProtocol) prepareGetObjectOrMetaBinary(err error, pa
 		pReqGetAdditionalMeta.Version = types.UInt16(version)
 		pReqGetAdditionalMeta.MetaBinary = metaInfo.MetaBinary
 	} else {
-		key := fmt.Sprintf("%020d_%010d.bin", metaInfo.DataID, version)
+		key := fmt.Sprintf("objects/%020d_%010d.bin", metaInfo.DataID, version)
 		getData, err := manager.S3.PresignGet(key, time.Minute*15)
 		if err != nil {
 			common_globals.Logger.Error(err.Error())
