@@ -26,6 +26,16 @@ func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingMan
 		friendList = manager.GetUserFriendPIDs(uint32(connection.PID()))
 	}
 
+	myBlockList, nexErr := GetBlockList(manager, connection.PID())
+	if nexErr != nil {
+		return nil, nexErr
+	}
+	blockedByList, nexErr := GetBlockedByList(manager, connection.PID())
+	if nexErr != nil {
+		return nil, nexErr
+	}
+	exclusionList := append(myBlockList, blockedByList...)
+
 	if resultRange.Offset == math.MaxUint32 {
 		resultRange.Offset = 0
 	}
@@ -71,6 +81,15 @@ func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingMan
 			(CASE WHEN $6=true THEN g.host_pid <> 0 ELSE true END) AND
 			(CASE WHEN $7=true THEN ms.user_password_enabled=false ELSE true END) AND
 			(CASE WHEN $8=true THEN ms.system_password_enabled=false ELSE true END)`
+
+		if len(exclusionList) > 0 {
+			var pidStrs []string
+			for _, pid := range exclusionList {
+				pidStrs = append(pidStrs, strconv.FormatUint(uint64(pid), 10))
+			}
+			exclusionPidStr := strings.Join(pidStrs, ",")
+			searchStatement += fmt.Sprintf(" AND g.owner_pid NOT IN (%s)", exclusionPidStr)
+		}
 
 		var valid bool = true
 		for i, attrib := range searchCriteria.Attribs {
