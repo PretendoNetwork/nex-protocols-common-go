@@ -16,11 +16,11 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithSearchCriteriaPostpone(er
 	}
 
 	if len(strMessage) > 256 {
-		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "strMessage too long")
 	}
 
 	if len(lstSearchCriteria) > 2 {
-		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "Too many search criteria")
 	}
 
 	connection := packet.Sender().(*nex.PRUDPConnection)
@@ -37,14 +37,14 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithSearchCriteriaPostpone(er
 	if anyGathering.Object.GatheringObjectID().Equals(types.NewString("MatchmakeSession")) {
 		matchmakeSession = anyGathering.Object.(match_making_types.MatchmakeSession)
 	} else {
-		common_globals.Logger.Critical("Non-MatchmakeSession DataType?!")
+		common_globals.Logger.Critical("Provided gathering was not a MatchmakeSession")
 		commonProtocol.manager.Mutex.Unlock()
-		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "Provided gathering was not a MatchmakeSession")
 	}
 
 	if !common_globals.CheckValidMatchmakeSession(matchmakeSession) {
 		commonProtocol.manager.Mutex.Unlock()
-		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "MatchmakeSession is invalid")
 	}
 
 	if commonProtocol.CleanupMatchmakeSessionSearchCriterias != nil {
@@ -74,7 +74,7 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithSearchCriteriaPostpone(er
 		// TODO - What should really happen here?
 		if resultSession.UserPasswordEnabled || resultSession.SystemPasswordEnabled {
 			commonProtocol.manager.Mutex.Unlock()
-			return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
+			return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "Session has password")
 		}
 	}
 
