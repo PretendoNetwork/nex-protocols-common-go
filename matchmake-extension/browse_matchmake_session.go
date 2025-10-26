@@ -29,7 +29,7 @@ func (commonProtocol *CommonProtocol) browseMatchmakeSession(err error, packet n
 		commonProtocol.CleanupMatchmakeSessionSearchCriterias(lstSearchCriteria)
 	}
 
-	sessions, nexError := database.FindMatchmakeSessionBySearchCriteria(commonProtocol.manager, connection, searchCriterias, resultRange, nil)
+	sessions, nexError := database.FindMatchmakeSessionBySearchCriteria(commonProtocol.manager, connection, searchCriterias, resultRange, nil, false)
 	if nexError != nil {
 		commonProtocol.manager.Mutex.RUnlock()
 		return nil, nexError
