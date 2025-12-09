@@ -13,6 +13,11 @@ func (commonProtocol *CommonProtocol) getStringSettings(err error, packet nex.Pa
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
+	if commonProtocol.manager.GetStringSettings == nil {
+		common_globals.Logger.Warning("GetStringSettings not defined")
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
+	}
+
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 

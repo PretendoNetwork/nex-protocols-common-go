@@ -13,6 +13,11 @@ func (commonProtocol *CommonProtocol) getIntegerSettings(err error, packet nex.P
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
+	if commonProtocol.manager.GetIntegerSettings == nil {
+		common_globals.Logger.Warning("GetIntegerSettings not defined")
+		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
+	}
+
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
