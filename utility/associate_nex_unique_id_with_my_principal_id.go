@@ -34,12 +34,7 @@ func (commonProtocol *CommonProtocol) associateNexUniqueIDWithMyPrincipalID(err 
 		return nil, nexError
 	}
 
-	if uniqueIdInfo.NEXUniqueIDPassword == types.UInt64(0) {
-		nexError = utility_database.InsertUniqueIDsByUser(commonProtocol.manager, packet.Sender().PID(), types.List[types.UInt64]{uniqueIdInfo.NEXUniqueID}, true)
-	} else {
-		nexError = utility_database.InsertUniqueIDsByUserWithPasswords(commonProtocol.manager, packet.Sender().PID(), types.List[types.UInt64]{uniqueIdInfo.NEXUniqueID}, types.List[types.UInt64]{uniqueIdInfo.NEXUniqueIDPassword}, true)
-	}
-
+	nexError = utility_database.UpdateUniqueIDAssociations(commonProtocol.manager, packet.Sender().PID(), types.List[types.UInt64]{uniqueIdInfo.NEXUniqueID}, true)
 	if nexError != nil {
 		common_globals.Logger.Error(nexError.Error())
 		return nil, nexError

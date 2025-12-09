@@ -7,7 +7,7 @@ import (
 )
 
 func ClearPIDUniqueIDAssociations(manager *common_globals.UtilityManager, userPid types.PID) *nex.Error {
-	_, err := manager.Database.Exec(`UPDATE utility.unique_ids SET associated_pid=0, is_primary_id=false WHERE associated_pid=$1`, userPid)
+	_, err := manager.Database.Exec(`UPDATE utility.unique_ids SET associated_pid=0, associated_time=null, is_primary_id=false WHERE associated_pid=$1`, userPid)
 	if err != nil {
 		return nex.NewError(nex.ResultCodes.Core.Unknown, err.Error())
 	}

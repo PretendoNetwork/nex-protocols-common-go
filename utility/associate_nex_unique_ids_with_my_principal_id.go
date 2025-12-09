@@ -42,9 +42,7 @@ func (commonProtocol *CommonProtocol) associateNexUniqueIDsWithMyPrincipalID(err
 		return nil, nexError
 	}
 
-	// The primary difference between with/without passwords is convenience, we can insert zeroed passwords just fine this way
-	nexError = utility_database.InsertUniqueIDsByUserWithPasswords(commonProtocol.manager, packet.Sender().PID(), uniqueIdList, passwordList, true)
-
+	nexError = utility_database.UpdateUniqueIDAssociations(commonProtocol.manager, packet.Sender().PID(), uniqueIdList, true)
 	if nexError != nil {
 		common_globals.Logger.Error(nexError.Error())
 		return nil, nexError

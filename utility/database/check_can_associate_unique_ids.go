@@ -8,6 +8,7 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 )
 
+// This handles all relevant validity checking (including the existence of an id, if the password matches, etc)
 func CheckCanAssociateUniqueIDs(manager *common_globals.UtilityManager, userPid types.PID, uniqueIds, passwords types.List[types.UInt64]) *nex.Error {
 	var uniqueId, dbPassword types.UInt64
 	var associatedPid types.PID
