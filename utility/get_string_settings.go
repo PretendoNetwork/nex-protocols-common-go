@@ -7,7 +7,7 @@ import (
 	utility "github.com/PretendoNetwork/nex-protocols-go/v2/utility"
 )
 
-func (commonProtocol *CommonProtocol) acquireNexUniqueID(err error, packet nex.PacketInterface, callID uint32) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) getStringSettings(err error, packet nex.PacketInterface, callID uint32, stringSettingIndex types.UInt32) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
@@ -16,7 +16,7 @@ func (commonProtocol *CommonProtocol) acquireNexUniqueID(err error, packet nex.P
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
-	pNexUniqueID, nexError := commonProtocol.manager.GenerateNEXUniqueID(commonProtocol.manager, packet)
+	stringSettings, nexError := commonProtocol.manager.GetStringSettings(commonProtocol.manager, packet, uint32(stringSettingIndex))
 	if nexError != nil {
 		common_globals.Logger.Error(nexError.Error())
 		return nil, nexError
@@ -24,13 +24,18 @@ func (commonProtocol *CommonProtocol) acquireNexUniqueID(err error, packet nex.P
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
-	types.UInt64(pNexUniqueID).WriteTo(rmcResponseStream)
+	nexStringSettings := make(types.Map[types.UInt16, types.String])
+	for k, v := range stringSettings {
+		nexStringSettings[types.UInt16(k)] = types.String(v)
+	}
+
+	nexStringSettings.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
 	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
 	rmcResponse.ProtocolID = utility.ProtocolID
-	rmcResponse.MethodID = utility.MethodAcquireNexUniqueID
+	rmcResponse.MethodID = utility.MethodGetStringSettings
 	rmcResponse.CallID = callID
 
 	return rmcResponse, nil

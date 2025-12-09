@@ -1,0 +1,33 @@
+package utility_database
+
+import (
+	"crypto/rand"
+	"encoding/binary"
+
+	"github.com/PretendoNetwork/nex-go/v2"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+)
+
+func GenerateNEXUniqueID(manager *common_globals.UtilityManager, packet nex.PacketInterface) (uint64, *nex.Error) {
+	var uniqueID uint64
+
+	err := binary.Read(rand.Reader, binary.BigEndian, &uniqueID)
+	if err != nil {
+		common_globals.Logger.Error(err.Error())
+		return 0, nex.NewError(nex.ResultCodes.Core.Unknown, err.Error())
+	}
+
+	primaryExists, _, nexError := CheckUserHasPrimaryUniqueID(manager, packet.Sender().PID())
+	if nexError != nil {
+		common_globals.Logger.Error(nexError.Error())
+		return 0, nexError
+	}
+
+	nexError = InsertUniqueIDsByUser(manager, packet.Sender().PID(), []uint64{uniqueID}, primaryExists)
+	if nexError != nil {
+		common_globals.Logger.Error(nexError.Error())
+		return 0, nexError
+	}
+
+	return uniqueID, nil
+}
