@@ -9,7 +9,7 @@ import (
 )
 
 func CheckUserHasPrimaryUniqueID(manager *common_globals.UtilityManager, userPid types.PID) (bool, types.UInt64, *nex.Error) {
-	var primaryExists bool
+	primaryExists := true
 	var primaryId types.UInt64
 
 	err := manager.Database.QueryRow(`SELECT unique_id FROM utility.unique_ids WHERE associated_pid=$1 AND is_primary_id=true`,

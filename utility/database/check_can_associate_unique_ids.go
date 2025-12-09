@@ -19,7 +19,10 @@ func CheckCanAssociateUniqueIDs(manager *common_globals.UtilityManager, userPid 
 		return nex.NewError(nex.ResultCodes.Core.Unknown, err.Error())
 	}
 
+	rowCount := 0
 	for rows.Next() {
+		rowCount++
+
 		err = rows.Scan(
 			&uniqueId,
 			&associatedPid,
@@ -47,6 +50,10 @@ func CheckCanAssociateUniqueIDs(manager *common_globals.UtilityManager, userPid 
 		if dbPassword != passwords[index] {
 			return nex.NewError(nex.ResultCodes.Core.AccessDenied, "Invalid password for a unique id")
 		}
+	}
+
+	if rowCount != len(uniqueIds) {
+		return nex.NewError(nex.ResultCodes.Core.InvalidArgument, "One or more of the provided unique ids do not exist")
 	}
 
 	return nil

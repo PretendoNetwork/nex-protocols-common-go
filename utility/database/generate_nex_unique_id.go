@@ -24,7 +24,7 @@ func GenerateNEXUniqueID(manager *common_globals.UtilityManager, packet nex.Pack
 		return 0, nexError
 	}
 
-	nexError = InsertUniqueIDsByUser(manager, packet.Sender().PID(), types.List[types.UInt64]{uniqueID}, primaryExists)
+	nexError = InsertUniqueIDsByUser(manager, packet.Sender().PID(), types.List[types.UInt64]{uniqueID}, !primaryExists)
 	if nexError != nil {
 		common_globals.Logger.Error(nexError.Error())
 		return 0, nexError
