@@ -22,7 +22,7 @@ func (commonProtocol *CommonProtocol) associateNexUniqueIDWithMyPrincipalID(err 
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "No unique id sent")
 	}
 
-	nexError := utility_database.CheckCanAssociateUniqueIDs(commonProtocol.manager, packet.Sender().PID(), []uint64{uint64(uniqueIdInfo.NEXUniqueID)}, []uint64{uint64(uniqueIdInfo.NEXUniqueIDPassword)})
+	nexError := utility_database.CheckCanAssociateUniqueIDs(commonProtocol.manager, packet.Sender().PID(), types.List[types.UInt64]{uniqueIdInfo.NEXUniqueID}, types.List[types.UInt64]{uniqueIdInfo.NEXUniqueIDPassword})
 	if nexError != nil {
 		common_globals.Logger.Error(nexError.Error())
 		return nil, nexError
@@ -35,9 +35,9 @@ func (commonProtocol *CommonProtocol) associateNexUniqueIDWithMyPrincipalID(err 
 	}
 
 	if uniqueIdInfo.NEXUniqueIDPassword == types.UInt64(0) {
-		nexError = utility_database.InsertUniqueIDsByUser(commonProtocol.manager, packet.Sender().PID(), []uint64{uint64(uniqueIdInfo.NEXUniqueID)}, true)
+		nexError = utility_database.InsertUniqueIDsByUser(commonProtocol.manager, packet.Sender().PID(), types.List[types.UInt64]{uniqueIdInfo.NEXUniqueID}, true)
 	} else {
-		nexError = utility_database.InsertUniqueIDsByUserWithPasswords(commonProtocol.manager, packet.Sender().PID(), []uint64{uint64(uniqueIdInfo.NEXUniqueID)}, []uint64{uint64(uniqueIdInfo.NEXUniqueIDPassword)}, true)
+		nexError = utility_database.InsertUniqueIDsByUserWithPasswords(commonProtocol.manager, packet.Sender().PID(), types.List[types.UInt64]{uniqueIdInfo.NEXUniqueID}, types.List[types.UInt64]{uniqueIdInfo.NEXUniqueIDPassword}, true)
 	}
 
 	if nexError != nil {

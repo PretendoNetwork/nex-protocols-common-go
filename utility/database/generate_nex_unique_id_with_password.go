@@ -5,12 +5,12 @@ import (
 	"encoding/binary"
 
 	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 )
 
-func GenerateNEXUniqueIDWithPassword(manager *common_globals.UtilityManager, packet nex.PacketInterface) (uint64, uint64, *nex.Error) {
-	var uniqueID uint64
-	var password uint64
+func GenerateNEXUniqueIDWithPassword(manager *common_globals.UtilityManager, packet nex.PacketInterface) (types.UInt64, types.UInt64, *nex.Error) {
+	var uniqueID, password types.UInt64
 
 	err := binary.Read(rand.Reader, binary.BigEndian, &uniqueID)
 	if err != nil {
@@ -30,7 +30,7 @@ func GenerateNEXUniqueIDWithPassword(manager *common_globals.UtilityManager, pac
 		return 0, 0, nexError
 	}
 
-	nexError = InsertUniqueIDsByUserWithPasswords(manager, packet.Sender().PID(), []uint64{uniqueID}, []uint64{password}, primaryExists)
+	nexError = InsertUniqueIDsByUserWithPasswords(manager, packet.Sender().PID(), types.List[types.UInt64]{uniqueID}, types.List[types.UInt64]{password}, primaryExists)
 	if nexError != nil {
 		common_globals.Logger.Error(nexError.Error())
 		return 0, 0, nexError

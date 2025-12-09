@@ -1,7 +1,6 @@
 package utility_database
 
 import (
-	"strconv"
 	"time"
 
 	"github.com/PretendoNetwork/nex-go/v2"
@@ -10,7 +9,7 @@ import (
 )
 
 // isPrimary is used to indicate if the 0th unique id in the array should be set as a primary id
-func InsertUniqueIDsByUser(manager *common_globals.UtilityManager, userPid types.PID, uniqueIds []uint64, isPrimary bool) *nex.Error {
+func InsertUniqueIDsByUser(manager *common_globals.UtilityManager, userPid types.PID, uniqueIds types.List[types.UInt64], isPrimary bool) *nex.Error {
 	var err error
 	if len(uniqueIds) == 0 {
 		common_globals.Logger.Error("Tried to pass in empty array to InsertUniqueIDsByUser!")
@@ -18,7 +17,6 @@ func InsertUniqueIDsByUser(manager *common_globals.UtilityManager, userPid types
 	}
 
 	currentTime := time.Now().UTC()
-	userPidString := strconv.FormatUint(uint64(userPid), 10)
 
 	for index, uniqueId := range uniqueIds {
 		_, err = manager.Database.Exec(`INSERT INTO utility.unique_ids (
@@ -36,9 +34,9 @@ func InsertUniqueIDsByUser(manager *common_globals.UtilityManager, userPid types
 			$5,
 			$6
 		)`,
-			strconv.FormatUint(uniqueId, 10),
-			"0", // I hate this, but thats just how numerics work
-			userPidString,
+			uniqueId,
+			types.UInt64(0),
+			userPid,
 			currentTime,
 			currentTime,
 			index == 0 && isPrimary,

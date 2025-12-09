@@ -22,12 +22,12 @@ func (commonProtocol *CommonProtocol) associateNexUniqueIDsWithMyPrincipalID(err
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "No unique ids sent")
 	}
 
-	uniqueIdList := make([]uint64, 0)
-	passwordList := make([]uint64, 0)
+	uniqueIdList := make(types.List[types.UInt64], 0)
+	passwordList := make(types.List[types.UInt64], 0)
 
 	for _, info := range uniqueIdInfos {
-		uniqueIdList = append(uniqueIdList, uint64(info.NEXUniqueID))
-		passwordList = append(passwordList, uint64(info.NEXUniqueIDPassword))
+		uniqueIdList = append(uniqueIdList, info.NEXUniqueID)
+		passwordList = append(passwordList, info.NEXUniqueIDPassword)
 	}
 
 	nexError := utility_database.CheckCanAssociateUniqueIDs(commonProtocol.manager, packet.Sender().PID(), uniqueIdList, passwordList)

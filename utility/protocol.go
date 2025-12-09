@@ -39,7 +39,7 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.Utility
 		associated_pid numeric(20),
 		associated_time timestamp,
 		creation_time timestamp,
-		is_primary_id bool
+		is_primary_id bool NOT NULL DEFAULT false
 	)`)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
