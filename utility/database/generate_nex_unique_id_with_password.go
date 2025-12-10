@@ -27,6 +27,14 @@ func GenerateNEXUniqueIDWithPassword(manager *common_globals.UtilityManager, use
 	}
 
 	// As rare as this should be in the first place, I don't think calling it from itself should be a problem
+	nexError := CheckUniqueIDAlreadyExists(manager, uniqueIDInfo)
+	if nexError != nil && nexError.ResultCode == nex.ResultCodes.Core.SystemError {
+		return GenerateNEXUniqueIDWithPassword(manager, userPID)
+	} else if nexError != nil {
+		common_globals.Logger.Error(nexError.Error())
+		return utility_types.UniqueIDInfo{}, nexError
+	}
+
 	primaryExists, _, nexError := CheckUserHasPrimaryUniqueID(manager, userPID)
 	if nexError != nil {
 		common_globals.Logger.Error(nexError.Error())
