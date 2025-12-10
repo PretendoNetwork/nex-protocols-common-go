@@ -7,28 +7,39 @@ import (
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	utility_types "github.com/PretendoNetwork/nex-protocols-go/v2/utility/types"
 )
 
-func GenerateNEXUniqueID(manager *common_globals.UtilityManager, packet nex.PacketInterface) (types.UInt64, *nex.Error) {
-	var uniqueID types.UInt64
+// GenerateNEXUniqueID generates a unique ID, associated with the given user's PID
+func GenerateNEXUniqueID(manager *common_globals.UtilityManager, userPID types.PID) (types.UInt64, *nex.Error) {
+	uniqueIDInfo := utility_types.NewUniqueIDInfo()
 
-	err := binary.Read(rand.Reader, binary.BigEndian, &uniqueID)
+	err := binary.Read(rand.Reader, binary.NativeEndian, &uniqueIDInfo.NEXUniqueID)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return 0, nex.NewError(nex.ResultCodes.Core.Unknown, err.Error())
 	}
 
-	primaryExists, _, nexError := CheckUserHasPrimaryUniqueID(manager, packet.Sender().PID())
+	// As rare as this should be in the first place, I don't think calling it from itself should be a problem
+	nexError := CheckUniqueIDAlreadyExists(manager, uniqueIDInfo)
+	if nexError != nil && nexError.ResultCode == nex.ResultCodes.Core.SystemError {
+		return GenerateNEXUniqueID(manager, userPID)
+	} else if nexError != nil {
+		common_globals.Logger.Error(nexError.Error())
+		return 0, nexError
+	}
+
+	primaryExists, _, nexError := CheckUserHasPrimaryUniqueID(manager, userPID)
 	if nexError != nil {
 		common_globals.Logger.Error(nexError.Error())
 		return 0, nexError
 	}
 
-	nexError = InsertUniqueIDsByUser(manager, packet.Sender().PID(), types.List[types.UInt64]{uniqueID}, !primaryExists)
+	nexError = InsertUniqueIDsByUser(manager, userPID, types.List[types.UInt64]{uniqueIDInfo.NEXUniqueID}, types.List[types.UInt64]{0}, !primaryExists)
 	if nexError != nil {
 		common_globals.Logger.Error(nexError.Error())
 		return 0, nexError
 	}
 
-	return uniqueID, nil
+	return uniqueIDInfo.NEXUniqueID, nil
 }

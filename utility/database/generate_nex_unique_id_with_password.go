@@ -7,34 +7,37 @@ import (
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	utility_types "github.com/PretendoNetwork/nex-protocols-go/v2/utility/types"
 )
 
-func GenerateNEXUniqueIDWithPassword(manager *common_globals.UtilityManager, packet nex.PacketInterface) (types.UInt64, types.UInt64, *nex.Error) {
-	var uniqueID, password types.UInt64
+// GenerateNEXUniqueIDWithPassword generates a unique ID + password combination, associated with the given user's PID
+func GenerateNEXUniqueIDWithPassword(manager *common_globals.UtilityManager, userPID types.PID) (utility_types.UniqueIDInfo, *nex.Error) {
+	uniqueIDInfo := utility_types.NewUniqueIDInfo()
 
-	err := binary.Read(rand.Reader, binary.BigEndian, &uniqueID)
+	err := binary.Read(rand.Reader, binary.NativeEndian, &uniqueIDInfo.NEXUniqueID)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return 0, 0, nex.NewError(nex.ResultCodes.Core.Unknown, "change_error")
+		return utility_types.UniqueIDInfo{}, nex.NewError(nex.ResultCodes.Core.Unknown, "change_error")
 	}
 
-	err = binary.Read(rand.Reader, binary.BigEndian, &password)
+	err = binary.Read(rand.Reader, binary.NativeEndian, &uniqueIDInfo.NEXUniqueIDPassword)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return 0, 0, nex.NewError(nex.ResultCodes.Core.Unknown, "change_error")
+		return utility_types.UniqueIDInfo{}, nex.NewError(nex.ResultCodes.Core.Unknown, "change_error")
 	}
 
-	primaryExists, _, nexError := CheckUserHasPrimaryUniqueID(manager, packet.Sender().PID())
+	// As rare as this should be in the first place, I don't think calling it from itself should be a problem
+	primaryExists, _, nexError := CheckUserHasPrimaryUniqueID(manager, userPID)
 	if nexError != nil {
 		common_globals.Logger.Error(nexError.Error())
-		return 0, 0, nexError
+		return utility_types.UniqueIDInfo{}, nexError
 	}
 
-	nexError = InsertUniqueIDsByUserWithPasswords(manager, packet.Sender().PID(), types.List[types.UInt64]{uniqueID}, types.List[types.UInt64]{password}, !primaryExists)
+	nexError = InsertUniqueIDsByUser(manager, userPID, types.List[types.UInt64]{uniqueIDInfo.NEXUniqueID}, types.List[types.UInt64]{uniqueIDInfo.NEXUniqueIDPassword}, !primaryExists)
 	if nexError != nil {
 		common_globals.Logger.Error(nexError.Error())
-		return 0, 0, nexError
+		return utility_types.UniqueIDInfo{}, nexError
 	}
 
-	return uniqueID, password, nil
+	return uniqueIDInfo, nil
 }

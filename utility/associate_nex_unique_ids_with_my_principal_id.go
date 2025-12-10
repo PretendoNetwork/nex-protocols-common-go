@@ -9,7 +9,7 @@ import (
 	utility_types "github.com/PretendoNetwork/nex-protocols-go/v2/utility/types"
 )
 
-func (commonProtocol *CommonProtocol) associateNexUniqueIDsWithMyPrincipalID(err error, packet nex.PacketInterface, callID uint32, uniqueIdInfos types.List[utility_types.UniqueIDInfo]) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) associateNEXUniqueIDsWithMyPrincipalID(err error, packet nex.PacketInterface, callID uint32, uniqueIDInfos types.List[utility_types.UniqueIDInfo]) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
@@ -18,34 +18,27 @@ func (commonProtocol *CommonProtocol) associateNexUniqueIDsWithMyPrincipalID(err
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
-	if len(uniqueIdInfos) == 0 {
-		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "No unique ids sent")
+	infosLength := len(uniqueIDInfos)
+	if infosLength != 0 {
+		nexError := utility_database.CheckCanAssociateUniqueIDs(commonProtocol.manager, packet.Sender().PID(), uniqueIDInfos)
+		if nexError != nil {
+			common_globals.Logger.Error(nexError.Error())
+			return nil, nexError
+		}
 	}
 
-	uniqueIdList := make(types.List[types.UInt64], 0)
-	passwordList := make(types.List[types.UInt64], 0)
-
-	for _, info := range uniqueIdInfos {
-		uniqueIdList = append(uniqueIdList, info.NEXUniqueID)
-		passwordList = append(passwordList, info.NEXUniqueIDPassword)
-	}
-
-	nexError := utility_database.CheckCanAssociateUniqueIDs(commonProtocol.manager, packet.Sender().PID(), uniqueIdList, passwordList)
+	nexError := utility_database.ClearPIDUniqueIDAssociations(commonProtocol.manager, packet.Sender().PID())
 	if nexError != nil {
 		common_globals.Logger.Error(nexError.Error())
 		return nil, nexError
 	}
 
-	nexError = utility_database.ClearPIDUniqueIDAssociations(commonProtocol.manager, packet.Sender().PID())
-	if nexError != nil {
-		common_globals.Logger.Error(nexError.Error())
-		return nil, nexError
-	}
-
-	nexError = utility_database.UpdateUniqueIDAssociations(commonProtocol.manager, packet.Sender().PID(), uniqueIdList, true)
-	if nexError != nil {
-		common_globals.Logger.Error(nexError.Error())
-		return nil, nexError
+	if infosLength != 0 {
+		nexError = utility_database.UpdateUniqueIDAssociations(commonProtocol.manager, packet.Sender().PID(), uniqueIDInfos, true)
+		if nexError != nil {
+			common_globals.Logger.Error(nexError.Error())
+			return nil, nexError
+		}
 	}
 
 	rmcResponse := nex.NewRMCSuccess(endpoint, nil)

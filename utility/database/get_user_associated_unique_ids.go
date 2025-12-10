@@ -4,38 +4,37 @@ import (
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	utility_types "github.com/PretendoNetwork/nex-protocols-go/v2/utility/types"
 )
 
-func GetUserAssociatedUniqueIDs(manager *common_globals.UtilityManager, userPid types.PID) ([]uint64, []uint64, *nex.Error) {
-	var uniqueId, password types.UInt64
-
-	uniqueIds := make([]uint64, 0)
-	passwords := make([]uint64, 0)
-
+// GetUserAssociatedUniqueIDs gets all unique ID + password (if applicable) combinations associated with a user's PID
+func GetUserAssociatedUniqueIDs(manager *common_globals.UtilityManager, userPID types.PID) (types.List[utility_types.UniqueIDInfo], *nex.Error) {
 	rows, err := manager.Database.Query(`
 			SELECT 
 				unique_id,
 				password 
 			FROM utility.unique_ids
 			WHERE associated_pid=$1 ORDER BY is_primary_id DESC, associated_time DESC`,
-		userPid,
+		userPID,
 	)
 	if err != nil {
-		return nil, nil, nex.NewError(nex.ResultCodes.Core.Unknown, err.Error())
+		return types.List[utility_types.UniqueIDInfo]{}, nex.NewError(nex.ResultCodes.Core.Unknown, err.Error())
 	}
 
+	uniqueIDInfos := make(types.List[utility_types.UniqueIDInfo], 0)
 	for rows.Next() {
+		uniqueIDInfo := utility_types.NewUniqueIDInfo()
+
 		err = rows.Scan(
-			&uniqueId,
-			&password,
+			&uniqueIDInfo.NEXUniqueID,
+			&uniqueIDInfo.NEXUniqueIDPassword,
 		)
 		if err != nil {
-			return nil, nil, nex.NewError(nex.ResultCodes.Core.Unknown, err.Error())
+			return types.List[utility_types.UniqueIDInfo]{}, nex.NewError(nex.ResultCodes.Core.Unknown, err.Error())
 		}
 
-		uniqueIds = append(uniqueIds, uint64(uniqueId))
-		passwords = append(passwords, uint64(password))
+		uniqueIDInfos = append(uniqueIDInfos, uniqueIDInfo)
 	}
 
-	return uniqueIds, passwords, nil
+	return uniqueIDInfos, nil
 }

@@ -2,12 +2,11 @@ package utility
 
 import (
 	"github.com/PretendoNetwork/nex-go/v2"
-	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	utility "github.com/PretendoNetwork/nex-protocols-go/v2/utility"
 )
 
-func (commonProtocol *CommonProtocol) acquireNexUniqueID(err error, packet nex.PacketInterface, callID uint32) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) acquireNEXUniqueID(err error, packet nex.PacketInterface, callID uint32) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
@@ -16,7 +15,7 @@ func (commonProtocol *CommonProtocol) acquireNexUniqueID(err error, packet nex.P
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
-	pNexUniqueID, nexError := commonProtocol.manager.GenerateNEXUniqueID(commonProtocol.manager, packet)
+	pNexUniqueID, nexError := commonProtocol.manager.GenerateNEXUniqueID(commonProtocol.manager, packet.Sender().PID())
 	if nexError != nil {
 		common_globals.Logger.Error(nexError.Error())
 		return nil, nexError
@@ -24,7 +23,7 @@ func (commonProtocol *CommonProtocol) acquireNexUniqueID(err error, packet nex.P
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
-	types.UInt64(pNexUniqueID).WriteTo(rmcResponseStream)
+	pNexUniqueID.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 

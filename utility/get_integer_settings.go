@@ -21,7 +21,7 @@ func (commonProtocol *CommonProtocol) getIntegerSettings(err error, packet nex.P
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
-	integerSettings, nexError := commonProtocol.manager.GetIntegerSettings(commonProtocol.manager, packet, uint32(integerSettingIndex))
+	integerSettings, nexError := commonProtocol.manager.GetIntegerSettings(commonProtocol.manager, packet.Sender().PID(), integerSettingIndex)
 	if nexError != nil {
 		common_globals.Logger.Error(nexError.Error())
 		return nil, nexError
@@ -29,12 +29,7 @@ func (commonProtocol *CommonProtocol) getIntegerSettings(err error, packet nex.P
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
-	nexIntegerSettings := make(types.Map[types.UInt16, types.Int32])
-	for k, v := range integerSettings {
-		nexIntegerSettings[types.UInt16(k)] = types.Int32(v)
-	}
-
-	nexIntegerSettings.WriteTo(rmcResponseStream)
+	integerSettings.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 

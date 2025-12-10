@@ -6,15 +6,21 @@ import (
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	utility_types "github.com/PretendoNetwork/nex-protocols-go/v2/utility/types"
 )
 
-// This handles all relevant validity checking (including the existence of an id, if the password matches, etc)
-func CheckCanAssociateUniqueIDs(manager *common_globals.UtilityManager, userPid types.PID, uniqueIds, passwords types.List[types.UInt64]) *nex.Error {
-	var uniqueId, dbPassword types.UInt64
-	var associatedPid types.PID
+// CheckCanAssociateUniqueIDs handles all relevant validity checking (including the existence of a unique ID, if the password matches, etc)
+func CheckCanAssociateUniqueIDs(manager *common_globals.UtilityManager, userPID types.PID, uniqueIDInfos types.List[utility_types.UniqueIDInfo]) *nex.Error {
+	var uniqueID, dbPassword types.UInt64
+	var associatedPID types.PID
+
+	uniqueIDs := make([]types.UInt64, 0)
+	for _, uniqueIDInfo := range uniqueIDInfos {
+		uniqueIDs = append(uniqueIDs, uniqueIDInfo.NEXUniqueID)
+	}
 
 	rows, err := manager.Database.Query(`SELECT unique_id, associated_pid, password FROM utility.unique_ids WHERE unique_id=ANY($1)`,
-		uniqueIds,
+		uniqueIDs,
 	)
 	if err != nil {
 		return nex.NewError(nex.ResultCodes.Core.Unknown, err.Error())
@@ -25,36 +31,31 @@ func CheckCanAssociateUniqueIDs(manager *common_globals.UtilityManager, userPid 
 		rowCount++
 
 		err = rows.Scan(
-			&uniqueId,
-			&associatedPid,
+			&uniqueID,
+			&associatedPID,
 			&dbPassword,
 		)
 		if err != nil {
 			return nex.NewError(nex.ResultCodes.Core.Unknown, err.Error())
 		}
 
-		// TODO - Is this a correct assumption?
-		if associatedPid != userPid {
-			return nex.NewError(nex.ResultCodes.Core.Unknown, "One of the unique ids is already owned by this user")
+		targetConnection := manager.Endpoint.FindConnectionByPID(uint64(associatedPID))
+		if !manager.AllowUniqueIDStealing || targetConnection != nil {
+			return nex.NewError(nex.ResultCodes.Core.AccessDenied, "Unique ID stealing is disabled or the owner is online")
 		}
 
-		targetConnection := manager.Endpoint.FindConnectionByPID(uint64(associatedPid))
-		if targetConnection != nil || !manager.AllowUniqueIDStealing {
-			return nex.NewError(nex.ResultCodes.Core.AccessDenied, "Unique id stealing is disabled or the target is online")
-		}
-
-		index := slices.Index(uniqueIds, uniqueId)
+		index := slices.Index(uniqueIDs, uniqueID)
 		if index == -1 {
-			return nex.NewError(nex.ResultCodes.Core.Unknown, "Index of unique id not found in array, this SHOULD NOT HAPPEN")
+			return nex.NewError(nex.ResultCodes.Core.Unknown, "Index of unique ID not found in array, this SHOULD NOT HAPPEN")
 		}
 
-		if dbPassword != passwords[index] {
-			return nex.NewError(nex.ResultCodes.Core.AccessDenied, "Invalid password for a unique id")
+		if dbPassword != uniqueIDInfos[index].NEXUniqueIDPassword {
+			return nex.NewError(nex.ResultCodes.Core.AccessDenied, "Invalid password for a unique ID")
 		}
 	}
 
-	if rowCount != len(uniqueIds) {
-		return nex.NewError(nex.ResultCodes.Core.InvalidArgument, "One or more of the provided unique ids do not exist")
+	if rowCount != len(uniqueIDs) {
+		return nex.NewError(nex.ResultCodes.Core.InvalidArgument, "One or more of the provided unique IDs do not exist")
 	}
 
 	return nil
