@@ -10,21 +10,21 @@ import (
 
 // InsertUniqueIDsByUser inserts a unique ID + password (if applicable) combination into the database, associated with the given user's PID
 // isPrimary is used to indicate if the 0th unique ID in the array should be set as a primary ID (in most cases, this should be true)
-func InsertUniqueIDsByUser(manager *common_globals.UtilityManager, userPid types.PID, uniqueIds, passwords types.List[types.UInt64], isPrimary bool) *nex.Error {
+func InsertUniqueIDsByUser(manager *common_globals.UtilityManager, userPID types.PID, uniqueIDs, passwords types.List[types.UInt64], isPrimary bool) *nex.Error {
 	var err error
-	if len(uniqueIds) != len(passwords) {
-		common_globals.Logger.Error("Mismatched uniqueIds and passwords array lengths in InsertUniqueIDsByUser!")
+	if len(uniqueIDs) != len(passwords) {
+		common_globals.Logger.Error("Mismatched uniqueIDs and passwords array lengths in InsertUniqueIDsByUser!")
 		return nex.NewError(nex.ResultCodes.Core.Unknown, "change_error")
 	}
 
-	if len(uniqueIds) == 0 {
+	if len(uniqueIDs) == 0 {
 		common_globals.Logger.Error("Tried to pass in empty array to InsertUniqueIDsByUser!")
 		return nex.NewError(nex.ResultCodes.Core.Unknown, "change_error")
 	}
 
 	currentTime := time.Now().UTC()
 
-	for index, uniqueId := range uniqueIds {
+	for index, uniqueID := range uniqueIDs {
 		_, err = manager.Database.Exec(`INSERT INTO utility.unique_ids (
 			unique_id,
 			password,
@@ -40,9 +40,9 @@ func InsertUniqueIDsByUser(manager *common_globals.UtilityManager, userPid types
 			$5,
 			$6
 		)`,
-			uniqueId,
+			uniqueID,
 			passwords[index],
-			userPid,
+			userPID,
 			currentTime,
 			currentTime,
 			index == 0 && isPrimary,
