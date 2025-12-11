@@ -6,25 +6,22 @@ import (
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	utility_types "github.com/PretendoNetwork/nex-protocols-go/v2/utility/types"
 )
 
 // InsertUniqueIDsByUser inserts a unique ID + password (if applicable) combination into the database, associated with the given user's PID
 // isPrimary is used to indicate if the 0th unique ID in the array should be set as a primary ID (in most cases, this should be true)
-func InsertUniqueIDsByUser(manager *common_globals.UtilityManager, userPID types.PID, uniqueIDs, passwords types.List[types.UInt64], isPrimary bool) *nex.Error {
+func InsertUniqueIDsByUser(manager *common_globals.UtilityManager, userPID types.PID, uniqueIDInfos types.List[utility_types.UniqueIDInfo], isPrimary bool) *nex.Error {
 	var err error
-	if len(uniqueIDs) != len(passwords) {
-		common_globals.Logger.Error("Mismatched uniqueIDs and passwords array lengths in InsertUniqueIDsByUser!")
-		return nex.NewError(nex.ResultCodes.Core.Unknown, "change_error")
-	}
 
-	if len(uniqueIDs) == 0 {
+	if len(uniqueIDInfos) == 0 {
 		common_globals.Logger.Error("Tried to pass in empty array to InsertUniqueIDsByUser!")
 		return nex.NewError(nex.ResultCodes.Core.Unknown, "change_error")
 	}
 
 	currentTime := time.Now().UTC()
 
-	for index, uniqueID := range uniqueIDs {
+	for index, uniqueIDInfo := range uniqueIDInfos {
 		_, err = manager.Database.Exec(`INSERT INTO utility.unique_ids (
 			unique_id,
 			password,
@@ -40,8 +37,8 @@ func InsertUniqueIDsByUser(manager *common_globals.UtilityManager, userPID types
 			$5,
 			$6
 		)`,
-			uniqueID,
-			passwords[index],
+			uniqueIDInfo.NEXUniqueID,
+			uniqueIDInfo.NEXUniqueIDPassword,
 			userPID,
 			currentTime,
 			currentTime,

@@ -41,7 +41,7 @@ func GenerateNEXUniqueIDWithPassword(manager *common_globals.UtilityManager, use
 		return utility_types.UniqueIDInfo{}, nexError
 	}
 
-	nexError = InsertUniqueIDsByUser(manager, userPID, types.List[types.UInt64]{uniqueIDInfo.NEXUniqueID}, types.List[types.UInt64]{uniqueIDInfo.NEXUniqueIDPassword}, !primaryExists)
+	nexError = InsertUniqueIDsByUser(manager, userPID, types.List[utility_types.UniqueIDInfo]{uniqueIDInfo}, !primaryExists)
 	if nexError != nil {
 		common_globals.Logger.Error(nexError.Error())
 		return utility_types.UniqueIDInfo{}, nexError
