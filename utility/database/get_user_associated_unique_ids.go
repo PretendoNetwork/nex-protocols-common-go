@@ -20,6 +20,7 @@ func GetUserAssociatedUniqueIDs(manager *common_globals.UtilityManager, userPID 
 	if err != nil {
 		return types.List[utility_types.UniqueIDInfo]{}, nex.NewError(nex.ResultCodes.Core.Unknown, err.Error())
 	}
+	defer rows.Close()
 
 	uniqueIDInfos := make(types.List[utility_types.UniqueIDInfo], 0)
 	for rows.Next() {

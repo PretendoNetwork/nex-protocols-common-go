@@ -25,6 +25,7 @@ func CheckCanAssociateUniqueIDs(manager *common_globals.UtilityManager, userPID 
 	if err != nil {
 		return nex.NewError(nex.ResultCodes.Core.Unknown, err.Error())
 	}
+	defer rows.Close()
 
 	rowCount := 0
 	for rows.Next() {
