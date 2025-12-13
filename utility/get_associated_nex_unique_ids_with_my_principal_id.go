@@ -8,7 +8,7 @@ import (
 	utility_types "github.com/PretendoNetwork/nex-protocols-go/v2/utility/types"
 )
 
-func (commonProtocol *CommonProtocol) getAssociatedNEXUniqueIDsWithMyPrincipalID(err error, packet nex.PacketInterface, callID uint32) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) getAssociatedNexUniqueIDsWithMyPrincipalID(err error, packet nex.PacketInterface, callID uint32) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")

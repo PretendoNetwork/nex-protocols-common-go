@@ -12,12 +12,12 @@ import (
 
 // CheckUniqueIDAlreadyExists takes a UniqueIDInfo and returns an error if the unique ID is already present in the database
 func CheckUniqueIDAlreadyExists(manager *common_globals.UtilityManager, uniqueIDInfo utility_types.UniqueIDInfo) *nex.Error {
-	var primaryID types.UInt64
+	var uniqueID types.UInt64
 
 	err := manager.Database.QueryRow(`SELECT unique_id FROM utility.unique_ids WHERE unique_id=$1`,
 		uniqueIDInfo.NEXUniqueID,
 	).Scan(
-		&primaryID,
+		&uniqueID,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -27,5 +27,5 @@ func CheckUniqueIDAlreadyExists(manager *common_globals.UtilityManager, uniqueID
 		}
 	}
 
-	return nex.NewError(nex.ResultCodes.Core.SystemError, fmt.Sprintf("Unique id (%d) already exists", primaryID))
+	return nex.NewError(nex.ResultCodes.Core.SystemError, fmt.Sprintf("Unique id (%d) already exists", uniqueID))
 }

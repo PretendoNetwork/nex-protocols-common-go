@@ -14,7 +14,7 @@ func CheckCanAssociateUniqueIDs(manager *common_globals.UtilityManager, userPID 
 	var uniqueID, dbPassword types.UInt64
 	var associatedPID types.PID
 
-	uniqueIDs := make([]types.UInt64, 0)
+	uniqueIDs := make(types.List[types.UInt64], 0)
 	for _, uniqueIDInfo := range uniqueIDInfos {
 		uniqueIDs = append(uniqueIDs, uniqueIDInfo.NEXUniqueID)
 	}
@@ -41,10 +41,10 @@ func CheckCanAssociateUniqueIDs(manager *common_globals.UtilityManager, userPID 
 		}
 
 		var targetConnection *nex.PRUDPConnection = nil
-		if associatedPID != 0 {
+		if associatedPID != 0 && associatedPID != userPID {
 			targetConnection = manager.Endpoint.FindConnectionByPID(uint64(associatedPID))
 
-			if !manager.AllowUniqueIDStealing && associatedPID != userPID || targetConnection != nil && associatedPID != userPID {
+			if !manager.AllowUniqueIDStealing || targetConnection != nil {
 				return nex.NewError(nex.ResultCodes.Core.AccessDenied, "Unique ID stealing is disabled or the owner is online")
 			}
 		}

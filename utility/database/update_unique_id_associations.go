@@ -21,7 +21,7 @@ func UpdateUniqueIDAssociations(manager *common_globals.UtilityManager, userPID 
 	}
 
 	currentTime := time.Now().UTC()
-	uniqueIDs := make([]types.UInt64, 0)
+	uniqueIDs := make(types.List[types.UInt64], 0)
 	for _, uniqueIDInfo := range uniqueIDInfos {
 		uniqueIDs = append(uniqueIDs, uniqueIDInfo.NEXUniqueID)
 	}

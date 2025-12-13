@@ -8,12 +8,12 @@ import (
 	utility_types "github.com/PretendoNetwork/nex-protocols-go/v2/utility/types"
 )
 
-// UtilityManager manages NEX unique ids
+// UtilityManager manages NEX unique IDs
 type UtilityManager struct {
 	Database *sql.DB
 	Endpoint *nex.PRUDPEndPoint
 
-	AllowUniqueIDStealing bool // Allows users' unique ids to be stolen while they are offline, likely unneeded but implemented for posterity
+	AllowUniqueIDStealing bool // Allows users' unique IDs to be stolen while they are offline, likely unneeded but implemented for posterity
 
 	GenerateNEXUniqueID             func(manager *UtilityManager, userPID types.PID) (types.UInt64, *nex.Error)
 	GenerateNEXUniqueIDWithPassword func(manager *UtilityManager, userPID types.PID) (utility_types.UniqueIDInfo, *nex.Error)
