@@ -27,5 +27,5 @@ func CheckUniqueIDAlreadyExists(manager *common_globals.UtilityManager, uniqueID
 		}
 	}
 
-	return nex.NewError(nex.ResultCodes.Core.SystemError, fmt.Sprintf("Unique id (%d) already exists", uniqueID))
+	return nex.NewError(nex.ResultCodes.Core.SystemError, fmt.Sprintf("Unique ID (%d) already exists", uniqueID))
 }
