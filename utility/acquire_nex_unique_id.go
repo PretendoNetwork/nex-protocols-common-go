@@ -15,7 +15,7 @@ func (commonProtocol *CommonProtocol) acquireNexUniqueID(err error, packet nex.P
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
-	pNexUniqueID, nexError := commonProtocol.manager.GenerateNEXUniqueID(commonProtocol.manager, packet.Sender().PID())
+	pNexUniqueIDInfo, nexError := commonProtocol.manager.GenerateNEXUniqueIDWithPassword(commonProtocol.manager, packet.Sender().PID(), false)
 	if nexError != nil {
 		common_globals.Logger.Error(nexError.Error())
 		return nil, nexError
@@ -23,7 +23,7 @@ func (commonProtocol *CommonProtocol) acquireNexUniqueID(err error, packet nex.P
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
-	pNexUniqueID.WriteTo(rmcResponseStream)
+	pNexUniqueIDInfo.NEXUniqueID.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 

@@ -15,8 +15,7 @@ type UtilityManager struct {
 
 	AllowUniqueIDStealing bool // Allows users' unique IDs to be stolen while they are offline, likely unneeded but implemented for posterity
 
-	GenerateNEXUniqueID             func(manager *UtilityManager, userPID types.PID) (types.UInt64, *nex.Error)
-	GenerateNEXUniqueIDWithPassword func(manager *UtilityManager, userPID types.PID) (utility_types.UniqueIDInfo, *nex.Error)
+	GenerateNEXUniqueIDWithPassword func(manager *UtilityManager, userPID types.PID, usePassword bool) (utility_types.UniqueIDInfo, *nex.Error)
 	GetIntegerSettings              func(manager *UtilityManager, userPID types.PID, integerSettingIndex types.UInt32) (types.Map[types.UInt16, types.UInt32], *nex.Error)
 	GetStringSettings               func(manager *UtilityManager, userPID types.PID, stringSettingIndex types.UInt32) (types.Map[types.UInt16, types.String], *nex.Error)
 }

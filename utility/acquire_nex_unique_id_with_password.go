@@ -15,7 +15,7 @@ func (commonProtocol *CommonProtocol) acquireNexUniqueIDWithPassword(err error, 
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
-	pNexUniqueIDInfo, nexError := commonProtocol.manager.GenerateNEXUniqueIDWithPassword(commonProtocol.manager, packet.Sender().PID())
+	pNexUniqueIDInfo, nexError := commonProtocol.manager.GenerateNEXUniqueIDWithPassword(commonProtocol.manager, packet.Sender().PID(), true)
 	if nexError != nil {
 		common_globals.Logger.Error(nexError.Error())
 		return nil, nexError

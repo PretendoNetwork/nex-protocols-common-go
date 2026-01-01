@@ -19,10 +19,6 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.Utility
 
 	commonProtocol.manager = manager
 
-	if manager.GenerateNEXUniqueID == nil {
-		manager.GenerateNEXUniqueID = utility_database.GenerateNEXUniqueID
-	}
-
 	if manager.GenerateNEXUniqueIDWithPassword == nil {
 		manager.GenerateNEXUniqueIDWithPassword = utility_database.GenerateNEXUniqueIDWithPassword
 	}
