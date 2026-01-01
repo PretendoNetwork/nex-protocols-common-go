@@ -26,11 +26,7 @@ func (commonProtocol *CommonProtocol) getAssociatedNexUniqueIDsWithMyPrincipalID
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
 	if len(uniqueIDInfos) == 0 {
-		uniqueIDInfo := utility_types.NewUniqueIDInfo()
-		uniqueIDInfo.NEXUniqueID = 0
-		uniqueIDInfo.NEXUniqueIDPassword = 0
-
-		uniqueIDInfos = append(uniqueIDInfos, uniqueIDInfo)
+		uniqueIDInfos = append(uniqueIDInfos, utility_types.NewUniqueIDInfo())
 	}
 
 	uniqueIDInfos.WriteTo(rmcResponseStream)

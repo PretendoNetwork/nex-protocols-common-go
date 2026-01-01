@@ -27,9 +27,6 @@ func (commonProtocol *CommonProtocol) getAssociatedNexUniqueIDWithMyPrincipalID(
 
 	if len(uniqueIDInfos) == 0 {
 		uniqueIDInfo := utility_types.NewUniqueIDInfo()
-		uniqueIDInfo.NEXUniqueID = 0
-		uniqueIDInfo.NEXUniqueIDPassword = 0
-
 		uniqueIDInfo.WriteTo(rmcResponseStream)
 	} else {
 		uniqueIDInfos[0].WriteTo(rmcResponseStream)
