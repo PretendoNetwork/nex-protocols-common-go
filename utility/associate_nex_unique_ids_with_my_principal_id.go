@@ -18,27 +18,16 @@ func (commonProtocol *CommonProtocol) associateNexUniqueIDsWithMyPrincipalID(err
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
-	infosLength := len(uniqueIDInfos)
-	if infosLength != 0 {
-		nexError := utility_database.CheckCanAssociateUniqueIDs(commonProtocol.manager, packet.Sender().PID(), uniqueIDInfos)
-		if nexError != nil {
-			common_globals.Logger.Error(nexError.Error())
-			return nil, nexError
-		}
-	}
-
 	nexError := utility_database.ClearPIDUniqueIDAssociations(commonProtocol.manager, packet.Sender().PID())
 	if nexError != nil {
 		common_globals.Logger.Error(nexError.Error())
 		return nil, nexError
 	}
 
-	if infosLength != 0 {
-		nexError = utility_database.UpdateUniqueIDAssociations(commonProtocol.manager, packet.Sender().PID(), uniqueIDInfos, true)
-		if nexError != nil {
-			common_globals.Logger.Error(nexError.Error())
-			return nil, nexError
-		}
+	nexError = utility_database.UpdateUniqueIDAssociations(commonProtocol.manager, packet.Sender().PID(), uniqueIDInfos, true)
+	if nexError != nil {
+		common_globals.Logger.Error(nexError.Error())
+		return nil, nexError
 	}
 
 	rmcResponse := nex.NewRMCSuccess(endpoint, nil)

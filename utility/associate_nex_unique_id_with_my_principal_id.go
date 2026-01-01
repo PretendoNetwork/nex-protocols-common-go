@@ -18,14 +18,6 @@ func (commonProtocol *CommonProtocol) associateNexUniqueIDWithMyPrincipalID(err 
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
-	if uniqueIDInfo.NEXUniqueID != 0 {
-		nexError := utility_database.CheckCanAssociateUniqueIDs(commonProtocol.manager, packet.Sender().PID(), types.List[utility_types.UniqueIDInfo]{uniqueIDInfo})
-		if nexError != nil {
-			common_globals.Logger.Error(nexError.Error())
-			return nil, nexError
-		}
-	}
-
 	nexError := utility_database.ClearPIDUniqueIDAssociations(commonProtocol.manager, packet.Sender().PID())
 	if nexError != nil {
 		common_globals.Logger.Error(nexError.Error())

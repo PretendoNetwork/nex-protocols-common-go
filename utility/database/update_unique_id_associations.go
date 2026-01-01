@@ -16,8 +16,13 @@ func UpdateUniqueIDAssociations(manager *common_globals.UtilityManager, userPID 
 	var err error
 
 	if len(uniqueIDInfos) == 0 {
-		common_globals.Logger.Error("Tried to pass in empty array to UpdateUniqueIDAssociations!")
-		return nex.NewError(nex.ResultCodes.Core.Unknown, "change_error")
+		return nil
+	}
+
+	nexError := CheckCanAssociateUniqueIDs(manager, userPID, uniqueIDInfos)
+	if nexError != nil {
+		common_globals.Logger.Error(nexError.Error())
+		return nexError
 	}
 
 	currentTime := time.Now().UTC()
