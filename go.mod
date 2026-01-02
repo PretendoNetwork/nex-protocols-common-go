@@ -5,8 +5,8 @@ go 1.23.0
 toolchain go1.24.2
 
 require (
-	github.com/PretendoNetwork/nex-go/v2 v2.1.3
-	github.com/PretendoNetwork/nex-protocols-go/v2 v2.2.1
+	github.com/PretendoNetwork/nex-go/v2 v2.2.0
+	github.com/PretendoNetwork/nex-protocols-go/v2 v2.2.2
 	github.com/PretendoNetwork/plogger-go v1.1.0
 	github.com/PretendoNetwork/pq-extended v1.0.0
 	github.com/minio/minio-go/v7 v7.0.90
