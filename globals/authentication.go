@@ -2,23 +2,47 @@ package common_globals
 
 import (
 	"bytes"
+	"context"
 	"crypto/aes"
 	"crypto/cipher"
-	"encoding/base64"
 	"encoding/binary"
 	"fmt"
 	"hash/crc32"
+	"os"
 	"strings"
 	"time"
 
+	pb "github.com/PretendoNetwork/grpc/go/account/v2"
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	account_management_types "github.com/PretendoNetwork/nex-protocols-go/v2/account-management/types"
 	ticket_granting_types "github.com/PretendoNetwork/nex-protocols-go/v2/ticket-granting/types"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 )
 
-// ValidatePretendoLoginData validates the given Pretendo login data
-func ValidatePretendoLoginData(pid types.PID, loginData types.DataHolder, aesKey []byte) *nex.Error {
+func ConnectToAccountGRPC(host string, port uint16, apiKey string) {
+	if GRPCAccountClientConnection != nil {
+		return
+	}
+
+	var err error
+
+	GRPCAccountClientConnection, err = grpc.NewClient(fmt.Sprintf("%s:%d", host, port), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		Logger.Criticalf("Failed to connect to account gRPC server: %v", err)
+		os.Exit(0)
+	}
+
+	GRPCAccountClient = pb.NewAccountServiceClient(GRPCAccountClientConnection)
+	GRPCAccountCommonMetadata = metadata.Pairs(
+		"X-API-Key", apiKey,
+	)
+}
+
+// ValidateNEXLoginData validates the given NEX login data
+func ValidateNEXLoginData(pid types.PID, loginData types.DataHolder, gameServerID string) *nex.Error {
 	var tokenBase64 string
 
 	loginDataType := loginData.Object.DataObjectID().(types.String)
@@ -47,35 +71,39 @@ func ValidatePretendoLoginData(pid types.PID, loginData types.DataHolder, aesKey
 		return nex.NewError(nex.ResultCodes.Authentication.ValidationFailed, fmt.Sprintf("Invalid loginData data type %s!", loginDataType))
 	}
 
-	encryptedToken, err := base64.StdEncoding.DecodeString(tokenBase64)
+	ctx := metadata.NewOutgoingContext(context.Background(), GRPCAccountCommonMetadata)
+
+	response, err := GRPCAccountClient.ExchangeNEXTokenForUserData(ctx, &pb.ExchangeNEXTokenForUserDataRequest{
+		GameServerId: gameServerID,
+		Token:        tokenBase64,
+	})
 	if err != nil {
-		Logger.Error(err.Error())
 		return nex.NewError(nex.ResultCodes.Authentication.ValidationFailed, err.Error())
 	}
 
-	decryptedToken, nexError := DecryptToken(encryptedToken, aesKey)
-	if nexError != nil {
-		return nexError
+	// * The account server database separates all the token types into their own
+	// * collections, so a non-NEX token (even if valid) should still return no
+	// * data here. But sanity the types check anyway just in case
+	if response.TokenInfo.TokenType != 3 { // * 3 = NEX
+		return nex.NewError(nex.ResultCodes.Authentication.ValidationFailed, "Invalid token")
 	}
 
-	// Check for NEX token type
-	if decryptedToken.TokenType != 3 {
-		return nex.NewError(nex.ResultCodes.Authentication.ValidationFailed, "Invalid token type")
+	if response.TokenInfo.SystemType != 1 && response.TokenInfo.SystemType != 2 { // * 1 = WUP, 2 = CTR
+		return nex.NewError(nex.ResultCodes.Authentication.ValidationFailed, "Invalid token")
 	}
 
-	// Expire time is in milliseconds
-	expireTime := time.Unix(int64(decryptedToken.ExpireTime / 1000), 0)
-
-	if expireTime.Before(time.Now()) {
+	// * If the token is expired, the account server database will have deleted it,
+	// * but sanity check anyway just in case
+	if response.TokenInfo.ExpireTime != nil && response.TokenInfo.ExpireTime.AsTime().Before(time.Now()) {
 		return nex.NewError(nex.ResultCodes.Authentication.TokenExpired, "Token expired")
 	}
 
-	if types.NewPID(uint64(decryptedToken.UserPID)) != pid {
-		return nex.NewError(nex.ResultCodes.Authentication.PrincipalIDUnmatched, fmt.Sprintf("Account %d expected, got %d", pid, decryptedToken.UserPID))
+	if types.NewPID(uint64(response.NexAccount.Pid)) != pid {
+		return nex.NewError(nex.ResultCodes.Authentication.PrincipalIDUnmatched, fmt.Sprintf("Account %d expected, got %d", pid, response.NexAccount.Pid))
 	}
 
-	if decryptedToken.AccessLevel < 0 {
-		return nex.NewError(nex.ResultCodes.RendezVous.AccountDisabled, fmt.Sprintf("Account %d is banned", decryptedToken.UserPID))
+	if response.NexAccount.AccessLevel < 0 {
+		return nex.NewError(nex.ResultCodes.RendezVous.AccountDisabled, fmt.Sprintf("Account %d is banned", response.NexAccount.Pid))
 	}
 
 	return nil
@@ -106,7 +134,7 @@ func DecryptToken(encryptedToken []byte, aesKey []byte) (*NEXToken, *nex.Error) 
 	expectedChecksum := binary.BigEndian.Uint32(encryptedToken[0:4])
 	encryptedBody := encryptedToken[4:]
 
-	if len(encryptedBody) % aes.BlockSize != 0 {
+	if len(encryptedBody)%aes.BlockSize != 0 {
 		return nil, nex.NewError(nex.ResultCodes.Authentication.ValidationFailed, fmt.Sprintf("Encrypted body has invalid size %d", len(encryptedBody)))
 	}
 

@@ -3,8 +3,8 @@ package secureconnection
 import (
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
-	_ "github.com/PretendoNetwork/nex-protocols-go/v2"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	_ "github.com/PretendoNetwork/nex-protocols-go/v2"
 	secure_connection "github.com/PretendoNetwork/nex-protocols-go/v2/secure-connection"
 )
 
@@ -32,10 +32,10 @@ func (commonProtocol *CommonProtocol) EnableInsecureRegister() {
 	commonProtocol.allowInsecureRegisterMethod = true
 }
 
-// SetPretendoValidation configures the protocol to use Pretendo validation
-func (commonProtocol *CommonProtocol) SetPretendoValidation(aesKey []byte) {
+// SetGameServerID configures the servers game server ID for use in validating NEX login data
+func (commonProtocol *CommonProtocol) SetGameServerID(gameServerID string) {
 	commonProtocol.ValidateLoginData = func(pid types.PID, loginData types.DataHolder) *nex.Error {
-		return common_globals.ValidatePretendoLoginData(pid, loginData, aesKey)
+		return common_globals.ValidateNEXLoginData(pid, loginData, gameServerID)
 	}
 }
 
