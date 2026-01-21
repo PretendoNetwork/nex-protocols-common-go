@@ -36,8 +36,8 @@ func ConnectToAccountGRPC(host string, port uint16, apiKey string) {
 	)
 }
 
-// ValidateNEXLoginData validates the given NEX login data
-func ValidateNEXLoginData(pid types.PID, loginData types.DataHolder, gameServerID string) *nex.Error {
+// ValidatePNLoginData validates the given NEX login data
+func ValidatePNLoginData(pid types.PID, loginData types.DataHolder, gameServerID string) *nex.Error {
 	var tokenBase64 string
 
 	loginDataType := loginData.Object.DataObjectID().(types.String)
