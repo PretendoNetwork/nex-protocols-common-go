@@ -17,6 +17,9 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+// ConnectToAccountGRPC connects to the provided account server gRPC server.
+// Required for all Pretendo Network servers, but provided generically for
+// others to make use of as well with their own gRPC servers
 func ConnectToAccountGRPC(host string, port uint16, apiKey string) {
 	if GRPCAccountClientConnection != nil {
 		return
