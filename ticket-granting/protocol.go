@@ -36,10 +36,10 @@ func (commonProtocol *CommonProtocol) EnableInsecureLogin() {
 	commonProtocol.allowInsecureLoginMethod = true
 }
 
-// SetPretendoValidation configures the protocol to use Pretendo validation
-func (commonProtocol *CommonProtocol) SetPretendoValidation(aesKey []byte) {
+// ConfigurePNValidation configures the servers game server ID for use in validating NEX login data
+func (commonProtocol *CommonProtocol) ConfigurePNValidation(gameServerID string) {
 	commonProtocol.ValidateLoginData = func(pid types.PID, loginData types.DataHolder) *nex.Error {
-		return common_globals.ValidatePretendoLoginData(pid, loginData, aesKey)
+		return common_globals.ValidatePNLoginData(pid, loginData, gameServerID)
 	}
 }
 
