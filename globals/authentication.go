@@ -1,13 +1,8 @@
 package common_globals
 
 import (
-	"bytes"
 	"context"
-	"crypto/aes"
-	"crypto/cipher"
-	"encoding/binary"
 	"fmt"
-	"hash/crc32"
 	"os"
 	"strings"
 	"time"
@@ -117,55 +112,4 @@ type NEXToken struct {
 	ExpireTime  uint64
 	TitleID     uint64
 	AccessLevel int8
-}
-
-// DecryptToken decrypts the given encrypted Pretendo token
-func DecryptToken(encryptedToken []byte, aesKey []byte) (*NEXToken, *nex.Error) {
-	if len(encryptedToken) < 4 {
-		return nil, nex.NewError(nex.ResultCodes.Authentication.ValidationFailed, "Token size is too small")
-	}
-
-	// Decrypt the token body
-	block, err := aes.NewCipher(aesKey)
-	if err != nil {
-		return nil, nex.NewError(nex.ResultCodes.Authentication.ValidationFailed, err.Error())
-	}
-
-	expectedChecksum := binary.BigEndian.Uint32(encryptedToken[0:4])
-	encryptedBody := encryptedToken[4:]
-
-	if len(encryptedBody)%aes.BlockSize != 0 {
-		return nil, nex.NewError(nex.ResultCodes.Authentication.ValidationFailed, fmt.Sprintf("Encrypted body has invalid size %d", len(encryptedBody)))
-	}
-
-	decrypted := make([]byte, len(encryptedBody))
-	iv := make([]byte, 16)
-	mode := cipher.NewCBCDecrypter(block, iv)
-	mode.CryptBlocks(decrypted, encryptedBody)
-
-	paddingSize := int(decrypted[len(decrypted)-1])
-
-	if paddingSize < 0 || paddingSize >= len(decrypted) {
-		return nil, nex.NewError(nex.ResultCodes.Authentication.ValidationFailed, fmt.Sprintf("Invalid padding size %d for token %x", paddingSize, encryptedToken))
-	}
-
-	decrypted = decrypted[:len(decrypted)-paddingSize]
-
-	table := crc32.MakeTable(crc32.IEEE)
-	calculatedChecksum := crc32.Checksum(decrypted, table)
-
-	if expectedChecksum != calculatedChecksum {
-		return nil, nex.NewError(nex.ResultCodes.Authentication.ValidationFailed, "Checksum did not match. Failed decrypt. Are you using the right key?")
-	}
-
-	// Unpack the token body to struct
-	token := &NEXToken{}
-	tokenReader := bytes.NewBuffer(decrypted)
-
-	err = binary.Read(tokenReader, binary.LittleEndian, token)
-	if err != nil {
-		return nil, nex.NewError(nex.ResultCodes.Authentication.ValidationFailed, err.Error())
-	}
-
-	return token, nil
 }
