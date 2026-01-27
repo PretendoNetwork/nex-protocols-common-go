@@ -34,7 +34,7 @@ func UpdateUniqueIDAssociations(manager *common_globals.UtilityManager, userPID 
 	_, err = manager.Database.Exec(`UPDATE utility.unique_ids SET 
 			associated_pid=$2, 
 			associated_time=$3, 
-			is_primary_id=(CASE WHEN unique_id=$4 AND $5=true THEN true ELSE false)
+			is_primary_id=(CASE WHEN unique_id=$4 AND $5=true THEN true ELSE false END)
 		WHERE unique_id=ANY($1)
 	`,
 		uniqueIDs,
