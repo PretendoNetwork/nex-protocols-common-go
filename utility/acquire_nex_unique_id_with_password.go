@@ -6,7 +6,7 @@ import (
 	utility "github.com/PretendoNetwork/nex-protocols-go/v2/utility"
 )
 
-func (commonProtocol *CommonProtocol) acquireNexUniqueID(err error, packet nex.PacketInterface, callID uint32) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) acquireNexUniqueIDWithPassword(err error, packet nex.PacketInterface, callID uint32) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
@@ -15,7 +15,7 @@ func (commonProtocol *CommonProtocol) acquireNexUniqueID(err error, packet nex.P
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
-	pNexUniqueIDInfo, nexError := commonProtocol.manager.GenerateNEXUniqueIDWithPassword(commonProtocol.manager, packet.Sender().PID(), false)
+	pNexUniqueIDInfo, nexError := commonProtocol.manager.GenerateNEXUniqueIDWithPassword(commonProtocol.manager, packet.Sender().PID(), true)
 	if nexError != nil {
 		common_globals.Logger.Error(nexError.Error())
 		return nil, nexError
@@ -23,13 +23,13 @@ func (commonProtocol *CommonProtocol) acquireNexUniqueID(err error, packet nex.P
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
-	pNexUniqueIDInfo.NEXUniqueID.WriteTo(rmcResponseStream)
+	pNexUniqueIDInfo.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
 	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
 	rmcResponse.ProtocolID = utility.ProtocolID
-	rmcResponse.MethodID = utility.MethodAcquireNexUniqueID
+	rmcResponse.MethodID = utility.MethodAcquireNexUniqueIDWithPassword
 	rmcResponse.CallID = callID
 
 	return rmcResponse, nil
