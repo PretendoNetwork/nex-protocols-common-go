@@ -13,7 +13,7 @@ import (
  * The rest of the database code is explicitly set up to allow overlap in card IDs between users - this is a required
  * behavior for accuracy, but we can use it to our advantage to simplify implementation too.
  */
-func (commonProtocol *CommonProtocol) acquireCardId(err error, packet nex.PacketInterface, callID uint32) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) acquireCardID(err error, packet nex.PacketInterface, callID uint32) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		commonglobals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
@@ -22,13 +22,12 @@ func (commonProtocol *CommonProtocol) acquireCardId(err error, packet nex.Packet
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
-	id := rand.Int64() // 63 bits to fit in PostgreSQL bigint
+	id := rand.Int64() // 63 bits to make everyone's lives easier. NN cards can be 64.
 	retval := types.NewUInt64(uint64(id))
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
 	retval.WriteTo(rmcResponseStream)
-	commonglobals.Logger.Infof("Card ID: %v", retval)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 

@@ -3,10 +3,10 @@ package database
 import (
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	commonglobals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 )
 
-func GetUniqueIDsForPID(manager *common_globals.StorageManagerManager, pid types.PID) (types.List[types.UInt32], *nex.Error) {
+func GetUniqueIDsForPID(manager *commonglobals.StorageManagerManager, pid types.PID) (types.List[types.UInt32], *nex.Error) {
 	rows, err := manager.Database.Query(
 		`SELECT unique_id FROM storage_manager.unique_ids WHERE associated_pid = $1`, pid,
 	)

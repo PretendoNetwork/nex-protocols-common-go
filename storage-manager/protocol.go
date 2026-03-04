@@ -29,8 +29,8 @@ func (commonProtocol *CommonProtocol) SetManager(manager *commonglobals.StorageM
 		unique_id serial4 PRIMARY KEY,
 		slot_id int2 CONSTRAINT slot_range CHECK (slot_id >= 0 AND slot_id < 5),
 		/* Basically a random value for users to get more slots.
-		   Again we generate these and can limit the range. NULL for no card */
-		card_id int8,
+		   Old NN cards can be full 64-bit range. NULL for no card */
+		card_id numeric(20),
 		associated_pid numeric(20),
 		associated_time timestamp,
 		creation_time timestamp,
@@ -50,10 +50,12 @@ func NewCommonProtocol(protocol storagemanager.Interface) *CommonProtocol {
 		protocol: protocol,
 	}
 
-	protocol.SetHandlerAcquireCardID(commonProtocol.acquireCardId)
-	protocol.SetHandlerAcquireNexUniqueID(commonProtocol.acquireNexUniqueId)
+	protocol.SetHandlerAcquireCardID(commonProtocol.acquireCardID)
+	protocol.SetHandlerAcquireNexUniqueID(commonProtocol.acquireNexUniqueID)
 	protocol.SetHandlerActivateWithCardID(commonProtocol.setHandlerActivateWithCardID)
-	protocol.SetHandlerNexUniqueIDToPrincipalID(commonProtocol.nexUniqueIdToPrincipalId)
+	protocol.SetHandlerNexUniqueIDToPrincipalID(commonProtocol.nexUniqueIDToPrincipalID)
+	// Disabled since this is literally a guess based on the argument list
+	// protocol.SetHandlerUnk3(commonProtocol.getAssociatedNexUniqueIDs)
 
 	return commonProtocol
 }

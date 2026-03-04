@@ -3,17 +3,17 @@ package database
 import (
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	commonglobals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 )
 
-// GetUniqueId returns the unique ID for a user, slot, card combo, or generates a new one if not present.
-func GetUniqueId(manager *common_globals.StorageManagerManager, slotId types.UInt8, cardId int64, userPID types.PID) (types.UInt32, types.Bool, *nex.Error) {
-	var card any = cardId
-	if cardId < 0 {
+// GetUniqueID returns the unique ID for a user, slot, card combo, or generates a new one if not present.
+func GetUniqueID(manager *commonglobals.StorageManagerManager, slotID types.UInt8, withCard bool, cardID types.UInt64, userPID types.PID) (types.UInt32, types.Bool, *nex.Error) {
+	var card any = cardID
+	if !withCard {
 		card = nil
 	}
 
-	var uniqueId types.UInt32
+	var uniqueID types.UInt32
 	var firstTime types.Bool
 
 	// https://stackoverflow.com/a/74057102
@@ -35,13 +35,13 @@ func GetUniqueId(manager *common_globals.StorageManagerManager, slotId types.UIn
 				   AND card_id = $2
 				   AND associated_pid = $3
 		LIMIT 1;
-	`, slotId, card, userPID).Scan(
-		&uniqueId,
+	`, slotID, card, userPID).Scan(
+		&uniqueID,
 		&firstTime,
 	)
 	if err != nil {
 		return 0, false, nex.NewError(nex.ResultCodes.Core.SystemError, err.Error())
 	}
 
-	return uniqueId, firstTime, nil
+	return uniqueID, firstTime, nil
 }

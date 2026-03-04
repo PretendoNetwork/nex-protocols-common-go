@@ -8,7 +8,7 @@ import (
 	storagemanager "github.com/PretendoNetwork/nex-protocols-go/v2/storage-manager"
 )
 
-func (commonProtocol *CommonProtocol) nexUniqueIdToPrincipalId(err error, packet nex.PacketInterface, callID uint32, uniqueID types.UInt32) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) nexUniqueIDToPrincipalID(err error, packet nex.PacketInterface, callID uint32, uniqueID types.UInt32) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		commonglobals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
@@ -17,7 +17,7 @@ func (commonProtocol *CommonProtocol) nexUniqueIdToPrincipalId(err error, packet
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
-	pid, nexErr := database.GetPidForUniqueId(commonProtocol.manager, uniqueID)
+	pid, nexErr := database.GetPIDForUniqueID(commonProtocol.manager, uniqueID)
 	if nexErr != nil {
 		commonglobals.Logger.Error(nexErr.Error())
 		return nil, nexErr

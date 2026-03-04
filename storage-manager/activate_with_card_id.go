@@ -17,8 +17,7 @@ func (commonProtocol *CommonProtocol) setHandlerActivateWithCardID(err error, pa
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
-	// Conversion to int64 is ok here because we generate the card IDs serverside and ensure they are within range
-	uniqueID, firstTime, nexErr := database.GetUniqueId(commonProtocol.manager, slot, int64(cardID), connection.PID())
+	uniqueID, firstTime, nexErr := database.GetUniqueID(commonProtocol.manager, slot, true, cardID, connection.PID())
 	if nexErr != nil {
 		commonglobals.Logger.Error(nexErr.Error())
 		return nil, nexErr
@@ -26,7 +25,6 @@ func (commonProtocol *CommonProtocol) setHandlerActivateWithCardID(err error, pa
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
-	commonglobals.Logger.Infof("Unique ID: %v First time: %v Card ID: %v", uniqueID, firstTime, cardID)
 	uniqueID.WriteTo(rmcResponseStream)
 	firstTime.WriteTo(rmcResponseStream)
 
