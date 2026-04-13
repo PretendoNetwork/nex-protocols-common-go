@@ -6,7 +6,7 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	"github.com/PretendoNetwork/nex-protocols-common-go/v2/match-making/database"
 	match_making "github.com/PretendoNetwork/nex-protocols-go/v2/match-making"
-	notifications "github.com/PretendoNetwork/nex-protocols-go/v2/notifications"
+	notifications_constants "github.com/PretendoNetwork/nex-protocols-go/v2/notifications/constants"
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/v2/notifications/types"
 )
 
@@ -37,12 +37,9 @@ func (commonProtocol *CommonProtocol) unregisterGathering(err error, packet nex.
 		return nil, nexError
 	}
 
-	category := notifications.NotificationCategories.GatheringUnregistered
-	subtype := notifications.NotificationSubTypes.GatheringUnregistered.None
-
 	oEvent := notifications_types.NewNotificationEvent()
 	oEvent.PIDSource = connection.PID().Copy().(types.PID)
-	oEvent.Type = types.NewUInt32(notifications.BuildNotificationType(category, subtype))
+	oEvent.Type = notifications_constants.NotificationCategoryGatheringUnregistered.Build()
 	oEvent.Param1 = types.UInt64(idGathering)
 
 	common_globals.SendNotificationEvent(endpoint, oEvent, common_globals.RemoveDuplicates(participants))

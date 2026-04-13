@@ -6,9 +6,10 @@ import (
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/constants"
 	"github.com/PretendoNetwork/nex-go/v2/types"
-	message_delivery "github.com/PretendoNetwork/nex-protocols-go/v2/message-delivery"
 	match_making_constants "github.com/PretendoNetwork/nex-protocols-go/v2/match-making/constants"
 	match_making_types "github.com/PretendoNetwork/nex-protocols-go/v2/match-making/types"
+	message_delivery "github.com/PretendoNetwork/nex-protocols-go/v2/message-delivery"
+	messaging_constants "github.com/PretendoNetwork/nex-protocols-go/v2/messaging/constants"
 	messaging_types "github.com/PretendoNetwork/nex-protocols-go/v2/messaging/types"
 	notifications "github.com/PretendoNetwork/nex-protocols-go/v2/notifications"
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/v2/notifications/types"
@@ -151,7 +152,7 @@ func CanJoinMatchmakeSession(manager *MatchmakingManager, pid types.PID, matchma
 }
 
 // GetUserMessageRecipientData returns the recipient ID and the recipient type of a message
-func GetUserMessageRecipientData(libraryVersion *nex.LibraryVersion, userMessage messaging_types.UserMessage) (types.UInt64, types.UInt32) {
+func GetUserMessageRecipientData(libraryVersion *nex.LibraryVersion, userMessage messaging_types.UserMessage) (types.UInt64, messaging_constants.RecipientType) {
 	if libraryVersion.GreaterOrEqual("4.0.0") {
 		switch userMessage.MessageRecipient.UIRecipientType {
 		case 1:
@@ -168,7 +169,7 @@ func GetUserMessageRecipientData(libraryVersion *nex.LibraryVersion, userMessage
 }
 
 // SetUserMessageRecipientData sets the recipient ID and the recipient type of a message
-func SetUserMessageRecipientData(libraryVersion *nex.LibraryVersion, userMessage messaging_types.UserMessage, recipientID types.UInt64, recipientType types.UInt32) messaging_types.UserMessage {
+func SetUserMessageRecipientData(libraryVersion *nex.LibraryVersion, userMessage messaging_types.UserMessage, recipientID types.UInt64, recipientType messaging_constants.RecipientType) messaging_types.UserMessage {
 	if libraryVersion.GreaterOrEqual("4.0.0") {
 		switch recipientType {
 		case 1:
@@ -189,7 +190,7 @@ func SetUserMessageRecipientData(libraryVersion *nex.LibraryVersion, userMessage
 }
 
 // GetMessageRecipientData returns the recipient ID and the recipient type of a message recipient
-func GetMessageRecipientData(libraryVersion *nex.LibraryVersion, recipient messaging_types.MessageRecipient) (types.UInt64, types.UInt32) {
+func GetMessageRecipientData(libraryVersion *nex.LibraryVersion, recipient messaging_types.MessageRecipient) (types.UInt64, messaging_constants.RecipientType) {
 	if libraryVersion.GreaterOrEqual("4.0.0") {
 		switch recipient.UIRecipientType {
 		case 1:

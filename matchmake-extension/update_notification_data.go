@@ -9,11 +9,11 @@ import (
 	"github.com/PretendoNetwork/nex-protocols-common-go/v2/matchmake-extension/database"
 	"github.com/PretendoNetwork/nex-protocols-common-go/v2/matchmake-extension/tracking"
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/v2/matchmake-extension"
-	notifications "github.com/PretendoNetwork/nex-protocols-go/v2/notifications"
+	notifications_constants "github.com/PretendoNetwork/nex-protocols-go/v2/notifications/constants"
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/v2/notifications/types"
 )
 
-func (commonProtocol *CommonProtocol) updateNotificationData(err error, packet nex.PacketInterface, callID uint32, uiType types.UInt32, uiParam1 types.UInt64, uiParam2 types.UInt64, strParam types.String) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) updateNotificationData(err error, packet nex.PacketInterface, callID uint32, uiType notifications_constants.NotificationCategory, uiParam1 types.UInt64, uiParam2 types.UInt64, strParam types.String) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, err.Error())
@@ -35,7 +35,7 @@ func (commonProtocol *CommonProtocol) updateNotificationData(err error, packet n
 
 	notificationData := notifications_types.NewNotificationEvent()
 	notificationData.PIDSource = connection.PID()
-	notificationData.Type = types.NewUInt32(notifications.BuildNotificationType(uint32(uiType), 0))
+	notificationData.Type = uiType.Build()
 	notificationData.Param1 = uiParam1
 	notificationData.Param2 = uiParam2
 	notificationData.StrParam = strParam

@@ -3,8 +3,10 @@ package matchmake_extension
 import (
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
+	"github.com/PretendoNetwork/nex-protocols-go/v2/match-making/constants"
 	match_making_types "github.com/PretendoNetwork/nex-protocols-go/v2/match-making/types"
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/v2/matchmake-extension"
+	notifications_constants "github.com/PretendoNetwork/nex-protocols-go/v2/notifications/constants"
 
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	"github.com/PretendoNetwork/nex-protocols-common-go/v2/matchmake-extension/database"
@@ -39,9 +41,9 @@ type CommonProtocol struct {
 	OnAfterBrowseMatchmakeSession                  func(packet nex.PacketInterface, searchCriteria match_making_types.MatchmakeSessionSearchCriteria, resultRange types.ResultRange)
 	OnAfterJoinMatchmakeSessionEx                  func(packet nex.PacketInterface, gid types.UInt32, strMessage types.String, dontCareMyBlockList types.Bool, participationCount types.UInt16)
 	OnAfterGetSimpleCommunity                      func(packet nex.PacketInterface, gatheringIDList types.List[types.UInt32])
-	OnAfterUpdateNotificationData                  func(packet nex.PacketInterface, uiType types.UInt32, uiParam1 types.UInt64, uiParam2 types.UInt64, strParam types.String)
-	OnAfterGetFriendNotificationData               func(packet nex.PacketInterface, uiType types.Int32)
-	OnAfterGetlstFriendNotificationData            func(packet nex.PacketInterface, lstTypes types.List[types.UInt32])
+	OnAfterUpdateNotificationData                  func(packet nex.PacketInterface, uiType notifications_constants.NotificationCategory, uiParam1 types.UInt64, uiParam2 types.UInt64, strParam types.String)
+	OnAfterGetFriendNotificationData               func(packet nex.PacketInterface, uiType notifications_constants.NotificationCategorySigned)
+	OnAfterGetlstFriendNotificationData            func(packet nex.PacketInterface, lstTypes types.List[notifications_constants.NotificationCategory])
 }
 
 // SetDatabase defines the matchmaking manager to be used by the common protocol
@@ -167,7 +169,7 @@ func NewCommonProtocol(protocol matchmake_extension.Interface) *CommonProtocol {
 	commonProtocol := &CommonProtocol{
 		endpoint:                       endpoint,
 		protocol:                       protocol,
-		PersistentGatheringCreationMax: 4, // * Default of 4 active persistent gatherings per user
+		PersistentGatheringCreationMax: constants.PersistentGatheringCreationMax, // * Default of 4 active persistent gatherings per user
 	}
 
 	protocol.SetHandlerOpenParticipation(commonProtocol.openParticipation)
