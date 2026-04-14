@@ -3,13 +3,14 @@ package database
 import (
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
+	messaging_constants "github.com/PretendoNetwork/nex-protocols-go/v2/messaging/constants"
 	messaging_types "github.com/PretendoNetwork/nex-protocols-go/v2/messaging/types"
 
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 )
 
 // RetrieveAllMessagesWithinRange retrieves all messages available for the given recipient
-func RetrieveAllMessagesWithinRange(manager *common_globals.MessagingManager, recipientID types.UInt64, recipientType types.UInt32, resultRange types.ResultRange) (types.List[types.DataHolder], *nex.Error) {
+func RetrieveAllMessagesWithinRange(manager *common_globals.MessagingManager, recipientID types.UInt64, recipientType messaging_constants.RecipientType, resultRange types.ResultRange) (types.List[types.DataHolder], *nex.Error) {
 	lstMessages := make(types.List[types.DataHolder], 0, resultRange.Length)
 
 	rows, err := manager.Database.Query(`WITH updated AS (
@@ -48,7 +49,7 @@ func RetrieveAllMessagesWithinRange(manager *common_globals.MessagingManager, re
 	for rows.Next() {
 		var messageHeader messaging_types.UserMessage
 		var recipientID types.UInt64
-		var recipientType types.UInt32
+		var recipientType messaging_constants.RecipientType
 		var messageType string
 
 		err = rows.Scan(

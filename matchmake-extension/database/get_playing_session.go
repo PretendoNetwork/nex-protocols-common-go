@@ -80,7 +80,7 @@ func GetPlayingSession(manager *common_globals.MatchmakingManager, listPID types
 				&resultMatchmakeSession.MatchmakeSystemType,
 				&resultMatchmakeSession.ApplicationBuffer,
 				&resultMatchmakeSession.ProgressScore,
-				&resultMatchmakeSession.Option,
+				&resultMatchmakeSession.Option0,
 				&resultMatchmakeParam,
 				&resultMatchmakeSession.ReferGID,
 				&resultMatchmakeSession.UserPasswordEnabled,

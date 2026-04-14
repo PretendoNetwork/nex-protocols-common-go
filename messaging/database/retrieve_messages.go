@@ -3,13 +3,14 @@ package database
 import (
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
+	messaging_constants "github.com/PretendoNetwork/nex-protocols-go/v2/messaging/constants"
 	messaging_types "github.com/PretendoNetwork/nex-protocols-go/v2/messaging/types"
 
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 )
 
 // RetrieveMessages retrieves the specified messages for the given recipient
-func RetrieveMessages(manager *common_globals.MessagingManager, recipientID types.UInt64, recipientType types.UInt32, lstMsgIDs types.List[types.UInt32], bLeaveOnServer types.Bool) (types.List[types.DataHolder], *nex.Error) {
+func RetrieveMessages(manager *common_globals.MessagingManager, recipientID types.UInt64, recipientType messaging_constants.RecipientType, lstMsgIDs types.List[types.UInt32], bLeaveOnServer types.Bool) (types.List[types.DataHolder], *nex.Error) {
 	lstMessages := make(types.List[types.DataHolder], 0, len(lstMsgIDs))
 
 	rows, err := manager.Database.Query(`UPDATE messaging.messages SET read = $4 -- Use the inverse of bLeaveOnServer to not mark messages as read if set
@@ -44,7 +45,7 @@ func RetrieveMessages(manager *common_globals.MessagingManager, recipientID type
 	for rows.Next() {
 		var messageHeader messaging_types.UserMessage
 		var recipientID types.UInt64
-		var recipientType types.UInt32
+		var recipientType messaging_constants.RecipientType
 		var messageType string
 
 		err = rows.Scan(

@@ -84,7 +84,7 @@ func CreateMatchmakeSession(manager *common_globals.MatchmakingManager, connecti
 		matchmakeSession.ApplicationBuffer,
 		matchmakeSession.ProgressScore,
 		matchmakeSession.SessionKey,
-		matchmakeSession.Option,
+		matchmakeSession.Option0,
 		matchmakeParam.Bytes(),
 		matchmakeSession.UserPassword,
 		matchmakeSession.ReferGID,
