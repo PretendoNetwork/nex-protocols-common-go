@@ -7,8 +7,8 @@ import (
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	"github.com/PretendoNetwork/nex-protocols-common-go/v2/match-making/tracking"
-	match_making "github.com/PretendoNetwork/nex-protocols-go/v2/match-making"
-	notifications "github.com/PretendoNetwork/nex-protocols-go/v2/notifications"
+	match_making_constants "github.com/PretendoNetwork/nex-protocols-go/v2/match-making/constants"
+	notifications_constants "github.com/PretendoNetwork/nex-protocols-go/v2/notifications/constants"
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/v2/notifications/types"
 )
 
@@ -35,7 +35,7 @@ func EndGatheringParticipation(manager *common_globals.MatchmakingManager, gathe
 	}
 
 	// * If the gathering is a persistent gathering and allows zero users, only remove the participant from the gathering
-	if uint32(gathering.Flags)&(match_making.GatheringFlags.PersistentGathering|match_making.GatheringFlags.PersistentGatheringAllowZeroUsers) != 0 {
+	if gathering.Flags.HasFlag(match_making_constants.GatheringFlagPersistentGathering) || gathering.Flags.HasFlag(match_making_constants.GatheringFlagAllowNoParticipant) {
 		return nil
 	}
 
@@ -49,18 +49,15 @@ func EndGatheringParticipation(manager *common_globals.MatchmakingManager, gathe
 		// * This flag tells the server to change the matchmake session owner if they disconnect
 		// * If the flag is not set, delete the session
 		// * More info: https://nintendo-wiki.pretendo.network/docs/nex/protocols/match-making/types#flags
-		if uint32(gathering.Flags)&match_making.GatheringFlags.DisconnectChangeOwner == 0 {
+		if !gathering.Flags.HasFlag(match_making_constants.GatheringFlagMigrateOwner) {
 			nexError = UnregisterGathering(manager, connection.PID(), gatheringID)
 			if nexError != nil {
 				return nexError
 			}
 
-			category := notifications.NotificationCategories.GatheringUnregistered
-			subtype := notifications.NotificationSubTypes.GatheringUnregistered.None
-
 			oEvent := notifications_types.NewNotificationEvent()
 			oEvent.PIDSource = connection.PID().Copy().(types.PID)
-			oEvent.Type = types.UInt32(notifications.BuildNotificationType(category, subtype))
+			oEvent.Type = notifications_constants.NotificationCategoryGatheringUnregistered.Build()
 			oEvent.Param1 = types.UInt64(gatheringID)
 
 			common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, common_globals.RemoveDuplicates(newParticipants))
@@ -83,12 +80,9 @@ func EndGatheringParticipation(manager *common_globals.MatchmakingManager, gathe
 			return nexError
 		}
 
-		category := notifications.NotificationCategories.HostChanged
-		subtype := notifications.NotificationSubTypes.HostChanged.None
-
 		oEvent := notifications_types.NewNotificationEvent()
 		oEvent.PIDSource = connection.PID().Copy().(types.PID)
-		oEvent.Type = types.UInt32(notifications.BuildNotificationType(category, subtype))
+		oEvent.Type = notifications_constants.NotificationCategoryHostChangeEvent.Build()
 		oEvent.Param1 = types.UInt64(gatheringID)
 
 		// TODO - Should the notification actually be sent to all participants?
@@ -101,12 +95,9 @@ func EndGatheringParticipation(manager *common_globals.MatchmakingManager, gathe
 		}
 	}
 
-	category := notifications.NotificationCategories.Participation
-	subtype := notifications.NotificationSubTypes.Participation.Ended
-
 	oEvent := notifications_types.NewNotificationEvent()
 	oEvent.PIDSource = connection.PID().Copy().(types.PID)
-	oEvent.Type = types.UInt32(notifications.BuildNotificationType(category, subtype))
+	oEvent.Type = notifications_constants.NotificationCategoryParticipationEvent.Build(notifications_constants.ParticipationEventsEndParticipation)
 	oEvent.Param1 = types.UInt64(gatheringID)
 	oEvent.Param2 = types.UInt64(connection.PID())
 	oEvent.StrParam = types.NewString(message)
@@ -114,7 +105,7 @@ func EndGatheringParticipation(manager *common_globals.MatchmakingManager, gathe
 	var participationEndedTargets []uint64
 
 	// * When the VerboseParticipants or VerboseParticipantsEx flags are set, all participant notification events are sent to everyone
-	if uint32(gathering.Flags)&(match_making.GatheringFlags.VerboseParticipants|match_making.GatheringFlags.VerboseParticipantsEx) != 0 {
+	if gathering.Flags.HasFlag(match_making_constants.GatheringFlagNotifyParticipationEventsToAllParticipants) || gathering.Flags.HasFlag(match_making_constants.GatheringFlagNotifyParticipationEventsToAllParticipantsReproducibly) {
 		participationEndedTargets = common_globals.RemoveDuplicates(participants)
 	} else {
 		participationEndedTargets = []uint64{uint64(gathering.OwnerPID)}

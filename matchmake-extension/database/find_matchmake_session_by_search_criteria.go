@@ -76,7 +76,7 @@ func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingMan
 		for i, attrib := range searchCriteria.Attribs {
 			// * Ignore attribute 1 here, reserved for the selection method
 			if i == 1 {
-				continue;
+				continue
 			}
 
 			if attrib != "" {
@@ -94,7 +94,7 @@ func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingMan
 						break
 					}
 
-					searchStatement += fmt.Sprintf(` AND ms.attribs[%d] BETWEEN %d AND %d`, i + 1, min, max)
+					searchStatement += fmt.Sprintf(` AND ms.attribs[%d] BETWEEN %d AND %d`, i+1, min, max)
 				} else {
 					value, err := strconv.ParseUint(before, 10, 32)
 					if err != nil {
@@ -102,7 +102,7 @@ func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingMan
 						break
 					}
 
-					searchStatement += fmt.Sprintf(` AND ms.attribs[%d]=%d`, i + 1, value)
+					searchStatement += fmt.Sprintf(` AND ms.attribs[%d]=%d`, i+1, value)
 				}
 			}
 		}
@@ -218,11 +218,11 @@ func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingMan
 			}
 		}
 
-		switch constants.SelectionMethod(searchCriteria.SelectionMethod) {
-		case constants.SelectionMethodRandom:
+		switch searchCriteria.SelectionMethod {
+		case constants.MatchmakeSelectionMethodRandom:
 			// * Random global
 			searchStatement += ` ORDER BY RANDOM()`
-		case constants.SelectionMethodNearestNeighbor:
+		case constants.MatchmakeSelectionMethodNearestNeighbor:
 			// * Closest attribute
 			attribute1, err := strconv.ParseUint(string(searchCriteria.Attribs[1]), 10, 32)
 			if err != nil {
@@ -231,7 +231,7 @@ func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingMan
 			}
 
 			searchStatement += fmt.Sprintf(` ORDER BY abs(%d - ms.attribs[2])`, attribute1)
-		case constants.SelectionMethodBroadenRange:
+		case constants.MatchmakeSelectionMethodBroadenRange:
 			// * Ranked
 
 			// TODO - Actually implement ranked matchmaking, using closest attribute at the moment
@@ -242,7 +242,7 @@ func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingMan
 			}
 
 			searchStatement += fmt.Sprintf(` ORDER BY abs(%d - ms.attribs[2])`, attribute1)
-		case constants.SelectionMethodProgressScore:
+		case constants.MatchmakeSelectionMethodProgressScore:
 			// * Progress Score
 
 			// * We can only use this when doing auto-matchmake
@@ -251,7 +251,7 @@ func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingMan
 			}
 
 			searchStatement += fmt.Sprintf(` ORDER BY abs(%d - ms.progress_score)`, sourceMatchmakeSession.ProgressScore)
-		case constants.SelectionMethodBroadenRangeWithProgressScore:
+		case constants.MatchmakeSelectionMethodBroadenRangeWithProgressScore:
 			// * Ranked + Progress
 
 			// TODO - Actually implement ranked matchmaking, using closest attribute at the moment
@@ -272,7 +272,7 @@ func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingMan
 				searchStatement += fmt.Sprintf(` ORDER BY abs(%d - ms.attribs[2] + %d - ms.progress_score)`, attribute1, sourceMatchmakeSession.ProgressScore)
 			}
 
-		// case constants.SelectionMethodScoreBased: // * According to notes this is related with the MatchmakeParam. TODO - Implement this
+			// case constants.SelectionMethodScoreBased: // * According to notes this is related with the MatchmakeParam. TODO - Implement this
 		}
 
 		// * If the ResultRange inside the MatchmakeSessionSearchCriteria is valid (only present on NEX 4.0+), use that
@@ -282,7 +282,7 @@ func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingMan
 		} else {
 			// * Since we use one ResultRange for all searches, limit the total length to the one specified
 			// * but apply the same offset to all queries
-			searchStatement += fmt.Sprintf(` LIMIT %d OFFSET %d`, uint32(resultRange.Length) - uint32(len(resultMatchmakeSessions)), uint32(resultRange.Offset))
+			searchStatement += fmt.Sprintf(` LIMIT %d OFFSET %d`, uint32(resultRange.Length)-uint32(len(resultMatchmakeSessions)), uint32(resultRange.Offset))
 		}
 
 		rows, err := manager.Database.Query(searchStatement,
@@ -326,7 +326,7 @@ func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingMan
 				&resultMatchmakeSession.ApplicationBuffer,
 				&resultMatchmakeSession.ProgressScore,
 				&resultMatchmakeSession.SessionKey,
-				&resultMatchmakeSession.Option,
+				&resultMatchmakeSession.Option0,
 				&resultMatchmakeParam,
 				&resultMatchmakeSession.UserPassword,
 				&resultMatchmakeSession.ReferGID,

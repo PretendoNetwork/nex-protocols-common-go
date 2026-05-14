@@ -6,25 +6,26 @@ import (
 
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
+	messaging_constants "github.com/PretendoNetwork/nex-protocols-go/v2/messaging/constants"
 	messaging_types "github.com/PretendoNetwork/nex-protocols-go/v2/messaging/types"
 )
 
 // MessagingManager manages messaging communications
 type MessagingManager struct {
-	Database                 *sql.DB
-	Endpoint                 *nex.PRUDPEndPoint
+	Database *sql.DB
+	Endpoint *nex.PRUDPEndPoint
 
 	MatchmakingManager       *MatchmakingManager
-	ValidateMessage          func(message types.DataHolder) (types.UInt64, types.UInt32, *nex.Error)
+	ValidateMessage          func(message types.DataHolder) (types.UInt64, messaging_constants.RecipientType, *nex.Error)
 	GetMessageHeader         func(message types.DataHolder) (messaging_types.UserMessage, *nex.Error)
 	SetMessageHeader         func(message types.DataHolder, header messaging_types.UserMessage) (types.DataHolder, *nex.Error)
-	ProcessMessage           func(manager *MessagingManager, message types.DataHolder, recipientIDs types.List[types.UInt64], recipientType types.UInt32, sendMessage bool) (types.DataHolder, types.List[types.UInt32], types.List[types.PID], *nex.Error)
-	ValidateMessageRecipient func(manager *MessagingManager, pid types.PID, recipientID types.UInt64, recipientType types.UInt32) bool
+	ProcessMessage           func(manager *MessagingManager, message types.DataHolder, recipientIDs types.List[types.UInt64], recipientType messaging_constants.RecipientType, sendMessage bool) (types.DataHolder, types.List[types.UInt32], types.List[types.PID], *nex.Error)
+	ValidateMessageRecipient func(manager *MessagingManager, pid types.PID, recipientID types.UInt64, recipientType messaging_constants.RecipientType) bool
 	RetrieveDetailedMessage  func(manager *MessagingManager, messageHeader messaging_types.UserMessage, messageType string) (types.DataHolder, *nex.Error)
 }
 
 // ValidateUserMessage checks if a UserMessage is valid, and returns its validity and the recipient information of the message
-func (mm *MessagingManager) ValidateUserMessage(userMessage messaging_types.UserMessage) (types.UInt64, types.UInt32, *nex.Error) {
+func (mm *MessagingManager) ValidateUserMessage(userMessage messaging_types.UserMessage) (types.UInt64, messaging_constants.RecipientType, *nex.Error) {
 	if utf8.RuneCountInString(string(userMessage.StrSubject)) > 256 {
 		return 0, 0, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "Message subject is too long")
 	}
@@ -34,7 +35,7 @@ func (mm *MessagingManager) ValidateUserMessage(userMessage messaging_types.User
 }
 
 // ValidateTextMessage checks if a TextMessage is valid, and returns its validity and the recipient information of the message
-func (mm *MessagingManager) ValidateTextMessage(textMessage messaging_types.TextMessage) (types.UInt64, types.UInt32, *nex.Error) {
+func (mm *MessagingManager) ValidateTextMessage(textMessage messaging_types.TextMessage) (types.UInt64, messaging_constants.RecipientType, *nex.Error) {
 	recipientID, recipientType, nexError := mm.ValidateUserMessage(textMessage.UserMessage)
 	if nexError != nil {
 		return 0, 0, nexError
@@ -48,7 +49,7 @@ func (mm *MessagingManager) ValidateTextMessage(textMessage messaging_types.Text
 }
 
 // ValidateBinaryMessage checks if a BinaryMessage is valid, and returns its validity and the recipient information of the message
-func (mm *MessagingManager) ValidateBinaryMessage(binaryMessage messaging_types.BinaryMessage) (types.UInt64, types.UInt32, *nex.Error) {
+func (mm *MessagingManager) ValidateBinaryMessage(binaryMessage messaging_types.BinaryMessage) (types.UInt64, messaging_constants.RecipientType, *nex.Error) {
 	recipientID, recipientType, nexError := mm.ValidateUserMessage(binaryMessage.UserMessage)
 	if nexError != nil {
 		return 0, 0, nexError
@@ -62,7 +63,7 @@ func (mm *MessagingManager) ValidateBinaryMessage(binaryMessage messaging_types.
 }
 
 // DefaultValidateMessage is the default handler of MessagingManager to validate an input message holder
-func (mm *MessagingManager) DefaultValidateMessage(message types.DataHolder) (types.UInt64, types.UInt32, *nex.Error) {
+func (mm *MessagingManager) DefaultValidateMessage(message types.DataHolder) (types.UInt64, messaging_constants.RecipientType, *nex.Error) {
 	messageObjectID := message.Object.ObjectID()
 	if messageObjectID.Equals(types.NewString("TextMessage")) {
 		return mm.ValidateTextMessage(message.Object.(messaging_types.TextMessage))

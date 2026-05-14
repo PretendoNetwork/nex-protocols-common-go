@@ -3,13 +3,14 @@ package database
 import (
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
+	messaging_constants "github.com/PretendoNetwork/nex-protocols-go/v2/messaging/constants"
 	messaging_types "github.com/PretendoNetwork/nex-protocols-go/v2/messaging/types"
 
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 )
 
 // GetMessagesHeaders gets the message headers available for the given recipient
-func GetMessagesHeaders(manager *common_globals.MessagingManager, recipientID types.UInt64, recipientType types.UInt32, resultRange types.ResultRange) (types.List[messaging_types.UserMessage], *nex.Error) {
+func GetMessagesHeaders(manager *common_globals.MessagingManager, recipientID types.UInt64, recipientType messaging_constants.RecipientType, resultRange types.ResultRange) (types.List[messaging_types.UserMessage], *nex.Error) {
 	lstMsgHeaders := make(types.List[messaging_types.UserMessage], 0, resultRange.Length)
 
 	rows, err := manager.Database.Query(`SELECT (
@@ -43,7 +44,7 @@ func GetMessagesHeaders(manager *common_globals.MessagingManager, recipientID ty
 	for rows.Next() {
 		var messageHeader messaging_types.UserMessage
 		var recipientID types.UInt64
-		var recipientType types.UInt32
+		var recipientType messaging_constants.RecipientType
 
 		err = rows.Scan(
 			&messageHeader.UIID,

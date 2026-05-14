@@ -8,9 +8,9 @@ import (
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	"github.com/PretendoNetwork/nex-protocols-common-go/v2/match-making/tracking"
-	match_making "github.com/PretendoNetwork/nex-protocols-go/v2/match-making"
 	"github.com/PretendoNetwork/nex-protocols-go/v2/match-making/constants"
-	notifications "github.com/PretendoNetwork/nex-protocols-go/v2/notifications"
+	match_making_constants "github.com/PretendoNetwork/nex-protocols-go/v2/match-making/constants"
+	notifications_constants "github.com/PretendoNetwork/nex-protocols-go/v2/notifications/constants"
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/v2/notifications/types"
 	pqextended "github.com/PretendoNetwork/pq-extended"
 )
@@ -19,7 +19,7 @@ import (
 func JoinGatheringWithParticipants(manager *common_globals.MatchmakingManager, gatheringID uint32, connection *nex.PRUDPConnection, additionalParticipants []types.PID, joinMessage string, joinMatchmakeSessionBehavior constants.JoinMatchmakeSessionBehavior) (uint32, *nex.Error) {
 	var ownerPID uint64
 	var maxParticipants uint32
-	var flags uint32
+	var flags match_making_constants.GatheringFlags
 	var oldParticipants []uint64
 	err := manager.Database.QueryRow(`SELECT owner_pid, max_participants, flags, participants FROM matchmaking.gatherings WHERE id=$1`, gatheringID).Scan(&ownerPID, &maxParticipants, &flags, pqextended.Array(&oldParticipants))
 	if err != nil {
@@ -71,7 +71,7 @@ func JoinGatheringWithParticipants(manager *common_globals.MatchmakingManager, g
 	var participantJoinedTargets []uint64
 
 	// * When the VerboseParticipants or the VerboseParticipantsEx flags are set, all participant notification events are sent to everyone
-	if flags&(match_making.GatheringFlags.VerboseParticipants|match_making.GatheringFlags.VerboseParticipantsEx) != 0 {
+	if flags.HasFlag(match_making_constants.GatheringFlagNotifyParticipationEventsToAllParticipants) || flags.HasFlag(match_making_constants.GatheringFlagNotifyParticipationEventsToAllParticipantsReproducibly) {
 		participantJoinedTargets = common_globals.RemoveDuplicates(participants)
 	} else {
 		participantJoinedTargets = []uint64{ownerPID}
@@ -84,12 +84,9 @@ func JoinGatheringWithParticipants(manager *common_globals.MatchmakingManager, g
 			continue
 		}
 
-		notificationCategory := notifications.NotificationCategories.SwitchGathering
-		notificationSubtype := notifications.NotificationSubTypes.SwitchGathering.None
-
 		oEvent := notifications_types.NewNotificationEvent()
 		oEvent.PIDSource = connection.PID()
-		oEvent.Type = types.UInt32(notifications.BuildNotificationType(notificationCategory, notificationSubtype))
+		oEvent.Type = notifications_constants.NotificationCategoryAddedToGathering.Build()
 		oEvent.Param1 = types.UInt64(gatheringID)
 		oEvent.Param2 = types.UInt64(participant)
 
@@ -100,13 +97,10 @@ func JoinGatheringWithParticipants(manager *common_globals.MatchmakingManager, g
 	for _, participant := range newParticipants {
 		// * If the new participant is the same as the owner, then we are creating a new gathering.
 		// * We don't need to send the new participant notification event in that case
-		if flags&(match_making.GatheringFlags.VerboseParticipants|match_making.GatheringFlags.VerboseParticipantsEx) != 0 || uint64(connection.PID()) != ownerPID {
-			notificationCategory := notifications.NotificationCategories.Participation
-			notificationSubtype := notifications.NotificationSubTypes.Participation.NewParticipant
-
+		if (flags.HasFlag(match_making_constants.GatheringFlagNotifyParticipationEventsToAllParticipants) || flags.HasFlag(match_making_constants.GatheringFlagNotifyParticipationEventsToAllParticipantsReproducibly)) || uint64(connection.PID()) != ownerPID {
 			oEvent := notifications_types.NewNotificationEvent()
 			oEvent.PIDSource = connection.PID()
-			oEvent.Type = types.UInt32(notifications.BuildNotificationType(notificationCategory, notificationSubtype))
+			oEvent.Type = notifications_constants.NotificationCategoryParticipationEvent.Build(notifications_constants.ParticipationEventsParticipate)
 			oEvent.Param1 = types.UInt64(gatheringID)
 			oEvent.Param2 = types.UInt64(participant)
 			oEvent.StrParam = types.NewString(joinMessage)
@@ -116,15 +110,12 @@ func JoinGatheringWithParticipants(manager *common_globals.MatchmakingManager, g
 		}
 
 		// * This flag also sends a recap of all currently connected players on the gathering to the participant that is connecting
-		if flags&match_making.GatheringFlags.VerboseParticipantsEx != 0 {
+		if flags.HasFlag(match_making_constants.GatheringFlagNotifyParticipationEventsToAllParticipantsReproducibly) {
 			// TODO - Should this actually be deduplicated?
 			for _, oldParticipant := range common_globals.RemoveDuplicates(oldParticipants) {
-				notificationCategory := notifications.NotificationCategories.Participation
-				notificationSubtype := notifications.NotificationSubTypes.Participation.NewParticipant
-
 				oEvent := notifications_types.NewNotificationEvent()
 				oEvent.PIDSource = connection.PID()
-				oEvent.Type = types.UInt32(notifications.BuildNotificationType(notificationCategory, notificationSubtype))
+				oEvent.Type = notifications_constants.NotificationCategoryParticipationEvent.Build(notifications_constants.ParticipationEventsParticipate)
 				oEvent.Param1 = types.UInt64(gatheringID)
 				oEvent.Param2 = types.UInt64(oldParticipant)
 				oEvent.StrParam = types.NewString(joinMessage)

@@ -114,7 +114,7 @@ func FindMatchmakeSession(manager *common_globals.MatchmakingManager, connection
 		&resultMatchmakeSession.ApplicationBuffer,
 		&resultMatchmakeSession.ProgressScore,
 		&resultMatchmakeSession.SessionKey,
-		&resultMatchmakeSession.Option,
+		&resultMatchmakeSession.Option0,
 		&resultMatchmakeParam,
 		&resultMatchmakeSession.UserPassword,
 		&resultMatchmakeSession.ReferGID,

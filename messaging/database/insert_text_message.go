@@ -3,12 +3,13 @@ package database
 import (
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
-	messaging_types "github.com/PretendoNetwork/nex-protocols-go/v2/messaging/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	messaging_constants "github.com/PretendoNetwork/nex-protocols-go/v2/messaging/constants"
+	messaging_types "github.com/PretendoNetwork/nex-protocols-go/v2/messaging/types"
 )
 
 // InsertTextMessage inserts a new text message into the database
-func InsertTextMessage(manager *common_globals.MessagingManager, message messaging_types.TextMessage, recipientID types.UInt64, recipientType types.UInt32) *nex.Error {
+func InsertTextMessage(manager *common_globals.MessagingManager, message messaging_types.TextMessage, recipientID types.UInt64, recipientType messaging_constants.RecipientType) *nex.Error {
 	var err error
 
 	_, err = manager.Database.Exec(`WITH message_id AS (INSERT INTO messaging.messages (

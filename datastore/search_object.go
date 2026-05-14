@@ -5,6 +5,7 @@ import (
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	datastore "github.com/PretendoNetwork/nex-protocols-go/v2/datastore"
+	"github.com/PretendoNetwork/nex-protocols-go/v2/datastore/constants"
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
@@ -52,16 +53,16 @@ func (commonProtocol *CommonProtocol) searchObject(err error, packet nex.PacketI
 		pSearchResult.Result = append(pSearchResult.Result, object)
 	}
 
-	var totalCountType uint8
+	var totalCountType constants.SearchResultTotalCountType
 
 	// * Doing this here since the object
 	// * the permissions checks in the
 	// * previous loop will mutate the data
 	// * returned from the database
 	if totalCount == uint32(len(pSearchResult.Result)) {
-		totalCountType = 0 // * Has no more data. All possible results were returned
+		totalCountType = constants.SearchResultTotalExact // * Has no more data. All possible results were returned
 	} else {
-		totalCountType = 1 // * Has more data. Not all possible results were returned
+		totalCountType = constants.SearchResultTotalMinimum // * Has more data. Not all possible results were returned
 	}
 
 	// * Disables the TotalCount
@@ -71,12 +72,12 @@ func (commonProtocol *CommonProtocol) searchObject(err error, packet nex.PacketI
 	if param.StructureVersion >= 3 || endpoint.LibraryVersions().DataStore.GreaterOrEqual("4.0.0") {
 		if !param.TotalCountEnabled {
 			totalCount = 0
-			totalCountType = 3
+			totalCountType = constants.SearchResultTotalDisabled
 		}
 	}
 
 	pSearchResult.TotalCount = types.NewUInt32(totalCount)
-	pSearchResult.TotalCountType = types.NewUInt8(totalCountType)
+	pSearchResult.TotalCountType = totalCountType
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 

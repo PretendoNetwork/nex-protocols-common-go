@@ -75,7 +75,7 @@ func GetMatchmakeSessionByID(manager *common_globals.MatchmakingManager, endpoin
 		&resultMatchmakeSession.ApplicationBuffer,
 		&resultMatchmakeSession.ProgressScore,
 		&resultMatchmakeSession.SessionKey,
-		&resultMatchmakeSession.Option,
+		&resultMatchmakeSession.Option0,
 		&resultMatchmakeParam,
 		&resultMatchmakeSession.UserPassword,
 		&resultMatchmakeSession.ReferGID,

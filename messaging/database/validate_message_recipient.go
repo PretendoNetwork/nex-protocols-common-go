@@ -4,13 +4,14 @@ import (
 	"slices"
 
 	"github.com/PretendoNetwork/nex-go/v2/types"
+	messaging_constants "github.com/PretendoNetwork/nex-protocols-go/v2/messaging/constants"
 
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	match_making_database "github.com/PretendoNetwork/nex-protocols-common-go/v2/match-making/database"
 )
 
 // ValidateMessageRecipient checks that the given PID can access the given recipient data
-func ValidateMessageRecipient(manager *common_globals.MessagingManager, pid types.PID, recipientID types.UInt64, recipientType types.UInt32) bool {
+func ValidateMessageRecipient(manager *common_globals.MessagingManager, pid types.PID, recipientID types.UInt64, recipientType messaging_constants.RecipientType) bool {
 	switch recipientType {
 	case 1: // * PID - Valid if the recipient ID is the same as the given PID
 		if pid != types.PID(recipientID) {

@@ -4,6 +4,7 @@ import (
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	ranking "github.com/PretendoNetwork/nex-protocols-go/v2/ranking"
+	"github.com/PretendoNetwork/nex-protocols-go/v2/ranking/constants"
 	ranking_types "github.com/PretendoNetwork/nex-protocols-go/v2/ranking/types"
 )
 
@@ -21,7 +22,7 @@ type CommonProtocol struct {
 	OnAfterGetCachedTopXRanking                                    func(packet nex.PacketInterface, category types.UInt32, orderParam ranking_types.RankingOrderParam)
 	OnAfterGetCachedTopXRankings                                   func(packet nex.PacketInterface, categories types.List[types.UInt32], orderParams types.List[ranking_types.RankingOrderParam])
 	OnAfterGetCommonData                                           func(packet nex.PacketInterface, uniqueID types.UInt64)
-	OnAfterGetRanking                                              func(packet nex.PacketInterface, rankingMode types.UInt8, category types.UInt32, orderParam ranking_types.RankingOrderParam, uniqueID types.UInt64, principalID types.PID)
+	OnAfterGetRanking                                              func(packet nex.PacketInterface, rankingMode constants.RankingMode, category types.UInt32, orderParam ranking_types.RankingOrderParam, uniqueID types.UInt64, principalID types.PID)
 	OnAfterUploadCommonData                                        func(packet nex.PacketInterface, commonData types.Buffer, uniqueID types.UInt64)
 	OnAfterUploadScore                                             func(packet nex.PacketInterface, scoreData ranking_types.RankingScoreData, uniqueID types.UInt64)
 }

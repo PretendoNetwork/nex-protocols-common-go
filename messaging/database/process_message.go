@@ -3,13 +3,14 @@ package database
 import (
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
-	messaging_types "github.com/PretendoNetwork/nex-protocols-go/v2/messaging/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	match_making_database "github.com/PretendoNetwork/nex-protocols-common-go/v2/match-making/database"
+	messaging_constants "github.com/PretendoNetwork/nex-protocols-go/v2/messaging/constants"
+	messaging_types "github.com/PretendoNetwork/nex-protocols-go/v2/messaging/types"
 )
 
 // ProcessMessage delivers the given message and stores it in the server
-func ProcessMessage(manager *common_globals.MessagingManager, message types.DataHolder, recipientIDs types.List[types.UInt64], recipientType types.UInt32, sendMessage bool) (types.DataHolder, types.List[types.UInt32], types.List[types.PID], *nex.Error) {
+func ProcessMessage(manager *common_globals.MessagingManager, message types.DataHolder, recipientIDs types.List[types.UInt64], recipientType messaging_constants.RecipientType, sendMessage bool) (types.DataHolder, types.List[types.UInt32], types.List[types.PID], *nex.Error) {
 	header, nexError := manager.GetMessageHeader(message)
 	if nexError != nil {
 		return message, nil, nil, nexError
@@ -24,7 +25,7 @@ func ProcessMessage(manager *common_globals.MessagingManager, message types.Data
 		// TODO - Should we check that the PID exists with manager.Endpoint.AccountDetailsByPID?
 
 		// * We don't have to get the connection if this isn't an instant message
-		if header.UIFlags & 1 != 0 {
+		if header.UIFlags&1 != 0 {
 			for _, recipientID := range recipientIDs {
 				targetConnection := manager.Endpoint.FindConnectionByPID(uint64(recipientID))
 				if targetConnection != nil {
@@ -56,7 +57,7 @@ func ProcessMessage(manager *common_globals.MessagingManager, message types.Data
 		}
 
 		// * We don't have to get the participants connections if this isn't an instant message or we won't send it
-		if header.UIFlags & 1 != 0 && sendMessage {
+		if header.UIFlags&1 != 0 && sendMessage {
 			for _, participant := range participants {
 				targetConnection := manager.Endpoint.FindConnectionByPID(participant)
 				if targetConnection == nil {
@@ -75,7 +76,7 @@ func ProcessMessage(manager *common_globals.MessagingManager, message types.Data
 		return message, nil, nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "Invalid recipient type")
 	}
 
-	if header.UIFlags & 1 != 0 { // * Instant message
+	if header.UIFlags&1 != 0 { // * Instant message
 		messageObjectID := message.Object.ObjectID()
 		if messageObjectID.Equals(types.NewString("TextMessage")) {
 			textMessage := message.Object.(messaging_types.TextMessage)

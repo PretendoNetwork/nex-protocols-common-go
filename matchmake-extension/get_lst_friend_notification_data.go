@@ -3,14 +3,14 @@ package matchmake_extension
 import (
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
-	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/v2/matchmake-extension"
-	notifications "github.com/PretendoNetwork/nex-protocols-go/v2/notifications"
-	notifications_types "github.com/PretendoNetwork/nex-protocols-go/v2/notifications/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	"github.com/PretendoNetwork/nex-protocols-common-go/v2/matchmake-extension/database"
+	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/v2/matchmake-extension"
+	notifications_constants "github.com/PretendoNetwork/nex-protocols-go/v2/notifications/constants"
+	notifications_types "github.com/PretendoNetwork/nex-protocols-go/v2/notifications/types"
 )
 
-func (commonProtocol *CommonProtocol) getlstFriendNotificationData(err error, packet nex.PacketInterface, callID uint32, lstTypes types.List[types.UInt32]) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) getlstFriendNotificationData(err error, packet nex.PacketInterface, callID uint32, lstTypes types.List[notifications_constants.NotificationCategory]) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, err.Error())
@@ -26,7 +26,7 @@ func (commonProtocol *CommonProtocol) getlstFriendNotificationData(err error, pa
 			return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 		}
 
-		notificationTypes[i] = notifications.BuildNotificationType(uint32(notificationType), 0)
+		notificationTypes[i] = uint32(notificationType.Build())
 	}
 
 	commonProtocol.manager.Mutex.RLock()

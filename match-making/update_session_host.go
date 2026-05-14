@@ -9,7 +9,8 @@ import (
 	"github.com/PretendoNetwork/nex-protocols-common-go/v2/match-making/database"
 	"github.com/PretendoNetwork/nex-protocols-common-go/v2/match-making/tracking"
 	match_making "github.com/PretendoNetwork/nex-protocols-go/v2/match-making"
-	notifications "github.com/PretendoNetwork/nex-protocols-go/v2/notifications"
+	match_making_constants "github.com/PretendoNetwork/nex-protocols-go/v2/match-making/constants"
+	notifications_constants "github.com/PretendoNetwork/nex-protocols-go/v2/notifications/constants"
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/v2/notifications/types"
 )
 
@@ -47,7 +48,7 @@ func (commonProtocol *CommonProtocol) updateSessionHost(err error, packet nex.Pa
 			return nil, nexError
 		}
 	} else {
-		if uint32(gathering.Flags)&match_making.GatheringFlags.ParticipantsChangeOwner == 0 {
+		if !gathering.Flags.HasFlag(match_making_constants.GatheringFlagChangeOwnerByOtherHost) {
 			commonProtocol.manager.Mutex.Unlock()
 			return nil, nex.NewError(nex.ResultCodes.RendezVous.InvalidOperation, "change_error")
 		}
@@ -70,12 +71,9 @@ func (commonProtocol *CommonProtocol) updateSessionHost(err error, packet nex.Pa
 			return nil, nexError
 		}
 
-		category := notifications.NotificationCategories.OwnershipChanged
-		subtype := notifications.NotificationSubTypes.OwnershipChanged.None
-
 		oEvent := notifications_types.NewNotificationEvent()
 		oEvent.PIDSource = connection.PID()
-		oEvent.Type = types.UInt32(notifications.BuildNotificationType(category, subtype))
+		oEvent.Type = notifications_constants.NotificationCategoryOwnershipChangeEvent.Build()
 		oEvent.Param1 = types.UInt64(gid)
 		oEvent.Param2 = types.UInt64(connection.PID())
 

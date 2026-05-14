@@ -6,11 +6,11 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	"github.com/PretendoNetwork/nex-protocols-common-go/v2/matchmake-extension/database"
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/v2/matchmake-extension"
-	notifications "github.com/PretendoNetwork/nex-protocols-go/v2/notifications"
+	notifications_constants "github.com/PretendoNetwork/nex-protocols-go/v2/notifications/constants"
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/v2/notifications/types"
 )
 
-func (commonProtocol *CommonProtocol) getFriendNotificationData(err error, packet nex.PacketInterface, callID uint32, uiType types.Int32) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) getFriendNotificationData(err error, packet nex.PacketInterface, callID uint32, uiType notifications_constants.NotificationCategorySigned) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, err.Error())
@@ -26,7 +26,7 @@ func (commonProtocol *CommonProtocol) getFriendNotificationData(err error, packe
 
 	commonProtocol.manager.Mutex.RLock()
 
-	notificationDatas, nexError := database.GetNotificationDatas(commonProtocol.manager, connection.PID(), []uint32{notifications.BuildNotificationType(uint32(uiType), 0)})
+	notificationDatas, nexError := database.GetNotificationDatas(commonProtocol.manager, connection.PID(), []uint32{uint32(uiType.ToUnsigned().Build())})
 	if nexError != nil {
 		commonProtocol.manager.Mutex.RUnlock()
 		return nil, nexError

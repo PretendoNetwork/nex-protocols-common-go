@@ -3,12 +3,13 @@ package database
 import (
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
+	messaging_constants "github.com/PretendoNetwork/nex-protocols-go/v2/messaging/constants"
 
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 )
 
 // DeleteMessages deletes the given messages for the given recipient
-func DeleteMessages(manager *common_globals.MessagingManager, recipientID types.UInt64, recipientType types.UInt32, lstMessagesToDelete types.List[types.UInt32]) *nex.Error {
+func DeleteMessages(manager *common_globals.MessagingManager, recipientID types.UInt64, recipientType messaging_constants.RecipientType, lstMessagesToDelete types.List[types.UInt32]) *nex.Error {
 	var err error
 
 	_, err = manager.Database.Exec(`UPDATE FROM messaging.messages SET deleted = true WHERE

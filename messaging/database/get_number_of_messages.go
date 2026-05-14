@@ -3,12 +3,13 @@ package database
 import (
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
+	messaging_constants "github.com/PretendoNetwork/nex-protocols-go/v2/messaging/constants"
 
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 )
 
 // GetNumberOfMessages gets the number of messages available for the given recipient
-func GetNumberOfMessages(manager *common_globals.MessagingManager, recipientID types.UInt64, recipientType types.UInt32) (types.UInt32, *nex.Error) {
+func GetNumberOfMessages(manager *common_globals.MessagingManager, recipientID types.UInt64, recipientType messaging_constants.RecipientType) (types.UInt32, *nex.Error) {
 	var err error
 	var uiNbMessages types.UInt32
 
