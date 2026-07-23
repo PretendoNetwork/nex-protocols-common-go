@@ -15,9 +15,20 @@ import (
 	pqextended "github.com/PretendoNetwork/pq-extended"
 )
 
+// FindMatchmakeSessionBySearchCriteriaOptions contains all of the options for FindMatchmakeSessionBySearchCriteria
+type FindMatchmakeSessionBySearchCriteriaOptions struct {
+	ResultRange            types.ResultRange
+	PublicSession          bool
+	SourceMatchmakeSession *match_making_types.MatchmakeSession
+}
+
 // FindMatchmakeSessionBySearchCriteria finds matchmake sessions with the given search criterias
-func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingManager, connection *nex.PRUDPConnection, searchCriterias []match_making_types.MatchmakeSessionSearchCriteria, resultRange types.ResultRange, publicSession bool, sourceMatchmakeSession *match_making_types.MatchmakeSession) ([]match_making_types.MatchmakeSession, *nex.Error) {
+func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingManager, connection *nex.PRUDPConnection, searchCriterias []match_making_types.MatchmakeSessionSearchCriteria, options FindMatchmakeSessionBySearchCriteriaOptions) ([]match_making_types.MatchmakeSession, *nex.Error) {
 	resultMatchmakeSessions := make([]match_making_types.MatchmakeSession, 0)
+
+	resultRange := options.ResultRange
+	publicSession := options.PublicSession
+	sourceMatchmakeSession := options.SourceMatchmakeSession
 
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 

@@ -53,7 +53,11 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithSearchCriteriaPostpone(er
 
 	resultRange := types.NewResultRange()
 	resultRange.Length = 1
-	resultSessions, nexError := database.FindMatchmakeSessionBySearchCriteria(commonProtocol.manager, connection, lstSearchCriteria, resultRange, true, &matchmakeSession)
+	resultSessions, nexError := database.FindMatchmakeSessionBySearchCriteria(commonProtocol.manager, connection, lstSearchCriteria, database.FindMatchmakeSessionBySearchCriteriaOptions{
+		ResultRange: resultRange,
+		PublicSession: true,
+		SourceMatchmakeSession: &matchmakeSession,
+	})
 	if nexError != nil {
 		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
