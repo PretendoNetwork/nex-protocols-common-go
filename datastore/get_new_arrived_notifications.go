@@ -2,8 +2,8 @@ package datastore
 
 import (
 	"github.com/PretendoNetwork/nex-go/v2"
-	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	"github.com/PretendoNetwork/nex-protocols-common-go/v2/datastore/database"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	datastore "github.com/PretendoNetwork/nex-protocols-go/v2/datastore"
 	datastore_constants "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/constants"
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
@@ -15,7 +15,7 @@ func (commonProtocol *CommonProtocol) getNewArrivedNotfications(err error, packe
 		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
 	}
 
-	if uint32(param.Limit) > datastore_constants.MaxSearchResultSize {
+	if int(param.Limit) > datastore_constants.MaxSearchResultSize {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 	}
 

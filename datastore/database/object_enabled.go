@@ -11,7 +11,7 @@ import (
 
 func ObjectEnabled(manager *common_globals.DataStoreManager, dataID types.UInt64) (bool, *nex.Error) {
 	var uploaded bool
-	var status types.UInt8
+	var status datastore_constants.DataStatus
 
 	err := manager.Database.QueryRow(`SELECT upload_completed, status FROM datastore.objects WHERE data_id=$1`, dataID).Scan(&uploaded, &status)
 	if err != nil {
@@ -24,7 +24,7 @@ func ObjectEnabled(manager *common_globals.DataStoreManager, dataID types.UInt64
 	}
 
 	// * If either flag is set, assume enabled already
-	enabled := uploaded || status == types.UInt8(datastore_constants.DataStatusNone)
+	enabled := uploaded || status == datastore_constants.DataStatusNone
 
 	return enabled, nil
 }

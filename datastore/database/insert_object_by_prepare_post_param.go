@@ -20,7 +20,7 @@ func InsertObjectByPreparePostParam(manager *common_globals.DataStoreManager, ow
 		return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object larger than 10MiB")
 	}
 
-	if len(param.Name) > int(datastore_constants.MaxNameLength) {
+	if len(param.Name) > datastore_constants.MaxNameLength {
 		return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with a name which is too long")
 	}
 
@@ -28,23 +28,23 @@ func InsertObjectByPreparePostParam(manager *common_globals.DataStoreManager, ow
 		return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with invalid DataType")
 	}
 
-	if len(param.MetaBinary) > int(datastore_constants.MaxMetaBinSize) {
+	if len(param.MetaBinary) > datastore_constants.MaxMetaBinSize {
 		return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with a MetaBinary which is too long")
 	}
 
-	if param.Permission.Permission > types.UInt8(datastore_constants.PermissionSpecifiedFriend) {
+	if param.Permission.Permission > datastore_constants.PermissionSpecifiedFriend {
 		return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with invalid access permission")
 	}
 
-	if len(param.Permission.RecipientIDs) > int(datastore_constants.DatastorePermissionRecipientIDsMax) {
+	if len(param.Permission.RecipientIDs) > datastore_constants.DatastorePermissionRecipientIDsMax {
 		return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with too many access recipient IDs")
 	}
 
-	if param.DelPermission.Permission > types.UInt8(datastore_constants.PermissionSpecifiedFriend) {
+	if param.DelPermission.Permission > datastore_constants.PermissionSpecifiedFriend {
 		return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with invalid update permission")
 	}
 
-	if len(param.DelPermission.RecipientIDs) > int(datastore_constants.DatastorePermissionRecipientIDsMax) {
+	if len(param.DelPermission.RecipientIDs) > datastore_constants.DatastorePermissionRecipientIDsMax {
 		return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with too many update recipient IDs")
 	}
 
@@ -54,7 +54,7 @@ func InsertObjectByPreparePostParam(manager *common_globals.DataStoreManager, ow
 
 	seenTags := make([]string, 0)
 	for _, tag := range param.Tags {
-		if len(tag) > int(datastore_constants.MaxTagLength) {
+		if len(tag) > datastore_constants.MaxTagLength {
 			return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with a tag which is too long")
 		}
 
@@ -81,7 +81,7 @@ func InsertObjectByPreparePostParam(manager *common_globals.DataStoreManager, ow
 			return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with an invalid rating slot")
 		}
 
-		if ratingInitParam.Param.LockType > types.UInt8(datastore_constants.RatingLockPermanent) {
+		if ratingInitParam.Param.LockType > datastore_constants.RatingLockPermanent {
 			return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with an invalid rating lock type")
 		}
 
@@ -89,7 +89,7 @@ func InsertObjectByPreparePostParam(manager *common_globals.DataStoreManager, ow
 
 		// * "Interval" locks treat PeriodDuration as a non-negative value representing
 		// * the number of seconds until the lock expires
-		if ratingInitParam.Param.LockType == types.UInt8(datastore_constants.RatingLockInterval) {
+		if ratingInitParam.Param.LockType == datastore_constants.RatingLockInterval {
 			if ratingInitParam.Param.PeriodDuration < 0 {
 				return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with an invalid PeriodDuration")
 			}
@@ -98,15 +98,15 @@ func InsertObjectByPreparePostParam(manager *common_globals.DataStoreManager, ow
 		// * "Period" locks treat PeriodDuration as the day of the week/month and
 		// * PeriodHour as the hour of that day. "Day1" is the first of the following
 		// * month
-		if ratingInitParam.Param.LockType == types.UInt8(datastore_constants.RatingLockPeriod) {
-			if ratingInitParam.Param.PeriodDuration != types.Int16(datastore_constants.RatingLockPeriodMon) &&
-				ratingInitParam.Param.PeriodDuration != types.Int16(datastore_constants.RatingLockPeriodTue) &&
-				ratingInitParam.Param.PeriodDuration != types.Int16(datastore_constants.RatingLockPeriodWed) &&
-				ratingInitParam.Param.PeriodDuration != types.Int16(datastore_constants.RatingLockPeriodThu) &&
-				ratingInitParam.Param.PeriodDuration != types.Int16(datastore_constants.RatingLockPeriodFri) &&
-				ratingInitParam.Param.PeriodDuration != types.Int16(datastore_constants.RatingLockPeriodSat) &&
-				ratingInitParam.Param.PeriodDuration != types.Int16(datastore_constants.RatingLockPeriodSun) &&
-				ratingInitParam.Param.PeriodDuration != types.Int16(datastore_constants.RatingLockPeriodDay1) {
+		if ratingInitParam.Param.LockType == datastore_constants.RatingLockPeriod {
+			if ratingInitParam.Param.PeriodDuration != datastore_constants.RatingLockPeriodMon &&
+				ratingInitParam.Param.PeriodDuration != datastore_constants.RatingLockPeriodTue &&
+				ratingInitParam.Param.PeriodDuration != datastore_constants.RatingLockPeriodWed &&
+				ratingInitParam.Param.PeriodDuration != datastore_constants.RatingLockPeriodThu &&
+				ratingInitParam.Param.PeriodDuration != datastore_constants.RatingLockPeriodFri &&
+				ratingInitParam.Param.PeriodDuration != datastore_constants.RatingLockPeriodSat &&
+				ratingInitParam.Param.PeriodDuration != datastore_constants.RatingLockPeriodSun &&
+				ratingInitParam.Param.PeriodDuration != datastore_constants.RatingLockPeriodDay1 {
 				return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with an invalid PeriodDuration")
 			}
 
@@ -136,13 +136,13 @@ func InsertObjectByPreparePostParam(manager *common_globals.DataStoreManager, ow
 		return 0, nil
 	}
 
-	needsReview := (param.Flag & types.UInt32(datastore_constants.DataFlagNeedReview)) != 0
-	updateExpirationOnReference := (param.Flag & types.UInt32(datastore_constants.DataFlagPeriodFromLastReferred)) != 0
-	useReadLock := (param.Flag & types.UInt32(datastore_constants.DataFlagUseReadLock)) != 0
-	notifyAccessRecipientsOnCreation := (param.Flag & types.UInt32(datastore_constants.DataFlagUseNotificationOnPost)) != 0
-	notifyAccessRecipientsOnUpdate := (param.Flag & types.UInt32(datastore_constants.DataFlagUseNotificationOnUpdate)) != 0
-	notUseFileServer := (param.Flag & types.UInt32(datastore_constants.DataFlagNotUseFileServer)) != 0
-	needUploadCompletion := (param.Flag & types.UInt32(datastore_constants.DataFlagNeedCompletion)) != 0
+	needsReview := param.Flag.HasFlag(datastore_constants.DataFlagNeedReview)
+	updateExpirationOnReference := param.Flag.HasFlag(datastore_constants.DataFlagPeriodFromLastReferred)
+	useReadLock := param.Flag.HasFlag(datastore_constants.DataFlagUseReadLock)
+	notifyAccessRecipientsOnCreation := param.Flag.HasFlag(datastore_constants.DataFlagUseNotificationOnPost)
+	notifyAccessRecipientsOnUpdate := param.Flag.HasFlag(datastore_constants.DataFlagUseNotificationOnUpdate)
+	notUseFileServer := param.Flag.HasFlag(datastore_constants.DataFlagNotUseFileServer)
+	needUploadCompletion := param.Flag.HasFlag(datastore_constants.DataFlagNeedCompletion)
 
 	// * I believe the useReadLock flag is related to the "lockId" seen
 	// * on DataStorePrepareGetParamV1, DataStorePrepareGetParam and

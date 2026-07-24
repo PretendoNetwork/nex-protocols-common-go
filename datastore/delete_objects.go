@@ -20,7 +20,7 @@ func (commonProtocol *CommonProtocol) deleteObjects(err error, packet nex.Packet
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
-	if len(params) > int(datastore_constants.BatchProcessingCapacity) {
+	if len(params) > datastore_constants.BatchProcessingCapacity {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 	}
 

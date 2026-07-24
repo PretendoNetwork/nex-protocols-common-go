@@ -54,8 +54,8 @@ func (commonProtocol *CommonProtocol) prepareGetObjectOrMetaBinary(err error, pa
 	}
 
 	// * The owner of an object can always view their objects, but normal users cannot
-	if metaInfo.Status != types.UInt8(datastore_constants.DataStatusNone) && metaInfo.OwnerID != connection.PID() {
-		if metaInfo.Status == types.UInt8(datastore_constants.DataStatusPending) {
+	if metaInfo.Status != datastore_constants.DataStatusNone && metaInfo.OwnerID != connection.PID() {
+		if metaInfo.Status == datastore_constants.DataStatusPending {
 			return nil, nex.NewError(nex.ResultCodes.DataStore.UnderReviewing, "change_error")
 		}
 
@@ -74,7 +74,6 @@ func (commonProtocol *CommonProtocol) prepareGetObjectOrMetaBinary(err error, pa
 
 	// TODO - Check param.LockID. See InsertObjectByPreparePostParam for notes on read locks
 
-	notUseFileServer := (metaInfo.Flag & types.UInt32(datastore_constants.DataFlagNotUseFileServer)) != 0
 	pReqGetInfo := datastore_types.NewDataStoreReqGetInfo()
 	pReqGetAdditionalMeta := datastore_types.NewDataStoreReqGetAdditionalMeta()
 
@@ -84,7 +83,7 @@ func (commonProtocol *CommonProtocol) prepareGetObjectOrMetaBinary(err error, pa
 	// * a single RMC call
 	// TODO - Populate pReqGetAdditionalMeta anyway? Not sure what harm it would do, if any
 
-	if notUseFileServer {
+	if metaInfo.Flag.HasFlag(datastore_constants.DataFlagNotUseFileServer) {
 		if version > math.MaxUint16 {
 			// * OverCapacity is definitely not the correct error here, but it sounds nice
 			return nil, nex.NewError(nex.ResultCodes.DataStore.OverCapacity, "change_error")

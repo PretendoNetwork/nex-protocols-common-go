@@ -29,9 +29,8 @@ func (commonProtocol *CommonProtocol) postMetaBinary(err error, packet nex.Packe
 	}
 
 	// * Server sets this if not set already
-	notUseFileServer := (param.Flag & types.UInt32(datastore_constants.DataFlagNotUseFileServer)) != 0
-	if !notUseFileServer {
-		param.Flag |= types.UInt32(datastore_constants.DataFlagNotUseFileServer)
+	if !param.Flag.HasFlag(datastore_constants.DataFlagNotUseFileServer) {
+		param.Flag |= datastore_constants.DataFlagNotUseFileServer
 	}
 
 	dataID, errCode := database.InsertObjectByPreparePostParam(manager, connection.PID(), param)
@@ -72,7 +71,7 @@ func (commonProtocol *CommonProtocol) postMetaBinary(err error, packet nex.Packe
 	}
 
 	// TODO - Should this be moved inside InsertObjectByPreparePostParam?
-	notifyAccessRecipientsOnCreation := (param.Flag & types.UInt32(datastore_constants.DataFlagUseNotificationOnPost)) != 0
+	notifyAccessRecipientsOnCreation := param.Flag.HasFlag(datastore_constants.DataFlagUseNotificationOnPost)
 	if notifyAccessRecipientsOnCreation {
 		recipientIDs, errCode := manager.GetNotificationRecipients(connection.PID(), param.Permission)
 		if errCode != nil {

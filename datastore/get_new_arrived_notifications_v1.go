@@ -16,7 +16,7 @@ func (commonProtocol *CommonProtocol) getNewArrivedNotficationsV1(err error, pac
 		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
 	}
 
-	if uint32(param.Limit) > datastore_constants.MaxSearchResultSize {
+	if int(param.Limit) > datastore_constants.MaxSearchResultSize {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 	}
 
@@ -51,4 +51,3 @@ func (commonProtocol *CommonProtocol) getNewArrivedNotficationsV1(err error, pac
 
 	return rmcResponse, nil
 }
-

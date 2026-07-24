@@ -11,7 +11,7 @@ import (
 	"github.com/lib/pq"
 )
 
-func GetObjectMetaInfoByDataIDWithResultOption(manager *common_globals.DataStoreManager, dataID types.UInt64, resultOption types.UInt8) (datastore_types.DataStoreMetaInfo, *nex.Error) {
+func GetObjectMetaInfoByDataIDWithResultOption(manager *common_globals.DataStoreManager, dataID types.UInt64, resultOption datastore_constants.ResultFlag) (datastore_types.DataStoreMetaInfo, *nex.Error) {
 	metaInfo := datastore_types.NewDataStoreMetaInfo()
 
 	// * These fields are always populated.
@@ -56,10 +56,10 @@ func GetObjectMetaInfoByDataIDWithResultOption(manager *common_globals.DataStore
 		&metaInfo.ExpireTime,
 	}
 
-	populateTags := (resultOption & types.UInt8(datastore_constants.ResultFlagTags)) != 0
-	populateRatings := (resultOption & types.UInt8(datastore_constants.ResultFlagRatings)) != 0
-	populateMetaBinary := (resultOption & types.UInt8(datastore_constants.ResultFlagMetaBinary)) != 0
-	populateRecipientIDs := (resultOption & types.UInt8(datastore_constants.ResultFlagPermittedIDs)) != 0
+	populateTags := resultOption.HasFlag(datastore_constants.ResultFlagTags)
+	populateRatings := resultOption.HasFlag(datastore_constants.ResultFlagRatings)
+	populateMetaBinary := resultOption.HasFlag(datastore_constants.ResultFlagMetaBinary)
+	populateRecipientIDs := resultOption.HasFlag(datastore_constants.ResultFlagPermittedIDs)
 
 	if populateTags {
 		columns = append(columns, "tags")

@@ -19,7 +19,7 @@ func (commonProtocol *CommonProtocol) getObjectInfos(err error, packet nex.Packe
 		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
 	}
 
-	if len(dataIDs) > int(datastore_constants.BatchProcessingCapacity) {
+	if len(dataIDs) > datastore_constants.BatchProcessingCapacity {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 	}
 
@@ -55,7 +55,7 @@ func (commonProtocol *CommonProtocol) getObjectInfos(err error, packet nex.Packe
 		}
 
 		// * The owner of an object can always view their objects, but normal users cannot
-		if metaInfo.Status != types.UInt8(datastore_constants.DataStatusNone) && metaInfo.OwnerID != connection.PID() {
+		if metaInfo.Status != datastore_constants.DataStatusNone && metaInfo.OwnerID != connection.PID() {
 			pInfos = append(pInfos, invalidReqGetInfo)
 			pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.NotFound))
 			continue
@@ -63,8 +63,7 @@ func (commonProtocol *CommonProtocol) getObjectInfos(err error, packet nex.Packe
 
 		// TODO - Check param.LockID. See InsertObjectByPreparePostParam for notes on read locks
 
-		notUseFileServer := (metaInfo.Flag & types.UInt32(datastore_constants.DataFlagNotUseFileServer)) != 0
-		if notUseFileServer {
+		if metaInfo.Flag.HasFlag(datastore_constants.DataFlagNotUseFileServer) {
 			pInfos = append(pInfos, invalidReqGetInfo)
 			pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.InvalidArgument))
 			continue

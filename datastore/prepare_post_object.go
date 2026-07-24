@@ -30,8 +30,7 @@ func (commonProtocol *CommonProtocol) preparePostObject(err error, packet nex.Pa
 
 	// TODO - Add rollback for when error occurs
 
-	notUseFileServer := (param.Flag & types.UInt32(datastore_constants.DataFlagNotUseFileServer)) != 0
-	if notUseFileServer {
+	if param.Flag.HasFlag(datastore_constants.DataFlagNotUseFileServer) {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "PreparePostObject cannot be used with DataFlagNotUseFileServer")
 	}
 
@@ -73,8 +72,7 @@ func (commonProtocol *CommonProtocol) preparePostObject(err error, packet nex.Pa
 	}
 
 	// TODO - Should this be moved inside InsertObjectByPreparePostParam?
-	notifyAccessRecipientsOnCreation := (param.Flag & types.UInt32(datastore_constants.DataFlagUseNotificationOnPost)) != 0
-	if notifyAccessRecipientsOnCreation {
+	if param.Flag.HasFlag(datastore_constants.DataFlagUseNotificationOnPost) {
 		recipientIDs, errCode := manager.GetNotificationRecipients(connection.PID(), param.Permission)
 		if errCode != nil {
 			common_globals.Logger.Errorf("Error on getting notification recipients: %s", errCode.Error())

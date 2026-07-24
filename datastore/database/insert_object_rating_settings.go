@@ -19,7 +19,7 @@ func InsertObjectRatingSettings(manager *common_globals.DataStoreManager, dataID
 			return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with an invalid rating slot")
 		}
 
-		if ratingInitParam.Param.LockType > types.UInt8(datastore_constants.RatingLockPermanent) {
+		if ratingInitParam.Param.LockType > datastore_constants.RatingLockPermanent {
 			return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with an invalid rating lock type")
 		}
 
@@ -27,7 +27,7 @@ func InsertObjectRatingSettings(manager *common_globals.DataStoreManager, dataID
 
 		// * "Interval" locks treat PeriodDuration as a non-negative value representing
 		// * the number of seconds until the lock expires
-		if ratingInitParam.Param.LockType == types.UInt8(datastore_constants.RatingLockInterval) {
+		if ratingInitParam.Param.LockType == datastore_constants.RatingLockInterval {
 			if ratingInitParam.Param.PeriodDuration < 0 {
 				return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with an invalid PeriodDuration")
 			}
@@ -36,15 +36,15 @@ func InsertObjectRatingSettings(manager *common_globals.DataStoreManager, dataID
 		// * "Period" locks treat PeriodDuration as the day of the week/month and
 		// * PeriodHour as the hour of that day. "Day1" is the first of the following
 		// * month
-		if ratingInitParam.Param.LockType == types.UInt8(datastore_constants.RatingLockPeriod) {
-			if ratingInitParam.Param.PeriodDuration != types.Int16(datastore_constants.RatingLockPeriodMon) &&
-				ratingInitParam.Param.PeriodDuration != types.Int16(datastore_constants.RatingLockPeriodTue) &&
-				ratingInitParam.Param.PeriodDuration != types.Int16(datastore_constants.RatingLockPeriodWed) &&
-				ratingInitParam.Param.PeriodDuration != types.Int16(datastore_constants.RatingLockPeriodThu) &&
-				ratingInitParam.Param.PeriodDuration != types.Int16(datastore_constants.RatingLockPeriodFri) &&
-				ratingInitParam.Param.PeriodDuration != types.Int16(datastore_constants.RatingLockPeriodSat) &&
-				ratingInitParam.Param.PeriodDuration != types.Int16(datastore_constants.RatingLockPeriodSun) &&
-				ratingInitParam.Param.PeriodDuration != types.Int16(datastore_constants.RatingLockPeriodDay1) {
+		if ratingInitParam.Param.LockType == datastore_constants.RatingLockPeriod {
+			if ratingInitParam.Param.PeriodDuration != datastore_constants.RatingLockPeriodMon &&
+				ratingInitParam.Param.PeriodDuration != datastore_constants.RatingLockPeriodTue &&
+				ratingInitParam.Param.PeriodDuration != datastore_constants.RatingLockPeriodWed &&
+				ratingInitParam.Param.PeriodDuration != datastore_constants.RatingLockPeriodThu &&
+				ratingInitParam.Param.PeriodDuration != datastore_constants.RatingLockPeriodFri &&
+				ratingInitParam.Param.PeriodDuration != datastore_constants.RatingLockPeriodSat &&
+				ratingInitParam.Param.PeriodDuration != datastore_constants.RatingLockPeriodSun &&
+				ratingInitParam.Param.PeriodDuration != datastore_constants.RatingLockPeriodDay1 {
 				return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with an invalid PeriodDuration")
 			}
 
@@ -59,12 +59,12 @@ func InsertObjectRatingSettings(manager *common_globals.DataStoreManager, dataID
 
 	// TODO - Handle rollback on errors
 	for _, ratingInitParam := range ratingInitParams {
-		allowMultipleRatings := (ratingInitParam.Param.Flag & types.UInt8(datastore_constants.RatingFlagModifiable)) != 0
-		roundNegatives := (ratingInitParam.Param.Flag & types.UInt8(datastore_constants.RatingFlagRoundMinus)) != 0
-		disableSelfRating := (ratingInitParam.Param.Flag & types.UInt8(datastore_constants.RatingFlagDisableSelfRating)) != 0
+		allowMultipleRatings := ratingInitParam.Param.Flag.HasFlag(datastore_constants.RatingFlagModifiable)
+		roundNegatives := ratingInitParam.Param.Flag.HasFlag(datastore_constants.RatingFlagRoundMinus)
+		disableSelfRating := ratingInitParam.Param.Flag.HasFlag(datastore_constants.RatingFlagDisableSelfRating)
 
-		useMinimum := (ratingInitParam.Param.InternalFlag & types.UInt8(datastore_constants.RatingInternalFlagUseRangeMin)) != 0
-		useMaximum := (ratingInitParam.Param.InternalFlag & types.UInt8(datastore_constants.RatingInternalFlagUseRangeMax)) != 0
+		useMinimum := ratingInitParam.Param.InternalFlag.HasFlag(datastore_constants.RatingInternalFlagUseRangeMin)
+		useMaximum := ratingInitParam.Param.InternalFlag.HasFlag(datastore_constants.RatingInternalFlagUseRangeMax)
 
 		_, err := manager.Database.Exec(`INSERT INTO datastore.rating_settings (
 			data_id,

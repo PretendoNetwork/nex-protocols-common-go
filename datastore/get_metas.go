@@ -16,7 +16,7 @@ func (commonProtocol *CommonProtocol) getMetas(err error, packet nex.PacketInter
 		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
 	}
 
-	if len(dataIDs) > int(datastore_constants.BatchProcessingCapacity) {
+	if len(dataIDs) > datastore_constants.BatchProcessingCapacity {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 	}
 
@@ -54,7 +54,7 @@ func (commonProtocol *CommonProtocol) getMetas(err error, packet nex.PacketInter
 		}
 
 		// * The owner of an object can always view their objects, but normal users cannot
-		if metaInfo.Status != types.UInt8(datastore_constants.DataStatusNone) && metaInfo.OwnerID != connection.PID() {
+		if metaInfo.Status != datastore_constants.DataStatusNone && metaInfo.OwnerID != connection.PID() {
 			pMetaInfo = append(pMetaInfo, invalidMetaInfo)
 			pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.NotFound))
 			continue

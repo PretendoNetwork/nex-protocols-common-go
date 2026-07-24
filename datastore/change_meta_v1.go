@@ -43,7 +43,7 @@ func (commonProtocol *CommonProtocol) changeMetaV1(err error, packet nex.PacketI
 	}
 
 	// * If the object is pending or rejected, only the owner can interact with it
-	if metaInfo.OwnerID != connection.PID() && (metaInfo.Status == types.UInt8(datastore_constants.DataStatusPending) || metaInfo.Status == types.UInt8(datastore_constants.DataStatusRejected)) {
+	if metaInfo.OwnerID != connection.PID() && (metaInfo.Status == datastore_constants.DataStatusPending || metaInfo.Status == datastore_constants.DataStatusRejected) {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
 	}
 

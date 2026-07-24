@@ -48,8 +48,8 @@ func (commonProtocol *CommonProtocol) getMeta(err error, packet nex.PacketInterf
 	}
 
 	// * The owner of an object can always view their objects, but normal users cannot
-	if pMetaInfo.Status != types.UInt8(datastore_constants.DataStatusNone) && pMetaInfo.OwnerID != connection.PID() {
-		if pMetaInfo.Status == types.UInt8(datastore_constants.DataStatusPending) {
+	if pMetaInfo.Status != datastore_constants.DataStatusNone && pMetaInfo.OwnerID != connection.PID() {
+		if pMetaInfo.Status == datastore_constants.DataStatusPending {
 			return nil, nex.NewError(nex.ResultCodes.DataStore.UnderReviewing, "change_error")
 		}
 

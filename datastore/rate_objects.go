@@ -23,11 +23,11 @@ func (commonProtocol *CommonProtocol) rateObjects(err error, packet nex.PacketIn
 	endpoint := connection.Endpoint()
 
 	// * Reusing this constant. Name doesn't make sense but it's the same value so w/e
-	if len(targets) > int(datastore_constants.BatchProcessingCapacityPostObject) {
+	if len(targets) > datastore_constants.BatchProcessingCapacityPostObject {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 	}
 
-	if len(params) > int(datastore_constants.BatchProcessingCapacityPostObject) {
+	if len(params) > datastore_constants.BatchProcessingCapacityPostObject {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 	}
 
@@ -81,8 +81,8 @@ func (commonProtocol *CommonProtocol) rateObjects(err error, packet nex.PacketIn
 		}
 
 		// * The owner of an object can always view their objects, but normal users cannot
-		if metaInfo.Status != types.UInt8(datastore_constants.DataStatusNone) && metaInfo.OwnerID != connection.PID() {
-			if metaInfo.Status == types.UInt8(datastore_constants.DataStatusPending) {
+		if metaInfo.Status != datastore_constants.DataStatusNone && metaInfo.OwnerID != connection.PID() {
+			if metaInfo.Status == datastore_constants.DataStatusPending {
 				pRatings = append(pRatings, invalidRatingInfo)
 				pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.UnderReviewing))
 				continue
@@ -101,12 +101,12 @@ func (commonProtocol *CommonProtocol) rateObjects(err error, packet nex.PacketIn
 			continue
 		}
 
-		allowMultipleRatings := (ratingSettings.Flag & types.UInt8(datastore_constants.RatingFlagModifiable)) != 0
-		roundNegatives := (ratingSettings.Flag & types.UInt8(datastore_constants.RatingFlagRoundMinus)) != 0
-		disableSelfRating := (ratingSettings.Flag & types.UInt8(datastore_constants.RatingFlagDisableSelfRating)) != 0
+		allowMultipleRatings := ratingSettings.Flag.HasFlag(datastore_constants.RatingFlagModifiable)
+		roundNegatives := ratingSettings.Flag.HasFlag(datastore_constants.RatingFlagRoundMinus)
+		disableSelfRating := ratingSettings.Flag.HasFlag(datastore_constants.RatingFlagDisableSelfRating)
 
-		useMinimum := (ratingSettings.InternalFlag & types.UInt8(datastore_constants.RatingInternalFlagUseRangeMin)) != 0
-		useMaximum := (ratingSettings.InternalFlag & types.UInt8(datastore_constants.RatingInternalFlagUseRangeMax)) != 0
+		useMinimum := ratingSettings.InternalFlag.HasFlag(datastore_constants.RatingInternalFlagUseRangeMin)
+		useMaximum := ratingSettings.InternalFlag.HasFlag(datastore_constants.RatingInternalFlagUseRangeMax)
 
 		value := param.RatingValue
 
@@ -133,7 +133,7 @@ func (commonProtocol *CommonProtocol) rateObjects(err error, packet nex.PacketIn
 			continue
 		}
 
-		if ratingSettings.LockType != types.UInt8(datastore_constants.RatingLockNone) {
+		if ratingSettings.LockType != datastore_constants.RatingLockNone {
 			ratingLog, errCode := database.GetUserRatingLog(manager, target.DataID, target.Slot, connection.PID())
 			if errCode != nil {
 				pRatings = append(pRatings, invalidRatingInfo)
@@ -160,7 +160,7 @@ func (commonProtocol *CommonProtocol) rateObjects(err error, packet nex.PacketIn
 			continue
 		}
 
-		if ratingSettings.LockType != types.UInt8(datastore_constants.RatingLockNone) {
+		if ratingSettings.LockType != datastore_constants.RatingLockNone {
 			errCode := database.LockUserRatings(manager, target.DataID, target.Slot, connection.PID(), ratingSettings)
 			if errCode != nil {
 				pRatings = append(pRatings, invalidRatingInfo)

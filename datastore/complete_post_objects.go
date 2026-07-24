@@ -17,7 +17,7 @@ func (commonProtocol *CommonProtocol) completePostObjects(err error, packet nex.
 		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
 	}
 
-	if len(dataIDs) > int(datastore_constants.BatchProcessingCapacity) {
+	if len(dataIDs) > datastore_constants.BatchProcessingCapacity {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 	}
 

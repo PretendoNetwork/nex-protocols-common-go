@@ -22,7 +22,7 @@ func (commonProtocol *CommonProtocol) getSpecificMetaV1(err error, packet nex.Pa
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
-	if len(param.DataIDs) > int(datastore_constants.BatchProcessingCapacity) {
+	if len(param.DataIDs) > datastore_constants.BatchProcessingCapacity {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 	}
 
@@ -47,8 +47,8 @@ func (commonProtocol *CommonProtocol) getSpecificMetaV1(err error, packet nex.Pa
 		}
 
 		// * The owner of an object can always view their objects, but normal users cannot
-		if metaInfo.Status != types.UInt8(datastore_constants.DataStatusNone) && metaInfo.OwnerID != connection.PID() {
-			if metaInfo.Status == types.UInt8(datastore_constants.DataStatusPending) {
+		if metaInfo.Status != datastore_constants.DataStatusNone && metaInfo.OwnerID != connection.PID() {
+			if metaInfo.Status == datastore_constants.DataStatusPending {
 				return nil, nex.NewError(nex.ResultCodes.DataStore.UnderReviewing, "change_error")
 			}
 

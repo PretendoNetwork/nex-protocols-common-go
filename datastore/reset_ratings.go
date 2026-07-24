@@ -20,7 +20,7 @@ func (commonProtocol *CommonProtocol) resetRatings(err error, packet nex.PacketI
 	endpoint := connection.Endpoint()
 
 	// * This IS BatchProcessingCapacity, unlike other rating methods
-	if len(dataIDs) > int(datastore_constants.BatchProcessingCapacity) {
+	if len(dataIDs) > datastore_constants.BatchProcessingCapacity {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 	}
 
@@ -47,8 +47,8 @@ func (commonProtocol *CommonProtocol) resetRatings(err error, packet nex.PacketI
 		}
 
 		// * The owner of an object can always view their objects, but normal users cannot
-		if metaInfo.Status != types.UInt8(datastore_constants.DataStatusNone) && metaInfo.OwnerID != connection.PID() {
-			if metaInfo.Status == types.UInt8(datastore_constants.DataStatusPending) {
+		if metaInfo.Status != datastore_constants.DataStatusNone && metaInfo.OwnerID != connection.PID() {
+			if metaInfo.Status == datastore_constants.DataStatusPending {
 				pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.UnderReviewing))
 				continue
 			}

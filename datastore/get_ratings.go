@@ -24,7 +24,7 @@ func (commonProtocol *CommonProtocol) getRatings(err error, packet nex.PacketInt
 	// * Using BatchProcessingCapacityPostObject for now
 	// * to match RateObjects/RateObjectsWithPosting.
 	// TODO - If we see a real client use more than 16, update this
-	if len(dataIDs) > int(datastore_constants.BatchProcessingCapacityPostObject) {
+	if len(dataIDs) > datastore_constants.BatchProcessingCapacityPostObject {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 	}
 
@@ -55,8 +55,8 @@ func (commonProtocol *CommonProtocol) getRatings(err error, packet nex.PacketInt
 		}
 
 		// * The owner of an object can always view their objects, but normal users cannot
-		if metaInfo.Status != types.UInt8(datastore_constants.DataStatusNone) && metaInfo.OwnerID != connection.PID() {
-			if metaInfo.Status == types.UInt8(datastore_constants.DataStatusPending) {
+		if metaInfo.Status != datastore_constants.DataStatusNone && metaInfo.OwnerID != connection.PID() {
+			if metaInfo.Status == datastore_constants.DataStatusPending {
 				pRatings = append(pRatings, invalidRatingInfoWithSlot)
 				pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.UnderReviewing))
 				continue

@@ -15,19 +15,19 @@ import (
 
 func UpdateObjectMetadata(manager *common_globals.DataStoreManager, currentData datastore_types.DataStoreMetaInfo, newData datastore_types.DataStoreChangeMetaParam) *nex.Error {
 	// * Do nothing if nothing to update
-	if newData.ModifiesFlag == types.UInt32(datastore_constants.ModificationFlagNone) {
+	if newData.ModifiesFlag == datastore_constants.ModificationFlagNone {
 		return nil
 	}
 
-	modifyName := (newData.ModifiesFlag & types.UInt32(datastore_constants.ModificationFlagName)) != 0
-	modifyAccessPermission := (newData.ModifiesFlag & types.UInt32(datastore_constants.ModificationFlagAccessPermission)) != 0
-	modifyUpdatePermission := (newData.ModifiesFlag & types.UInt32(datastore_constants.ModificationFlagUpdatePermission)) != 0
-	modifyPeriod := (newData.ModifiesFlag & types.UInt32(datastore_constants.ModificationFlagPeriod)) != 0
-	modifyMetaBinary := (newData.ModifiesFlag & types.UInt32(datastore_constants.ModificationFlagMetaBinary)) != 0
-	modifyTags := (newData.ModifiesFlag & types.UInt32(datastore_constants.ModificationFlagTags)) != 0
-	modifyUpdatedTime := (newData.ModifiesFlag & types.UInt32(datastore_constants.ModificationFlagUpdatedTime)) != 0
-	modifyDataType := (newData.ModifiesFlag & types.UInt32(datastore_constants.ModificationFlagDataType)) != 0
-	modifyStatus := (newData.ModifiesFlag & types.UInt32(datastore_constants.ModificationFlagStatus)) != 0
+	modifyName := newData.ModifiesFlag.HasFlag(datastore_constants.ModificationFlagName)
+	modifyAccessPermission := newData.ModifiesFlag.HasFlag(datastore_constants.ModificationFlagAccessPermission)
+	modifyUpdatePermission := newData.ModifiesFlag.HasFlag(datastore_constants.ModificationFlagUpdatePermission)
+	modifyPeriod := newData.ModifiesFlag.HasFlag(datastore_constants.ModificationFlagPeriod)
+	modifyMetaBinary := newData.ModifiesFlag.HasFlag(datastore_constants.ModificationFlagMetaBinary)
+	modifyTags := newData.ModifiesFlag.HasFlag(datastore_constants.ModificationFlagTags)
+	modifyUpdatedTime := newData.ModifiesFlag.HasFlag(datastore_constants.ModificationFlagUpdatedTime)
+	modifyDataType := newData.ModifiesFlag.HasFlag(datastore_constants.ModificationFlagDataType)
+	modifyStatus := newData.ModifiesFlag.HasFlag(datastore_constants.ModificationFlagStatus)
 
 	now := time.Now().UTC()
 	updateData := map[string]any{
@@ -35,7 +35,7 @@ func UpdateObjectMetadata(manager *common_globals.DataStoreManager, currentData 
 	}
 
 	if modifyName {
-		if len(newData.Name) > int(datastore_constants.MaxNameLength) {
+		if len(newData.Name) > datastore_constants.MaxNameLength {
 			return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with a name which is too long")
 		}
 
@@ -43,11 +43,11 @@ func UpdateObjectMetadata(manager *common_globals.DataStoreManager, currentData 
 	}
 
 	if modifyAccessPermission {
-		if newData.Permission.Permission > types.UInt8(datastore_constants.PermissionSpecifiedFriend) {
+		if newData.Permission.Permission > datastore_constants.PermissionSpecifiedFriend {
 			return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with invalid access permission")
 		}
 
-		if len(newData.Permission.RecipientIDs) > int(datastore_constants.DatastorePermissionRecipientIDsMax) {
+		if len(newData.Permission.RecipientIDs) > datastore_constants.DatastorePermissionRecipientIDsMax {
 			return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with too many access recipient IDs")
 		}
 
@@ -56,11 +56,11 @@ func UpdateObjectMetadata(manager *common_globals.DataStoreManager, currentData 
 	}
 
 	if modifyUpdatePermission {
-		if newData.DelPermission.Permission > types.UInt8(datastore_constants.PermissionSpecifiedFriend) {
+		if newData.DelPermission.Permission > datastore_constants.PermissionSpecifiedFriend {
 			return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with invalid update permission")
 		}
 
-		if len(newData.DelPermission.RecipientIDs) > int(datastore_constants.DatastorePermissionRecipientIDsMax) {
+		if len(newData.DelPermission.RecipientIDs) > datastore_constants.DatastorePermissionRecipientIDsMax {
 			return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with too many update recipient IDs")
 		}
 
@@ -78,7 +78,7 @@ func UpdateObjectMetadata(manager *common_globals.DataStoreManager, currentData 
 	}
 
 	if modifyMetaBinary {
-		if len(newData.MetaBinary) > int(datastore_constants.MaxMetaBinSize) {
+		if len(newData.MetaBinary) > datastore_constants.MaxMetaBinSize {
 			return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with a MetaBinary which is too long")
 		}
 
@@ -92,7 +92,7 @@ func UpdateObjectMetadata(manager *common_globals.DataStoreManager, currentData 
 
 		seenTags := make([]string, 0)
 		for _, tag := range newData.Tags {
-			if len(tag) > int(datastore_constants.MaxTagLength) {
+			if len(tag) > datastore_constants.MaxTagLength {
 				return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with a tag which is too long")
 			}
 
@@ -127,9 +127,9 @@ func UpdateObjectMetadata(manager *common_globals.DataStoreManager, currentData 
 	}
 
 	if modifyStatus {
-		if newData.Status != types.UInt8(datastore_constants.DataStatusNone) &&
-			newData.Status != types.UInt8(datastore_constants.DataStatusPending) &&
-			newData.Status != types.UInt8(datastore_constants.DataStatusRejected) {
+		if newData.Status != datastore_constants.DataStatusNone &&
+			newData.Status != datastore_constants.DataStatusPending &&
+			newData.Status != datastore_constants.DataStatusRejected {
 			return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 		}
 
@@ -137,7 +137,7 @@ func UpdateObjectMetadata(manager *common_globals.DataStoreManager, currentData 
 		// * unless we know a client needs it. Allowing the status
 		// * to be updated would mean owners could bypass review checks
 		// * by setting the status to DataStatusNone
-		if currentData.Status != types.UInt8(datastore_constants.DataStatusNone) {
+		if currentData.Status != datastore_constants.DataStatusNone {
 			return nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
 		}
 

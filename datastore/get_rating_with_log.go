@@ -39,8 +39,8 @@ func (commonProtocol *CommonProtocol) getRatingWithLog(err error, packet nex.Pac
 	}
 
 	// * The owner of an object can always view their objects, but normal users cannot
-	if metaInfo.Status != types.UInt8(datastore_constants.DataStatusNone) && metaInfo.OwnerID != connection.PID() {
-		if metaInfo.Status == types.UInt8(datastore_constants.DataStatusPending) {
+	if metaInfo.Status != datastore_constants.DataStatusNone && metaInfo.OwnerID != connection.PID() {
+		if metaInfo.Status == datastore_constants.DataStatusPending {
 			return nil, nex.NewError(nex.ResultCodes.DataStore.UnderReviewing, "change_error")
 		}
 
@@ -53,11 +53,11 @@ func (commonProtocol *CommonProtocol) getRatingWithLog(err error, packet nex.Pac
 		return nil, errCode
 	}
 
-	allowMultipleRatings := (ratingSettings.Flag & types.UInt8(datastore_constants.RatingFlagModifiable)) != 0
+	allowMultipleRatings := ratingSettings.Flag.HasFlag(datastore_constants.RatingFlagModifiable)
 
 	// * If a slot allows multiple ratings per user, or has no locks,
 	// * then no log is created
-	if allowMultipleRatings || ratingSettings.LockType == types.UInt8(datastore_constants.RatingLockNone) {
+	if allowMultipleRatings || ratingSettings.LockType == datastore_constants.RatingLockNone {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "change_error")
 	}
 

@@ -47,8 +47,8 @@ func (commonProtocol *CommonProtocol) prepareGetObjectV1(err error, packet nex.P
 	}
 
 	// * The owner of an object can always view their objects, but normal users cannot
-	if metaInfo.Status != types.UInt8(datastore_constants.DataStatusNone) && metaInfo.OwnerID != connection.PID() {
-		if metaInfo.Status == types.UInt8(datastore_constants.DataStatusPending) {
+	if metaInfo.Status != datastore_constants.DataStatusNone && metaInfo.OwnerID != connection.PID() {
+		if metaInfo.Status == datastore_constants.DataStatusPending {
 			return nil, nex.NewError(nex.ResultCodes.DataStore.UnderReviewing, "change_error")
 		}
 
@@ -57,8 +57,7 @@ func (commonProtocol *CommonProtocol) prepareGetObjectV1(err error, packet nex.P
 
 	// TODO - Check param.LockID. See InsertObjectByPreparePostParam for notes on read locks
 
-	notUseFileServer := (metaInfo.Flag & types.UInt32(datastore_constants.DataFlagNotUseFileServer)) != 0
-	if notUseFileServer {
+	if metaInfo.Flag.HasFlag(datastore_constants.DataFlagNotUseFileServer) {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "PrepareGetObjectV1 cannot be used with DataFlagNotUseFileServer")
 	}
 

@@ -51,20 +51,20 @@ func (commonProtocol *CommonProtocol) changeMeta(err error, packet nex.PacketInt
 	}
 
 	// * If the object is pending or rejected, only the owner can interact with it
-	if metaInfo.OwnerID != connection.PID() && (metaInfo.Status == types.UInt8(datastore_constants.DataStatusPending) || metaInfo.Status == types.UInt8(datastore_constants.DataStatusRejected)) {
+	if metaInfo.OwnerID != connection.PID() && (metaInfo.Status == datastore_constants.DataStatusPending || metaInfo.Status == datastore_constants.DataStatusRejected) {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
 	}
 
-	compareName := (param.CompareParam.ComparisonFlag & types.UInt32(datastore_constants.ComparisonFlagName)) != 0
-	compareAccessPermission := (param.CompareParam.ComparisonFlag & types.UInt32(datastore_constants.ComparisonFlagAccessPermission)) != 0
-	compareUpdatePermission := (param.CompareParam.ComparisonFlag & types.UInt32(datastore_constants.ComparisonFlagUpdatePermission)) != 0
-	comparePeriod := (param.CompareParam.ComparisonFlag & types.UInt32(datastore_constants.ComparisonFlagPeriod)) != 0
-	compareMetaBinary := (param.CompareParam.ComparisonFlag & types.UInt32(datastore_constants.ComparisonFlagMetaBinary)) != 0
-	compareTags := (param.CompareParam.ComparisonFlag & types.UInt32(datastore_constants.ComparisonFlagTags)) != 0
-	compareDataType := (param.CompareParam.ComparisonFlag & types.UInt32(datastore_constants.ComparisonFlagDataType)) != 0
-	compareStatus := (param.CompareParam.ComparisonFlag & types.UInt32(datastore_constants.ComparisonFlagStatus)) != 0
+	compareName := param.CompareParam.ComparisonFlag.HasFlag(datastore_constants.ComparisonFlagName)
+	compareAccessPermission := param.CompareParam.ComparisonFlag.HasFlag(datastore_constants.ComparisonFlagAccessPermission)
+	compareUpdatePermission := param.CompareParam.ComparisonFlag.HasFlag(datastore_constants.ComparisonFlagUpdatePermission)
+	comparePeriod := param.CompareParam.ComparisonFlag.HasFlag(datastore_constants.ComparisonFlagPeriod)
+	compareMetaBinary := param.CompareParam.ComparisonFlag.HasFlag(datastore_constants.ComparisonFlagMetaBinary)
+	compareTags := param.CompareParam.ComparisonFlag.HasFlag(datastore_constants.ComparisonFlagTags)
+	compareDataType := param.CompareParam.ComparisonFlag.HasFlag(datastore_constants.ComparisonFlagDataType)
+	compareStatus := param.CompareParam.ComparisonFlag.HasFlag(datastore_constants.ComparisonFlagStatus)
 
-	if param.CompareParam.ComparisonFlag == types.UInt32(datastore_constants.ComparisonFlagAll) {
+	if param.CompareParam.ComparisonFlag == datastore_constants.ComparisonFlagAll {
 		compareName = true
 		compareAccessPermission = true
 		compareUpdatePermission = true
@@ -103,7 +103,7 @@ func (commonProtocol *CommonProtocol) changeMeta(err error, packet nex.PacketInt
 		return nil, nex.NewError(nex.ResultCodes.DataStore.ValueNotEqual, "change_error")
 	}
 
-	if compareStatus && !metaInfo.Status.Equals(param.CompareParam.Status) {
+	if compareStatus && metaInfo.Status != param.CompareParam.Status {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.ValueNotEqual, "change_error")
 	}
 

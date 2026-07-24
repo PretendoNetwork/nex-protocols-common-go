@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/PretendoNetwork/nex-go/v2"
-	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	datastore_constants "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/constants"
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
@@ -15,17 +14,17 @@ import (
 
 func UpdateObjectMetadataV1(manager *common_globals.DataStoreManager, currentData datastore_types.DataStoreMetaInfo, newData datastore_types.DataStoreChangeMetaParamV1) *nex.Error {
 	// * Do nothing if nothing to update
-	if newData.ModifiesFlag == types.UInt32(datastore_constants.ModificationFlagNone) {
+	if newData.ModifiesFlag == datastore_constants.ModificationFlagNone {
 		return nil
 	}
 
-	modifyName := (newData.ModifiesFlag & types.UInt32(datastore_constants.ModificationFlagName)) != 0
-	modifyAccessPermission := (newData.ModifiesFlag & types.UInt32(datastore_constants.ModificationFlagAccessPermission)) != 0
-	modifyUpdatePermission := (newData.ModifiesFlag & types.UInt32(datastore_constants.ModificationFlagUpdatePermission)) != 0
-	modifyPeriod := (newData.ModifiesFlag & types.UInt32(datastore_constants.ModificationFlagPeriod)) != 0
-	modifyMetaBinary := (newData.ModifiesFlag & types.UInt32(datastore_constants.ModificationFlagMetaBinary)) != 0
-	modifyTags := (newData.ModifiesFlag & types.UInt32(datastore_constants.ModificationFlagTags)) != 0
-	modifyUpdatedTime := (newData.ModifiesFlag & types.UInt32(datastore_constants.ModificationFlagUpdatedTime)) != 0
+	modifyName := newData.ModifiesFlag.HasFlag(datastore_constants.ModificationFlagName)
+	modifyAccessPermission := newData.ModifiesFlag.HasFlag(datastore_constants.ModificationFlagAccessPermission)
+	modifyUpdatePermission := newData.ModifiesFlag.HasFlag(datastore_constants.ModificationFlagUpdatePermission)
+	modifyPeriod := newData.ModifiesFlag.HasFlag(datastore_constants.ModificationFlagPeriod)
+	modifyMetaBinary := newData.ModifiesFlag.HasFlag(datastore_constants.ModificationFlagMetaBinary)
+	modifyTags := newData.ModifiesFlag.HasFlag(datastore_constants.ModificationFlagTags)
+	modifyUpdatedTime := newData.ModifiesFlag.HasFlag(datastore_constants.ModificationFlagUpdatedTime)
 
 	now := time.Now().UTC()
 	updateData := map[string]any{
@@ -33,7 +32,7 @@ func UpdateObjectMetadataV1(manager *common_globals.DataStoreManager, currentDat
 	}
 
 	if modifyName {
-		if len(newData.Name) > int(datastore_constants.MaxNameLength) {
+		if len(newData.Name) > datastore_constants.MaxNameLength {
 			return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with a name which is too long")
 		}
 
@@ -41,11 +40,11 @@ func UpdateObjectMetadataV1(manager *common_globals.DataStoreManager, currentDat
 	}
 
 	if modifyAccessPermission {
-		if newData.Permission.Permission > types.UInt8(datastore_constants.PermissionSpecifiedFriend) {
+		if newData.Permission.Permission > datastore_constants.PermissionSpecifiedFriend {
 			return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with invalid access permission")
 		}
 
-		if len(newData.Permission.RecipientIDs) > int(datastore_constants.DatastorePermissionRecipientIDsMax) {
+		if len(newData.Permission.RecipientIDs) > datastore_constants.DatastorePermissionRecipientIDsMax {
 			return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with too many access recipient IDs")
 		}
 
@@ -54,11 +53,11 @@ func UpdateObjectMetadataV1(manager *common_globals.DataStoreManager, currentDat
 	}
 
 	if modifyUpdatePermission {
-		if newData.DelPermission.Permission > types.UInt8(datastore_constants.PermissionSpecifiedFriend) {
+		if newData.DelPermission.Permission > datastore_constants.PermissionSpecifiedFriend {
 			return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with invalid update permission")
 		}
 
-		if len(newData.DelPermission.RecipientIDs) > int(datastore_constants.DatastorePermissionRecipientIDsMax) {
+		if len(newData.DelPermission.RecipientIDs) > datastore_constants.DatastorePermissionRecipientIDsMax {
 			return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with too many update recipient IDs")
 		}
 
@@ -76,7 +75,7 @@ func UpdateObjectMetadataV1(manager *common_globals.DataStoreManager, currentDat
 	}
 
 	if modifyMetaBinary {
-		if len(newData.MetaBinary) > int(datastore_constants.MaxMetaBinSize) {
+		if len(newData.MetaBinary) > datastore_constants.MaxMetaBinSize {
 			return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with a MetaBinary which is too long")
 		}
 
@@ -90,7 +89,7 @@ func UpdateObjectMetadataV1(manager *common_globals.DataStoreManager, currentDat
 
 		seenTags := make([]string, 0)
 		for _, tag := range newData.Tags {
-			if len(tag) > int(datastore_constants.MaxTagLength) {
+			if len(tag) > datastore_constants.MaxTagLength {
 				return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with a tag which is too long")
 			}
 
