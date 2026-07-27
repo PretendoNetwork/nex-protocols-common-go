@@ -13,37 +13,38 @@ import (
 )
 
 type CommonProtocol struct {
-	endpoint                                       nex.EndpointInterface
-	protocol                                       matchmake_extension.Interface
-	manager                                        *common_globals.MatchmakingManager
-	PersistentGatheringCreationMax                 int
-	CanJoinMatchmakeSession                        func(manager *common_globals.MatchmakingManager, pid types.PID, matchmakeSession match_making_types.MatchmakeSession) *nex.Error
-	CleanupSearchMatchmakeSession                  func(matchmakeSession *match_making_types.MatchmakeSession)
-	CleanupMatchmakeSessionSearchCriterias         func(searchCriterias types.List[match_making_types.MatchmakeSessionSearchCriteria])
-	OnAfterOpenParticipation                       func(packet nex.PacketInterface, gid types.UInt32)
-	OnAfterCloseParticipation                      func(packet nex.PacketInterface, gid types.UInt32)
-	OnAfterCreateMatchmakeSession                  func(packet nex.PacketInterface, anyGathering match_making_types.GatheringHolder, message types.String, participationCount types.UInt16)
-	OnAfterGetSimplePlayingSession                 func(packet nex.PacketInterface, listPID types.List[types.PID], includeLoginUser types.Bool)
-	OnAfterAutoMatchmakePostpone                   func(packet nex.PacketInterface, anyGathering match_making_types.GatheringHolder, message types.String)
-	OnAfterAutoMatchmakeWithParamPostpone          func(packet nex.PacketInterface, autoMatchmakeParam match_making_types.AutoMatchmakeParam)
-	OnAfterAutoMatchmakeWithSearchCriteriaPostpone func(packet nex.PacketInterface, lstSearchCriteria types.List[match_making_types.MatchmakeSessionSearchCriteria], anyGathering match_making_types.GatheringHolder, strMessage types.String)
-	OnAfterGetPlayingSession                       func(packet nex.PacketInterface, lstPID types.List[types.PID])
-	OnAfterCreateCommunity                         func(packet nex.PacketInterface, community match_making_types.PersistentGathering, strMessage types.String)
-	OnAfterFindCommunityByGatheringID              func(packet nex.PacketInterface, lstGID types.List[types.UInt32])
-	OnAfterFindOfficialCommunity                   func(packet nex.PacketInterface, isAvailableOnly types.Bool, resultRange types.ResultRange)
-	OnAfterFindCommunityByParticipant              func(packet nex.PacketInterface, pid types.PID, resultRange types.ResultRange)
-	OnAfterUpdateProgressScore                     func(packet nex.PacketInterface, gid types.UInt32, progressScore types.UInt8)
-	OnAfterCreateMatchmakeSessionWithParam         func(packet nex.PacketInterface, createMatchmakeSessionParam match_making_types.CreateMatchmakeSessionParam)
-	OnAfterUpdateApplicationBuffer                 func(packet nex.PacketInterface, gid types.UInt32, applicationBuffer types.Buffer)
-	OnAfterJoinMatchmakeSession                    func(packet nex.PacketInterface, gid types.UInt32, strMessage types.String)
-	OnAfterJoinMatchmakeSessionWithParam           func(packet nex.PacketInterface, joinMatchmakeSessionParam match_making_types.JoinMatchmakeSessionParam)
-	OnAfterModifyCurrentGameAttribute              func(packet nex.PacketInterface, gid types.UInt32, attribIndex types.UInt32, newValue types.UInt32)
-	OnAfterBrowseMatchmakeSession                  func(packet nex.PacketInterface, searchCriteria match_making_types.MatchmakeSessionSearchCriteria, resultRange types.ResultRange)
-	OnAfterJoinMatchmakeSessionEx                  func(packet nex.PacketInterface, gid types.UInt32, strMessage types.String, dontCareMyBlockList types.Bool, participationCount types.UInt16)
-	OnAfterGetSimpleCommunity                      func(packet nex.PacketInterface, gatheringIDList types.List[types.UInt32])
-	OnAfterUpdateNotificationData                  func(packet nex.PacketInterface, uiType notifications_constants.NotificationCategory, uiParam1 types.UInt64, uiParam2 types.UInt64, strParam types.String)
-	OnAfterGetFriendNotificationData               func(packet nex.PacketInterface, uiType notifications_constants.NotificationCategorySigned)
-	OnAfterGetlstFriendNotificationData            func(packet nex.PacketInterface, lstTypes types.List[notifications_constants.NotificationCategory])
+	endpoint                                         nex.EndpointInterface
+	protocol                                         matchmake_extension.Interface
+	manager                                          *common_globals.MatchmakingManager
+	PersistentGatheringCreationMax                   int
+	CanJoinMatchmakeSession                          func(manager *common_globals.MatchmakingManager, pid types.PID, matchmakeSession match_making_types.MatchmakeSession) *nex.Error
+	CleanupSearchMatchmakeSession                    func(matchmakeSession *match_making_types.MatchmakeSession)
+	CleanupMatchmakeSessionSearchCriterias           func(searchCriterias types.List[match_making_types.MatchmakeSessionSearchCriteria])
+	OnAfterOpenParticipation                         func(packet nex.PacketInterface, gid types.UInt32)
+	OnAfterCloseParticipation                        func(packet nex.PacketInterface, gid types.UInt32)
+	OnAfterCreateMatchmakeSession                    func(packet nex.PacketInterface, anyGathering match_making_types.GatheringHolder, message types.String, participationCount types.UInt16)
+	OnAfterGetSimplePlayingSession                   func(packet nex.PacketInterface, listPID types.List[types.PID], includeLoginUser types.Bool)
+	OnAfterAutoMatchmakePostpone                     func(packet nex.PacketInterface, anyGathering match_making_types.GatheringHolder, message types.String)
+	OnAfterAutoMatchmakeWithParamPostpone            func(packet nex.PacketInterface, autoMatchmakeParam match_making_types.AutoMatchmakeParam)
+	OnAfterAutoMatchmakeWithSearchCriteriaPostpone   func(packet nex.PacketInterface, lstSearchCriteria types.List[match_making_types.MatchmakeSessionSearchCriteria], anyGathering match_making_types.GatheringHolder, strMessage types.String)
+	OnAfterGetPlayingSession                         func(packet nex.PacketInterface, lstPID types.List[types.PID])
+	OnAfterCreateCommunity                           func(packet nex.PacketInterface, community match_making_types.PersistentGathering, strMessage types.String)
+	OnAfterFindCommunityByGatheringID                func(packet nex.PacketInterface, lstGID types.List[types.UInt32])
+	OnAfterFindOfficialCommunity                     func(packet nex.PacketInterface, isAvailableOnly types.Bool, resultRange types.ResultRange)
+	OnAfterFindCommunityByParticipant                func(packet nex.PacketInterface, pid types.PID, resultRange types.ResultRange)
+	OnAfterUpdateProgressScore                       func(packet nex.PacketInterface, gid types.UInt32, progressScore types.UInt8)
+	OnAfterCreateMatchmakeSessionWithParam           func(packet nex.PacketInterface, createMatchmakeSessionParam match_making_types.CreateMatchmakeSessionParam)
+	OnAfterUpdateApplicationBuffer                   func(packet nex.PacketInterface, gid types.UInt32, applicationBuffer types.Buffer)
+	OnAfterJoinMatchmakeSession                      func(packet nex.PacketInterface, gid types.UInt32, strMessage types.String)
+	OnAfterJoinMatchmakeSessionWithParam             func(packet nex.PacketInterface, joinMatchmakeSessionParam match_making_types.JoinMatchmakeSessionParam)
+	OnAfterModifyCurrentGameAttribute                func(packet nex.PacketInterface, gid types.UInt32, attribIndex types.UInt32, newValue types.UInt32)
+	OnAfterBrowseMatchmakeSession                    func(packet nex.PacketInterface, searchCriteria match_making_types.MatchmakeSessionSearchCriteria, resultRange types.ResultRange)
+	OnAfterJoinMatchmakeSessionEx                    func(packet nex.PacketInterface, gid types.UInt32, strMessage types.String, dontCareMyBlockList types.Bool, participationCount types.UInt16)
+	OnAfterGetSimpleCommunity                        func(packet nex.PacketInterface, gatheringIDList types.List[types.UInt32])
+	OnAfterUpdateNotificationData                    func(packet nex.PacketInterface, uiType notifications_constants.NotificationCategory, uiParam1 types.UInt64, uiParam2 types.UInt64, strParam types.String)
+	OnAfterGetFriendNotificationData                 func(packet nex.PacketInterface, uiType notifications_constants.NotificationCategorySigned)
+	OnAfterGetlstFriendNotificationData              func(packet nex.PacketInterface, lstTypes types.List[notifications_constants.NotificationCategory])
+	OnAfterFindMatchmakeSessionByGatheringIDDetail   func(packet nex.PacketInterface, gid types.UInt32)
 }
 
 // SetDatabase defines the matchmaking manager to be used by the common protocol
@@ -196,6 +197,7 @@ func NewCommonProtocol(protocol matchmake_extension.Interface) *CommonProtocol {
 	protocol.SetHandlerUpdateNotificationData(commonProtocol.updateNotificationData)
 	protocol.SetHandlerGetFriendNotificationData(commonProtocol.getFriendNotificationData)
 	protocol.SetHandlerGetlstFriendNotificationData(commonProtocol.getlstFriendNotificationData)
+	protocol.SetHandlerFindMatchmakeSessionByGatheringIDDetail(commonProtocol.findMatchmakeSessionByGatheringIDDetail)
 
 	endpoint.OnConnectionEnded(func(connection *nex.PRUDPConnection) {
 		commonProtocol.manager.Mutex.Lock()

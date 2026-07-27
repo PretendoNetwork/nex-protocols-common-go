@@ -65,7 +65,7 @@ func EndGatheringParticipation(manager *common_globals.MatchmakingManager, gathe
 			return nil
 		}
 
-		ownerPID, nexError = MigrateGatheringOwnership(manager, connection, gathering, newParticipants)
+		ownerPID, nexError = MigrateGatheringOwnership(manager, connection, gathering, newParticipants, nil, true)
 		if nexError != nil {
 			return nexError
 		}

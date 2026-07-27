@@ -10,15 +10,16 @@ import (
 )
 
 type CommonProtocol struct {
-	endpoint                   *nex.PRUDPEndPoint
-	protocol                   match_making.Interface
-	manager                    *common_globals.MatchmakingManager
-	OnAfterUnregisterGathering func(packet nex.PacketInterface, idGathering types.UInt32)
-	OnAfterFindBySingleID      func(packet nex.PacketInterface, id types.UInt32)
-	OnAfterUpdateSessionURL    func(packet nex.PacketInterface, idGathering types.UInt32, strURL types.String)
-	OnAfterUpdateSessionHostV1 func(packet nex.PacketInterface, gid types.UInt32)
-	OnAfterGetSessionURLs      func(packet nex.PacketInterface, gid types.UInt32)
-	OnAfterUpdateSessionHost   func(packet nex.PacketInterface, gid types.UInt32, isMigrateOwner types.Bool)
+	endpoint                         *nex.PRUDPEndPoint
+	protocol                         match_making.Interface
+	manager                          *common_globals.MatchmakingManager
+	OnAfterUnregisterGathering       func(packet nex.PacketInterface, idGathering types.UInt32)
+	OnAfterFindBySingleID            func(packet nex.PacketInterface, id types.UInt32)
+	OnAfterUpdateSessionURL          func(packet nex.PacketInterface, idGathering types.UInt32, strURL types.String)
+	OnAfterUpdateSessionHostV1       func(packet nex.PacketInterface, gid types.UInt32)
+	OnAfterGetSessionURLs            func(packet nex.PacketInterface, gid types.UInt32)
+	OnAfterUpdateSessionHost         func(packet nex.PacketInterface, gid types.UInt32, isMigrateOwner types.Bool)
+	OnAfterMigrateGatheringOwnership func(packet nex.PacketInterface, gid types.UInt32, lstPotentialNewOwnersID types.List[types.PID], participantsOnly types.Bool)
 }
 
 // SetManager defines the matchmaking manager to be used by the common protocol
@@ -163,6 +164,7 @@ func NewCommonProtocol(protocol match_making.Interface) *CommonProtocol {
 	protocol.SetHandlerUpdateSessionHostV1(commonProtocol.updateSessionHostV1)
 	protocol.SetHandlerGetSessionURLs(commonProtocol.getSessionURLs)
 	protocol.SetHandlerUpdateSessionHost(commonProtocol.updateSessionHost)
+	protocol.SetHandlerMigrateGatheringOwnership(commonProtocol.migrateGatheringOwnership)
 
 	endpoint.OnConnectionEnded(func(connection *nex.PRUDPConnection) {
 		commonProtocol.manager.Mutex.Lock()
