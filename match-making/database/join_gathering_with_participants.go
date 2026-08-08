@@ -106,7 +106,7 @@ func JoinGatheringWithParticipants(manager *common_globals.MatchmakingManager, g
 			oEvent.StrParam = types.NewString(joinMessage)
 			oEvent.Param3 = types.UInt64(len(participants))
 
-			common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, participantJoinedTargets)
+			common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, oldParticipants)
 		}
 
 		// * This flag also sends a recap of all currently connected players on the gathering to the participant that is connecting
