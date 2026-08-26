@@ -15,6 +15,49 @@ import (
 	pqextended "github.com/PretendoNetwork/pq-extended"
 )
 
+func SendAddedToGatheringToNewParticipants(connection *nex.PRUDPConnection, newParticipants []uint64, gatheringID uint32) {
+	for _, participant := range common_globals.RemoveDuplicates(newParticipants) {
+		// * Don't send the SwitchGathering notification to the participant that requested the join
+		if uint64(connection.PID()) == participant {
+			continue
+		}
+
+		oEvent := notifications_types.NewNotificationEvent()
+		oEvent.PIDSource = connection.PID()
+		oEvent.Type = notifications_constants.NotificationCategoryAddedToGathering.Build()
+		oEvent.Param1 = types.UInt64(gatheringID)
+		oEvent.Param2 = types.UInt64(participant)
+
+		// * Send the notification to the participant
+		common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, []uint64{participant})
+	}
+}
+
+func SendJoinNotificationsOfTo(connection *nex.PRUDPConnection, gatheringID uint32, joinMessage string, participantCount int, sourceParticipants []uint64, destinationParticipants []uint64) {
+	for _, participant := range common_globals.RemoveDuplicates(sourceParticipants) {
+		destWithoutSelf := common_globals.RemoveDuplicates(destinationParticipants)
+
+		// this removes any occurrance of `participant` from `destWithoutSelf` so that participants never see
+		// their own join notification as they already see their SwitchGathering notification
+		// i really dont like how this looks but this is the neatest way i could find of doing this...
+		for i := slices.Index(destWithoutSelf, participant); i >= 0; i = slices.Index(destWithoutSelf, participant) {
+			// remove index i out of destWithoutSelf
+			destWithoutSelf[i] = destWithoutSelf[len(destWithoutSelf)-1]
+			destWithoutSelf = destWithoutSelf[:len(destWithoutSelf)-1]
+		}
+
+		oEvent := notifications_types.NewNotificationEvent()
+		oEvent.PIDSource = connection.PID()
+		oEvent.Type = notifications_constants.NotificationCategoryParticipationEvent.Build(notifications_constants.ParticipationEventsParticipate)
+		oEvent.Param1 = types.UInt64(gatheringID)
+		oEvent.Param2 = types.UInt64(participant)
+		oEvent.StrParam = types.NewString(joinMessage)
+		oEvent.Param3 = types.UInt64(uint64(participantCount))
+
+		common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, destinationParticipants)
+	}
+}
+
 // JoinGatheringWithParticipants joins participants into a gathering. Returns the new number of participants
 func JoinGatheringWithParticipants(manager *common_globals.MatchmakingManager, gatheringID uint32, connection *nex.PRUDPConnection, additionalParticipants []types.PID, joinMessage string, joinMatchmakeSessionBehavior constants.JoinMatchmakeSessionBehavior) (uint32, *nex.Error) {
 	var ownerPID uint64
@@ -68,63 +111,19 @@ func JoinGatheringWithParticipants(manager *common_globals.MatchmakingManager, g
 		return 0, nexError
 	}
 
-	var participantJoinedTargets []uint64
-
-	// * When the VerboseParticipants or the VerboseParticipantsEx flags are set, all participant notification events are sent to everyone
-	if flags.HasFlag(match_making_constants.GatheringFlagNotifyParticipationEventsToAllParticipants) || flags.HasFlag(match_making_constants.GatheringFlagNotifyParticipationEventsToAllParticipantsReproducibly) {
-		participantJoinedTargets = common_globals.RemoveDuplicates(participants)
-	} else {
-		participantJoinedTargets = []uint64{ownerPID}
-	}
-
 	// * Send the switch SwitchGathering to the new participants first
-	for _, participant := range common_globals.RemoveDuplicates(newParticipants) {
-		// * Don't send the SwitchGathering notification to the participant that requested the join
-		if uint64(connection.PID()) == participant {
-			continue
-		}
-
-		oEvent := notifications_types.NewNotificationEvent()
-		oEvent.PIDSource = connection.PID()
-		oEvent.Type = notifications_constants.NotificationCategoryAddedToGathering.Build()
-		oEvent.Param1 = types.UInt64(gatheringID)
-		oEvent.Param2 = types.UInt64(participant)
-
-		// * Send the notification to the participant
-		common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, []uint64{participant})
+	SendAddedToGatheringToNewParticipants(connection, newParticipants, gatheringID)
+	if flags.HasFlag(match_making_constants.GatheringFlagNotifyParticipationEventsToAllParticipants) || flags.HasFlag(match_making_constants.GatheringFlagNotifyParticipationEventsToAllParticipantsReproducibly) {
+		// inform all people of the new participants joining
+		SendJoinNotificationsOfTo(connection, gatheringID, joinMessage, len(participants), newParticipants, oldParticipants)
+	} else {
+		// inform the owner of all people who are joining
+		SendJoinNotificationsOfTo(connection, gatheringID, joinMessage, len(participants), newParticipants, []uint64{ownerPID})
 	}
 
-	for _, participant := range newParticipants {
-		// * If the new participant is the same as the owner, then we are creating a new gathering.
-		// * We don't need to send the new participant notification event in that case
-		if (flags.HasFlag(match_making_constants.GatheringFlagNotifyParticipationEventsToAllParticipants) || flags.HasFlag(match_making_constants.GatheringFlagNotifyParticipationEventsToAllParticipantsReproducibly)) || uint64(connection.PID()) != ownerPID {
-			oEvent := notifications_types.NewNotificationEvent()
-			oEvent.PIDSource = connection.PID()
-			oEvent.Type = notifications_constants.NotificationCategoryParticipationEvent.Build(notifications_constants.ParticipationEventsParticipate)
-			oEvent.Param1 = types.UInt64(gatheringID)
-			oEvent.Param2 = types.UInt64(participant)
-			oEvent.StrParam = types.NewString(joinMessage)
-			oEvent.Param3 = types.UInt64(len(participants))
-
-			common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, oldParticipants)
-		}
-
-		// * This flag also sends a recap of all currently connected players on the gathering to the participant that is connecting
-		if flags.HasFlag(match_making_constants.GatheringFlagNotifyParticipationEventsToAllParticipantsReproducibly) {
-			// TODO - Should this actually be deduplicated?
-			for _, oldParticipant := range common_globals.RemoveDuplicates(oldParticipants) {
-				oEvent := notifications_types.NewNotificationEvent()
-				oEvent.PIDSource = connection.PID()
-				oEvent.Type = notifications_constants.NotificationCategoryParticipationEvent.Build(notifications_constants.ParticipationEventsParticipate)
-				oEvent.Param1 = types.UInt64(gatheringID)
-				oEvent.Param2 = types.UInt64(oldParticipant)
-				oEvent.StrParam = types.NewString(joinMessage)
-				oEvent.Param3 = types.UInt64(len(participants))
-
-				// * Send the notification to the joining participant
-				common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, []uint64{participant})
-			}
-		}
+	if flags.HasFlag(match_making_constants.GatheringFlagNotifyParticipationEventsToAllParticipantsReproducibly) {
+		// send the join notifications to all the new players for every player such that the new players all know of every joined player
+		SendJoinNotificationsOfTo(connection, gatheringID, joinMessage, len(participants), participants, newParticipants)
 	}
 
 	return uint32(len(participants)), nil
