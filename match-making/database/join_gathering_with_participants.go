@@ -62,8 +62,13 @@ func JoinGatheringWithParticipants(manager *common_globals.MatchmakingManager, g
 		return 0, nex.NewError(nex.ResultCodes.Core.Unknown, err.Error())
 	}
 
+	nexError := RecordMessage(manager, gatheringID, connection.PID(), joinMessage)
+	if nexError != nil {
+		return 0, nexError
+	}
+
 	// NOTE - This will log even if no new participants are added
-	nexError := tracking.LogJoinGathering(manager.Database, connection.PID(), gatheringID, newParticipants, participants)
+	nexError = tracking.LogJoinGathering(manager.Database, connection.PID(), gatheringID, newParticipants, participants)
 	if nexError != nil {
 		return 0, nexError
 	}

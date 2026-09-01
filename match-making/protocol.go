@@ -56,6 +56,17 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.Matchma
 		return
 	}
 
+	_, err = manager.Database.Exec(`CREATE TABLE IF NOT EXISTS matchmaking.messages (
+		gathering_id bigint,
+		pid numeric(20),
+		message text,
+		PRIMARY KEY (gathering_id, pid)
+	)`)
+	if err != nil {
+		common_globals.Logger.Error(err.Error())
+		return
+	}
+
 	_, err = manager.Database.Exec(`CREATE SCHEMA IF NOT EXISTS tracking`)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())

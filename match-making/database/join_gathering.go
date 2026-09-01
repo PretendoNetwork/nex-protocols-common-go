@@ -64,7 +64,12 @@ func JoinGathering(manager *common_globals.MatchmakingManager, gatheringID uint3
 		}
 	}
 
-	nexError := tracking.LogJoinGathering(manager.Database, connection.PID(), gatheringID, newParticipants, totalParticipants)
+	nexError := RecordMessage(manager, gatheringID, connection.PID(), joinMessage)
+	if nexError != nil {
+		return 0, nexError
+	}
+
+	nexError = tracking.LogJoinGathering(manager.Database, connection.PID(), gatheringID, newParticipants, totalParticipants)
 	if nexError != nil {
 		return 0, nexError
 	}
