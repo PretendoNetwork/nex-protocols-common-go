@@ -57,7 +57,7 @@ func CheckValidMatchmakeSession(matchmakeSession match_making_types.MatchmakeSes
 		return false
 	}
 
-	if len(matchmakeSession.Attributes) != 6 {
+	if len(matchmakeSession.Attributes) != 9 {
 		return false
 	}
 
@@ -74,8 +74,8 @@ func CheckValidMatchmakeSession(matchmakeSession match_making_types.MatchmakeSes
 		return false
 	}
 
-	// * All buffers must have a length lower than 512
-	if len(matchmakeSession.ApplicationBuffer) > 512 {
+	// * All buffers must have a length lower than 1024
+	if len(matchmakeSession.ApplicationBuffer) > 1024 {
 		return false
 	}
 

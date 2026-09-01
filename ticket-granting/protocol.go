@@ -57,6 +57,9 @@ func NewCommonProtocol(protocol ticket_granting.Interface) *CommonProtocol {
 
 	protocol.SetHandlerLogin(commonProtocol.login)
 	protocol.SetHandlerLoginEx(commonProtocol.loginEx)
+	if protocol.Endpoint().LibraryVersions().Main.GreaterOrEqual("4.0.0") {
+		protocol.SetHandlerValidateAndRequestTicketWithCustomData(commonProtocol.loginEx)
+	}
 	protocol.SetHandlerRequestTicket(commonProtocol.requestTicket)
 
 	commonProtocol.DisableInsecureLogin() // * Disable insecure login by default

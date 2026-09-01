@@ -33,7 +33,7 @@ func GetDetailedParticipants(manager *common_globals.MatchmakingManager, gatheri
 
 	for _, participant := range participantList {
 		participantInfo := matchmaking_types.NewParticipantDetails()
-		err = manager.Database.QueryRow(`SELECT owner_pid, message FROM matchmaking.messages WHERE gathering_id = $1 AND owner_pid = $2`, gatheringID, participant).Scan(&participantInfo.IDParticipant, &participantInfo.StrMessage)
+		err = manager.Database.QueryRow(`SELECT pid, message FROM matchmaking.messages WHERE gathering_id = $1 AND pid = $2`, gatheringID, participant).Scan(&participantInfo.IDParticipant, &participantInfo.StrMessage)
 		if err != nil {
 			common_globals.Logger.Error(err.Error())
 			continue
