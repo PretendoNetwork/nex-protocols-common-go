@@ -169,6 +169,7 @@ func NewCommonProtocol(protocol match_making.Interface) *CommonProtocol {
 	}
 
 	protocol.SetHandlerUnregisterGathering(commonProtocol.unregisterGathering)
+	protocol.SetHandlerGetDetailedParticipants(commonProtocol.GetDetailedParticipants)
 	protocol.SetHandlerFindBySingleID(commonProtocol.findBySingleID)
 	protocol.SetHandlerUpdateSessionURL(commonProtocol.updateSessionURL)
 	protocol.SetHandlerUpdateSessionHostV1(commonProtocol.updateSessionHostV1)
