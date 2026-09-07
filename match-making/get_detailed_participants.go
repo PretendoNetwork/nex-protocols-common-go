@@ -8,7 +8,7 @@ import (
 	match_making "github.com/PretendoNetwork/nex-protocols-go/v2/match-making"
 )
 
-func (commonProtocol *CommonProtocol) GetDetailedParticipants(err error, packet nex.PacketInterface, callID uint32, idGathering types.UInt32) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) getDetailedParticipants(err error, packet nex.PacketInterface, callID uint32, idGathering types.UInt32) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")

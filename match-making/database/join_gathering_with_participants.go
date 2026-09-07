@@ -62,7 +62,7 @@ func JoinGatheringWithParticipants(manager *common_globals.MatchmakingManager, g
 		return 0, nex.NewError(nex.ResultCodes.Core.Unknown, err.Error())
 	}
 
-	nexError := RecordMessage(manager, gatheringID, connection.PID(), joinMessage)
+	nexError := RecordJoinMessage(manager, gatheringID, connection.PID(), joinMessage)
 	if nexError != nil {
 		return 0, nexError
 	}

@@ -12,7 +12,7 @@ import (
 	matchmaking_types "github.com/PretendoNetwork/nex-protocols-go/v2/match-making/types"
 )
 
-// GetDetailedParticipants takes an array of participants associated with a gathering ID and creates info for each participant
+// GetDetailedParticipants returns detailed information about the participants of the given gathering
 func GetDetailedParticipants(manager *common_globals.MatchmakingManager, gatheringID types.UInt32, sourcePID types.PID) (types.List[matchmaking_types.ParticipantDetails], *nex.Error) {
 	var participantList []uint64
 
@@ -37,9 +37,16 @@ func GetDetailedParticipants(manager *common_globals.MatchmakingManager, gatheri
 
 	var participantDetails types.List[matchmaking_types.ParticipantDetails]
 
-	for _, participant := range participantList {
+	for _, participant := range common_globals.RemoveDuplicates(participantList) {
 		participantInfo := matchmaking_types.NewParticipantDetails()
-		err = manager.Database.QueryRow(`SELECT pid, message FROM matchmaking.messages WHERE gathering_id = $1 AND pid = $2`, gatheringID, participant).Scan(&participantInfo.IDParticipant, &participantInfo.StrMessage)
+
+		for _, pid := range participantList {
+			if participant == pid {
+				participantInfo.UIParticipants += 1
+			}
+		}
+
+		err = manager.Database.QueryRow(`SELECT pid, message FROM matchmaking.join_messages WHERE gathering_id = $1 AND pid = $2`, gatheringID, participant).Scan(&participantInfo.IDParticipant, &participantInfo.StrMessage)
 		if err != nil {
 			common_globals.Logger.Error(err.Error())
 			continue
@@ -47,11 +54,11 @@ func GetDetailedParticipants(manager *common_globals.MatchmakingManager, gatheri
 
 		accountDetails, err := manager.Endpoint.AccountDetailsByPID(types.NewPID(participant))
 		if err != nil {
-			return types.NewList[matchmaking_types.ParticipantDetails](), nex.NewError(nex.ResultCodes.Core.Unknown, err.Error())
+			common_globals.Logger.Error(err.Error())
+			continue
 		}
 
 		participantInfo.StrName = types.String(accountDetails.Username)
-		participantInfo.UIParticipants = types.UInt16(len(participantList))
 
 		participantDetails = append(participantDetails, participantInfo)
 	}

@@ -6,9 +6,9 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 )
 
-// This function records the strMessage or joinMessage from a Match-Making RMC call and stores it in a table for future queries
-func RecordMessage(manager *common_globals.MatchmakingManager, gatheringID uint32, PID types.PID, message string) *nex.Error {
-	_, err := manager.Database.Exec(`INSERT INTO matchmaking.messages (gathering_id, pid, message) VALUES ($1, $2, $3)`, gatheringID, PID, message)
+// RecordJoinMessage records the join message from a participant into a gathering
+func RecordJoinMessage(manager *common_globals.MatchmakingManager, gatheringID uint32, PID types.PID, message string) *nex.Error {
+	_, err := manager.Database.Exec(`INSERT INTO matchmaking.join_messages (gathering_id, pid, message) VALUES ($1, $2, $3) ON CONFLICT (gathering_id, pid) DO UPDATE SET message = $3`, gatheringID, PID, message)
 	if err != nil {
 		return nex.NewError(nex.ResultCodes.Core.SystemError, err.Error())
 	}
