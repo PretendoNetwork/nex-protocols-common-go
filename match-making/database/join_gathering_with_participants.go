@@ -35,8 +35,6 @@ func SendAddedToGatheringToNewParticipants(connection *nex.PRUDPConnection, newP
 
 func SendJoinNotificationsOfTo(connection *nex.PRUDPConnection, gatheringID uint32, joinMessage string, participantCount int, sourceParticipants []uint64, destinationParticipants []uint64) {
 	for _, participant := range common_globals.RemoveDuplicates(sourceParticipants) {
-		destWithoutSelf := common_globals.RemoveDuplicates(destinationParticipants)
-
 		oEvent := notifications_types.NewNotificationEvent()
 		oEvent.PIDSource = connection.PID()
 		oEvent.Type = notifications_constants.NotificationCategoryParticipationEvent.Build(notifications_constants.ParticipationEventsParticipate)
@@ -104,6 +102,7 @@ func JoinGatheringWithParticipants(manager *common_globals.MatchmakingManager, g
 
 	// * Send the switch SwitchGathering to the new participants first
 	SendAddedToGatheringToNewParticipants(connection, newParticipants, gatheringID)
+
 	if flags.HasFlag(match_making_constants.GatheringFlagNotifyParticipationEventsToAllParticipants) || flags.HasFlag(match_making_constants.GatheringFlagNotifyParticipationEventsToAllParticipantsReproducibly) {
 		// inform all people of the new participants joining
 		SendJoinNotificationsOfTo(connection, gatheringID, joinMessage, len(participants), newParticipants, oldParticipants)
@@ -114,8 +113,9 @@ func JoinGatheringWithParticipants(manager *common_globals.MatchmakingManager, g
 
 	if flags.HasFlag(match_making_constants.GatheringFlagNotifyParticipationEventsToAllParticipantsReproducibly) {
 		// send the join notifications to all the new players for every player such that the new players all know of every joined player
-		SendJoinNotificationsOfTo(connection, gatheringID, joinMessage, len(participants), oldParticipants, newParticipants)
+		SendJoinNotificationsOfTo(connection, gatheringID, joinMessage, len(participants), participants, newParticipants)
 	}
+
 
 	return uint32(len(participants)), nil
 }
