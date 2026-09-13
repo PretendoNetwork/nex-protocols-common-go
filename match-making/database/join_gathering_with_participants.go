@@ -18,6 +18,10 @@ import (
 func SendAddedToGatheringToNewParticipants(connection *nex.PRUDPConnection, newParticipants []uint64, gatheringID uint32) {
 	for _, participant := range common_globals.RemoveDuplicates(newParticipants) {
 		// * Don't send the SwitchGathering notification to the participant that requested the join
+		if uint64(connection.PID()) == participant {
+			continue
+		}
+
 		oEvent := notifications_types.NewNotificationEvent()
 		oEvent.PIDSource = connection.PID()
 		oEvent.Type = notifications_constants.NotificationCategoryAddedToGathering.Build()
@@ -32,15 +36,6 @@ func SendAddedToGatheringToNewParticipants(connection *nex.PRUDPConnection, newP
 func SendJoinNotificationsOfTo(connection *nex.PRUDPConnection, gatheringID uint32, joinMessage string, participantCount int, sourceParticipants []uint64, destinationParticipants []uint64) {
 	for _, participant := range common_globals.RemoveDuplicates(sourceParticipants) {
 		destWithoutSelf := common_globals.RemoveDuplicates(destinationParticipants)
-
-		// this removes any occurrance of `participant` from `destWithoutSelf` so that participants never see
-		// their own join notification as they already see their SwitchGathering notification
-		// i really dont like how this looks but this is the neatest way i could find of doing this...
-		for i := slices.Index(destWithoutSelf, participant); i >= 0; i = slices.Index(destWithoutSelf, participant) {
-			// remove index i out of destWithoutSelf
-			destWithoutSelf[i] = destWithoutSelf[len(destWithoutSelf)-1]
-			destWithoutSelf = destWithoutSelf[:len(destWithoutSelf)-1]
-		}
 
 		oEvent := notifications_types.NewNotificationEvent()
 		oEvent.PIDSource = connection.PID()
