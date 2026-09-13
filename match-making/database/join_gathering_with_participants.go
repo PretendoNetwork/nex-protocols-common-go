@@ -43,7 +43,7 @@ func SendJoinNotificationsOfTo(connection *nex.PRUDPConnection, gatheringID uint
 		oEvent.StrParam = types.NewString(joinMessage)
 		oEvent.Param3 = types.UInt64(uint64(participantCount))
 
-		common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, destinationParticipants)
+		common_globals.SendNotificationEvent(connection.Endpoint().(*nex.PRUDPEndPoint), oEvent, common_globals.RemoveDuplicates(destinationParticipants))
 	}
 }
 
