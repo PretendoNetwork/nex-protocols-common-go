@@ -18,10 +18,6 @@ import (
 func SendAddedToGatheringToNewParticipants(connection *nex.PRUDPConnection, newParticipants []uint64, gatheringID uint32) {
 	for _, participant := range common_globals.RemoveDuplicates(newParticipants) {
 		// * Don't send the SwitchGathering notification to the participant that requested the join
-		if uint64(connection.PID()) == participant {
-			continue
-		}
-
 		oEvent := notifications_types.NewNotificationEvent()
 		oEvent.PIDSource = connection.PID()
 		oEvent.Type = notifications_constants.NotificationCategoryAddedToGathering.Build()
@@ -123,7 +119,7 @@ func JoinGatheringWithParticipants(manager *common_globals.MatchmakingManager, g
 
 	if flags.HasFlag(match_making_constants.GatheringFlagNotifyParticipationEventsToAllParticipantsReproducibly) {
 		// send the join notifications to all the new players for every player such that the new players all know of every joined player
-		SendJoinNotificationsOfTo(connection, gatheringID, joinMessage, len(participants), participants, newParticipants)
+		SendJoinNotificationsOfTo(connection, gatheringID, joinMessage, len(participants), oldParticipants, newParticipants)
 	}
 
 	return uint32(len(participants)), nil
