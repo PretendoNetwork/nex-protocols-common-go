@@ -56,6 +56,17 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.Matchma
 		return
 	}
 
+	_, err = manager.Database.Exec(`CREATE TABLE IF NOT EXISTS matchmaking.join_messages (
+		gathering_id bigint,
+		pid numeric(20),
+		message text,
+		PRIMARY KEY (gathering_id, pid)
+	)`)
+	if err != nil {
+		common_globals.Logger.Error(err.Error())
+		return
+	}
+
 	_, err = manager.Database.Exec(`CREATE SCHEMA IF NOT EXISTS tracking`)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
@@ -158,6 +169,7 @@ func NewCommonProtocol(protocol match_making.Interface) *CommonProtocol {
 	}
 
 	protocol.SetHandlerUnregisterGathering(commonProtocol.unregisterGathering)
+	protocol.SetHandlerGetDetailedParticipants(commonProtocol.getDetailedParticipants)
 	protocol.SetHandlerFindBySingleID(commonProtocol.findBySingleID)
 	protocol.SetHandlerUpdateSessionURL(commonProtocol.updateSessionURL)
 	protocol.SetHandlerUpdateSessionHostV1(commonProtocol.updateSessionHostV1)
