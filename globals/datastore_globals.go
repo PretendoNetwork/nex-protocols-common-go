@@ -48,9 +48,9 @@ type S3Manager interface {
 
 // S3 represents an S3 configuration for a specific bucket
 type S3 struct {
-	Bucket        string
-	KeyBase       string
-	Manager       S3Manager
+	Bucket  string
+	KeyBase string
+	Manager S3Manager
 }
 
 // PresignGet creates a presigned GET request for a given object
@@ -161,9 +161,9 @@ type DataStoreManager struct {
 // Only one bucket can be configured at a time
 func (dsm *DataStoreManager) SetS3Config(bucket, keyBase string, manager S3Manager) {
 	dsm.S3 = &S3{
-		Bucket:        bucket,
-		KeyBase:       keyBase,
-		Manager:       manager,
+		Bucket:  bucket,
+		KeyBase: keyBase,
+		Manager: manager,
 	}
 }
 
