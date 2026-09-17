@@ -168,17 +168,17 @@ func (dsm *DataStoreManager) SetS3Config(bucket, keyBase string, manager S3Manag
 }
 
 // verifyObjectAccessPermission is the default implementation that verifies that a request can access a given object
-func (dsm DataStoreManager) verifyObjectAccessPermission(requesterPID types.PID, metaInfo datastore_types.DataStoreMetaInfo, objectAccessPassword, requesterAccessPassword types.UInt64) *nex.Error {
+func (dsm *DataStoreManager) verifyObjectAccessPermission(requesterPID types.PID, metaInfo datastore_types.DataStoreMetaInfo, objectAccessPassword, requesterAccessPassword types.UInt64) *nex.Error {
 	return dsm.VerifyObjectPermission(metaInfo.OwnerID, requesterPID, metaInfo.Permission, objectAccessPassword, requesterAccessPassword)
 }
 
 // verifyObjectUpdatePermission is the default implementation that verifies that a request can update a given object
-func (dsm DataStoreManager) verifyObjectUpdatePermission(requesterPID types.PID, metaInfo datastore_types.DataStoreMetaInfo, objectUpdatePassword, requesterUpdatePassword types.UInt64) *nex.Error {
+func (dsm *DataStoreManager) verifyObjectUpdatePermission(requesterPID types.PID, metaInfo datastore_types.DataStoreMetaInfo, objectUpdatePassword, requesterUpdatePassword types.UInt64) *nex.Error {
 	return dsm.VerifyObjectPermission(metaInfo.OwnerID, requesterPID, metaInfo.DelPermission, objectUpdatePassword, requesterUpdatePassword)
 }
 
 // verifyObjectPermission is the default implementation that verifies that a given set of permissions is allowed
-func (dsm DataStoreManager) verifyObjectPermission(ownerPID, requesterPID types.PID, permission datastore_types.DataStorePermission, objectPassword, requesterPassword types.UInt64) *nex.Error {
+func (dsm *DataStoreManager) verifyObjectPermission(ownerPID, requesterPID types.PID, permission datastore_types.DataStorePermission, objectPassword, requesterPassword types.UInt64) *nex.Error {
 	if permission.Permission > types.UInt8(datastore_constants.PermissionSpecifiedFriend) {
 		return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 	}
@@ -257,7 +257,7 @@ func (dsm DataStoreManager) verifyObjectPermission(ownerPID, requesterPID types.
 // NOTE: UNOFFICIAL BEHAVIOR! THIS USES HEURISTICS BASED ON HOW SEVERAL
 // GAMES CREATE THIS DATA. THE OFFICIAL SERVERS DID NOT VALIDATE THIS
 // DATA AT ALL, WE DO SO FOR SANITY AND SAFETY!
-func (dsm DataStoreManager) validateExtraData(extraData types.List[types.String]) *nex.Error {
+func (dsm *DataStoreManager) validateExtraData(extraData types.List[types.String]) *nex.Error {
 	// * These checks are based on observed behaviour in
 	// * Animal Crossing: New Leaf (3DS) and Xenoblade (Wii U).
 	// *
@@ -381,7 +381,7 @@ func (dsm DataStoreManager) validateExtraData(extraData types.List[types.String]
 
 // calculateRatingExpirationTime is the default implementation that calculates the
 // expiration time for object rating slot rating locks
-func (dsm DataStoreManager) calculateRatingExpirationTime(settings datastore_types.DataStoreRatingInitParam) time.Time {
+func (dsm *DataStoreManager) calculateRatingExpirationTime(settings datastore_types.DataStoreRatingInitParam) time.Time {
 	now := time.Now().UTC()
 
 	if settings.LockType == types.UInt8(datastore_constants.RatingLockInterval) {
@@ -459,7 +459,7 @@ func (dsm DataStoreManager) calculateRatingExpirationTime(settings datastore_typ
 
 // getNotificationRecipients is the default implementation that returns
 // the access recipients of an object to which notifications should be sent
-func (dsm DataStoreManager) getNotificationRecipients(ownerPID types.PID, permission datastore_types.DataStorePermission) (types.List[types.PID], *nex.Error) {
+func (dsm *DataStoreManager) getNotificationRecipients(ownerPID types.PID, permission datastore_types.DataStorePermission) (types.List[types.PID], *nex.Error) {
 	var recipientIDs types.List[types.PID]
 
 	// TODO - What should happen in other permission types?
