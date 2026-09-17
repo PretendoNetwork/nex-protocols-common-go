@@ -179,7 +179,7 @@ func (dsm *DataStoreManager) verifyObjectUpdatePermission(requesterPID types.PID
 
 // verifyObjectPermission is the default implementation that verifies that a given set of permissions is allowed
 func (dsm *DataStoreManager) verifyObjectPermission(ownerPID, requesterPID types.PID, permission datastore_types.DataStorePermission, objectPassword, requesterPassword types.UInt64) *nex.Error {
-	if permission.Permission > types.UInt8(datastore_constants.PermissionSpecifiedFriend) {
+	if permission.Permission > datastore_constants.PermissionSpecifiedFriend {
 		return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 	}
 
@@ -197,11 +197,11 @@ func (dsm *DataStoreManager) verifyObjectPermission(ownerPID, requesterPID types
 	// * Standard permission checks
 	var err *nex.Error
 
-	if permission.Permission == types.UInt8(datastore_constants.PermissionPublic) {
+	if permission.Permission == datastore_constants.PermissionPublic {
 		return nil
 	}
 
-	if permission.Permission == types.UInt8(datastore_constants.PermissionFriend) {
+	if permission.Permission == datastore_constants.PermissionFriend {
 		if dsm.GetUserFriendPIDs == nil {
 			return nex.NewError(nex.ResultCodes.DataStore.PermissionDenied, "change_error")
 		}
@@ -214,19 +214,19 @@ func (dsm *DataStoreManager) verifyObjectPermission(ownerPID, requesterPID types
 		}
 	}
 
-	if permission.Permission == types.UInt8(datastore_constants.PermissionSpecified) {
+	if permission.Permission == datastore_constants.PermissionSpecified {
 		if !permission.RecipientIDs.Contains(requesterPID) {
 			err = nex.NewError(nex.ResultCodes.DataStore.PermissionDenied, "change_error")
 		}
 	}
 
-	if permission.Permission == types.UInt8(datastore_constants.PermissionPrivate) {
+	if permission.Permission == datastore_constants.PermissionPrivate {
 		if !ownerPID.Equals(requesterPID) {
 			err = nex.NewError(nex.ResultCodes.DataStore.PermissionDenied, "change_error")
 		}
 	}
 
-	if permission.Permission == types.UInt8(datastore_constants.PermissionSpecifiedFriend) {
+	if permission.Permission == datastore_constants.PermissionSpecifiedFriend {
 		if dsm.GetUserFriendPIDs == nil {
 			return nex.NewError(nex.ResultCodes.DataStore.PermissionDenied, "change_error")
 		}
@@ -384,13 +384,13 @@ func (dsm *DataStoreManager) validateExtraData(extraData types.List[types.String
 func (dsm *DataStoreManager) calculateRatingExpirationTime(settings datastore_types.DataStoreRatingInitParam) time.Time {
 	now := time.Now().UTC()
 
-	if settings.LockType == types.UInt8(datastore_constants.RatingLockInterval) {
+	if settings.LockType == datastore_constants.RatingLockInterval {
 		// * RATING_LOCK_INTERVAL treats PeriodDuration as a number of seconds
 		// * that the user should be locked for
 		return now.Add(time.Duration(settings.PeriodDuration) * time.Second)
 	}
 
-	if settings.LockType == types.UInt8(datastore_constants.RatingLockPeriod) {
+	if settings.LockType == datastore_constants.RatingLockPeriod {
 		// * RATING_LOCK_PERIOD treats PeriodDuration as the day of the week/month
 		// * the lock should expire, and PeriodHour as the time of that day.
 		// *
@@ -463,7 +463,7 @@ func (dsm *DataStoreManager) getNotificationRecipients(ownerPID types.PID, permi
 	var recipientIDs types.List[types.PID]
 
 	// TODO - What should happen in other permission types?
-	if permission.Permission == types.UInt8(datastore_constants.PermissionFriend) {
+	if permission.Permission == datastore_constants.PermissionFriend {
 		if dsm.GetUserFriendPIDs == nil {
 			return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
 		}
@@ -475,9 +475,9 @@ func (dsm *DataStoreManager) getNotificationRecipients(ownerPID types.PID, permi
 		for i, friendPID := range friendsList {
 			recipientIDs[i] = types.PID(friendPID)
 		}
-	} else if permission.Permission == types.UInt8(datastore_constants.PermissionSpecified) {
+	} else if permission.Permission == datastore_constants.PermissionSpecified {
 		recipientIDs = permission.RecipientIDs
-	} else if permission.Permission == types.UInt8(datastore_constants.PermissionSpecifiedFriend) {
+	} else if permission.Permission == datastore_constants.PermissionSpecifiedFriend {
 		if dsm.GetUserFriendPIDs == nil {
 			return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
 		}
