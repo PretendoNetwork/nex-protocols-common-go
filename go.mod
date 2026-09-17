@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/PretendoNetwork/nex-go/v2 v2.3.1
-	github.com/PretendoNetwork/nex-protocols-go/v2 v2.3.5
+	github.com/PretendoNetwork/nex-protocols-go/v2 v2.3.7
 	github.com/PretendoNetwork/plogger-go v1.1.0
 	github.com/PretendoNetwork/pq-extended v1.0.0
 	github.com/lib/pq v1.12.3
