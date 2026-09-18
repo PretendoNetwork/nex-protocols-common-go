@@ -19,8 +19,7 @@ func PerpetuateObject(manager *common_globals.DataStoreManager, ownerPID types.P
 	) VALUES (
 		$1,
 		$2,
-		$3,
-		$4
+		$3
 	) ON CONFLICT (pid, slot) DO UPDATE SET data_id = EXCLUDED.data_id`,
 		ownerPID,
 		slot,
@@ -32,6 +31,7 @@ func PerpetuateObject(manager *common_globals.DataStoreManager, ownerPID types.P
 		return nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
 	}
 
+	// TODO - Replace this with PERMANENT_DATE_TIME https://nintendo.wiki/wiki/Nintendo_Network/NEX/Types#DateTime_Constants
 	expirationDate := time.Date(9999, time.December, 31, 0, 0, 0, 0, time.UTC)
 
 	_, err = manager.Database.Exec(`UPDATE datastore.objects SET expiration_date = $1 WHERE data_id=$2`, expirationDate, dataID)
