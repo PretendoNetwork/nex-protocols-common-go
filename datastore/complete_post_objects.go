@@ -56,12 +56,24 @@ func (commonProtocol *CommonProtocol) completePostObjects(err error, packet nex.
 		if objectUploaded {
 			return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "change_error")
 		}
+
+		// * Note: The official servers do not seem to validate this against S3.
+		// *       Because of this, we do not either. But it might be something
+		// *       to add later if it becomes a problem
+
+		if errCode := database.MarkObjectUploaded(manager, dataID); errCode != nil {
+			return nil, errCode
+		}
 	}
 
 	rmcResponse := nex.NewRMCSuccess(endpoint, nil)
 	rmcResponse.ProtocolID = datastore.ProtocolID
 	rmcResponse.MethodID = datastore.MethodCompletePostObjects
 	rmcResponse.CallID = callID
+
+	if commonProtocol.OnAfterCompletePostObjects != nil {
+		go commonProtocol.OnAfterCompletePostObjects(packet, dataIDs)
+	}
 
 	return rmcResponse, nil
 }
