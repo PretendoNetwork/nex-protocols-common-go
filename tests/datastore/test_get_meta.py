@@ -185,19 +185,19 @@ async def test_data_id(unique_data_type, post):
 	assert meta_info.delete_permission.permission == constants.Permission.PERMISSION_PRIVATE
 
 @pytest.mark.parametrize("post", POST_METHODS)
-async def test_data_id_is_used_over_persistence_target(unique_data_type, post):
+async def test_persistence_target_is_used_over_data_id(unique_data_type, post):
 	"""
-	If both a data ID and a persistence target are set, the data
-	ID is used and the persistence target is ignored
+	If both a persistence target and a data ID are set, the
+	persistence target is used and the data ID is ignored
 	"""
 
-	await post_persisted(post, nex.FRIEND_A, data_type=unique_data_type)
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
+	persisted = await post_persisted(post, nex.FRIEND_A, data_type=unique_data_type)
+	other = await post(nex.FRIEND_A, data_type=unique_data_type)
 
 	target = helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=PERSISTENCE_SLOT)
-	meta_info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id, persistence_target=target)
+	meta_info = await helpers.get_meta(nex.FRIEND_A, data_id=other, persistence_target=target)
 
-	assert meta_info.data_id == data_id
+	assert meta_info.data_id == persisted
 
 async def test_data_id_file_server_flag(unique_data_type):
 	"""
