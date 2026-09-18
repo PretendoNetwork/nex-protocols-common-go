@@ -45,8 +45,9 @@ func (commonProtocol *CommonProtocol) completePostObject(err error, packet nex.P
 		return nil, errCode
 	}
 
-	if objectUploaded {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "change_error")
+	// * Cannot successfully complete an object more than once
+	if objectUploaded && bool(param.IsSuccess) {
+		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
 	}
 
 	// * Note: The official servers do not seem to validate this against S3.
