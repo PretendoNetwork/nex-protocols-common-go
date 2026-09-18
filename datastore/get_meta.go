@@ -47,13 +47,23 @@ func (commonProtocol *CommonProtocol) getMeta(err error, packet nex.PacketInterf
 		return nil, errCode
 	}
 
-	// * The owner of an object can always view their objects, but normal users cannot
-	if pMetaInfo.Status != datastore_constants.DataStatusNone && pMetaInfo.OwnerID != connection.PID() {
-		if pMetaInfo.Status == datastore_constants.DataStatusPending {
-			return nil, nex.NewError(nex.ResultCodes.DataStore.UnderReviewing, "change_error")
+	// TODO - Move this to VerifyObjectAccessPermission?
+	if pMetaInfo.Status != datastore_constants.DataStatusNone {
+		// * Rejected objects behave as if they do not exist to everyone, including the owner.
+		// * The only exception is SearchObject/SearchObjectLight, using either
+		// * SEARCH_TYPE_OWN_REJECTED or SEARCH_TYPE_OWN_ALL
+		if pMetaInfo.Status == datastore_constants.DataStatusRejected {
+			return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
 		}
 
-		return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
+		// * Objects under review can still be viewed by their owner, but not by normal users
+		if pMetaInfo.OwnerID != connection.PID() {
+			if pMetaInfo.Status == datastore_constants.DataStatusPending {
+				return nil, nex.NewError(nex.ResultCodes.DataStore.UnderReviewing, "change_error")
+			}
+
+			return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
+		}
 	}
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
