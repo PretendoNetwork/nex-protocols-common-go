@@ -11,7 +11,7 @@ import (
 func ObjectOwner(manager *common_globals.DataStoreManager, dataID types.UInt64) (types.PID, *nex.Error) {
 	var owner types.PID
 
-	err := manager.Database.QueryRow(`SELECT owner FROM datastore.objects WHERE data_id=$1`, dataID).Scan(&owner)
+	err := manager.Database.QueryRow(`SELECT owner FROM datastore.objects WHERE data_id=$1 AND deleted=false`, dataID).Scan(&owner)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return owner, nex.NewError(nex.ResultCodes.DataStore.NotFound, err.Error())
