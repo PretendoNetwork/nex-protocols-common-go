@@ -295,6 +295,34 @@ async def test_persistence_target_returns_the_newest_object(unique_data_type, po
 
 	assert meta_info.data_id == newest
 
+@pytest.mark.parametrize("post", POST_METHODS)
+async def test_persistence_slots_are_per_user(unique_data_type, post):
+	"""
+	Persistence slots are tied to a user, so the same slot ID
+	holds a different object for every user
+	"""
+
+	first = await post_persisted(post, nex.FRIEND_A, data_type=unique_data_type)
+	second = await post_persisted(post, nex.FRIEND_B, data_type=unique_data_type)
+
+	first_target = helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=PERSISTENCE_SLOT)
+	second_target = helpers.persistence_target(owner_id=nex.FRIEND_B, persistence_id=PERSISTENCE_SLOT)
+
+	assert (await helpers.get_meta(nex.FRIEND_A, persistence_target=first_target)).data_id == first
+	assert (await helpers.get_meta(nex.FRIEND_A, persistence_target=second_target)).data_id == second
+
+@pytest.mark.parametrize("post", POST_METHODS)
+async def test_persistence_target_without_an_owner(unique_data_type, post):
+	"""
+	A persistence target with a slot but no owner is still used, and
+	fails because slots are tied to a user
+	"""
+
+	data_id = await post_persisted(post, nex.FRIEND_A, data_type=unique_data_type)
+	target = helpers.persistence_target(owner_id=0, persistence_id=PERSISTENCE_SLOT)
+
+	assert await get_meta_error(nex.FRIEND_A, data_id=data_id, persistence_target=target) == "DataStore::NotFound"
+
 async def test_empty_persistence_slot():
 	"""
 	Looking up a persistence slot which has no object in it fails
