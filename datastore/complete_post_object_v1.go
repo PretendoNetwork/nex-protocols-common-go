@@ -44,12 +44,12 @@ func (commonProtocol *CommonProtocol) completePostObjectV1(err error, packet nex
 		return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "change_error")
 	}
 
-	objectEnabled, errCode := database.ObjectEnabled(manager, dataID)
+	objectUploaded, errCode := database.ObjectUploaded(manager, dataID)
 	if errCode != nil {
 		return nil, errCode
 	}
 
-	if objectEnabled {
+	if objectUploaded {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "change_error")
 	}
 
@@ -58,7 +58,7 @@ func (commonProtocol *CommonProtocol) completePostObjectV1(err error, packet nex
 	// *       to add later if it becomes a problem
 
 	if param.IsSuccess {
-		if errCode := database.EnableObject(manager, dataID); errCode != nil {
+		if errCode := database.MarkObjectUploaded(manager, dataID); errCode != nil {
 			return nil, errCode
 		}
 	}
