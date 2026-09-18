@@ -8,7 +8,6 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	datastore_constants "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/constants"
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
-	"github.com/lib/pq"
 )
 
 func GetObjectMetaInfoByDataIDWithResultOption(manager *common_globals.DataStoreManager, dataID types.UInt64, resultOption datastore_constants.ResultFlag) (datastore_types.DataStoreMetaInfo, *nex.Error) {
@@ -63,19 +62,19 @@ func GetObjectMetaInfoByDataIDWithResultOption(manager *common_globals.DataStore
 
 	if populateTags {
 		columns = append(columns, "tags")
-		outs = append(outs, pq.Array(&metaInfo.Tags))
+		outs = append(outs, &metaInfo.Tags)
 	}
 
 	if populateMetaBinary {
 		columns = append(columns, "meta_binary")
-		outs = append(outs, pq.Array(&metaInfo.MetaBinary))
+		outs = append(outs, &metaInfo.MetaBinary)
 	}
 
 	if populateRecipientIDs {
 		columns = append(columns, "access_permission_recipients")
 		columns = append(columns, "update_permission_recipients")
-		outs = append(outs, pq.Array(&metaInfo.Permission.RecipientIDs))
-		outs = append(outs, pq.Array(&metaInfo.DelPermission.RecipientIDs))
+		outs = append(outs, &metaInfo.Permission.RecipientIDs)
+		outs = append(outs, &metaInfo.DelPermission.RecipientIDs)
 	}
 
 	query, params, err := Select(columns...).From("datastore.objects").Where("data_id").Is(dataID).Build()
