@@ -16,23 +16,6 @@ POST_METHODS = [
 	pytest.param(helpers.post_object, id="post-object"),
 ]
 
-async def get_meta_error(pid: int, **fields) -> str:
-	"""
-	Runs DataStoreProtocol::GetMeta and expects an error to be thrown,
-	returning the name of the error
-	"""
-
-	# * The error has to be caught inside the connection. If it leaves the
-	# * connection NintendoClients wraps it in an ExceptionGroup, and so
-	# * does anything else raised in here, such as a failed assertion
-	async with helpers.connect(pid) as client:
-		try:
-			await client.get_meta(helpers.get_meta_param(**fields))
-		except common.RMCError as error:
-			return error.name()
-
-	pytest.fail("DataStoreProtocol::GetMeta did not throw an error")
-
 async def post_persisted(post, pid: int, **fields) -> int:
 	"""
 	Posts an object as the given user, in the users persistence slot
@@ -77,7 +60,7 @@ async def test_access_permission(unique_data_type, post, permission, recipients,
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, permission=permission)
 
 	if not visible:
-		assert await get_meta_error(viewer, data_id=data_id) == "DataStore::PermissionDenied"
+		assert await helpers.get_meta_error(viewer, data_id=data_id) == "DataStore::PermissionDenied"
 		return
 
 	meta_info = await helpers.get_meta(viewer, data_id=data_id)
@@ -96,7 +79,7 @@ async def test_access_permission_of_persisted_objects(unique_data_type, post, pe
 	target = helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=PERSISTENCE_SLOT)
 
 	if not visible:
-		assert await get_meta_error(viewer, persistence_target=target) == "DataStore::PermissionDenied"
+		assert await helpers.get_meta_error(viewer, persistence_target=target) == "DataStore::PermissionDenied"
 		return
 
 	meta_info = await helpers.get_meta(viewer, persistence_target=target)
@@ -150,7 +133,7 @@ async def test_pending_object_is_under_review_for_everyone_else(unique_data_type
 
 	data_id = await post_pending(post, nex.FRIEND_A, data_type=unique_data_type)
 
-	assert await get_meta_error(nex.STRANGER, data_id=data_id) == "DataStore::UnderReviewing"
+	assert await helpers.get_meta_error(nex.STRANGER, data_id=data_id) == "DataStore::UnderReviewing"
 
 @pytest.mark.parametrize("post", POST_METHODS)
 async def test_rejected_object_is_not_visible_to_anyone(unique_data_type, post):
@@ -161,8 +144,8 @@ async def test_rejected_object_is_not_visible_to_anyone(unique_data_type, post):
 
 	data_id = await post_rejected(post, nex.FRIEND_A, data_type=unique_data_type)
 
-	assert await get_meta_error(nex.STRANGER, data_id=data_id) == "DataStore::NotFound"
-	assert await get_meta_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
+	assert await helpers.get_meta_error(nex.STRANGER, data_id=data_id) == "DataStore::NotFound"
+	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
 
 # * Data ID lookup tests
 
@@ -222,14 +205,14 @@ async def test_unknown_data_id():
 	Looking up an object which does not exist fails
 	"""
 
-	assert await get_meta_error(nex.FRIEND_A, data_id=0xFFFFFF) == "DataStore::NotFound"
+	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=0xFFFFFF) == "DataStore::NotFound"
 
 async def test_no_data_id_or_persistence_target():
 	"""
 	Either a data ID or a persistence target must be set
 	"""
 
-	assert await get_meta_error(nex.FRIEND_A) == "DataStore::InvalidArgument"
+	assert await helpers.get_meta_error(nex.FRIEND_A) == "DataStore::InvalidArgument"
 
 # * Object persistence tests
 # *
@@ -321,7 +304,7 @@ async def test_persistence_target_without_an_owner(unique_data_type, post):
 	data_id = await post_persisted(post, nex.FRIEND_A, data_type=unique_data_type)
 	target = helpers.persistence_target(owner_id=0, persistence_id=PERSISTENCE_SLOT)
 
-	assert await get_meta_error(nex.FRIEND_A, data_id=data_id, persistence_target=target) == "DataStore::NotFound"
+	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=data_id, persistence_target=target) == "DataStore::NotFound"
 
 async def test_empty_persistence_slot():
 	"""
@@ -330,7 +313,7 @@ async def test_empty_persistence_slot():
 
 	target = helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=constants.NUM_PERSISTENCE_SLOT - 1)
 
-	assert await get_meta_error(nex.FRIEND_A, persistence_target=target) == "DataStore::NotFound"
+	assert await helpers.get_meta_error(nex.FRIEND_A, persistence_target=target) == "DataStore::NotFound"
 
 # * ResultFlag tests
 # *
@@ -444,7 +427,7 @@ async def test_no_access_password_without_permission(unique_data_type, post):
 	permission = helpers.permission(permission=constants.Permission.PERMISSION_PRIVATE)
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, permission=permission)
 
-	assert await get_meta_error(nex.STRANGER, data_id=data_id, access_password=constants.INVALID_PASSWORD) == "DataStore::PermissionDenied"
+	assert await helpers.get_meta_error(nex.STRANGER, data_id=data_id, access_password=constants.INVALID_PASSWORD) == "DataStore::PermissionDenied"
 
 @pytest.mark.parametrize("post", POST_METHODS)
 async def test_wrong_access_password_without_permission(unique_data_type, post):
@@ -456,7 +439,7 @@ async def test_wrong_access_password_without_permission(unique_data_type, post):
 	permission = helpers.permission(permission=constants.Permission.PERMISSION_PRIVATE)
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, permission=permission)
 
-	assert await get_meta_error(nex.STRANGER, data_id=data_id, access_password=1234) == "DataStore::InvalidPassword"
+	assert await helpers.get_meta_error(nex.STRANGER, data_id=data_id, access_password=1234) == "DataStore::InvalidPassword"
 
 @pytest.mark.parametrize("post", POST_METHODS)
 async def test_wrong_access_password_with_permission(unique_data_type, post):

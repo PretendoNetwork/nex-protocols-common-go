@@ -1,5 +1,7 @@
 import contextlib
-from nintendo.nex import datastore
+
+import pytest
+from nintendo.nex import common, datastore
 
 import nex
 from datastore import constants
@@ -44,6 +46,45 @@ def post_param(**fields) -> datastore.DataStorePreparePostParam:
 	param.flag = constants.DataFlag.DATA_FLAG_NONE
 	param.period = constants.DEFAULT_PERIOD
 	param.extra_data = ["WUP", "4", "EUR", "110", "GB", ""]
+
+	for name, value in fields.items():
+		setattr(param, name, value)
+
+	return param
+
+def post_param_v1(**fields) -> datastore.DataStorePreparePostParamV1:
+	"""
+	Creates a DataStorePreparePostParamV1 with default parameters.
+	Any field can be overridden with a keyword argument
+	"""
+
+	param = datastore.DataStorePreparePostParamV1()
+	param.size = 0
+	param.name = "test"
+	param.data_type = 0
+	param.meta_binary = b"meta"
+	param.permission = permission()
+	param.delete_permission = permission(permission=constants.Permission.PERMISSION_PRIVATE)
+	param.flag = constants.DataFlag.DATA_FLAG_NONE
+	param.period = constants.DEFAULT_PERIOD
+	param.refer_data_id = constants.INVALID_DATAID
+	param.tags = []
+	param.rating_init_param = []
+
+	for name, value in fields.items():
+		setattr(param, name, value)
+
+	return param
+
+def delete_param(**fields) -> datastore.DataStoreDeleteParam:
+	"""
+	Creates a DataStoreDeleteParam with default parameters.
+	Any field can be overridden with a keyword argument
+	"""
+
+	param = datastore.DataStoreDeleteParam()
+	param.data_id = constants.INVALID_DATAID
+	param.update_password = constants.INVALID_PASSWORD
 
 	for name, value in fields.items():
 		setattr(param, name, value)
@@ -183,6 +224,21 @@ def change_meta_param(**fields) -> datastore.DataStoreChangeMetaParam:
 
 	return param
 
+def complete_post_param_v1(**fields) -> datastore.DataStoreCompletePostParamV1:
+	"""
+	Creates a DataStoreCompletePostParamV1 with default parameters.
+	Any field can be overridden with a keyword argument
+	"""
+
+	param = datastore.DataStoreCompletePostParamV1()
+	param.data_id = constants.INVALID_DATAID
+	param.success = True
+
+	for name, value in fields.items():
+		setattr(param, name, value)
+
+	return param
+
 def get_meta_param(**fields) -> datastore.DataStoreGetMetaParam:
 	"""
 	Creates a DataStoreGetMetaParam with default parameters.
@@ -208,6 +264,36 @@ async def post_meta_binary(pid: int, **fields) -> int:
 
 	async with connect(pid) as client:
 		return await client.post_meta_binary(post_param(**fields))
+
+async def prepare_post_object(pid: int, **fields) -> int:
+	"""
+	Starts posting an object which uses the file server, as the given
+	user, returning its data ID. The upload is not completed
+	"""
+
+	async with connect(pid) as client:
+		post_info = await client.prepare_post_object(post_param(**fields))
+
+		return post_info.data_id
+
+async def prepare_post_object_v1(pid: int, **fields) -> int:
+	"""
+	Starts posting an object which uses the file server, as the given user,
+	using the older version of the method. The upload is not completed
+	"""
+
+	async with connect(pid) as client:
+		post_info = await client.prepare_post_object_v1(post_param_v1(**fields))
+
+		return post_info.data_id
+
+async def delete_object(pid: int, **fields) -> None:
+	"""
+	Deletes an object as the given user
+	"""
+
+	async with connect(pid) as client:
+		await client.delete_object(delete_param(**fields))
 
 async def post_object(pid: int, **fields) -> int:
 	"""
@@ -245,4 +331,21 @@ async def get_meta(pid: int, **fields) -> datastore.DataStoreMetaInfo:
 
 	async with connect(pid) as client:
 		return await client.get_meta(get_meta_param(**fields))
+
+async def get_meta_error(pid: int, **fields) -> str:
+	"""
+	Runs DataStoreProtocol::GetMeta and expects an error to be thrown,
+	returning the name of the error
+	"""
+
+	# * The error has to be caught inside the connection. If it leaves the
+	# * connection NintendoClients wraps it in an ExceptionGroup, and so
+	# * does anything else raised in here, such as a failed assertion
+	async with connect(pid) as client:
+		try:
+			await client.get_meta(get_meta_param(**fields))
+		except common.RMCError as error:
+			return error.name()
+
+	pytest.fail("DataStoreProtocol::GetMeta did not throw an error")
 
