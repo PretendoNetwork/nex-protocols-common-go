@@ -24,7 +24,8 @@ func (commonProtocol *CommonProtocol) getMeta(err error, packet nex.PacketInterf
 	var accessPassword types.UInt64
 	var errCode *nex.Error
 
-	if param.PersistenceTarget.OwnerID != 0 {
+	// * The persistence target is used whenever it has a slot, even if it has no ownerId
+	if param.PersistenceTarget.PersistenceSlotID != types.UInt16(datastore_constants.InvalidPersistenceSlotID) {
 		metaInfo, accessPassword, errCode = database.GetAccessObjectInfoByPersistenceTarget(manager, param.PersistenceTarget)
 	} else if param.DataID != types.UInt64(datastore_constants.InvalidDataID) {
 		metaInfo, accessPassword, errCode = database.GetAccessObjectInfoByDataID(manager, param.DataID)
