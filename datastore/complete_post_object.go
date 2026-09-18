@@ -22,7 +22,9 @@ func (commonProtocol *CommonProtocol) completePostObject(err error, packet nex.P
 
 	creationDate, errCode := database.ObjectCreationDate(manager, param.DataID)
 	if errCode != nil {
-		return nil, errCode
+		// * Unlike CompletePostObjects, this method uses DataStore::Unknown
+		// * for objects which do not exist, rather than DataStore::NotFound
+		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, errCode.Message)
 	}
 
 	// * If 3 hours pass and the upload was not completed, object
