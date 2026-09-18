@@ -37,7 +37,7 @@ func GetUpdateObjectInfoByDataID(manager *common_globals.DataStoreManager, dataI
 			tags,
 			update_password
 		FROM datastore.objects
-		WHERE data_id=$1 AND deleted=false`, dataID).Scan(
+		WHERE data_id=$1 AND deleted=false AND upload_completed=true`, dataID).Scan(
 		&metaInfo.DataID,
 		&metaInfo.OwnerID,
 		&metaInfo.Size,
