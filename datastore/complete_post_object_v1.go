@@ -43,7 +43,7 @@ func (commonProtocol *CommonProtocol) completePostObjectV1(err error, packet nex
 	}
 
 	if objectOwner != connection.PID() {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "change_error")
+		return nil, nex.NewError(nex.ResultCodes.DataStore.PermissionDenied, "change_error")
 	}
 
 	objectUploaded, errCode := database.ObjectUploaded(manager, dataID)
