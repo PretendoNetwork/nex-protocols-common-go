@@ -433,13 +433,14 @@ async def test_wrong_access_password_without_permission(unique_data_type, post):
 @pytest.mark.parametrize("post", POST_METHODS)
 async def test_wrong_access_password_with_permission(unique_data_type, post):
 	"""
-	Using the wrong password fails even when the caller already
-	has access to the object without one
+	Using the wrong password on an object the user already access to
+	should not throw any errors
 	"""
 
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
+	meta_info = await helpers.get_meta(nex.STRANGER, data_id=data_id, access_password=1234)
 
-	assert await get_meta_error(nex.STRANGER, data_id=data_id, access_password=1234) == "DataStore::InvalidPassword"
+	assert meta_info.data_id == data_id
 
 @pytest.mark.parametrize("post", POST_METHODS)
 async def test_access_password_bypasses_permissions(unique_data_type, post):
