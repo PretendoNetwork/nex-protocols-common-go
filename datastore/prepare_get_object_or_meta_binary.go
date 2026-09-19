@@ -72,7 +72,10 @@ func (commonProtocol *CommonProtocol) prepareGetObjectOrMetaBinary(err error, pa
 		return nil, errCode
 	}
 
-	// TODO - Check param.LockID. See InsertObjectByPreparePostParam for notes on read locks
+	errCode = database.UpdateObjectLock(manager.Database, metaInfo.DataID, param.LockID)
+	if errCode != nil {
+		return nil, errCode
+	}
 
 	pReqGetInfo := datastore_types.NewDataStoreReqGetInfo()
 	pReqGetAdditionalMeta := datastore_types.NewDataStoreReqGetAdditionalMeta()

@@ -55,7 +55,10 @@ func (commonProtocol *CommonProtocol) prepareGetObjectV1(err error, packet nex.P
 		return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
 	}
 
-	// TODO - Check param.LockID. See InsertObjectByPreparePostParam for notes on read locks
+	errCode = database.UpdateObjectLock(manager.Database, metaInfo.DataID, param.LockID)
+	if errCode != nil {
+		return nil, errCode
+	}
 
 	if metaInfo.Flag.HasFlag(datastore_constants.DataFlagNotUseFileServer) {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "PrepareGetObjectV1 cannot be used with DataFlagNotUseFileServer")
