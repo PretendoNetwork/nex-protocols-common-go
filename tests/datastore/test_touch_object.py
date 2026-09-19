@@ -18,14 +18,6 @@ POST_METHODS = [
 	pytest.param(helpers.post_object, id="post-object"),
 ]
 
-async def touch(pid: int, **fields) -> None:
-	"""
-	Touches an object as the given user
-	"""
-
-	async with helpers.connect(pid) as client:
-		await client.touch_object(helpers.touch_object_param(**fields))
-
 async def touch_error(pid: int, **fields) -> str:
 	"""
 	Touches an object and expects an error to be thrown, returning
@@ -58,11 +50,11 @@ async def test_increments_the_reference_count(unique_data_type, post):
 
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).referred_count == 0
 
-	await touch(nex.FRIEND_A, data_id=data_id)
+	await helpers.touch_object(nex.FRIEND_A, data_id=data_id)
 
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).referred_count == 1
 
-	await touch(nex.FRIEND_A, data_id=data_id)
+	await helpers.touch_object(nex.FRIEND_A, data_id=data_id)
 
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).referred_count == 2
 
@@ -84,8 +76,8 @@ async def test_updates_the_reference_time_and_validity_period(unique_data_type, 
 
 	await anyio.sleep(TIMESTAMP_DELAY)
 
-	await touch(nex.FRIEND_A, data_id=plain)
-	await touch(nex.FRIEND_A, data_id=extends)
+	await helpers.touch_object(nex.FRIEND_A, data_id=plain)
+	await helpers.touch_object(nex.FRIEND_A, data_id=extends)
 
 	after = {
 		plain: await helpers.get_meta(nex.FRIEND_A, data_id=plain),
@@ -113,8 +105,8 @@ async def test_lock_id_locks_the_object(unique_data_type, post):
 
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_USE_READ_LOCK)
 
-	await touch(nex.FRIEND_A, data_id=data_id, lock_id=1234) # * Initial lock set
-	await touch(nex.FRIEND_A, data_id=data_id, lock_id=1234) # * Verifying that the object can be accessed with the lock ID
+	await helpers.touch_object(nex.FRIEND_A, data_id=data_id, lock_id=1234) # * Initial lock set
+	await helpers.touch_object(nex.FRIEND_A, data_id=data_id, lock_id=1234) # * Verifying that the object can be accessed with the lock ID
 
 	assert await touch_error(nex.FRIEND_A, data_id=data_id, lock_id=5678) == "DataStore::AlreadyLocked"
 
@@ -126,11 +118,11 @@ async def test_the_owner_is_not_exempt_from_the_lock(unique_data_type, post):
 
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_USE_READ_LOCK)
 
-	await touch(nex.STRANGER, data_id=data_id, lock_id=1234)
+	await helpers.touch_object(nex.STRANGER, data_id=data_id, lock_id=1234)
 
 	assert await touch_error(nex.FRIEND_A, data_id=data_id, lock_id=5678) == "DataStore::AlreadyLocked"
 
-	await touch(nex.FRIEND_A, data_id=data_id, lock_id=1234)
+	await helpers.touch_object(nex.FRIEND_A, data_id=data_id, lock_id=1234)
 
 @pytest.mark.parametrize("post", POST_METHODS)
 async def test_a_lock_id_of_zero_releases_the_lock(unique_data_type, post):
@@ -140,9 +132,9 @@ async def test_a_lock_id_of_zero_releases_the_lock(unique_data_type, post):
 
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_USE_READ_LOCK)
 
-	await touch(nex.FRIEND_A, data_id=data_id, lock_id=1234)
-	await touch(nex.FRIEND_A, data_id=data_id, lock_id=0)
-	await touch(nex.STRANGER, data_id=data_id, lock_id=5678)
+	await helpers.touch_object(nex.FRIEND_A, data_id=data_id, lock_id=1234)
+	await helpers.touch_object(nex.FRIEND_A, data_id=data_id, lock_id=0)
+	await helpers.touch_object(nex.STRANGER, data_id=data_id, lock_id=5678)
 
 	assert await touch_error(nex.FRIEND_A, data_id=data_id, lock_id=1234) == "DataStore::AlreadyLocked"
 
@@ -154,11 +146,11 @@ async def test_a_failed_lock_leaves_the_lock_alone(unique_data_type, post):
 
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_USE_READ_LOCK)
 
-	await touch(nex.FRIEND_A, data_id=data_id, lock_id=1234)
+	await helpers.touch_object(nex.FRIEND_A, data_id=data_id, lock_id=1234)
 
 	assert await touch_error(nex.FRIEND_A, data_id=data_id, lock_id=5678) == "DataStore::AlreadyLocked"
 
-	await touch(nex.FRIEND_A, data_id=data_id, lock_id=1234)
+	await helpers.touch_object(nex.FRIEND_A, data_id=data_id, lock_id=1234)
 
 @pytest.mark.parametrize("post", POST_METHODS)
 async def test_lock_ids_are_ignored_without_the_flag(unique_data_type, post):
@@ -169,8 +161,8 @@ async def test_lock_ids_are_ignored_without_the_flag(unique_data_type, post):
 
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
 
-	await touch(nex.FRIEND_A, data_id=data_id, lock_id=1234)
-	await touch(nex.FRIEND_A, data_id=data_id, lock_id=5678)
+	await helpers.touch_object(nex.FRIEND_A, data_id=data_id, lock_id=1234)
+	await helpers.touch_object(nex.FRIEND_A, data_id=data_id, lock_id=5678)
 
 # * Access permissions
 
@@ -182,7 +174,7 @@ async def test_anyone_with_access_can_touch(unique_data_type, post):
 
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
 
-	await touch(nex.STRANGER, data_id=data_id)
+	await helpers.touch_object(nex.STRANGER, data_id=data_id)
 
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).referred_count == 1
 
@@ -207,7 +199,7 @@ async def test_a_friend_of_the_owner_can_touch(unique_data_type, post):
 	permission = helpers.permission(permission=constants.Permission.PERMISSION_FRIEND)
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, permission=permission)
 
-	await touch(nex.FRIEND_B, data_id=data_id)
+	await helpers.touch_object(nex.FRIEND_B, data_id=data_id)
 
 	assert await touch_error(nex.STRANGER, data_id=data_id) == "DataStore::PermissionDenied"
 
@@ -225,7 +217,7 @@ async def test_specified_friend_needs_both(unique_data_type, post):
 	for_the_stranger = await post(nex.FRIEND_A, data_type=unique_data_type, permission=to_the_stranger)
 
 	# * A recipient who is also a friend
-	await touch(nex.FRIEND_B, data_id=for_the_friend)
+	await helpers.touch_object(nex.FRIEND_B, data_id=for_the_friend)
 
 	# * A recipient who is not a friend
 	assert await touch_error(nex.STRANGER, data_id=for_the_stranger) == "DataStore::PermissionDenied"
@@ -243,7 +235,7 @@ async def test_specified_does_not_need_friendship(unique_data_type, post):
 	permission = helpers.permission(permission=constants.Permission.PERMISSION_SPECIFIED, recipients=[nex.STRANGER])
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, permission=permission)
 
-	await touch(nex.STRANGER, data_id=data_id)
+	await helpers.touch_object(nex.STRANGER, data_id=data_id)
 
 @pytest.mark.parametrize("post", POST_METHODS)
 async def test_pending_object_can_be_touched_by_its_owner(unique_data_type, post):
@@ -254,7 +246,7 @@ async def test_pending_object_can_be_touched_by_its_owner(unique_data_type, post
 	flag = constants.DataFlag.DATA_FLAG_NEED_REVIEW
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=flag)
 
-	await touch(nex.FRIEND_A, data_id=data_id)
+	await helpers.touch_object(nex.FRIEND_A, data_id=data_id)
 
 # * Access passwords
 
@@ -268,7 +260,7 @@ async def test_access_password_bypasses_permissions(unique_data_type, post):
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, permission=permission)
 	password_info = await helpers.get_password_info(nex.FRIEND_A, data_id)
 
-	await touch(nex.STRANGER, data_id=data_id, access_password=password_info.access_password)
+	await helpers.touch_object(nex.STRANGER, data_id=data_id, access_password=password_info.access_password)
 
 @pytest.mark.parametrize("post", POST_METHODS)
 async def test_wrong_access_password_without_permission(unique_data_type, post):
@@ -291,7 +283,7 @@ async def test_wrong_access_password_as_the_owner(unique_data_type, post):
 	permission = helpers.permission(permission=constants.Permission.PERMISSION_PRIVATE)
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, permission=permission)
 
-	await touch(nex.FRIEND_A, data_id=data_id, access_password=1234)
+	await helpers.touch_object(nex.FRIEND_A, data_id=data_id, access_password=1234)
 
 # * Objects which cannot be touched
 

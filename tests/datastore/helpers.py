@@ -340,6 +340,14 @@ async def get_password_info(pid: int, data_id: int) -> datastore.DataStorePasswo
 	async with connect(pid) as client:
 		return await client.get_password_info(data_id)
 
+async def touch_object(pid: int, **fields) -> None:
+	"""
+	Touches an object as the given user
+	"""
+
+	async with connect(pid) as client:
+		await client.touch_object(touch_object_param(**fields))
+
 async def get_meta(pid: int, **fields) -> datastore.DataStoreMetaInfo:
 	"""
 	Gets an objects metadata as the given user

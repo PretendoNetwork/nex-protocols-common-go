@@ -411,6 +411,37 @@ async def test_result_option_every_flag(unique_data_type, post):
 	assert meta_info.permission.recipients == [nex.FRIEND_B]
 	assert [(rating.slot, rating.info.total_value) for rating in meta_info.ratings] == [(0, 7)]
 
+# * Read lock tests
+# *
+# * Read locks only gate downloading an object, so they never stop
+# * anyone from reading its metadata
+
+@pytest.mark.parametrize("post", POST_METHODS)
+async def test_read_locks_do_not_hide_metadata(unique_data_type, post):
+	"""
+	An object which is locked by someone else can still have its
+	metadata read, by anyone who has access to it
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_USE_READ_LOCK)
+
+	# * Touching the object with a lock ID locks it
+	await helpers.touch_object(nex.FRIEND_A, data_id=data_id, lock_id=1234)
+
+	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).data_id == data_id
+	assert (await helpers.get_meta(nex.STRANGER, data_id=data_id)).data_id == data_id
+
+@pytest.mark.parametrize("post", POST_METHODS)
+async def test_the_read_lock_flag_is_returned(unique_data_type, post):
+	"""
+	Objects posted with DATA_FLAG_USE_READ_LOCK say so in their metadata
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_USE_READ_LOCK)
+	meta_info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	assert meta_info.flag & constants.DataFlag.DATA_FLAG_USE_READ_LOCK
+
 # * Access password tests
 # *
 # * The server assigns every object a random access password, which the
