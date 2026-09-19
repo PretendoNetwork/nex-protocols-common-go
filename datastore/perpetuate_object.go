@@ -25,7 +25,7 @@ func (commonProtocol *CommonProtocol) perpetuateObject(err error, packet nex.Pac
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 	}
 
-	metaInfo, _, errCode := database.GetAccessObjectInfoByDataID(manager, dataID)
+	metaInfo, _, errCode := database.GetAccessObjectInfoByDataID(manager.Database, dataID)
 	if errCode != nil {
 		return nil, errCode
 	}
@@ -37,21 +37,21 @@ func (commonProtocol *CommonProtocol) perpetuateObject(err error, packet nex.Pac
 
 	// TODO - All of this can probably be done in a single SQL query
 
-	oldDataID, errCode := database.GetPerpetuatedObjectID(manager, connection.PID(), persistenceSlotID)
+	oldDataID, errCode := database.GetPerpetuatedObjectID(manager.Database, connection.PID(), persistenceSlotID)
 	if errCode != nil {
 		common_globals.Logger.Errorf("Error on persisting object: %s", errCode.Error())
 		return nil, errCode
 	}
 
 	if oldDataID != datastore_constants.InvalidDataID {
-		errCode := database.UnperpetuateObjectByDataID(manager, oldDataID, deleteLastObject)
+		errCode := database.UnperpetuateObjectByDataID(manager.Database, oldDataID, deleteLastObject)
 		if errCode != nil {
 			common_globals.Logger.Errorf("Error on unperpetuating object: %s", errCode.Error())
 			return nil, errCode
 		}
 	}
 
-	errCode = database.PerpetuateObject(manager, connection.PID(), persistenceSlotID, uint64(dataID))
+	errCode = database.PerpetuateObject(manager.Database, connection.PID(), persistenceSlotID, uint64(dataID))
 	if errCode != nil {
 		common_globals.Logger.Errorf("Error on perpetuating object: %s", errCode.Error())
 		return nil, errCode

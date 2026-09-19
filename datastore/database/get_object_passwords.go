@@ -8,7 +8,7 @@ import (
 	"github.com/lib/pq"
 )
 
-func GetObjectPasswords(manager *common_globals.DataStoreManager, caller types.PID, dataIDs types.List[types.UInt64]) (types.List[datastore_types.DataStorePasswordInfo], types.List[types.QResult], *nex.Error) {
+func GetObjectPasswords(database common_globals.Database, caller types.PID, dataIDs types.List[types.UInt64]) (types.List[datastore_types.DataStorePasswordInfo], types.List[types.QResult], *nex.Error) {
 	passwordInfos := types.NewList[datastore_types.DataStorePasswordInfo]()
 	results := types.NewList[types.QResult]()
 
@@ -19,7 +19,7 @@ func GetObjectPasswords(manager *common_globals.DataStoreManager, caller types.P
 	// * Return a row even if the data_id is invalid
 	// * or if the caller is not the owner. Validated
 	// * later
-	rows, err := manager.Database.Query(`
+	rows, err := database.Query(`
 		SELECT
 			input.data_id,
 			COALESCE(o.owner, 0) AS owner,

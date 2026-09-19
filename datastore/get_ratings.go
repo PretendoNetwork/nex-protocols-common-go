@@ -40,7 +40,7 @@ func (commonProtocol *CommonProtocol) getRatings(err error, packet nex.PacketInt
 			continue
 		}
 
-		metaInfo, objectAccessPassword, errCode := database.GetAccessObjectInfoByDataID(manager, dataID)
+		metaInfo, objectAccessPassword, errCode := database.GetAccessObjectInfoByDataID(manager.Database, dataID)
 		if errCode != nil {
 			pRatings = append(pRatings, invalidRatingInfoWithSlot)
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
@@ -67,7 +67,7 @@ func (commonProtocol *CommonProtocol) getRatings(err error, packet nex.PacketInt
 			continue
 		}
 
-		ratings, errCode := database.GetObjectRatingsByDataID(manager, dataID)
+		ratings, errCode := database.GetObjectRatingsByDataID(manager.Database, dataID)
 		if errCode != nil {
 			pRatings = append(pRatings, invalidRatingInfoWithSlot)
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))

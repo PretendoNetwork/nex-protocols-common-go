@@ -35,7 +35,7 @@ func (commonProtocol *CommonProtocol) prepareGetObjectV1(err error, packet nex.P
 	}
 
 	// * V1 has no persistence target
-	metaInfo, accessPassword, errCode := database.GetAccessObjectInfoByDataID(manager, types.UInt64(param.DataID))
+	metaInfo, accessPassword, errCode := database.GetAccessObjectInfoByDataID(manager.Database, types.UInt64(param.DataID))
 	if errCode != nil {
 		return nil, errCode
 	}
@@ -61,12 +61,12 @@ func (commonProtocol *CommonProtocol) prepareGetObjectV1(err error, packet nex.P
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "PrepareGetObjectV1 cannot be used with DataFlagNotUseFileServer")
 	}
 
-	errCode = database.UpdateObjectReferenceData(manager, metaInfo.DataID)
+	errCode = database.UpdateObjectReferenceData(manager.Database, metaInfo.DataID)
 	if errCode != nil {
 		return nil, errCode
 	}
 
-	version, errCode := database.GetObjectLatestVersionNumber(manager, metaInfo.DataID)
+	version, errCode := database.GetObjectLatestVersionNumber(manager.Database, metaInfo.DataID)
 	if errCode != nil {
 		return nil, errCode
 	}

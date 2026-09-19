@@ -13,7 +13,7 @@ import (
 	"github.com/lib/pq"
 )
 
-func InsertObjectByPreparePostParam(manager *common_globals.DataStoreManager, ownerPID types.PID, param datastore_types.DataStorePreparePostParam) (uint64, *nex.Error) {
+func InsertObjectByPreparePostParam(database common_globals.Database, manager *common_globals.DataStoreManager, ownerPID types.PID, param datastore_types.DataStorePreparePostParam) (uint64, *nex.Error) {
 	// * Max size is 10MiB.
 	// * Does not seem to be a constant in DataStore, so just inline it for now?
 	if param.Size > 0xA00000 {
@@ -212,7 +212,7 @@ func InsertObjectByPreparePostParam(manager *common_globals.DataStoreManager, ow
 
 	var dataID uint64
 
-	err := manager.Database.QueryRow(`INSERT INTO datastore.objects (
+	err := database.QueryRow(`INSERT INTO datastore.objects (
 		owner,
 		size,
 		name,

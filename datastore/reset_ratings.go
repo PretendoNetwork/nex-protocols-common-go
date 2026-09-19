@@ -34,7 +34,7 @@ func (commonProtocol *CommonProtocol) resetRatings(err error, packet nex.PacketI
 			continue
 		}
 
-		metaInfo, objectUpdatePassword, errCode := database.GetUpdateObjectInfoByDataID(manager, dataID)
+		metaInfo, objectUpdatePassword, errCode := database.GetUpdateObjectInfoByDataID(manager.Database, dataID)
 		if errCode != nil {
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
 			continue
@@ -57,7 +57,7 @@ func (commonProtocol *CommonProtocol) resetRatings(err error, packet nex.PacketI
 			continue
 		}
 
-		errCode = database.DeleteObjectRatings(manager, dataID)
+		errCode = database.DeleteObjectRatings(manager.Database, dataID)
 		if errCode != nil {
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
 			continue

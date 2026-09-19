@@ -50,7 +50,7 @@ func (commonProtocol *CommonProtocol) preparePostObjectV1(err error, packet nex.
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "PreparePostObjectV1 cannot be used with DataFlagNotUseFileServer")
 	}
 
-	dataID, errCode := database.InsertObjectByPreparePostParam(manager, connection.PID(), newParam)
+	dataID, errCode := database.InsertObjectByPreparePostParam(manager.Database, manager, connection.PID(), newParam)
 	if errCode != nil {
 		common_globals.Logger.Errorf("Error on object init: %s", errCode.Error())
 		return nil, errCode
@@ -64,7 +64,7 @@ func (commonProtocol *CommonProtocol) preparePostObjectV1(err error, packet nex.
 	}
 
 	// TODO - Should this be moved inside InsertObjectByPreparePostParam?
-	errCode = database.InsertObjectRatingSettings(manager, dataID, newParam.RatingInitParams)
+	errCode = database.InsertObjectRatingSettings(manager.Database, dataID, newParam.RatingInitParams)
 	if errCode != nil {
 		common_globals.Logger.Errorf("Error on rating init: %s", errCode.Error())
 		return nil, errCode
@@ -79,7 +79,7 @@ func (commonProtocol *CommonProtocol) preparePostObjectV1(err error, packet nex.
 		}
 
 		for _, recipientID := range recipientIDs {
-			errCode = database.SendNotification(manager, dataID, recipientID, connection.PID())
+			errCode = database.SendNotification(manager.Database, manager, dataID, recipientID, connection.PID())
 			if errCode != nil {
 				common_globals.Logger.Errorf("Error on sending notification: %s", errCode.Error())
 				return nil, errCode

@@ -18,7 +18,7 @@ func (commonProtocol *CommonProtocol) deleteObject(err error, packet nex.PacketI
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
-	metaInfo, updatePassword, errCode := database.GetUpdateObjectInfoByDataID(manager, param.DataID)
+	metaInfo, updatePassword, errCode := database.GetUpdateObjectInfoByDataID(manager.Database, param.DataID)
 	if errCode != nil {
 		return nil, errCode
 	}
@@ -35,7 +35,7 @@ func (commonProtocol *CommonProtocol) deleteObject(err error, packet nex.PacketI
 		return nil, errCode
 	}
 
-	errCode = database.DeleteObject(manager, param.DataID)
+	errCode = database.DeleteObject(manager.Database, param.DataID)
 	if errCode != nil {
 		return nil, errCode
 	}

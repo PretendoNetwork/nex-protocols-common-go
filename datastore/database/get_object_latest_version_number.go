@@ -8,10 +8,10 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 )
 
-func GetObjectLatestVersionNumber(manager *common_globals.DataStoreManager, dataID types.UInt64) (uint32, *nex.Error) {
+func GetObjectLatestVersionNumber(database common_globals.Database, dataID types.UInt64) (uint32, *nex.Error) {
 	var version uint32
 
-	err := manager.Database.QueryRow(`SELECT version FROM datastore.objects WHERE data_id=$1`, dataID).Scan(&version)
+	err := database.QueryRow(`SELECT version FROM datastore.objects WHERE data_id=$1`, dataID).Scan(&version)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return version, nex.NewError(nex.ResultCodes.DataStore.NotFound, err.Error())

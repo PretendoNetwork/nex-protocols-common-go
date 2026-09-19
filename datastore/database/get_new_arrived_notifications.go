@@ -7,9 +7,9 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
-func GetNewArrivedNotifications(manager *common_globals.DataStoreManager, recipientID types.PID, param datastore_types.DataStoreGetNewArrivedNotificationsParam) (types.List[datastore_types.DataStoreNotification], types.Bool, *nex.Error) {
+func GetNewArrivedNotifications(database common_globals.Database, recipientID types.PID, param datastore_types.DataStoreGetNewArrivedNotificationsParam) (types.List[datastore_types.DataStoreNotification], types.Bool, *nex.Error) {
 	// * First we mark all unread notifications as read
-	_, err := manager.Database.Exec(`UPDATE datastore.notifications SET read = true, read_date = (CURRENT_TIMESTAMP AT TIME ZONE 'UTC') WHERE recipient_id = $1 AND id <= $2 AND read IS NOT TRUE`, recipientID, param.LastNotificationID)
+	_, err := database.Exec(`UPDATE datastore.notifications SET read = true, read_date = (CURRENT_TIMESTAMP AT TIME ZONE 'UTC') WHERE recipient_id = $1 AND id <= $2 AND read IS NOT TRUE`, recipientID, param.LastNotificationID)
 	if err != nil {
 		// TODO - Send more specific errors?
 		return nil, false, nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
@@ -19,7 +19,7 @@ func GetNewArrivedNotifications(manager *common_globals.DataStoreManager, recipi
 	var pHasNext types.Bool = false
 
 	// * Add 1 to the limit to check for more notifications remaining
-	rows, err := manager.Database.Query(`SELECT id, data_id FROM datastore.notifications WHERE recipient_id = $1 AND read IS NOT TRUE LIMIT $2+1`, recipientID, param.Limit)
+	rows, err := database.Query(`SELECT id, data_id FROM datastore.notifications WHERE recipient_id = $1 AND read IS NOT TRUE LIMIT $2+1`, recipientID, param.Limit)
 	if err != nil {
 		// TODO - Send more specific errors?
 		return nil, false, nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())

@@ -33,14 +33,14 @@ func (commonProtocol *CommonProtocol) postMetaBinary(err error, packet nex.Packe
 		param.Flag |= datastore_constants.DataFlagNotUseFileServer
 	}
 
-	dataID, errCode := database.InsertObjectByPreparePostParam(manager, connection.PID(), param)
+	dataID, errCode := database.InsertObjectByPreparePostParam(manager.Database, manager, connection.PID(), param)
 	if errCode != nil {
 		common_globals.Logger.Errorf("Error on object init: %s", errCode.Error())
 		return nil, errCode
 	}
 
 	// TODO - Should this be moved inside InsertObjectByPreparePostParam?
-	errCode = database.InsertObjectRatingSettings(manager, dataID, param.RatingInitParams)
+	errCode = database.InsertObjectRatingSettings(manager.Database, dataID, param.RatingInitParams)
 	if errCode != nil {
 		common_globals.Logger.Errorf("Error on rating init: %s", errCode.Error())
 		return nil, errCode
@@ -49,21 +49,21 @@ func (commonProtocol *CommonProtocol) postMetaBinary(err error, packet nex.Packe
 	// TODO - Should this be moved inside InsertObjectByPreparePostParam?
 	if param.PersistenceInitParam.PersistenceSlotID != types.UInt16(datastore_constants.InvalidPersistenceSlotID) {
 		slot := param.PersistenceInitParam.PersistenceSlotID
-		oldDataID, err := database.GetPerpetuatedObjectID(manager, connection.PID(), slot)
+		oldDataID, err := database.GetPerpetuatedObjectID(manager.Database, connection.PID(), slot)
 		if err != nil {
 			common_globals.Logger.Errorf("Error on persisting object: %s", err.Error())
 			return nil, err
 		}
 
 		if oldDataID != datastore_constants.InvalidDataID {
-			err := database.UnperpetuateObjectByDataID(manager, oldDataID, param.PersistenceInitParam.DeleteLastObject)
+			err := database.UnperpetuateObjectByDataID(manager.Database, oldDataID, param.PersistenceInitParam.DeleteLastObject)
 			if err != nil {
 				common_globals.Logger.Errorf("Error on unperpetuating object: %s", err.Error())
 				return nil, err
 			}
 		}
 
-		err = database.PerpetuateObject(manager, connection.PID(), param.PersistenceInitParam.PersistenceSlotID, dataID)
+		err = database.PerpetuateObject(manager.Database, connection.PID(), param.PersistenceInitParam.PersistenceSlotID, dataID)
 		if err != nil {
 			common_globals.Logger.Errorf("Error on perpetuating object: %s", err.Error())
 			return nil, err
@@ -80,7 +80,7 @@ func (commonProtocol *CommonProtocol) postMetaBinary(err error, packet nex.Packe
 		}
 
 		for _, recipientID := range recipientIDs {
-			errCode = database.SendNotification(manager, dataID, recipientID, connection.PID())
+			errCode = database.SendNotification(manager.Database, manager, dataID, recipientID, connection.PID())
 			if errCode != nil {
 				common_globals.Logger.Errorf("Error on sending notification: %s", errCode.Error())
 				return nil, errCode

@@ -29,7 +29,7 @@ func (commonProtocol *CommonProtocol) deleteObjects(err error, packet nex.Packet
 	// TODO - Support transactional. If transactional=true, changes are all-or-nothing
 	// TODO - Refactor this, this can make up to 200 database queries and 100 gRPC calls in one go
 	for _, param := range params {
-		metaInfo, updatePassword, errCode := database.GetUpdateObjectInfoByDataID(manager, param.DataID)
+		metaInfo, updatePassword, errCode := database.GetUpdateObjectInfoByDataID(manager.Database, param.DataID)
 		if errCode != nil {
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
 			continue
@@ -49,7 +49,7 @@ func (commonProtocol *CommonProtocol) deleteObjects(err error, packet nex.Packet
 			continue
 		}
 
-		errCode = database.DeleteObject(manager, param.DataID)
+		errCode = database.DeleteObject(manager.Database, param.DataID)
 		if errCode != nil {
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
 			continue

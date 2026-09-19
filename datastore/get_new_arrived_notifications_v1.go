@@ -24,7 +24,7 @@ func (commonProtocol *CommonProtocol) getNewArrivedNotficationsV1(err error, pac
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
-	pResultRaw, pHasNext, errCode := database.GetNewArrivedNotifications(manager, connection.PID(), param)
+	pResultRaw, pHasNext, errCode := database.GetNewArrivedNotifications(manager.Database, connection.PID(), param)
 	if errCode != nil {
 		return nil, errCode
 	}

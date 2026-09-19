@@ -8,10 +8,10 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 )
 
-func SendNotification(manager *common_globals.DataStoreManager, dataID uint64, recipientID, senderPID types.PID) *nex.Error {
+func SendNotification(database common_globals.Database, manager *common_globals.DataStoreManager, dataID uint64, recipientID, senderPID types.PID) *nex.Error {
 	var notificationID uint64
 
-	err := manager.Database.QueryRow(`INSERT INTO datastore.notifications (
+	err := database.QueryRow(`INSERT INTO datastore.notifications (
 		data_id,
 		recipient_id,
 		sender_pid

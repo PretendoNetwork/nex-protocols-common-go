@@ -34,7 +34,7 @@ func (commonProtocol *CommonProtocol) getSpecificMeta(err error, packet nex.Pack
 	}
 
 	for _, dataID := range param.DataIDs {
-		metaInfo, accessPassword, errCode := database.GetAccessObjectInfoByDataID(manager, dataID)
+		metaInfo, accessPassword, errCode := database.GetAccessObjectInfoByDataID(manager.Database, dataID)
 		if errCode != nil {
 			return nil, errCode
 		}
@@ -53,7 +53,7 @@ func (commonProtocol *CommonProtocol) getSpecificMeta(err error, packet nex.Pack
 			return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
 		}
 
-		version, errCode := database.GetObjectLatestVersionNumber(manager, metaInfo.DataID)
+		version, errCode := database.GetObjectLatestVersionNumber(manager.Database, metaInfo.DataID)
 		if errCode != nil {
 			return nil, errCode
 		}

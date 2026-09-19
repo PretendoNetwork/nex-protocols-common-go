@@ -30,7 +30,7 @@ func (commonProtocol *CommonProtocol) getMetas(err error, packet nex.PacketInter
 
 	// * param.DataID and param.PersistenceTarget are ignored here
 	for _, dataID := range dataIDs {
-		metaInfo, accessPassword, errCode := database.GetAccessObjectInfoByDataID(manager, dataID)
+		metaInfo, accessPassword, errCode := database.GetAccessObjectInfoByDataID(manager.Database, dataID)
 		if errCode != nil {
 			pMetaInfo = append(pMetaInfo, invalidMetaInfo)
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
@@ -46,7 +46,7 @@ func (commonProtocol *CommonProtocol) getMetas(err error, packet nex.PacketInter
 			continue
 		}
 
-		metaInfo, errCode = database.GetObjectMetaInfoByDataIDWithResultOption(manager, dataID, param.ResultOption)
+		metaInfo, errCode = database.GetObjectMetaInfoByDataIDWithResultOption(manager.Database, dataID, param.ResultOption)
 		if errCode != nil {
 			pMetaInfo = append(pMetaInfo, invalidMetaInfo)
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))

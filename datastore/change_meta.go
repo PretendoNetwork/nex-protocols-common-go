@@ -26,9 +26,9 @@ func (commonProtocol *CommonProtocol) changeMeta(err error, packet nex.PacketInt
 
 	// * If using a PersistenceTarget, ignore the DataID
 	if param.PersistenceTarget.OwnerID != 0 {
-		metaInfo, updatePassword, errCode = database.GetUpdateObjectInfoByPersistenceTarget(manager, param.PersistenceTarget)
+		metaInfo, updatePassword, errCode = database.GetUpdateObjectInfoByPersistenceTarget(manager.Database, param.PersistenceTarget)
 	} else if param.DataID != types.UInt64(datastore_constants.InvalidDataID) {
-		metaInfo, updatePassword, errCode = database.GetUpdateObjectInfoByDataID(manager, param.DataID)
+		metaInfo, updatePassword, errCode = database.GetUpdateObjectInfoByDataID(manager.Database, param.DataID)
 	} else {
 		// * If both the PersistenceTarget and DataID are not set, bail
 		errCode = nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
@@ -107,7 +107,7 @@ func (commonProtocol *CommonProtocol) changeMeta(err error, packet nex.PacketInt
 		return nil, nex.NewError(nex.ResultCodes.DataStore.ValueNotEqual, "change_error")
 	}
 
-	errCode = database.UpdateObjectMetadata(manager, metaInfo, param)
+	errCode = database.UpdateObjectMetadata(manager.Database, metaInfo, param)
 	if errCode != nil {
 		return nil, errCode
 	}

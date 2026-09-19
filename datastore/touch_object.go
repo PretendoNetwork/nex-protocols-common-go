@@ -36,7 +36,7 @@ func (commonProtocol *CommonProtocol) touchObject(err error, packet nex.PacketIn
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 	}
 
-	metaInfo, accessPassword, errCode := database.GetAccessObjectInfoByDataID(manager, param.DataID)
+	metaInfo, accessPassword, errCode := database.GetAccessObjectInfoByDataID(manager.Database, param.DataID)
 	if errCode != nil {
 		return nil, errCode
 	}
@@ -57,7 +57,7 @@ func (commonProtocol *CommonProtocol) touchObject(err error, packet nex.PacketIn
 
 	// TODO - Check param.LockID. See InsertObjectByPreparePostParam for notes on read locks
 
-	errCode = database.UpdateObjectReferenceData(manager, metaInfo.DataID)
+	errCode = database.UpdateObjectReferenceData(manager.Database, metaInfo.DataID)
 	if errCode != nil {
 		return nil, errCode
 	}

@@ -9,12 +9,12 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
-func GetUpdateObjectInfoByPersistenceTarget(manager *common_globals.DataStoreManager, persistenceTarget datastore_types.DataStorePersistenceTarget) (datastore_types.DataStoreMetaInfo, types.UInt64, *nex.Error) {
+func GetUpdateObjectInfoByPersistenceTarget(database common_globals.Database, persistenceTarget datastore_types.DataStorePersistenceTarget) (datastore_types.DataStoreMetaInfo, types.UInt64, *nex.Error) {
 	var dataID types.UInt64
 	var metaInfo datastore_types.DataStoreMetaInfo // * Only used for error responses
 	var updatePassword types.UInt64                // * Only used for error responses
 
-	err := manager.Database.QueryRow(
+	err := database.QueryRow(
 		`SELECT data_id FROM datastore.persistence_slots WHERE pid=$1 AND slot=$2`,
 		persistenceTarget.OwnerID, persistenceTarget.PersistenceSlotID,
 	).Scan(&dataID)
@@ -28,5 +28,5 @@ func GetUpdateObjectInfoByPersistenceTarget(manager *common_globals.DataStoreMan
 		return metaInfo, updatePassword, nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
 	}
 
-	return GetUpdateObjectInfoByDataID(manager, dataID)
+	return GetUpdateObjectInfoByDataID(database, dataID)
 }

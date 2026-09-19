@@ -11,7 +11,7 @@ import (
 	"github.com/lib/pq"
 )
 
-func UpdateObjectByPrepareUpdateParam(manager *common_globals.DataStoreManager, updateParam datastore_types.DataStorePrepareUpdateParam, currentData datastore_types.DataStoreMetaInfo) (types.UInt32, *nex.Error) {
+func UpdateObjectByPrepareUpdateParam(database common_globals.Database, updateParam datastore_types.DataStorePrepareUpdateParam, currentData datastore_types.DataStoreMetaInfo) (types.UInt32, *nex.Error) {
 	// * Max size is 10MiB.
 	// * Does not seem to be a constant in DataStore, so just inline it for now?
 	if updateParam.Size > 0xA00000 {
@@ -38,7 +38,7 @@ func UpdateObjectByPrepareUpdateParam(manager *common_globals.DataStoreManager, 
 
 	// TODO - Do we want to update the row, or make a new row for each update version?
 	//        Doing so would use more space, but would let us track individual updates
-	err := manager.Database.QueryRow(`
+	err := database.QueryRow(`
 		UPDATE datastore.objects
 		SET
 			version = version + 1,

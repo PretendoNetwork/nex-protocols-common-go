@@ -40,7 +40,7 @@ func (commonProtocol *CommonProtocol) getNotificationURL(err error, packet nex.P
 	info.Query = types.String("?" + url.RawQuery)
 
 	// * This method triggers a new notification with an invalid data ID
-	errCode := database.SendNotification(manager, datastore_constants.InvalidDataID, connection.PID(), connection.PID())
+	errCode := database.SendNotification(manager.Database, manager, datastore_constants.InvalidDataID, connection.PID(), connection.PID())
 	if errCode != nil {
 		return nil, errCode
 	}

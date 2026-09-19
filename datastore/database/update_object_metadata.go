@@ -13,7 +13,7 @@ import (
 	"github.com/lib/pq"
 )
 
-func UpdateObjectMetadata(manager *common_globals.DataStoreManager, currentData datastore_types.DataStoreMetaInfo, newData datastore_types.DataStoreChangeMetaParam) *nex.Error {
+func UpdateObjectMetadata(database common_globals.Database, currentData datastore_types.DataStoreMetaInfo, newData datastore_types.DataStoreChangeMetaParam) *nex.Error {
 	// * Do nothing if nothing to update
 	if newData.ModifiesFlag == datastore_constants.ModificationFlagNone {
 		return nil
@@ -161,7 +161,7 @@ func UpdateObjectMetadata(manager *common_globals.DataStoreManager, currentData 
 		return nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
 	}
 
-	_, err = manager.Database.Exec(query, params...)
+	_, err = database.Exec(query, params...)
 	if err != nil {
 		return nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
 	}

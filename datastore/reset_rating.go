@@ -28,7 +28,7 @@ func (commonProtocol *CommonProtocol) resetRating(err error, packet nex.PacketIn
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 	}
 
-	metaInfo, objectUpdatePassword, errCode := database.GetUpdateObjectInfoByDataID(manager, target.DataID)
+	metaInfo, objectUpdatePassword, errCode := database.GetUpdateObjectInfoByDataID(manager.Database, target.DataID)
 	if errCode != nil {
 		return nil, errCode
 	}
@@ -47,7 +47,7 @@ func (commonProtocol *CommonProtocol) resetRating(err error, packet nex.PacketIn
 		return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
 	}
 
-	errCode = database.DeleteObjectRatingsBySlot(manager, target.DataID, target.Slot)
+	errCode = database.DeleteObjectRatingsBySlot(manager.Database, target.DataID, target.Slot)
 	if errCode != nil {
 		return nil, errCode
 	}

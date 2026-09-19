@@ -9,11 +9,11 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
-func GetUpdateObjectInfoByDataID(manager *common_globals.DataStoreManager, dataID types.UInt64) (datastore_types.DataStoreMetaInfo, types.UInt64, *nex.Error) {
+func GetUpdateObjectInfoByDataID(database common_globals.Database, dataID types.UInt64) (datastore_types.DataStoreMetaInfo, types.UInt64, *nex.Error) {
 	var metaInfo datastore_types.DataStoreMetaInfo
 	var updatePassword types.UInt64
 
-	err := manager.Database.QueryRow(`
+	err := database.QueryRow(`
 		SELECT
 			data_id,
 			owner,

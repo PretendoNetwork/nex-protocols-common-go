@@ -28,7 +28,7 @@ func (commonProtocol *CommonProtocol) getRatingWithLog(err error, packet nex.Pac
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 	}
 
-	metaInfo, objectAccessPassword, errCode := database.GetAccessObjectInfoByDataID(manager, target.DataID)
+	metaInfo, objectAccessPassword, errCode := database.GetAccessObjectInfoByDataID(manager.Database, target.DataID)
 	if errCode != nil {
 		return nil, errCode
 	}
@@ -48,7 +48,7 @@ func (commonProtocol *CommonProtocol) getRatingWithLog(err error, packet nex.Pac
 	}
 
 	// TODO - Refactor out this hack. We store decoded flags in Postgres, stop manually parsing them again here
-	ratingSettings, errCode := database.GetObjectRatingSlotSettings(manager, target.DataID, target.Slot)
+	ratingSettings, errCode := database.GetObjectRatingSlotSettings(manager.Database, target.DataID, target.Slot)
 	if errCode != nil {
 		return nil, errCode
 	}
@@ -61,12 +61,12 @@ func (commonProtocol *CommonProtocol) getRatingWithLog(err error, packet nex.Pac
 		return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "change_error")
 	}
 
-	pRating, errCode := database.GetObjectRatingByDataIDAndSlot(manager, target.DataID, target.Slot)
+	pRating, errCode := database.GetObjectRatingByDataIDAndSlot(manager.Database, target.DataID, target.Slot)
 	if errCode != nil {
 		return nil, errCode
 	}
 
-	pRatingLog, errCode := database.GetUserRatingLog(manager, target.DataID, target.Slot, connection.PID())
+	pRatingLog, errCode := database.GetUserRatingLog(manager.Database, target.DataID, target.Slot, connection.PID())
 	if errCode != nil {
 		return nil, errCode
 	}

@@ -40,7 +40,7 @@ func (commonProtocol *CommonProtocol) getObjectInfos(err error, packet nex.Packe
 
 	// * param.DataID and param.PersistenceTarget are ignored here
 	for _, dataID := range dataIDs {
-		metaInfo, accessPassword, errCode := database.GetAccessObjectInfoByDataID(manager, dataID)
+		metaInfo, accessPassword, errCode := database.GetAccessObjectInfoByDataID(manager.Database, dataID)
 		if errCode != nil {
 			pInfos = append(pInfos, invalidReqGetInfo)
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
@@ -69,14 +69,14 @@ func (commonProtocol *CommonProtocol) getObjectInfos(err error, packet nex.Packe
 			continue
 		}
 
-		errCode = database.UpdateObjectReferenceData(manager, metaInfo.DataID)
+		errCode = database.UpdateObjectReferenceData(manager.Database, metaInfo.DataID)
 		if errCode != nil {
 			pInfos = append(pInfos, invalidReqGetInfo)
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
 			continue
 		}
 
-		version, errCode := database.GetObjectLatestVersionNumber(manager, metaInfo.DataID)
+		version, errCode := database.GetObjectLatestVersionNumber(manager.Database, metaInfo.DataID)
 		if errCode != nil {
 			pInfos = append(pInfos, invalidReqGetInfo)
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))

@@ -3,6 +3,7 @@ package common_globals
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"net/url"
 	"slices"
@@ -137,9 +138,18 @@ func NewMinIOManager(minioClient *minio.Client) *MinIOManager {
 	}
 }
 
+// Database is anything which can run queries. Both the database
+// itself and a transaction satisfy this, so that handlers can run
+// their queries inside a transaction when they need to
+type Database interface {
+	Exec(query string, args ...any) (sql.Result, error)
+	Query(query string, args ...any) (*sql.Rows, error)
+	QueryRow(query string, args ...any) *sql.Row
+}
+
 // DataStoreManager manages a DataStore instance
 type DataStoreManager struct {
-	Database          *sql.DB
+	Database          Database
 	Endpoint          *nex.PRUDPEndPoint
 	S3                *S3
 	GetUserFriendPIDs func(pid uint32) []uint32
@@ -493,6 +503,19 @@ func (dsm *DataStoreManager) getNotificationRecipients(ownerPID types.PID, permi
 	}
 
 	return recipientIDs, nil
+}
+
+// BeginTransaction starts a new transaction on the managers database.
+// Every database method takes a Database, so a transaction can be given
+// to them in place of the managers own database in case a method needs
+// to roll data back on errors
+func (dsm DataStoreManager) BeginTransaction() (*sql.Tx, error) {
+	database, ok := dsm.Database.(*sql.DB)
+	if !ok {
+		return nil, errors.New("manager is already using a transaction")
+	}
+
+	return database.Begin()
 }
 
 // NewDataStoreManager returns a new DataStoreManager

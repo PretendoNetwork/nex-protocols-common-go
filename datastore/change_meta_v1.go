@@ -25,7 +25,7 @@ func (commonProtocol *CommonProtocol) changeMetaV1(err error, packet nex.PacketI
 	}
 
 	// * V1 has no persistence target
-	metaInfo, updatePassword, errCode := database.GetUpdateObjectInfoByDataID(manager, types.UInt64(param.DataID))
+	metaInfo, updatePassword, errCode := database.GetUpdateObjectInfoByDataID(manager.Database, types.UInt64(param.DataID))
 	if errCode != nil {
 		return nil, errCode
 	}
@@ -47,7 +47,7 @@ func (commonProtocol *CommonProtocol) changeMetaV1(err error, packet nex.PacketI
 		return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
 	}
 
-	errCode = database.UpdateObjectMetadataV1(manager, metaInfo, param)
+	errCode = database.UpdateObjectMetadataV1(manager.Database, metaInfo, param)
 	if errCode != nil {
 		return nil, errCode
 	}

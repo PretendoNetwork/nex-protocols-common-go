@@ -24,7 +24,7 @@ func (commonProtocol *CommonProtocol) completePostObjectV1(err error, packet nex
 	// * Only difference between V1 and current is DataID size
 	dataID := types.UInt64(param.DataID)
 
-	creationDate, errCode := database.ObjectCreationDate(manager, dataID)
+	creationDate, errCode := database.ObjectCreationDate(manager.Database, dataID)
 	if errCode != nil {
 		// * Unlike CompletePostObjects, this method uses DataStore::Unknown
 		// * for objects which do not exist, rather than DataStore::NotFound
@@ -37,7 +37,7 @@ func (commonProtocol *CommonProtocol) completePostObjectV1(err error, packet nex
 		return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
 	}
 
-	objectOwner, errCode := database.ObjectOwner(manager, dataID)
+	objectOwner, errCode := database.ObjectOwner(manager.Database, dataID)
 	if errCode != nil {
 		return nil, errCode
 	}
@@ -46,7 +46,7 @@ func (commonProtocol *CommonProtocol) completePostObjectV1(err error, packet nex
 		return nil, nex.NewError(nex.ResultCodes.DataStore.PermissionDenied, "change_error")
 	}
 
-	objectUploaded, errCode := database.ObjectUploaded(manager, dataID)
+	objectUploaded, errCode := database.ObjectUploaded(manager.Database, dataID)
 	if errCode != nil {
 		return nil, errCode
 	}
@@ -61,7 +61,7 @@ func (commonProtocol *CommonProtocol) completePostObjectV1(err error, packet nex
 	// *       to add later if it becomes a problem
 
 	if param.IsSuccess {
-		if errCode := database.MarkObjectUploaded(manager, dataID); errCode != nil {
+		if errCode := database.MarkObjectUploaded(manager.Database, dataID); errCode != nil {
 			return nil, errCode
 		}
 	}

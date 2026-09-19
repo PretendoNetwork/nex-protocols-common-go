@@ -26,7 +26,7 @@ func (commonProtocol *CommonProtocol) completeUpdateObject(err error, packet nex
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 	}
 
-	creationDate, errCode := database.ObjectCreationDate(manager, param.DataID)
+	creationDate, errCode := database.ObjectCreationDate(manager.Database, param.DataID)
 	if errCode != nil {
 		return nil, errCode
 	}
@@ -44,7 +44,7 @@ func (commonProtocol *CommonProtocol) completeUpdateObject(err error, packet nex
 	// * to this method
 	// *
 	// * Treating the same as PrepareUpdateObject until we see otherwise
-	objectOwner, errCode := database.ObjectOwner(manager, param.DataID)
+	objectOwner, errCode := database.ObjectOwner(manager.Database, param.DataID)
 	if errCode != nil {
 		return nil, errCode
 	}
@@ -53,7 +53,7 @@ func (commonProtocol *CommonProtocol) completeUpdateObject(err error, packet nex
 		return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "change_error")
 	}
 
-	objectUploaded, errCode := database.ObjectUploaded(manager, param.DataID)
+	objectUploaded, errCode := database.ObjectUploaded(manager.Database, param.DataID)
 	if errCode != nil {
 		return nil, errCode
 	}
@@ -62,7 +62,7 @@ func (commonProtocol *CommonProtocol) completeUpdateObject(err error, packet nex
 		return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "change_error")
 	}
 
-	version, errCode := database.GetObjectLatestVersionNumber(manager, param.DataID)
+	version, errCode := database.GetObjectLatestVersionNumber(manager.Database, param.DataID)
 	if errCode != nil {
 		return nil, errCode
 	}
@@ -76,7 +76,7 @@ func (commonProtocol *CommonProtocol) completeUpdateObject(err error, packet nex
 	// *       to add later if it becomes a problem
 
 	if param.IsSuccess {
-		if errCode := database.MarkObjectUploaded(manager, param.DataID); errCode != nil {
+		if errCode := database.MarkObjectUploaded(manager.Database, param.DataID); errCode != nil {
 			return nil, errCode
 		}
 	}

@@ -25,7 +25,7 @@ func (commonProtocol *CommonProtocol) getPersistenceInfo(err error, packet nex.P
 	persistenceTarget.OwnerID = ownerID
 	persistenceTarget.PersistenceSlotID = persistenceSlotID
 
-	metaInfo, accessPassword, errCode := database.GetAccessObjectInfoByPersistenceTarget(manager, persistenceTarget)
+	metaInfo, accessPassword, errCode := database.GetAccessObjectInfoByPersistenceTarget(manager.Database, persistenceTarget)
 	if errCode != nil {
 		return nil, errCode
 	}

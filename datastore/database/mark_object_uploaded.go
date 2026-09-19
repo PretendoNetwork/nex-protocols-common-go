@@ -6,8 +6,8 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 )
 
-func MarkObjectUploaded(manager *common_globals.DataStoreManager, dataID types.UInt64) *nex.Error {
-	result, err := manager.Database.Exec(`UPDATE datastore.objects SET upload_completed = TRUE WHERE data_id=$1`, dataID)
+func MarkObjectUploaded(database common_globals.Database, dataID types.UInt64) *nex.Error {
+	result, err := database.Exec(`UPDATE datastore.objects SET upload_completed = TRUE WHERE data_id=$1`, dataID)
 	if err != nil {
 		// TODO - Send more specific errors?
 		return nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())

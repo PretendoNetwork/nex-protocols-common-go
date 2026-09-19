@@ -9,7 +9,7 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
-func GetUserRatingLog(manager *common_globals.DataStoreManager, dataID types.UInt64, slot types.UInt8, pid types.PID) (datastore_types.DataStoreRatingLog, *nex.Error) {
+func GetUserRatingLog(database common_globals.Database, dataID types.UInt64, slot types.UInt8, pid types.PID) (datastore_types.DataStoreRatingLog, *nex.Error) {
 	var ratingLog datastore_types.DataStoreRatingLog
 	var ratingValue sql.NullInt64
 	var lockedUntil sql.NullTime
@@ -17,7 +17,7 @@ func GetUserRatingLog(manager *common_globals.DataStoreManager, dataID types.UIn
 	ratingLog.PID = pid
 	ratingLog.RatingValue = -1 // * Default value for when a rating does not exist
 
-	err := manager.Database.QueryRow(`
+	err := database.QueryRow(`
 		SELECT
 			r.value,
 			l.locked_until

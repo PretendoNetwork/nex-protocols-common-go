@@ -32,7 +32,7 @@ func (commonProtocol *CommonProtocol) rateObject(err error, packet nex.PacketInt
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 	}
 
-	metaInfo, accessPassword, errCode := database.GetAccessObjectInfoByDataID(manager, target.DataID)
+	metaInfo, accessPassword, errCode := database.GetAccessObjectInfoByDataID(manager.Database, target.DataID)
 	if errCode != nil {
 		return nil, errCode
 	}
@@ -52,7 +52,7 @@ func (commonProtocol *CommonProtocol) rateObject(err error, packet nex.PacketInt
 	}
 
 	// TODO - Refactor out this hack. We store decoded flags in Postgres, stop manually parsing them again here
-	ratingSettings, errCode := database.GetObjectRatingSlotSettings(manager, target.DataID, target.Slot)
+	ratingSettings, errCode := database.GetObjectRatingSlotSettings(manager.Database, target.DataID, target.Slot)
 	if errCode != nil {
 		return nil, errCode
 	}
@@ -84,7 +84,7 @@ func (commonProtocol *CommonProtocol) rateObject(err error, packet nex.PacketInt
 	}
 
 	if ratingSettings.LockType != datastore_constants.RatingLockNone {
-		ratingLog, errCode := database.GetUserRatingLog(manager, target.DataID, target.Slot, connection.PID())
+		ratingLog, errCode := database.GetUserRatingLog(manager.Database, target.DataID, target.Slot, connection.PID())
 		if errCode != nil {
 			return nil, errCode
 		}
@@ -95,9 +95,9 @@ func (commonProtocol *CommonProtocol) rateObject(err error, packet nex.PacketInt
 	}
 
 	if !allowMultipleRatings {
-		errCode = database.UpdateUserRating(manager, target.DataID, target.Slot, connection.PID(), param.RatingValue)
+		errCode = database.UpdateUserRating(manager.Database, target.DataID, target.Slot, connection.PID(), param.RatingValue)
 	} else {
-		errCode = database.AddUserRating(manager, target.DataID, target.Slot, connection.PID(), param.RatingValue)
+		errCode = database.AddUserRating(manager.Database, target.DataID, target.Slot, connection.PID(), param.RatingValue)
 	}
 
 	if errCode != nil {
@@ -105,7 +105,7 @@ func (commonProtocol *CommonProtocol) rateObject(err error, packet nex.PacketInt
 	}
 
 	if ratingSettings.LockType != datastore_constants.RatingLockNone {
-		errCode := database.LockUserRatings(manager, target.DataID, target.Slot, connection.PID(), ratingSettings)
+		errCode := database.LockUserRatings(manager.Database, manager, target.DataID, target.Slot, connection.PID(), ratingSettings)
 		if errCode != nil {
 			return nil, errCode
 		}
@@ -116,7 +116,7 @@ func (commonProtocol *CommonProtocol) rateObject(err error, packet nex.PacketInt
 	var pRating datastore_types.DataStoreRatingInfo
 
 	if fetchRatings {
-		pRating, errCode = database.GetObjectRatingByDataIDAndSlot(manager, target.DataID, target.Slot)
+		pRating, errCode = database.GetObjectRatingByDataIDAndSlot(manager.Database, target.DataID, target.Slot)
 		if errCode != nil {
 			return nil, errCode
 		}

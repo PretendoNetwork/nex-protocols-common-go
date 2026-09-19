@@ -18,17 +18,26 @@ func (commonProtocol *CommonProtocol) completePostObjects(err error, packet nex.
 	}
 
 	if len(dataIDs) > datastore_constants.BatchProcessingCapacity {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
+		return nil, nex.NewError(nex.ResultCodes.DataStore.OverCapacity, "change_error")
 	}
 
 	manager := commonProtocol.manager
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
-	// TODO - Add rollback for when error occurs
+	// * If anything fails, roll it all back
+	transaction, err := manager.BeginTransaction()
+	if err != nil {
+		// TODO - Send more specific errors?
+		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
+	}
 
+	// * Does nothing once the transaction has been committed successfully
+	defer transaction.Rollback()
+
+	// TODO - This runs up to BATCH_PROCESSING_CAPACITY*4 (400) queries. Create some native batch versions of these functions?
 	for _, dataID := range dataIDs {
-		creationDate, errCode := database.ObjectCreationDate(manager, dataID)
+		creationDate, errCode := database.ObjectCreationDate(transaction, dataID)
 		if errCode != nil {
 			return nil, errCode
 		}
@@ -39,16 +48,16 @@ func (commonProtocol *CommonProtocol) completePostObjects(err error, packet nex.
 			return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
 		}
 
-		objectOwner, errCode := database.ObjectOwner(manager, dataID)
+		objectOwner, errCode := database.ObjectOwner(transaction, dataID)
 		if errCode != nil {
 			return nil, errCode
 		}
 
 		if objectOwner != connection.PID() {
-			return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "change_error")
+			return nil, nex.NewError(nex.ResultCodes.DataStore.PermissionDenied, "change_error")
 		}
 
-		objectUploaded, errCode := database.ObjectUploaded(manager, dataID)
+		objectUploaded, errCode := database.ObjectUploaded(transaction, dataID)
 		if errCode != nil {
 			return nil, errCode
 		}
@@ -61,9 +70,14 @@ func (commonProtocol *CommonProtocol) completePostObjects(err error, packet nex.
 		// *       Because of this, we do not either. But it might be something
 		// *       to add later if it becomes a problem
 
-		if errCode := database.MarkObjectUploaded(manager, dataID); errCode != nil {
+		if errCode := database.MarkObjectUploaded(transaction, dataID); errCode != nil {
 			return nil, errCode
 		}
+	}
+
+	if err := transaction.Commit(); err != nil {
+		// TODO - Send more specific errors?
+		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
 	}
 
 	rmcResponse := nex.NewRMCSuccess(endpoint, nil)

@@ -8,7 +8,7 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
-func InsertObjectRatingSettings(manager *common_globals.DataStoreManager, dataID uint64, ratingInitParams types.List[datastore_types.DataStoreRatingInitParamWithSlot]) *nex.Error {
+func InsertObjectRatingSettings(database common_globals.Database, dataID uint64, ratingInitParams types.List[datastore_types.DataStoreRatingInitParamWithSlot]) *nex.Error {
 	if len(ratingInitParams) > int(datastore_constants.NumRatingSlot) {
 		return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with too many RatingInitParams")
 	}
@@ -66,7 +66,7 @@ func InsertObjectRatingSettings(manager *common_globals.DataStoreManager, dataID
 		useMinimum := ratingInitParam.Param.InternalFlag.HasFlag(datastore_constants.RatingInternalFlagUseRangeMin)
 		useMaximum := ratingInitParam.Param.InternalFlag.HasFlag(datastore_constants.RatingInternalFlagUseRangeMax)
 
-		_, err := manager.Database.Exec(`INSERT INTO datastore.rating_settings (
+		_, err := database.Exec(`INSERT INTO datastore.rating_settings (
 			data_id,
 			slot,
 			raw_flags,

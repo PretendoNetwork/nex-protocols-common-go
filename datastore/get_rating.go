@@ -28,7 +28,7 @@ func (commonProtocol *CommonProtocol) getRating(err error, packet nex.PacketInte
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 	}
 
-	metaInfo, objectAccessPassword, errCode := database.GetAccessObjectInfoByDataID(manager, target.DataID)
+	metaInfo, objectAccessPassword, errCode := database.GetAccessObjectInfoByDataID(manager.Database, target.DataID)
 	if errCode != nil {
 		return nil, errCode
 	}
@@ -47,7 +47,7 @@ func (commonProtocol *CommonProtocol) getRating(err error, packet nex.PacketInte
 		return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
 	}
 
-	pRating, errCode := database.GetObjectRatingByDataIDAndSlot(manager, target.DataID, target.Slot)
+	pRating, errCode := database.GetObjectRatingByDataIDAndSlot(manager.Database, target.DataID, target.Slot)
 	if errCode != nil {
 		return nil, errCode
 	}

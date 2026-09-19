@@ -22,7 +22,7 @@ func (commonProtocol *CommonProtocol) getPasswordInfo(err error, packet nex.Pack
 	dataIDs := types.NewList[types.UInt64]()
 	dataIDs = append(dataIDs, dataID)
 
-	passwords, results, errCode := database.GetObjectPasswords(manager, connection.PID(), dataIDs)
+	passwords, results, errCode := database.GetObjectPasswords(manager.Database, connection.PID(), dataIDs)
 	if errCode != nil {
 		return nil, errCode
 	}

@@ -26,9 +26,9 @@ func (commonProtocol *CommonProtocol) getMeta(err error, packet nex.PacketInterf
 
 	// * The persistence target is used whenever it has a slot, even if it has no ownerId
 	if param.PersistenceTarget.PersistenceSlotID != types.UInt16(datastore_constants.InvalidPersistenceSlotID) {
-		metaInfo, accessPassword, errCode = database.GetAccessObjectInfoByPersistenceTarget(manager, param.PersistenceTarget)
+		metaInfo, accessPassword, errCode = database.GetAccessObjectInfoByPersistenceTarget(manager.Database, param.PersistenceTarget)
 	} else if param.DataID != types.UInt64(datastore_constants.InvalidDataID) {
-		metaInfo, accessPassword, errCode = database.GetAccessObjectInfoByDataID(manager, param.DataID)
+		metaInfo, accessPassword, errCode = database.GetAccessObjectInfoByDataID(manager.Database, param.DataID)
 	} else {
 		// * If both the PersistenceTarget and DataID are not set, bail
 		errCode = nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
@@ -43,7 +43,7 @@ func (commonProtocol *CommonProtocol) getMeta(err error, packet nex.PacketInterf
 		return nil, errCode
 	}
 
-	pMetaInfo, errCode := database.GetObjectMetaInfoByDataIDWithResultOption(manager, metaInfo.DataID, param.ResultOption)
+	pMetaInfo, errCode := database.GetObjectMetaInfoByDataIDWithResultOption(manager.Database, metaInfo.DataID, param.ResultOption)
 	if errCode != nil {
 		return nil, errCode
 	}

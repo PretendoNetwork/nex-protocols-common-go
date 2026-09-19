@@ -36,9 +36,9 @@ func (commonProtocol *CommonProtocol) prepareGetObjectOrMetaBinary(err error, pa
 	var errCode *nex.Error
 
 	if param.PersistenceTarget.OwnerID != 0 {
-		metaInfo, accessPassword, errCode = database.GetAccessObjectInfoByPersistenceTarget(manager, param.PersistenceTarget)
+		metaInfo, accessPassword, errCode = database.GetAccessObjectInfoByPersistenceTarget(manager.Database, param.PersistenceTarget)
 	} else if param.DataID != types.UInt64(datastore_constants.InvalidDataID) {
-		metaInfo, accessPassword, errCode = database.GetAccessObjectInfoByDataID(manager, param.DataID)
+		metaInfo, accessPassword, errCode = database.GetAccessObjectInfoByDataID(manager.Database, param.DataID)
 	} else {
 		// * If both the PersistenceTarget and DataID are not set, bail
 		errCode = nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
@@ -62,12 +62,12 @@ func (commonProtocol *CommonProtocol) prepareGetObjectOrMetaBinary(err error, pa
 		return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
 	}
 
-	errCode = database.UpdateObjectReferenceData(manager, metaInfo.DataID)
+	errCode = database.UpdateObjectReferenceData(manager.Database, metaInfo.DataID)
 	if errCode != nil {
 		return nil, errCode
 	}
 
-	version, errCode := database.GetObjectLatestVersionNumber(manager, metaInfo.DataID)
+	version, errCode := database.GetObjectLatestVersionNumber(manager.Database, metaInfo.DataID)
 	if errCode != nil {
 		return nil, errCode
 	}

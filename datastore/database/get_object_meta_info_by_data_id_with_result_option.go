@@ -10,7 +10,7 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
-func GetObjectMetaInfoByDataIDWithResultOption(manager *common_globals.DataStoreManager, dataID types.UInt64, resultOption datastore_constants.ResultFlag) (datastore_types.DataStoreMetaInfo, *nex.Error) {
+func GetObjectMetaInfoByDataIDWithResultOption(database common_globals.Database, dataID types.UInt64, resultOption datastore_constants.ResultFlag) (datastore_types.DataStoreMetaInfo, *nex.Error) {
 	metaInfo := datastore_types.NewDataStoreMetaInfo()
 
 	// * These fields are always populated.
@@ -83,7 +83,7 @@ func GetObjectMetaInfoByDataIDWithResultOption(manager *common_globals.DataStore
 		return metaInfo, nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
 	}
 
-	err = manager.Database.QueryRow(query, params...).Scan(outs...)
+	err = database.QueryRow(query, params...).Scan(outs...)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return metaInfo, nex.NewError(nex.ResultCodes.DataStore.NotFound, err.Error())
@@ -94,7 +94,7 @@ func GetObjectMetaInfoByDataIDWithResultOption(manager *common_globals.DataStore
 	}
 
 	if populateRatings {
-		ratings, err := GetObjectRatingsByDataID(manager, dataID)
+		ratings, err := GetObjectRatingsByDataID(database, dataID)
 		if err != nil {
 			// TODO - Send more specific errors?
 			return metaInfo, nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())

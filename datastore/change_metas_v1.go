@@ -42,7 +42,7 @@ func (commonProtocol *CommonProtocol) changeMetasV1(err error, packet nex.Packet
 		}
 
 		// * V1 has no persistence target
-		metaInfo, updatePassword, errCode := database.GetUpdateObjectInfoByDataID(manager, dataID)
+		metaInfo, updatePassword, errCode := database.GetUpdateObjectInfoByDataID(manager.Database, dataID)
 		if errCode != nil {
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
 			continue
@@ -68,7 +68,7 @@ func (commonProtocol *CommonProtocol) changeMetasV1(err error, packet nex.Packet
 			continue
 		}
 
-		errCode = database.UpdateObjectMetadataV1(manager, metaInfo, param)
+		errCode = database.UpdateObjectMetadataV1(manager.Database, metaInfo, param)
 		if errCode != nil {
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
 			continue

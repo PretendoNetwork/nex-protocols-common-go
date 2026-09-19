@@ -6,9 +6,9 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 )
 
-func UpdateUserRating(manager *common_globals.DataStoreManager, dataID types.UInt64, slot types.UInt8, pid types.PID, ratingValue types.Int32) *nex.Error {
+func UpdateUserRating(database common_globals.Database, dataID types.UInt64, slot types.UInt8, pid types.PID, ratingValue types.Int32) *nex.Error {
 	// TODO - Check rows affected?
-	_, err := manager.Database.Exec(`
+	_, err := database.Exec(`
 		INSERT INTO datastore.ratings (
 			data_id,
 			slot,

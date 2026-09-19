@@ -9,10 +9,10 @@ import (
 )
 
 // TODO - Add an optional flag to require DataFlagNeedCompletion being respected. Real servers seem to ignore it. See https://github.com/PretendoNetwork/swapdoodle/pull/1#issuecomment-4292881082 for details
-func ObjectUploaded(manager *common_globals.DataStoreManager, dataID types.UInt64) (bool, *nex.Error) {
+func ObjectUploaded(database common_globals.Database, dataID types.UInt64) (bool, *nex.Error) {
 	var uploaded bool
 
-	err := manager.Database.QueryRow(`SELECT upload_completed FROM datastore.objects WHERE data_id=$1 AND deleted=false`, dataID).Scan(&uploaded)
+	err := database.QueryRow(`SELECT upload_completed FROM datastore.objects WHERE data_id=$1 AND deleted=false`, dataID).Scan(&uploaded)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return false, nex.NewError(nex.ResultCodes.DataStore.NotFound, err.Error())

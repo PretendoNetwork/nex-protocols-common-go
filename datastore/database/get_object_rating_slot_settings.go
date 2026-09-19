@@ -8,10 +8,10 @@ import (
 )
 
 // TODO - This is mostly a hack for right now, abusing an existing struct
-func GetObjectRatingSlotSettings(manager *common_globals.DataStoreManager, dataID types.UInt64, slot types.UInt8) (datastore_types.DataStoreRatingInitParam, *nex.Error) {
+func GetObjectRatingSlotSettings(database common_globals.Database, dataID types.UInt64, slot types.UInt8) (datastore_types.DataStoreRatingInitParam, *nex.Error) {
 	var ratingSettings datastore_types.DataStoreRatingInitParam
 
-	err := manager.Database.QueryRow(`
+	err := database.QueryRow(`
 		SELECT
 			raw_flags,
 			raw_internal_flags,

@@ -9,10 +9,10 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 )
 
-func ObjectCreationDate(manager *common_globals.DataStoreManager, dataID types.UInt64) (time.Time, *nex.Error) {
+func ObjectCreationDate(database common_globals.Database, dataID types.UInt64) (time.Time, *nex.Error) {
 	var creationDate time.Time
 
-	err := manager.Database.QueryRow(`SELECT creation_date FROM datastore.objects WHERE data_id=$1 AND deleted=false`, dataID).Scan(&creationDate)
+	err := database.QueryRow(`SELECT creation_date FROM datastore.objects WHERE data_id=$1 AND deleted=false`, dataID).Scan(&creationDate)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return creationDate, nex.NewError(nex.ResultCodes.DataStore.NotFound, err.Error())

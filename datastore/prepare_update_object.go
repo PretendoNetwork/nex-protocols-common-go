@@ -42,7 +42,7 @@ func (commonProtocol *CommonProtocol) prepareUpdateObject(err error, packet nex.
 		return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "change_error")
 	}
 
-	metaInfo, updatePassword, errCode := database.GetUpdateObjectInfoByDataID(manager, param.DataID)
+	metaInfo, updatePassword, errCode := database.GetUpdateObjectInfoByDataID(manager.Database, param.DataID)
 	if errCode != nil {
 		return nil, errCode
 	}
@@ -61,7 +61,7 @@ func (commonProtocol *CommonProtocol) prepareUpdateObject(err error, packet nex.
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "PrepareUpdateObject cannot be used with DataFlagNotUseFileServer")
 	}
 
-	newVersion, errCode := database.UpdateObjectByPrepareUpdateParam(manager, param, metaInfo)
+	newVersion, errCode := database.UpdateObjectByPrepareUpdateParam(manager.Database, param, metaInfo)
 	if errCode != nil {
 		return nil, errCode
 	}
@@ -84,7 +84,7 @@ func (commonProtocol *CommonProtocol) prepareUpdateObject(err error, packet nex.
 		}
 
 		for _, recipientID := range recipientIDs {
-			errCode := database.SendNotification(manager, uint64(metaInfo.DataID), recipientID, connection.PID())
+			errCode := database.SendNotification(manager.Database, manager, uint64(metaInfo.DataID), recipientID, connection.PID())
 			if errCode != nil {
 				common_globals.Logger.Errorf("Error on sending notification: %s", errCode.Error())
 				return nil, errCode

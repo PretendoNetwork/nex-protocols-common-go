@@ -7,11 +7,11 @@ import (
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
-func GetObjectRatingByDataIDAndSlot(manager *common_globals.DataStoreManager, dataID types.UInt64, slot types.UInt8) (datastore_types.DataStoreRatingInfo, *nex.Error) {
+func GetObjectRatingByDataIDAndSlot(database common_globals.Database, dataID types.UInt64, slot types.UInt8) (datastore_types.DataStoreRatingInfo, *nex.Error) {
 	ratingInfo := datastore_types.NewDataStoreRatingInfo()
 
 	// TODO - If the total value goes above or below int64 min/max, it needs to be rounded to either the min/max
-	err := manager.Database.QueryRow(`
+	err := database.QueryRow(`
 		SELECT
 			COALESCE(SUM(r.value), 0) + rs.initial_value AS total_value,
 			COUNT(r.id) AS rating_count,
