@@ -239,6 +239,22 @@ def complete_post_param_v1(**fields) -> datastore.DataStoreCompletePostParamV1:
 
 	return param
 
+def touch_object_param(**fields) -> datastore.DataStoreTouchObjectParam:
+	"""
+	Creates a DataStoreTouchObjectParam with default parameters.
+	Any field can be overridden with a keyword argument
+	"""
+
+	param = datastore.DataStoreTouchObjectParam()
+	param.data_id = constants.INVALID_DATAID
+	param.lock_id = 0
+	param.access_password = constants.INVALID_PASSWORD
+
+	for name, value in fields.items():
+		setattr(param, name, value)
+
+	return param
+
 def get_meta_param(**fields) -> datastore.DataStoreGetMetaParam:
 	"""
 	Creates a DataStoreGetMetaParam with default parameters.
