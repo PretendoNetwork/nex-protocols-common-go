@@ -33,7 +33,7 @@ func (commonProtocol *CommonProtocol) touchObject(err error, packet nex.PacketIn
 	// TODO - Add rollback for when error occurs
 
 	if param.DataID == types.UInt64(datastore_constants.InvalidDataID) {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
+		return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
 	}
 
 	metaInfo, accessPassword, errCode := database.GetAccessObjectInfoByDataID(manager.Database, param.DataID)
