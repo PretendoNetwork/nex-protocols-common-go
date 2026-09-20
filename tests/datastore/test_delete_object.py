@@ -121,14 +121,7 @@ async def test_deleting_a_persisted_object_empties_the_slot(unique_data_type, po
 
 	await helpers.delete_object(nex.FRIEND_A, data_id=data_id)
 
-	async with helpers.connect(nex.FRIEND_A) as client:
-		try:
-			await client.get_persistence_info(nex.FRIEND_A, SLOT)
-		except common.RMCError as error:
-			assert error.name() == "DataStore::NotFound"
-			return
-
-	pytest.fail("the persistence slot still has an object in it")
+	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, SLOT) == "DataStore::NotFound"
 
 # * Deleting an object is gated by the objects delete permission, which
 # * is separate from the access permission used to read it

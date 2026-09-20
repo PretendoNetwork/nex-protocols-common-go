@@ -356,6 +356,23 @@ async def get_persistence_info(pid: int, owner_id: int, slot: int) -> datastore.
 	async with connect(pid) as client:
 		return await client.get_persistence_info(owner_id, slot)
 
+async def get_persistence_info_error(pid: int, owner_id: int, slot: int) -> str:
+	"""
+	Runs DataStoreProtocol::GetPersistenceInfo and expects an error to
+	be thrown, returning the name of the error
+	"""
+
+	# * The error has to be caught inside the connection. If it leaves the
+	# * connection NintendoClients wraps it in an ExceptionGroup, and so
+	# * does anything else raised in here, such as a failed assertion
+	async with connect(pid) as client:
+		try:
+			await client.get_persistence_info(owner_id, slot)
+		except common.RMCError as error:
+			return error.name()
+
+	pytest.fail("DataStoreProtocol::GetPersistenceInfo did not throw an error")
+
 async def get_meta(pid: int, **fields) -> datastore.DataStoreMetaInfo:
 	"""
 	Gets an objects metadata as the given user
