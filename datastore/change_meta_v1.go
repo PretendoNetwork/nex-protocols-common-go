@@ -31,7 +31,9 @@ func (commonProtocol *CommonProtocol) changeMetaV1(err error, packet nex.PacketI
 	}
 
 	// TODO - Move this to VerifyObjectUpdatePermission?
-	// * Objects in the DataID range 900,000-999,999 are special
+	// * Objects in the DataID range 900,000-999,999 belong to the system, and a
+	// * normal client is not allowed to touch them
+	// * https://nintendo.wiki/wiki/Nintendo_Network/NEX/Protocols/DataStoreProtocol#Object_Data_ID
 	if metaInfo.DataID < 1000000 {
 		// * Unsure if this is the correct error, but it feels right
 		return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "change_error")
