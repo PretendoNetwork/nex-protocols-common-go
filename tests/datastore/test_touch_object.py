@@ -11,13 +11,6 @@ pytestmark = pytest.mark.anyio
 # * check them have to wait before touching
 TIMESTAMP_DELAY = 2
 
-# * Objects can be posted with or without the file server. Testing both
-# * to ensure that touching works the same either way
-POST_METHODS = [
-	pytest.param(helpers.post_meta_binary, id="post-meta-binary"),
-	pytest.param(helpers.post_object, id="post-object"),
-]
-
 async def touch_error(pid: int, **fields) -> str:
 	"""
 	Touches an object and expects an error to be thrown, returning
@@ -40,7 +33,7 @@ async def touch_error(pid: int, **fields) -> str:
 # * Touching an object references it, without downloading it or
 # * returning any metadata
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_increments_the_reference_count(unique_data_type, post):
 	"""
 	Every touch counts as one reference
@@ -58,7 +51,7 @@ async def test_increments_the_reference_count(unique_data_type, post):
 
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).referred_count == 2
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_updates_the_reference_time_and_validity_period(unique_data_type, post):
 	"""
 	Touching always updates the time the object was last referenced, but
@@ -96,7 +89,7 @@ async def test_updates_the_reference_time_and_validity_period(unique_data_type, 
 # * were last referenced with, and only that lock ID may be used until
 # * someone releases the lock with a lock ID of 0
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_lock_id_locks_the_object(unique_data_type, post):
 	"""
 	The lock ID the object is referenced with is the only one
@@ -110,7 +103,7 @@ async def test_lock_id_locks_the_object(unique_data_type, post):
 
 	assert await touch_error(nex.FRIEND_A, data_id=data_id, lock_id=5678) == "DataStore::AlreadyLocked"
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_the_owner_is_not_exempt_from_the_lock(unique_data_type, post):
 	"""
 	Locking an object locks it for everyone, including its owner
@@ -124,7 +117,7 @@ async def test_the_owner_is_not_exempt_from_the_lock(unique_data_type, post):
 
 	await helpers.touch_object(nex.FRIEND_A, data_id=data_id, lock_id=1234)
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_a_lock_id_of_zero_releases_the_lock(unique_data_type, post):
 	"""
 	A lock ID of 0 releases the lock
@@ -138,7 +131,7 @@ async def test_a_lock_id_of_zero_releases_the_lock(unique_data_type, post):
 
 	assert await touch_error(nex.FRIEND_A, data_id=data_id, lock_id=1234) == "DataStore::AlreadyLocked"
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_a_failed_lock_leaves_the_lock_alone(unique_data_type, post):
 	"""
 	Using the wrong lock ID does not change the lock
@@ -152,7 +145,7 @@ async def test_a_failed_lock_leaves_the_lock_alone(unique_data_type, post):
 
 	await helpers.touch_object(nex.FRIEND_A, data_id=data_id, lock_id=1234)
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_lock_ids_are_ignored_without_the_flag(unique_data_type, post):
 	"""
 	Objects which were not posted with DATA_FLAG_USE_READ_LOCK are
@@ -166,7 +159,7 @@ async def test_lock_ids_are_ignored_without_the_flag(unique_data_type, post):
 
 # * Access permissions
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_anyone_with_access_can_touch(unique_data_type, post):
 	"""
 	Touching is a read operation, so it is not limited to the owner
@@ -178,7 +171,7 @@ async def test_anyone_with_access_can_touch(unique_data_type, post):
 
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).referred_count == 1
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_touching_an_object_without_access(unique_data_type, post):
 	"""
 	Objects the caller cannot access cannot be touched
@@ -189,7 +182,7 @@ async def test_touching_an_object_without_access(unique_data_type, post):
 
 	assert await touch_error(nex.STRANGER, data_id=data_id) == "DataStore::PermissionDenied"
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_a_friend_of_the_owner_can_touch(unique_data_type, post):
 	"""
 	PERMISSION_FRIEND objects can be referenced by the friends
@@ -203,7 +196,7 @@ async def test_a_friend_of_the_owner_can_touch(unique_data_type, post):
 
 	assert await touch_error(nex.STRANGER, data_id=data_id) == "DataStore::PermissionDenied"
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_specified_friend_needs_both(unique_data_type, post):
 	"""
 	PERMISSION_SPECIFIED_FRIEND objects can only be referenced by
@@ -225,7 +218,7 @@ async def test_specified_friend_needs_both(unique_data_type, post):
 	# * A friend who is not a recipient
 	assert await touch_error(nex.FRIEND_B, data_id=for_the_stranger) == "DataStore::PermissionDenied"
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_specified_does_not_need_friendship(unique_data_type, post):
 	"""
 	PERMISSION_SPECIFIED objects can be referenced by their recipients,
@@ -237,7 +230,7 @@ async def test_specified_does_not_need_friendship(unique_data_type, post):
 
 	await helpers.touch_object(nex.STRANGER, data_id=data_id)
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_pending_object_can_be_touched_by_its_owner(unique_data_type, post):
 	"""
 	Objects under review can still be referenced by their owner
@@ -250,7 +243,7 @@ async def test_pending_object_can_be_touched_by_its_owner(unique_data_type, post
 
 # * Access passwords
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_access_password_bypasses_permissions(unique_data_type, post):
 	"""
 	The correct password lets anyone touch the object
@@ -262,7 +255,7 @@ async def test_access_password_bypasses_permissions(unique_data_type, post):
 
 	await helpers.touch_object(nex.STRANGER, data_id=data_id, access_password=password_info.access_password)
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_wrong_access_password_without_permission(unique_data_type, post):
 	"""
 	Using the wrong password on an object the caller has no access to fails
@@ -273,7 +266,7 @@ async def test_wrong_access_password_without_permission(unique_data_type, post):
 
 	assert await touch_error(nex.STRANGER, data_id=data_id, access_password=1234) == "DataStore::InvalidPassword"
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_wrong_access_password_as_the_owner(unique_data_type, post):
 	"""
 	The password is only checked when the caller would be denied
@@ -299,7 +292,7 @@ async def test_unknown_data_id(data_id):
 
 	assert await touch_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_touching_a_deleted_object(unique_data_type, post):
 	"""
 	Deleted objects cannot be touched

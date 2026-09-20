@@ -8,14 +8,6 @@ pytestmark = pytest.mark.anyio
 
 SLOT = 3
 
-# * Objects can be posted with or without the file server. Tests which
-# * upload one are run against both, to make sure the method being
-# * tested behaves the same either way
-POST_METHODS = [
-	pytest.param(helpers.post_meta_binary, id="post-meta-binary"),
-	pytest.param(helpers.post_object, id="post-object"),
-]
-
 async def delete_error(pid: int, **fields) -> str:
 	"""
 	Deletes an object and expects an error to be thrown, returning

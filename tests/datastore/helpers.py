@@ -380,3 +380,11 @@ async def get_meta_error(pid: int, **fields) -> str:
 			return error.name()
 
 	pytest.fail("DataStoreProtocol::GetMeta did not throw an error")
+
+# * Objects can be posted with or without the file server. Tests which
+# * upload one are run against both, to make sure the method being
+# * tested behaves the same either way
+POST_METHODS = [
+	pytest.param(post_meta_binary, id="post-meta-binary"),
+	pytest.param(post_object, id="post-object"),
+]

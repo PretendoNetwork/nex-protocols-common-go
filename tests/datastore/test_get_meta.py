@@ -1,5 +1,4 @@
 import pytest
-from nintendo.nex import common
 
 import nex
 from datastore import constants, helpers
@@ -7,14 +6,6 @@ from datastore import constants, helpers
 pytestmark = pytest.mark.anyio
 
 PERSISTENCE_SLOT = 0
-
-# * Objects can be posted with or without the file server.
-# * Testing both to ensure that GetMeta gets the same results
-# * regardless of upload type
-POST_METHODS = [
-	pytest.param(helpers.post_meta_binary, id="post-meta-binary"),
-	pytest.param(helpers.post_object, id="post-object"),
-]
 
 async def post_persisted(post, pid: int, **fields) -> int:
 	"""
@@ -49,7 +40,7 @@ ACCESS_PERMISSION_CASES = [
 	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.STRANGER], nex.FRIEND_B, False, id="specified-friend-friend-not-recipient"),
 ]
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 @pytest.mark.parametrize("permission, recipients, viewer, visible", ACCESS_PERMISSION_CASES)
 async def test_access_permission(unique_data_type, post, permission, recipients, viewer, visible):
 	"""
@@ -67,7 +58,7 @@ async def test_access_permission(unique_data_type, post, permission, recipients,
 
 	assert meta_info.data_id == data_id
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 @pytest.mark.parametrize("permission, recipients, viewer, visible", ACCESS_PERMISSION_CASES)
 async def test_access_permission_of_persisted_objects(unique_data_type, post, permission, recipients, viewer, visible):
 	"""
@@ -112,7 +103,7 @@ async def post_rejected(post, pid: int, **fields) -> int:
 
 	return data_id
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_pending_object_is_visible_to_its_owner(unique_data_type, post):
 	"""
 	Objects under review can still be seen by their owner
@@ -124,7 +115,7 @@ async def test_pending_object_is_visible_to_its_owner(unique_data_type, post):
 	assert meta_info.data_id == data_id
 	assert meta_info.status == constants.DataStatus.DATA_STATUS_PENDING
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_pending_object_is_under_review_for_everyone_else(unique_data_type, post):
 	"""
 	Objects under review are not visible to anyone but their owner,
@@ -135,7 +126,7 @@ async def test_pending_object_is_under_review_for_everyone_else(unique_data_type
 
 	assert await helpers.get_meta_error(nex.STRANGER, data_id=data_id) == "DataStore::UnderReviewing"
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_rejected_object_is_not_visible_to_anyone(unique_data_type, post):
 	"""
 	Rejected objects behave as if they do not exist, for everyone
@@ -149,7 +140,7 @@ async def test_rejected_object_is_not_visible_to_anyone(unique_data_type, post):
 
 # * Data ID lookup tests
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_data_id(unique_data_type, post):
 	"""
 	Tests that an object can be looked up by its dataId
@@ -167,7 +158,7 @@ async def test_data_id(unique_data_type, post):
 	assert meta_info.permission.permission == constants.Permission.PERMISSION_PUBLIC
 	assert meta_info.delete_permission.permission == constants.Permission.PERMISSION_PRIVATE
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_persistence_target_is_used_over_data_id(unique_data_type, post):
 	"""
 	If both a persistence target and a data ID are set, the
@@ -219,7 +210,7 @@ async def test_no_data_id_or_persistence_target():
 # * Somewhat redundant due to the access permission
 # * tests, but cover all our bases anyway
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_persistence_target(unique_data_type, post):
 	"""
 	Tests that an object can be looked up by its persistence slot
@@ -232,7 +223,7 @@ async def test_persistence_target(unique_data_type, post):
 
 	assert meta_info.data_id == data_id
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_persistence_target_of_another_user(unique_data_type, post):
 	"""
 	Tests that another users persistence slot can be checked, assuming
@@ -246,7 +237,7 @@ async def test_persistence_target_of_another_user(unique_data_type, post):
 
 	assert meta_info.data_id == data_id
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_persistence_target_without_a_slot_is_ignored(unique_data_type, post):
 	"""
 	A persistence target which uses INVALID_PERSISTENCE_SLOT_ID is not
@@ -263,7 +254,7 @@ async def test_persistence_target_without_a_slot_is_ignored(unique_data_type, po
 
 	assert meta_info.data_id == data_id
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_persistence_target_returns_the_newest_object(unique_data_type, post):
 	"""
 	Posting another object into a slot which is already in use
@@ -278,7 +269,7 @@ async def test_persistence_target_returns_the_newest_object(unique_data_type, po
 
 	assert meta_info.data_id == newest
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_persistence_slots_are_per_user(unique_data_type, post):
 	"""
 	Persistence slots are tied to a user, so the same slot ID
@@ -294,7 +285,7 @@ async def test_persistence_slots_are_per_user(unique_data_type, post):
 	assert (await helpers.get_meta(nex.FRIEND_A, persistence_target=first_target)).data_id == first
 	assert (await helpers.get_meta(nex.FRIEND_A, persistence_target=second_target)).data_id == second
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_persistence_target_without_an_owner(unique_data_type, post):
 	"""
 	A persistence target with a slot but no owner is still used, and
@@ -319,7 +310,7 @@ async def test_empty_persistence_slot():
 # *
 # * ResultFlag determines what data is returned in the response
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_result_option_empty_by_default(unique_data_type, post):
 	"""
 	Optional metadata fields are left empty when no result flags are set
@@ -335,7 +326,7 @@ async def test_result_option_empty_by_default(unique_data_type, post):
 	assert meta_info.ratings == []
 	assert meta_info.permission.recipients == []
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_result_option_tags(unique_data_type, post):
 	"""
 	RESULT_FLAG_TAGS returns the object tags
@@ -347,7 +338,7 @@ async def test_result_option_tags(unique_data_type, post):
 
 	assert meta_info.tags == ["a", "b"]
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_result_option_ratings(unique_data_type, post):
 	"""
 	RESULT_FLAG_RATINGS returns every rating slot of the object
@@ -360,7 +351,7 @@ async def test_result_option_ratings(unique_data_type, post):
 
 	assert [(rating.slot, rating.info.total_value) for rating in meta_info.ratings] == [(0, 7)]
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_result_option_metabinary(unique_data_type, post):
 	"""
 	RESULT_FLAG_METABINARY returns the object MetaBinary
@@ -372,7 +363,7 @@ async def test_result_option_metabinary(unique_data_type, post):
 
 	assert meta_info.meta_binary == b"\x01\x02"
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_result_option_permitted_ids(unique_data_type, post):
 	"""
 	RESULT_FLAG_PERMITTED_IDS returns the recipient ID lists
@@ -388,7 +379,7 @@ async def test_result_option_permitted_ids(unique_data_type, post):
 	assert meta_info.permission.recipients == [nex.FRIEND_B]
 	assert meta_info.delete_permission.recipients == [nex.STRANGER]
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_result_option_every_flag(unique_data_type, post):
 	"""
 	Every optional metadata field is returned when all result flags are set
@@ -416,7 +407,7 @@ async def test_result_option_every_flag(unique_data_type, post):
 # * Read locks only gate downloading an object, so they never stop
 # * anyone from reading its metadata
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_read_locks_do_not_hide_metadata(unique_data_type, post):
 	"""
 	An object which is locked by someone else can still have its
@@ -431,7 +422,7 @@ async def test_read_locks_do_not_hide_metadata(unique_data_type, post):
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).data_id == data_id
 	assert (await helpers.get_meta(nex.STRANGER, data_id=data_id)).data_id == data_id
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_the_read_lock_flag_is_returned(unique_data_type, post):
 	"""
 	Objects posted with DATA_FLAG_USE_READ_LOCK say so in their metadata
@@ -448,7 +439,7 @@ async def test_the_read_lock_flag_is_returned(unique_data_type, post):
 # * owner can share with other users. A correct password bypasses every
 # * permission check
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_no_access_password_without_permission(unique_data_type, post):
 	"""
 	Using INVALID_PASSWORD on an object the caller has no
@@ -460,7 +451,7 @@ async def test_no_access_password_without_permission(unique_data_type, post):
 
 	assert await helpers.get_meta_error(nex.STRANGER, data_id=data_id, access_password=constants.INVALID_PASSWORD) == "DataStore::PermissionDenied"
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_wrong_access_password_without_permission(unique_data_type, post):
 	"""
 	Using the wrong password on an object the caller has no access
@@ -472,7 +463,7 @@ async def test_wrong_access_password_without_permission(unique_data_type, post):
 
 	assert await helpers.get_meta_error(nex.STRANGER, data_id=data_id, access_password=1234) == "DataStore::InvalidPassword"
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_wrong_access_password_with_permission(unique_data_type, post):
 	"""
 	Using the wrong password on an object the user already access to
@@ -484,7 +475,7 @@ async def test_wrong_access_password_with_permission(unique_data_type, post):
 
 	assert meta_info.data_id == data_id
 
-@pytest.mark.parametrize("post", POST_METHODS)
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_access_password_bypasses_permissions(unique_data_type, post):
 	"""
 	Using the correct password bypasses every permission check
