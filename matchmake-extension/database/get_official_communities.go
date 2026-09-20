@@ -38,10 +38,9 @@ func GetOfficialCommunities(manager *common_globals.MatchmakingManager, sourcePI
 			WHERE gms.registered=true
 			AND ms.matchmake_system_type=5 -- matchmake_system_type=5 is only used in matchmake sessions attached to a persistent gathering
 			AND ms.attribs[1]=g.id) AS matchmake_session_count,
-		COALESCE((SELECT cp.participation_count
-			FROM matchmaking.community_participations AS cp
-			WHERE cp.user_pid=$5
-			AND cp.gathering_id=g.id), 0) AS participation_count
+		COALESCE((SELECT COUNT(p.id)
+			FROM matchmaking.community_participations AS p
+			WHERE p.gathering_id=g.id), 0) AS participation_count
 		FROM matchmaking.gatherings AS g
 		INNER JOIN matchmaking.persistent_gatherings AS pg ON g.id = pg.id
 		WHERE
@@ -49,16 +48,15 @@ func GetOfficialCommunities(manager *common_globals.MatchmakingManager, sourcePI
 		g.type='PersistentGathering' AND
 		pg.community_type=2 AND
 		(CASE WHEN $1 THEN
-			(CASE WHEN pg.participation_start_date <> $6 THEN $2 >= pg.participation_start_date ELSE true END)
+			(CASE WHEN pg.participation_start_date <> $5 THEN $2 >= pg.participation_start_date ELSE true END)
 			AND
-			(CASE WHEN pg.participation_end_date <> $6 THEN $2 <= pg.participation_end_date ELSE true END)
+			(CASE WHEN pg.participation_end_date <> $5 THEN $2 <= pg.participation_end_date ELSE true END)
 			ELSE true END)
 		LIMIT $3 OFFSET $4`,
 		isAvailableOnly,
 		currentTime,
 		uint32(resultRange.Length),
 		uint32(resultRange.Offset),
-		sourcePID,
 		timeNever,
 	)
 	if err != nil {

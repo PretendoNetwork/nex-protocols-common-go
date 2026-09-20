@@ -97,7 +97,6 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.Matchma
 		id bigserial PRIMARY KEY,
 		user_pid numeric(20),
 		gathering_id bigint,
-		participation_count bigint,
 		UNIQUE (user_pid, gathering_id)
 	)`)
 	if err != nil {

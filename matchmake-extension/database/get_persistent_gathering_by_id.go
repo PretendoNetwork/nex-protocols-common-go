@@ -40,10 +40,9 @@ func GetPersistentGatheringByID(manager *common_globals.MatchmakingManager, sour
 			WHERE gms.registered=true
 			AND ms.matchmake_system_type=5 -- matchmake_system_type=5 is only used in matchmake sessions attached to a persistent gathering
 			AND ms.attribs[1]=g.id) AS matchmake_session_count,
-		COALESCE((SELECT cp.participation_count
-			FROM matchmaking.community_participations AS cp
-			WHERE cp.user_pid=$2
-			AND cp.gathering_id=g.id), 0) AS participation_count
+		COALESCE((SELECT COUNT(p.id)
+			FROM matchmaking.community_participations AS p
+			WHERE p.gathering_id=g.id), 0) AS participation_count
 		FROM matchmaking.gatherings AS g
 		INNER JOIN matchmaking.persistent_gatherings AS pg ON g.id = pg.id
 		WHERE
@@ -51,7 +50,6 @@ func GetPersistentGatheringByID(manager *common_globals.MatchmakingManager, sour
 		g.type='PersistentGathering' AND
 		g.id=$1`,
 		gatheringID,
-		sourcePID,
 	).Scan(
 		&resultPersistentGathering.Gathering.ID,
 		&resultPersistentGathering.Gathering.OwnerPID,
