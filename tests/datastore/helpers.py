@@ -348,6 +348,14 @@ async def touch_object(pid: int, **fields) -> None:
 	async with connect(pid) as client:
 		await client.touch_object(touch_object_param(**fields))
 
+async def get_persistence_info(pid: int, owner_id: int, slot: int) -> datastore.DataStorePersistenceInfo:
+	"""
+	Reads one of a users persistence slots, as the given user
+	"""
+
+	async with connect(pid) as client:
+		return await client.get_persistence_info(owner_id, slot)
+
 async def get_meta(pid: int, **fields) -> datastore.DataStoreMetaInfo:
 	"""
 	Gets an objects metadata as the given user
@@ -372,4 +380,3 @@ async def get_meta_error(pid: int, **fields) -> str:
 			return error.name()
 
 	pytest.fail("DataStoreProtocol::GetMeta did not throw an error")
-
