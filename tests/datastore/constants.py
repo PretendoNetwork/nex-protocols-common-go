@@ -59,6 +59,12 @@ MAX_TAG_LENGTH = 24
 DEFAULT_PERIOD = 90
 """The default object validity period, in days"""
 
+PERMANENT_DATE_TIME = 671075926016
+"""
+The DateTime an object is given when it will never expire.
+See https://nintendo.wiki/wiki/Nintendo_Network/NEX/Types#DateTime_Constants
+"""
+
 DEFAULT_HTTP_THREAD_PRIORITY = 16
 """Unknown"""
 
