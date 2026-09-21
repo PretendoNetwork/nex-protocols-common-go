@@ -6,6 +6,8 @@ from nintendo.nex import common, datastore
 import nex
 from datastore import constants
 
+UNKNOWN_DATA_ID = 0xFFFFFF
+
 @contextlib.asynccontextmanager
 async def connect(pid: int):
 	"""
@@ -405,3 +407,11 @@ POST_METHODS = [
 	pytest.param(post_meta_binary, id="post-meta-binary"),
 	pytest.param(post_object, id="post-object"),
 ]
+
+def result_names(results: list) -> list:
+	"""
+	Turns the results of a batch request into something readable, where
+	an entry which worked is None
+	"""
+
+	return [None if result.is_success() else result.name() for result in results]
