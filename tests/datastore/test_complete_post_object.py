@@ -156,8 +156,7 @@ async def test_completing_an_object_which_needs_review(unique_data_type):
 	which needs review is still under review afterwards
 	"""
 
-	flag = constants.DataFlag.DATA_FLAG_NEED_REVIEW
-	data_id = await helpers.prepare_post_object(nex.FRIEND_A, data_type=unique_data_type, flag=flag)
+	data_id = await helpers.prepare_post_object(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
 
 	await complete(nex.FRIEND_A, data_id=data_id)
 	meta_info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)

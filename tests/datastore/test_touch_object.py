@@ -236,8 +236,7 @@ async def test_pending_object_can_be_touched_by_its_owner(unique_data_type, post
 	Objects under review can still be referenced by their owner
 	"""
 
-	flag = constants.DataFlag.DATA_FLAG_NEED_REVIEW
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=flag)
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
 
 	await helpers.touch_object(nex.FRIEND_A, data_id=data_id)
 
