@@ -200,10 +200,10 @@ async def test_unknown_data_id():
 
 async def test_no_data_id_or_persistence_target():
 	"""
-	Either a data ID or a persistence target must be set
+	A request with neither finds nothing
 	"""
 
-	assert await helpers.get_meta_error(nex.FRIEND_A) == "DataStore::InvalidArgument"
+	assert await helpers.get_meta_error(nex.FRIEND_A) == "DataStore::NotFound"
 
 # * Object persistence tests
 # *
