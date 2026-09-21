@@ -402,6 +402,16 @@ async def get_meta_error(pid: int, **fields) -> str:
 
 	pytest.fail("DataStoreProtocol::GetMeta did not throw an error")
 
+async def post_persisted(post, pid: int, slot: int, **fields) -> int:
+	"""
+	Posts an object into one of the users persistence slots,
+	using the given post method, and returns its data ID
+	"""
+
+	init_param = persistence_init_param(persistence_id=slot)
+
+	return await post(pid, persistence_init_param=init_param, **fields)
+
 # * Objects can be posted with or without the file server. Tests which
 # * upload one are run against both, to make sure the method being
 # * tested behaves the same either way
@@ -417,3 +427,10 @@ def result_names(results: list) -> list:
 	"""
 
 	return [None if result.is_success() else result.name() for result in results]
+
+def data_ids_of(response) -> list[int]:
+	"""
+	The data ID of every info which came back
+	"""
+
+	return [info.data_id for info in response.infos]

@@ -31,13 +31,6 @@ async def get_password_infos_error(pid: int, data_ids: list[int]) -> str:
 
 	pytest.fail("DataStoreProtocol::GetPasswordInfos did not throw an error")
 
-def data_ids_of(response) -> list[int]:
-	"""
-	The data ID of every info which came back
-	"""
-
-	return [info.data_id for info in response.infos]
-
 # * The passwords the server made when the objects were posted
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
@@ -188,7 +181,7 @@ async def test_the_access_permission_does_not_open_the_passwords(unique_data_typ
 	response = await get_password_infos(caller, [data_id])
 
 	assert helpers.result_names(response.results) == ["DataStore::PermissionDenied"]
-	assert data_ids_of(response) == [constants.INVALID_DATAID]
+	assert helpers.data_ids_of(response) == [constants.INVALID_DATAID]
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 @pytest.mark.parametrize("caller", [
@@ -223,7 +216,7 @@ async def test_somebody_elses_object_only_fails_its_own_entry(unique_data_type, 
 	response = await get_password_infos(nex.FRIEND_A, [mine, theirs])
 
 	assert helpers.result_names(response.results) == [None, "DataStore::PermissionDenied"]
-	assert data_ids_of(response) == [mine, constants.INVALID_DATAID]
+	assert helpers.data_ids_of(response) == [mine, constants.INVALID_DATAID]
 
 # * Objects the owner can still read the passwords of
 
@@ -238,7 +231,7 @@ async def test_an_object_under_review(unique_data_type, post):
 	response = await get_password_infos(nex.FRIEND_A, [data_id])
 
 	assert helpers.result_names(response.results) == [None]
-	assert data_ids_of(response) == [data_id]
+	assert helpers.data_ids_of(response) == [data_id]
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_the_owner_of_a_private_object(unique_data_type, post):
@@ -252,7 +245,7 @@ async def test_the_owner_of_a_private_object(unique_data_type, post):
 	response = await get_password_infos(nex.FRIEND_A, [data_id])
 
 	assert helpers.result_names(response.results) == [None]
-	assert data_ids_of(response) == [data_id]
+	assert helpers.data_ids_of(response) == [data_id]
 
 # * Objects which are not there
 
@@ -270,7 +263,7 @@ async def test_unknown_data_id(data_id):
 	response = await get_password_infos(nex.FRIEND_A, [data_id])
 
 	assert helpers.result_names(response.results) == ["DataStore::NotFound"]
-	assert data_ids_of(response) == [constants.INVALID_DATAID]
+	assert helpers.data_ids_of(response) == [constants.INVALID_DATAID]
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_a_deleted_object(unique_data_type, post):
@@ -312,7 +305,7 @@ async def test_returns_an_info_for_every_object(unique_data_type, post):
 	response = await get_password_infos(nex.FRIEND_A, [second, first])
 
 	assert helpers.result_names(response.results) == [None, None]
-	assert data_ids_of(response) == [second, first]
+	assert helpers.data_ids_of(response) == [second, first]
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 @pytest.mark.parametrize("position", [
@@ -331,10 +324,10 @@ async def test_a_failure_does_not_fail_the_request(unique_data_type, post, posit
 
 	if position == 0:
 		assert helpers.result_names(response.results) == ["DataStore::NotFound", None]
-		assert data_ids_of(response) == [constants.INVALID_DATAID, data_id]
+		assert helpers.data_ids_of(response) == [constants.INVALID_DATAID, data_id]
 	else:
 		assert helpers.result_names(response.results) == [None, "DataStore::NotFound"]
-		assert data_ids_of(response) == [data_id, constants.INVALID_DATAID]
+		assert helpers.data_ids_of(response) == [data_id, constants.INVALID_DATAID]
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_the_same_object_twice(unique_data_type, post):
@@ -347,7 +340,7 @@ async def test_the_same_object_twice(unique_data_type, post):
 	response = await get_password_infos(nex.FRIEND_A, [data_id, data_id])
 
 	assert helpers.result_names(response.results) == [None, None]
-	assert data_ids_of(response) == [data_id, data_id]
+	assert helpers.data_ids_of(response) == [data_id, data_id]
 	assert response.infos[0].access_password == response.infos[1].access_password
 
 async def test_no_data_ids():
