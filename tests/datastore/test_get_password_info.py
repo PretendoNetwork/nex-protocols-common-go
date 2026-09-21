@@ -70,9 +70,6 @@ async def test_every_object_has_its_own_passwords(unique_data_type, post):
 # * is cryptographically secure without triggering false negatives,
 # * but we can at least catch obviously bad passwords
 
-UINT64_MAX = 0xFFFFFFFFFFFFFFFF
-UINT32_MAX = 0xFFFFFFFF
-
 # * How many objects to post when looking at entropy
 PASSWORD_SAMPLES = 16
 
@@ -96,8 +93,8 @@ async def test_the_passwords_are_not_small(unique_data_type, post):
 	# * In my live tests the smallest password was 60 bits, so this
 	# * gives a lot more leway for potentially bad passwords
 
-	assert info.access_password > UINT32_MAX
-	assert info.update_password > UINT32_MAX
+	assert info.access_password > helpers.UINT32_MAX
+	assert info.update_password > helpers.UINT32_MAX
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_the_passwords_are_spread_out(unique_data_type, post):
@@ -131,10 +128,10 @@ async def test_the_passwords_are_spread_out(unique_data_type, post):
 
 	for password in passwords:
 		seen_set |= password
-		seen_clear |= password ^ UINT64_MAX
+		seen_clear |= password ^ helpers.UINT64_MAX
 
-	assert seen_set == UINT64_MAX
-	assert seen_clear == UINT64_MAX
+	assert seen_set == helpers.UINT64_MAX
+	assert seen_clear == helpers.UINT64_MAX
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_the_update_password_works(unique_data_type, post):
@@ -221,7 +218,7 @@ async def test_the_owner_of_a_private_object(unique_data_type, post):
 	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown"),
 	pytest.param(constants.INVALID_DATAID, id="invalid-dataid"),
 	pytest.param(999999, id="the-system-range"),
-	pytest.param(UINT64_MAX, id="uint64-max"),
+	pytest.param(helpers.UINT64_MAX, id="uint64-max"),
 ])
 async def test_unknown_data_id(data_id):
 	"""

@@ -63,9 +63,9 @@ async def test_completing_twice(unique_data_type):
 	assert await complete_error(nex.FRIEND_A, [data_id]) == "DataStore::OperationNotAllowed"
 
 @pytest.mark.parametrize("data_id", [
-	pytest.param(0xFFFFFF, id="unknown"),
+	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown"),
 	pytest.param(constants.INVALID_DATAID, id="invalid-dataid"),
-	pytest.param(0xFFFFFFFFFFFFFFFF, id="uint64-max"),
+	pytest.param(helpers.UINT64_MAX, id="uint64-max"),
 ])
 async def test_unknown_data_id(data_id):
 	"""
@@ -99,7 +99,7 @@ async def test_too_many_data_ids():
 	No more than BATCH_PROCESSING_CAPACITY objects can be completed at once
 	"""
 
-	data_ids = [0xFFFFFF] * (constants.BATCH_PROCESSING_CAPACITY + 1)
+	data_ids = [helpers.UNKNOWN_DATA_ID] * (constants.BATCH_PROCESSING_CAPACITY + 1)
 
 	assert await complete_error(nex.FRIEND_A, data_ids) == "DataStore::OverCapacity"
 
@@ -108,7 +108,7 @@ async def test_the_most_data_ids_allowed():
 	Exactly BATCH_PROCESSING_CAPACITY objects is allowed
 	"""
 
-	data_ids = [0xFFFFFF] * constants.BATCH_PROCESSING_CAPACITY
+	data_ids = [helpers.UNKNOWN_DATA_ID] * constants.BATCH_PROCESSING_CAPACITY
 
 	assert await complete_error(nex.FRIEND_A, data_ids) == "DataStore::NotFound"
 
@@ -124,7 +124,7 @@ async def test_nothing_is_completed_when_an_object_does_not_exist(unique_data_ty
 
 	data_id = await helpers.prepare_post_object(nex.FRIEND_A, data_type=unique_data_type)
 
-	assert await complete_error(nex.FRIEND_A, [data_id, 0xFFFFFF]) == "DataStore::NotFound"
+	assert await complete_error(nex.FRIEND_A, [data_id, helpers.UNKNOWN_DATA_ID]) == "DataStore::NotFound"
 	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
 
 async def test_nothing_is_completed_when_an_object_is_already_completed(unique_data_type):

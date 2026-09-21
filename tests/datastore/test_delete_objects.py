@@ -7,7 +7,6 @@ from datastore import constants, helpers
 pytestmark = pytest.mark.anyio
 
 SLOT = 3
-UNKNOWN_DATA_ID = 0xFFFFFF
 
 async def delete(pid: int, entries: list[dict], transactional: bool) -> list:
 	"""
@@ -36,14 +35,6 @@ async def delete_error(pid: int, entries: list[dict], transactional: bool) -> st
 
 	pytest.fail("DataStoreProtocol::DeleteObjects did not throw an error")
 
-def names(results: list) -> list:
-	"""
-	Turns the results of a batch request into something readable, where
-	an object which was deleted is None
-	"""
-
-	return [None if result.is_success() else result.name() for result in results]
-
 # * Requests which never get as far as looking at an object
 
 @pytest.mark.parametrize("transactional", [True, False])
@@ -60,12 +51,12 @@ async def test_exactly_the_capacity(transactional):
 	The capacity itself is allowed
 	"""
 
-	entries = [{"data_id": UNKNOWN_DATA_ID}] * constants.BATCH_PROCESSING_CAPACITY
+	entries = [{"data_id": helpers.UNKNOWN_DATA_ID}] * constants.BATCH_PROCESSING_CAPACITY
 
 	if transactional:
 		assert await delete_error(nex.FRIEND_A, entries, transactional) == "DataStore::NotFound"
 	else:
-		assert names(await delete(nex.FRIEND_A, entries, transactional)) == ["DataStore::NotFound"] * len(entries)
+		assert helpers.result_names(await delete(nex.FRIEND_A, entries, transactional)) == ["DataStore::NotFound"] * len(entries)
 
 @pytest.mark.parametrize("transactional", [True, False])
 async def test_too_many_data_ids(transactional):
@@ -73,7 +64,7 @@ async def test_too_many_data_ids(transactional):
 	One object over the capacity is a failure, always
 	"""
 
-	entries = [{"data_id": UNKNOWN_DATA_ID}] * (constants.BATCH_PROCESSING_CAPACITY + 1)
+	entries = [{"data_id": helpers.UNKNOWN_DATA_ID}] * (constants.BATCH_PROCESSING_CAPACITY + 1)
 
 	assert await delete_error(nex.FRIEND_A, entries, transactional) == "DataStore::OverCapacity"
 
@@ -107,7 +98,7 @@ async def test_transactional_leaves_everything_alone_when_one_fails(unique_data_
 	"""
 
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
-	entries = [{"data_id": UNKNOWN_DATA_ID}, {"data_id": data_id}] if position == 0 else [{"data_id": data_id}, {"data_id": UNKNOWN_DATA_ID}]
+	entries = [{"data_id": helpers.UNKNOWN_DATA_ID}, {"data_id": data_id}] if position == 0 else [{"data_id": data_id}, {"data_id": helpers.UNKNOWN_DATA_ID}]
 
 	assert await delete_error(nex.FRIEND_A, entries, True) == "DataStore::NotFound"
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).data_id == data_id
@@ -150,9 +141,9 @@ async def test_deletes_what_it_can(unique_data_type, post):
 	first = await post(nex.FRIEND_A, data_type=unique_data_type)
 	second = await post(nex.FRIEND_A, data_type=unique_data_type)
 
-	results = await delete(nex.FRIEND_A, [{"data_id": first}, {"data_id": UNKNOWN_DATA_ID}, {"data_id": second}], False)
+	results = await delete(nex.FRIEND_A, [{"data_id": first}, {"data_id": helpers.UNKNOWN_DATA_ID}, {"data_id": second}], False)
 
-	assert names(results) == [None, "DataStore::NotFound", None]
+	assert helpers.result_names(results) == [None, "DataStore::NotFound", None]
 	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=first) == "DataStore::NotFound"
 	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=second) == "DataStore::NotFound"
 
@@ -168,7 +159,7 @@ async def test_a_permission_failure_only_fails_its_own_entry(unique_data_type, p
 
 	results = await delete(nex.FRIEND_A, [{"data_id": mine}, {"data_id": theirs}], False)
 
-	assert names(results) == [None, "DataStore::PermissionDenied"]
+	assert helpers.result_names(results) == [None, "DataStore::PermissionDenied"]
 	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=mine) == "DataStore::NotFound"
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
@@ -182,7 +173,7 @@ async def test_the_same_object_twice(unique_data_type, post):
 
 	results = await delete(nex.FRIEND_A, [{"data_id": data_id}, {"data_id": data_id}], False)
 
-	assert names(results) == [None, "DataStore::NotFound"]
+	assert helpers.result_names(results) == [None, "DataStore::NotFound"]
 	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
 
 # * Objects which are in an unusual state
@@ -196,7 +187,7 @@ async def test_deleting_an_object_under_review(unique_data_type, post):
 
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
 
-	assert names(await delete(nex.FRIEND_A, [{"data_id": data_id}], False)) == [None]
+	assert helpers.result_names(await delete(nex.FRIEND_A, [{"data_id": data_id}], False)) == [None]
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_deleting_a_read_locked_object(unique_data_type, post):
@@ -209,7 +200,7 @@ async def test_deleting_a_read_locked_object(unique_data_type, post):
 
 	await helpers.touch_object(nex.STRANGER, data_id=data_id, lock_id=1234)
 
-	assert names(await delete(nex.FRIEND_A, [{"data_id": data_id}], False)) == [None]
+	assert helpers.result_names(await delete(nex.FRIEND_A, [{"data_id": data_id}], False)) == [None]
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_deleting_a_persisted_object_empties_the_slot(unique_data_type, post):
@@ -221,17 +212,17 @@ async def test_deleting_a_persisted_object_empties_the_slot(unique_data_type, po
 	persistence_init_param = helpers.persistence_init_param(persistence_id=SLOT)
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, persistence_init_param=persistence_init_param)
 
-	assert names(await delete(nex.FRIEND_A, [{"data_id": data_id}], False)) == [None]
+	assert helpers.result_names(await delete(nex.FRIEND_A, [{"data_id": data_id}], False)) == [None]
 
 	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, SLOT) == "DataStore::NotFound"
 
 # * Data IDs which never name an object
 
 @pytest.mark.parametrize("data_id", [
-	pytest.param(UNKNOWN_DATA_ID, id="unknown"),
+	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown"),
 	pytest.param(constants.INVALID_DATAID, id="invalid-dataid"),
 	pytest.param(999999, id="the-system-range"),
-	pytest.param(0xFFFFFFFFFFFFFFFF, id="uint64-max"),
+	pytest.param(helpers.UINT64_MAX, id="uint64-max"),
 ])
 @pytest.mark.parametrize("transactional", [True, False])
 async def test_data_ids_which_do_not_exist(data_id, transactional):
@@ -243,7 +234,7 @@ async def test_data_ids_which_do_not_exist(data_id, transactional):
 	if transactional:
 		assert await delete_error(nex.FRIEND_A, [{"data_id": data_id}], transactional) == "DataStore::NotFound"
 	else:
-		assert names(await delete(nex.FRIEND_A, [{"data_id": data_id}], transactional)) == ["DataStore::NotFound"]
+		assert helpers.result_names(await delete(nex.FRIEND_A, [{"data_id": data_id}], transactional)) == ["DataStore::NotFound"]
 
 async def test_an_object_which_was_never_completed(unique_data_type):
 	"""
@@ -253,7 +244,7 @@ async def test_an_object_which_was_never_completed(unique_data_type):
 
 	data_id = await helpers.prepare_post_object(nex.FRIEND_A, data_type=unique_data_type)
 
-	assert names(await delete(nex.FRIEND_A, [{"data_id": data_id}], False)) == ["DataStore::NotFound"]
+	assert helpers.result_names(await delete(nex.FRIEND_A, [{"data_id": data_id}], False)) == ["DataStore::NotFound"]
 
 # * Each entry carries its own update password, which stands in for the
 # * delete permission the same way it does for DeleteObject
@@ -275,7 +266,7 @@ async def test_every_entry_uses_its_own_password(unique_data_type, post):
 		{"data_id": second, "update_password": second_password},
 	]
 
-	assert names(await delete(nex.STRANGER, entries, False)) == [None, None]
+	assert helpers.result_names(await delete(nex.STRANGER, entries, False)) == [None, None]
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_a_wrong_password_only_fails_its_own_entry(unique_data_type, post):
@@ -290,6 +281,6 @@ async def test_a_wrong_password_only_fails_its_own_entry(unique_data_type, post)
 	entries = [{"data_id": public}, {"data_id": private, "update_password": 1234}]
 	results = await delete(nex.STRANGER, entries, False)
 
-	assert names(results) == [None, "DataStore::InvalidPassword"]
+	assert helpers.result_names(results) == [None, "DataStore::InvalidPassword"]
 	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=public) == "DataStore::NotFound"
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=private)).data_id == private

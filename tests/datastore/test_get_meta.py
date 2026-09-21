@@ -196,7 +196,7 @@ async def test_unknown_data_id():
 	Looking up an object which does not exist fails
 	"""
 
-	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=0xFFFFFF) == "DataStore::NotFound"
+	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=helpers.UNKNOWN_DATA_ID) == "DataStore::NotFound"
 
 async def test_no_data_id_or_persistence_target():
 	"""

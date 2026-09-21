@@ -105,9 +105,9 @@ async def test_reporting_a_failure_after_completing(unique_data_type):
 	assert meta_info.data_id == data_id
 
 @pytest.mark.parametrize("data_id", [
-	pytest.param(0xFFFFFF, id="unknown"),
+	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown"),
 	pytest.param(constants.INVALID_DATAID, id="invalid-dataid"),
-	pytest.param(0xFFFFFFFF, id="uint32-max"),
+	pytest.param(helpers.UINT32_MAX, id="uint32-max"),
 ])
 async def test_unknown_data_id(data_id):
 	"""

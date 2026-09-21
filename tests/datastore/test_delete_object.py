@@ -48,9 +48,9 @@ async def test_deleting_twice(unique_data_type, post):
 	assert await delete_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
 
 @pytest.mark.parametrize("data_id", [
-	pytest.param(0xFFFFFF, id="unknown"),
+	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown"),
 	pytest.param(constants.INVALID_DATAID, id="invalid-dataid"),
-	pytest.param(0xFFFFFFFFFFFFFFFF, id="uint64-max"),
+	pytest.param(helpers.UINT64_MAX, id="uint64-max"),
 ])
 async def test_unknown_data_id(data_id):
 	"""

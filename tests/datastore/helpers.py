@@ -7,6 +7,8 @@ import nex
 from datastore import constants
 
 UNKNOWN_DATA_ID = 0xFFFFFF
+UINT32_MAX = 0xFFFFFFFF
+UINT64_MAX = 0xFFFFFFFFFFFFFFFF
 
 @contextlib.asynccontextmanager
 async def connect(pid: int):
