@@ -28,10 +28,13 @@ async def delete_error(pid: int, entries: list[dict], transactional: bool) -> st
 	# * The error has to be caught inside the connection. If it leaves the
 	# * connection NintendoClients wraps it in an ExceptionGroup, and so
 	# * does anything else raised in here, such as a failed assertion
-	try:
-		await delete(pid, entries, transactional)
-	except common.RMCError as error:
-		return error.name()
+	async with helpers.connect(pid) as client:
+		params = [helpers.delete_param(**entry) for entry in entries]
+
+		try:
+			await client.delete_objects(params, transactional)
+		except common.RMCError as error:
+			return error.name()
 
 	pytest.fail("DataStoreProtocol::DeleteObjects did not throw an error")
 
