@@ -35,6 +35,17 @@ async def perpetuate_error(pid: int, slot: int, data_id: int, delete_last_object
 
 	pytest.fail("DataStoreProtocol::PerpetuateObject did not throw an error")
 
+async def empty_slot(pid: int, slot: int) -> None:
+	"""
+	Makes sure a slot has nothing in it
+	"""
+
+	async with helpers.connect(pid) as client:
+		try:
+			await client.unperpetuate_object(slot, False)
+		except common.RMCError:
+			pass
+
 # * Putting an object into a slot
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
@@ -73,11 +84,50 @@ async def test_an_object_can_only_be_in_one_slot(unique_data_type, post):
 
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
 
+	await empty_slot(nex.FRIEND_A, SLOT_1) # * Make sure the target slot is empty
 	await perpetuate(nex.FRIEND_A, SLOT_0, data_id)
 	await perpetuate(nex.FRIEND_A, SLOT_1, data_id)
 
 	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, SLOT_0)).data_id == data_id
 	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, SLOT_1) == "DataStore::NotFound"
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("delete_last_object", [
+	pytest.param(False, id="keeping-the-old-object"),
+	pytest.param(True, id="deleting-the-old-object"),
+])
+async def test_an_object_in_a_slot_cannot_take_over_another_one(unique_data_type, post, delete_last_object):
+	"""
+	Moving into an empty slot quietly does nothing, but moving into a
+	slot which is taken is a failure
+	"""
+
+	mover = await helpers.post_persisted(post, nex.FRIEND_A, SLOT_0, data_type=unique_data_type)
+	sitter = await helpers.post_persisted(post, nex.FRIEND_A, SLOT_1, data_type=unique_data_type)
+
+	assert await perpetuate_error(nex.FRIEND_A, SLOT_1, mover, delete_last_object) == "DataStore::OperationNotAllowed"
+
+	# * Neither slot moved, and nothing was deleted on the way
+	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, SLOT_0)).data_id == mover
+	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, SLOT_1)).data_id == sitter
+	assert (await helpers.get_meta(nex.FRIEND_A, data_id=mover)).data_id == mover
+	assert (await helpers.get_meta(nex.FRIEND_A, data_id=sitter)).data_id == sitter
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_an_object_with_no_slot_can_take_over_one(unique_data_type, post):
+	"""
+	An object not in a slot can take over an occupied slot. The rejection in
+	test_an_object_in_a_slot_cannot_take_over_another_one is about moving an
+	object from one slot to another, not about overtaking an occupied slot
+	"""
+
+	await helpers.post_persisted(post, nex.FRIEND_A, SLOT_1, data_type=unique_data_type)
+
+	loose = await post(nex.FRIEND_A, data_type=unique_data_type)
+
+	await perpetuate(nex.FRIEND_A, SLOT_1, loose)
+
+	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, SLOT_1)).data_id == loose
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_an_object_under_review(unique_data_type, post):
