@@ -4,7 +4,6 @@ import (
 	"database/sql"
 
 	"github.com/PretendoNetwork/pq-extended"
-	"slices"
 
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
@@ -28,11 +27,6 @@ func GetDetailedParticipants(manager *common_globals.MatchmakingManager, gatheri
 	if len(participantList) == 0 {
 		// * Empty gathering
 		return types.NewList[matchmaking_types.ParticipantDetails](), nil
-	}
-
-	if !slices.Contains(participantList, uint64(sourcePID)) {
-		// * Is this the right error to use?
-		return types.NewList[matchmaking_types.ParticipantDetails](), nex.NewError(nex.ResultCodes.RendezVous.NotParticipatedGathering, "User attempted GetDetailedParticipants inside of a NotParticipatedGathering")
 	}
 
 	var participantDetails types.List[matchmaking_types.ParticipantDetails]
