@@ -1,0 +1,905 @@
+import pytest
+from nintendo.nex import common, datastore
+
+import nex
+from datastore import constants, helpers
+
+pytestmark = pytest.mark.anyio
+
+# * The largest object which can be uploaded
+# TODO - Make a constant for this in Go libs
+MAX_OBJECT_SIZE = 10 * 1024 * 1024
+
+# * Every stock flag. Only DATA_FLAG_NOT_USE_FILESERVER cannot be used, as it's
+# * set by the game server in PostMetaBinary
+DATA_FLAGS = [
+	pytest.param(constants.DataFlag.DATA_FLAG_NEED_REVIEW, True, id="need-review"),
+	pytest.param(constants.DataFlag.DATA_FLAG_PERIOD_FROM_LAST_REFERRED, True, id="period-from-last-referred"),
+	pytest.param(constants.DataFlag.DATA_FLAG_USE_READ_LOCK, True, id="use-read-lock"),
+	pytest.param(constants.DataFlag.DATA_FLAG_USE_NOTIFICATION_ON_POST, True, id="use-notification-on-post"),
+	pytest.param(constants.DataFlag.DATA_FLAG_USE_NOTIFICATION_ON_UPDATE, True, id="use-notification-on-update"),
+	pytest.param(constants.DataFlag.DATA_FLAG_NOT_USE_FILESERVER, False, id="not-use-fileserver"),
+	pytest.param(constants.DataFlag.DATA_FLAG_NEED_COMPLETION, True, id="need-completion"),
+]
+
+# * Bits which no flag uses. The stock servers only accept known flags
+# TODO - Some games, like Super Mario Maker, are known to add custom flags. No idea how to test that here
+UNDEFINED_FLAGS = [
+	pytest.param(0x80, id="the-first-unused-bit"),
+	pytest.param(0x100, id="past-a-byte"),
+	pytest.param(0x8000, id="past-two-bytes"),
+	pytest.param(helpers.UINT32_MAX, id="every-bit"),
+]
+
+PERMISSIONS = [
+	pytest.param(constants.Permission.PERMISSION_PUBLIC, [], id="public"),
+	pytest.param(constants.Permission.PERMISSION_FRIEND, [], id="friend"),
+	pytest.param(constants.Permission.PERMISSION_SPECIFIED, [nex.STRANGER], id="specified"),
+	pytest.param(constants.Permission.PERMISSION_PRIVATE, [], id="private"),
+	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.FRIEND_B], id="specified-friend"),
+]
+
+RATING_LOCK_TYPES = [
+	pytest.param(constants.RatingLockType.RATING_LOCK_NONE, id="none"),
+	pytest.param(constants.RatingLockType.RATING_LOCK_INTERVAL, id="interval"),
+	pytest.param(constants.RatingLockType.RATING_LOCK_PERIOD, id="period"),
+	pytest.param(constants.RatingLockType.RATING_LOCK_PERMANENT, id="permanent"),
+]
+
+async def prepare(pid: int, **fields) -> datastore.DataStoreReqPostInfo:
+	"""
+	Starts posting an object, returning all the info
+	"""
+
+	async with helpers.connect(pid) as client:
+		return await client.prepare_post_object(helpers.post_param(**fields))
+
+async def prepare_error(pid: int, **fields) -> str:
+	"""
+	Starts posting an object and expects an error to be thrown,
+	returning the name of the error
+	"""
+
+	# * The error has to be caught inside the connection. If it leaves the
+	# * connection NintendoClients wraps it in an ExceptionGroup, and so
+	# * does anything else raised in here, such as a failed assertion
+	async with helpers.connect(pid) as client:
+		try:
+			await client.prepare_post_object(helpers.post_param(**fields))
+		except common.RMCError as error:
+			return error.name()
+
+	pytest.fail("DataStoreProtocol::PreparePostObject did not throw an error")
+
+def rating_slots(count: int, first: int = 0, **fields) -> list:
+	"""
+	A list of rating slot params, starting at the given slot
+	"""
+
+	return [helpers.rating_init_param_with_slot(slot=first + i, param=helpers.rating_init_param(**fields)) for i in range(count)]
+
+# * What the server hands back
+
+async def test_returns_somewhere_to_upload_to(unique_data_type):
+	"""
+	Basic functionality test
+	"""
+
+	info = await prepare(nex.FRIEND_A, data_type=unique_data_type)
+
+	assert info.data_id != constants.INVALID_DATAID
+	assert info.url != ""
+	assert [field.key for field in info.form] != [] # TODO - Maybe this should be allowed, for cases where the file server doesn't need addtional form fields?
+
+async def test_the_object_is_not_there_yet(unique_data_type):
+	"""
+	Preparing only reserves the object, so it cannot be seen until
+	the upload is completed
+	"""
+
+	info = await prepare(nex.FRIEND_A, data_type=unique_data_type)
+
+	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=info.data_id) == "DataStore::NotFound"
+
+async def test_every_object_gets_its_own_data_id(unique_data_type):
+	"""
+	Two objects prepared the same way do not collide
+	"""
+
+	first = await prepare(nex.FRIEND_A, data_type=unique_data_type)
+	second = await prepare(nex.FRIEND_A, data_type=unique_data_type)
+
+	assert first.data_id != second.data_id
+
+# * size
+
+@pytest.mark.parametrize("size", [
+	pytest.param(0, id="zero"),
+	pytest.param(MAX_OBJECT_SIZE, id="at-the-limit"),
+])
+async def test_a_size_which_is_allowed(unique_data_type, size):
+	"""
+	Anything up to the maximum is allowed, including a size of 0
+	"""
+
+	info = await prepare(nex.FRIEND_A, data_type=unique_data_type, size=size)
+
+	assert info.data_id != constants.INVALID_DATAID
+
+async def test_a_size_which_is_too_big(unique_data_type):
+	"""
+	An object bigger than the maximum allowed size is invalid
+	"""
+
+	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, size=MAX_OBJECT_SIZE + 1) == "DataStore::InvalidArgument"
+
+async def test_the_size_is_kept_on_the_object(unique_data_type):
+	"""
+	The size is stored as it was sent
+	"""
+
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=1234)
+
+	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).size == 1234
+
+# * name
+
+async def test_a_name_at_the_limit(unique_data_type):
+	"""
+	A name of exactly MAX_NAME_LENGTH is allowed
+	"""
+
+	info = await prepare(nex.FRIEND_A, data_type=unique_data_type, name="n" * constants.MAX_NAME_LENGTH)
+
+	assert info.data_id != constants.INVALID_DATAID
+
+async def test_a_name_over_the_limit(unique_data_type):
+	"""
+	A name longer than MAX_NAME_LENGTH is a failure
+	"""
+
+	name = "n" * (constants.MAX_NAME_LENGTH + 1)
+
+	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, name=name) == "DataStore::InvalidArgument"
+
+async def test_an_empty_name(unique_data_type):
+	"""
+	Objects do not have to be named
+	"""
+
+	info = await prepare(nex.FRIEND_A, data_type=unique_data_type, name="")
+
+	assert info.data_id != constants.INVALID_DATAID
+
+async def test_the_name_is_kept_on_the_object(unique_data_type):
+	"""
+	The name is stored as it was sent
+	"""
+
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, name="a name")
+
+	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).name == "a name"
+
+# * Object strings are UTF-8 on the wire but 16 bit characters on the server
+
+@pytest.mark.parametrize("text", helpers.TEXT_SAMPLES)
+async def test_a_name_in_any_script(unique_data_type, text):
+	"""
+	Every sample which fits in 16 bit characters is stored and handed
+	back unchanged
+	"""
+
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, name=text)
+
+	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).name == text
+
+@pytest.mark.parametrize("text", helpers.ASTRAL_TEXT_SAMPLES)
+async def test_a_name_above_the_basic_plane(unique_data_type, text):
+	"""
+	Emoji and anything else needing a surrogate pair cannot be decoded,
+	which fails before DataStore ever sees the request
+	"""
+
+	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, name=text) == "PythonCore::ConversionError"
+
+@pytest.mark.parametrize("text", helpers.CONTROL_TEXT_SAMPLES)
+async def test_a_name_with_control_characters(unique_data_type, text):
+	"""
+	A name takes control characters and keeps them as they are, unlike
+	a tag, which refuses them?
+	"""
+
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, name=text)
+
+	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).name == text
+
+async def test_a_name_with_a_null_in_it(unique_data_type):
+	"""
+	Strings are null terminated on the wire, so a null in the middle
+	ends the name early rather than being refused
+	"""
+
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, name="a\x00b")
+
+	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).name == "a"
+
+@pytest.mark.parametrize("text, allowed", [
+	pytest.param("\u6f22" * constants.MAX_NAME_LENGTH, True, id="at-the-limit"),
+	pytest.param("\u6f22" * (constants.MAX_NAME_LENGTH + 1), False, id="one-over-the-limit"),
+])
+async def test_the_name_limit_counts_characters_not_bytes(unique_data_type, text, allowed):
+	"""
+	Length is measured in code units, not bytes
+	"""
+
+	if not allowed:
+		assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, name=text) == "DataStore::InvalidArgument"
+		return
+
+	info = await prepare(nex.FRIEND_A, data_type=unique_data_type, name=text)
+
+	assert info.data_id != constants.INVALID_DATAID
+
+# * data_type
+
+@pytest.mark.parametrize("data_type", [
+	pytest.param(0, id="the-lowest"),
+	pytest.param(constants.INVALID_DATA_TYPE - 1, id="the-highest-real-one"),
+])
+async def test_a_data_type_which_is_allowed(data_type):
+	"""
+	Everything below the invalid one is a usable data type
+	"""
+
+	info = await prepare(nex.FRIEND_A, data_type=data_type)
+
+	assert info.data_id != constants.INVALID_DATAID
+
+async def test_the_invalid_data_type():
+	"""
+	An invalid data type is invalid
+	"""
+
+	assert await prepare_error(nex.FRIEND_A, data_type=constants.INVALID_DATA_TYPE) == "DataStore::InvalidArgument"
+
+async def test_the_data_type_is_kept_on_the_object(unique_data_type):
+	"""
+	The data type is stored as it was sent
+	"""
+
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type)
+
+	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).data_type == unique_data_type
+
+# * meta_binary
+
+async def test_a_meta_binary_at_the_limit(unique_data_type):
+	"""
+	A meta binary size MAX_METABIN_SIZE is allowed
+	"""
+
+	info = await prepare(nex.FRIEND_A, data_type=unique_data_type, meta_binary=b"m" * constants.MAX_METABIN_SIZE)
+
+	assert info.data_id != constants.INVALID_DATAID
+
+async def test_a_meta_binary_over_the_limit(unique_data_type):
+	"""
+	A meta binary larger than MAX_METABIN_SIZE is a failure
+	"""
+
+	meta_binary = b"m" * (constants.MAX_METABIN_SIZE + 1)
+
+	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, meta_binary=meta_binary) == "DataStore::InvalidArgument"
+
+async def test_an_empty_meta_binary(unique_data_type):
+	"""
+	Objects do not have to carry a meta binary
+	"""
+
+	info = await prepare(nex.FRIEND_A, data_type=unique_data_type, meta_binary=b"")
+
+	assert info.data_id != constants.INVALID_DATAID
+
+async def test_the_meta_binary_is_kept_on_the_object(unique_data_type):
+	"""
+	The meta binary comes back byte for byte
+	"""
+
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, meta_binary=b"\x00\xFF\x10binary")
+	info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id, result_option=constants.ResultFlag.RESULT_FLAG_METABINARY)
+
+	assert info.meta_binary == b"\x00\xFF\x10binary"
+
+# * permission
+
+@pytest.mark.parametrize("permission, recipients", PERMISSIONS)
+async def test_an_access_permission_is_kept_on_the_object(unique_data_type, permission, recipients):
+	"""
+	Every access permission is allowed, and both it and its recipients
+	are stored as they were sent
+	"""
+
+	access = helpers.permission(permission=permission, recipients=recipients)
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, permission=access)
+	info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id, result_option=constants.ResultFlag.RESULT_FLAG_PERMITTED_IDS)
+
+	assert info.permission.permission == permission
+	assert info.permission.recipients == recipients
+
+async def test_an_unknown_access_permission(unique_data_type):
+	"""
+	Only the permissions which exist can be used
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_SPECIFIED_FRIEND + 1)
+
+	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, permission=permission) == "DataStore::InvalidArgument"
+
+@pytest.mark.parametrize("count", [
+	pytest.param(constants.DATASTOREPERMISSION_RECIPIENTIDS_MAX, id="at-the-limit"),
+	pytest.param(constants.DATASTOREPERMISSION_RECIPIENTIDS_MAX + 1, id="one-over-the-limit"),
+])
+async def test_how_many_access_recipients_are_allowed(unique_data_type, count):
+	"""
+	DATASTOREPERMISSION_RECIPIENTIDS_MAX seems to not be enforced on Nintendo Network.
+	Possibly only added on the Switch/NEX 4?
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_SPECIFIED, recipients=list(range(1, count + 1)))
+	info = await prepare(nex.FRIEND_A, data_type=unique_data_type, permission=permission)
+
+	assert info.data_id != constants.INVALID_DATAID
+
+# * delete_permission
+
+@pytest.mark.parametrize("permission, recipients", PERMISSIONS)
+async def test_a_delete_permission_is_kept_on_the_object(unique_data_type, permission, recipients):
+	"""
+	The delete permission is stored the same way the access one is,
+	and the two do not interfere
+	"""
+
+	delete_permission = helpers.permission(permission=permission, recipients=recipients)
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, delete_permission=delete_permission)
+	info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id, result_option=constants.ResultFlag.RESULT_FLAG_PERMITTED_IDS)
+
+	assert info.delete_permission.permission == permission
+	assert info.delete_permission.recipients == recipients
+	assert info.permission.permission == constants.Permission.PERMISSION_PUBLIC
+
+async def test_an_unknown_delete_permission(unique_data_type):
+	"""
+	Only the permissions which exist can be used
+	"""
+
+	delete_permission = helpers.permission(permission=constants.Permission.PERMISSION_SPECIFIED_FRIEND + 1)
+
+	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, delete_permission=delete_permission) == "DataStore::InvalidArgument"
+
+@pytest.mark.parametrize("count", [
+	pytest.param(constants.DATASTOREPERMISSION_RECIPIENTIDS_MAX, id="at-the-limit"),
+	pytest.param(constants.DATASTOREPERMISSION_RECIPIENTIDS_MAX + 1, id="one-over-the-limit"),
+])
+async def test_how_many_delete_recipients_are_allowed(unique_data_type, count):
+	"""
+	The delete permission recipients are not counted either
+	"""
+
+	delete_permission = helpers.permission(permission=constants.Permission.PERMISSION_SPECIFIED, recipients=list(range(1, count + 1)))
+	info = await prepare(nex.FRIEND_A, data_type=unique_data_type, delete_permission=delete_permission)
+
+	assert info.data_id != constants.INVALID_DATAID
+
+# * flag
+
+@pytest.mark.parametrize("flag, allowed", DATA_FLAGS)
+async def test_every_data_flag(unique_data_type, flag, allowed):
+	"""
+	Every flag which is defined can be set, besides DATA_FLAG_NOT_USE_FILESERVER
+	"""
+
+	if not allowed:
+		assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, flag=flag) == "DataStore::InvalidArgument"
+		return
+
+	info = await prepare(nex.FRIEND_A, data_type=unique_data_type, flag=flag)
+
+	assert info.data_id != constants.INVALID_DATAID
+
+@pytest.mark.parametrize("flag, allowed", DATA_FLAGS)
+async def test_a_data_flag_is_kept_on_the_object(unique_data_type, flag, allowed):
+	"""
+	The flags which are allowed come back exactly as they were sent
+	"""
+
+	if not allowed:
+		# TODO - This emits skipped tests in the results which should just be a success, is there a better way to do this?
+		pytest.skip("this flag cannot be used with PreparePostObject")
+
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, flag=flag)
+
+	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).flag == flag
+
+@pytest.mark.parametrize("flag", UNDEFINED_FLAGS)
+async def test_a_flag_which_is_not_defined(unique_data_type, flag):
+	"""
+	Unknown flags are rejected
+	"""
+
+	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, flag=flag) == "DataStore::InvalidArgument"
+
+async def test_two_flags_at_once(unique_data_type):
+	"""
+	Flags are a bit field, so more than one can be set
+	"""
+
+	flag = constants.DataFlag.DATA_FLAG_NEED_REVIEW | constants.DataFlag.DATA_FLAG_USE_READ_LOCK
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, flag=flag)
+
+	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).flag == flag
+
+async def test_the_need_review_flag_sets_the_status(unique_data_type):
+	"""
+	Asking for a review is what puts an object into the pending state
+	"""
+
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
+
+	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).status == constants.DataStatus.DATA_STATUS_PENDING
+
+# * period
+
+@pytest.mark.parametrize("period", [
+	pytest.param(constants.MAX_PERIOD, id="at-the-limit"),
+	pytest.param(0, id="zero"),
+])
+async def test_a_period_which_is_allowed(unique_data_type, period):
+	"""
+	Anything up to the maximum is allowed, including no period at all
+	"""
+
+	info = await prepare(nex.FRIEND_A, data_type=unique_data_type, period=period)
+
+	assert info.data_id != constants.INVALID_DATAID
+
+async def test_a_period_which_is_not_allowed(unique_data_type):
+	"""
+	Anything past the maximum is invalid
+	"""
+
+	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, period=constants.MAX_PERIOD + 1) == "DataStore::InvalidArgument"
+
+async def test_a_period_of_zero_expires_the_object_at_once(unique_data_type):
+	"""
+	The period is counted in days from when the object was made, so a period
+	of 0 expires the object immediately
+	"""
+
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, period=0)
+
+	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
+
+async def test_the_period_is_kept_on_the_object(unique_data_type):
+	"""
+	The period is stored as it was sent, and the expiry is worked out
+	"""
+
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, period=constants.MAX_PERIOD)
+	info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	assert info.period == constants.MAX_PERIOD
+	assert info.expire_time.value() > info.create_time.value() # TODO - Better check for this
+
+# * refer_data_id
+
+@pytest.mark.parametrize("refer_data_id", [
+	pytest.param(constants.INVALID_DATAID, id="zero"),
+	pytest.param(helpers.UNKNOWN_DATA_ID, id="an-object-which-is-not-there"),
+	pytest.param(helpers.UINT32_MAX, id="uint32-max"),
+])
+async def test_a_refer_data_id_is_not_checked(unique_data_type, refer_data_id):
+	"""
+	Accepts any value without checks it seems
+	"""
+
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, refer_data_id=refer_data_id)
+
+	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).refer_data_id == refer_data_id
+
+async def test_a_refer_data_id_which_is_a_real_object(unique_data_type):
+	"""
+	Referring to an object which does exist works the same way
+	"""
+
+	referred = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type)
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, refer_data_id=referred)
+
+	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).refer_data_id == referred
+
+# * tags
+
+async def test_tags_at_the_slot_limit(unique_data_type):
+	"""
+	An object can fill every tag slot it has
+	"""
+
+	tags = ["tag%i" % i for i in range(constants.NUM_TAG_SLOT)]
+	info = await prepare(nex.FRIEND_A, data_type=unique_data_type, tags=tags)
+
+	assert info.data_id != constants.INVALID_DATAID
+
+async def test_tags_over_the_slot_limit(unique_data_type):
+	"""
+	One tag more than there are slots is refused
+	"""
+
+	tags = ["tag%i" % i for i in range(constants.NUM_TAG_SLOT + 1)]
+
+	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, tags=tags) == "DataStore::InvalidArgument"
+
+async def test_a_tag_at_the_length_limit(unique_data_type):
+	"""
+	A tag of exactly the maximum length is allowed
+	"""
+
+	tags = ["t" * constants.MAX_TAG_LENGTH]
+	info = await prepare(nex.FRIEND_A, data_type=unique_data_type, tags=tags)
+
+	assert info.data_id != constants.INVALID_DATAID
+
+async def test_a_tag_over_the_length_limit(unique_data_type):
+	"""
+	One character more than the maximum is refused
+	"""
+
+	tags = ["t" * (constants.MAX_TAG_LENGTH + 1)]
+
+	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, tags=tags) == "DataStore::InvalidArgument"
+
+async def test_duplicate_tags(unique_data_type):
+	"""
+	The same tag cannot be used twice on one object
+	"""
+
+	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, tags=["same", "same"]) == "DataStore::InvalidArgument"
+
+async def test_an_empty_tag(unique_data_type):
+	"""
+	A tag with nothing in it is allowed
+	"""
+
+	info = await prepare(nex.FRIEND_A, data_type=unique_data_type, tags=[""])
+
+	assert info.data_id != constants.INVALID_DATAID
+
+async def test_the_tags_are_sorted_when_they_are_stored(unique_data_type):
+	"""
+	Tags are sorted on the server by byte value
+	"""
+
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, tags=["9nine", "banana", "1one", "Apple"])
+	info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id, result_option=constants.ResultFlag.RESULT_FLAG_TAGS)
+
+	assert info.tags == ["1one", "9nine", "Apple", "banana"]
+
+async def test_the_tags_are_not_trimmed(unique_data_type):
+	"""
+	Whitespace around a tag is part of the tag, and is left alone
+	"""
+
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, tags=["  padded  "])
+	info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id, result_option=constants.ResultFlag.RESULT_FLAG_TAGS)
+
+	assert info.tags == ["  padded  "]
+
+@pytest.mark.parametrize("text", helpers.TEXT_SAMPLES)
+async def test_a_tag_in_any_script(unique_data_type, text):
+	"""
+	Tags take the same range of characters names do
+	"""
+
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, tags=[text])
+
+	info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id, result_option=constants.ResultFlag.RESULT_FLAG_TAGS)
+
+	assert info.tags == [text]
+
+@pytest.mark.parametrize("text", helpers.ASTRAL_TEXT_SAMPLES)
+async def test_a_tag_above_the_basic_plane(unique_data_type, text):
+	"""
+	A tag which cannot be decoded fails the same way a name does
+	"""
+
+	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, tags=[text]) == "PythonCore::ConversionError"
+
+@pytest.mark.parametrize("text", helpers.CONTROL_TEXT_SAMPLES)
+async def test_a_tag_with_control_characters(unique_data_type, text):
+	"""
+	Control characters are refused in tags
+	"""
+
+	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, tags=[text]) == "DataStore::InvalidArgument"
+
+@pytest.mark.parametrize("text, allowed", [
+	pytest.param("\u6f22" * constants.MAX_TAG_LENGTH, True, id="at-the-limit"),
+	pytest.param("\u6f22" * (constants.MAX_TAG_LENGTH + 1), False, id="one-over-the-limit"),
+])
+async def test_the_tag_limit_counts_characters_not_bytes(unique_data_type, text, allowed):
+	"""
+	The tag size limit is counted the same way the name size limit is
+	"""
+
+	if not allowed:
+		assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, tags=[text]) == "DataStore::InvalidArgument"
+		return
+
+	info = await prepare(nex.FRIEND_A, data_type=unique_data_type, tags=[text])
+
+	assert info.data_id != constants.INVALID_DATAID
+
+# * rating_init_param
+
+async def test_a_rating_slot_is_set_up(unique_data_type):
+	"""
+	A rating slot should get created when posted
+	"""
+
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=rating_slots(1))
+	ratings = (await helpers.get_meta(nex.FRIEND_A, data_id=data_id, result_option=constants.ResultFlag.RESULT_FLAG_RATINGS)).ratings
+
+	assert [rating.slot for rating in ratings] == [0]
+	assert ratings[0].info.total_value == 0
+	assert ratings[0].info.count == 0
+
+async def test_a_rating_slot_can_start_at_a_value(unique_data_type):
+	"""
+	The initial value is the value the slot starts at, and it does not
+	count as somebody having rated
+	"""
+
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=rating_slots(1, initial_value=50))
+	ratings = (await helpers.get_meta(nex.FRIEND_A, data_id=data_id, result_option=constants.ResultFlag.RESULT_FLAG_RATINGS)).ratings
+
+	assert ratings[0].info.total_value == 50
+	assert ratings[0].info.count == 0
+
+async def test_rating_slots_at_the_limit(unique_data_type):
+	"""
+	An object can set up every rating slot it has
+	"""
+
+	info = await prepare(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=rating_slots(constants.NUM_RATING_SLOT))
+
+	assert info.data_id != constants.INVALID_DATAID
+
+async def test_rating_slots_over_the_limit(unique_data_type):
+	"""
+	One rating slot more than there are is refused
+	"""
+
+	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=rating_slots(constants.NUM_RATING_SLOT + 1)) == "DataStore::InvalidArgument"
+
+async def test_a_rating_slot_which_does_not_exist(unique_data_type):
+	"""
+	Only slots 0 to NUM_RATING_SLOT - 1 can be set up
+	"""
+
+	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=rating_slots(1, first=constants.NUM_RATING_SLOT)) == "DataStore::InvalidArgument"
+
+async def test_two_rating_params_for_the_same_slot(unique_data_type):
+	"""
+	A slot can only be set up once, and asking twice is refused rather
+	than the second one winning
+	"""
+
+	params = rating_slots(1) + rating_slots(1)
+
+	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=params) == "DataStore::OperationNotAllowed"
+
+@pytest.mark.parametrize("lock_type", RATING_LOCK_TYPES)
+async def test_every_rating_lock_type(unique_data_type, lock_type):
+	"""
+	Every lock type which is defined can be set up
+	"""
+
+	info = await prepare(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=rating_slots(1, lock_type=lock_type))
+
+	# * Lock types aren't exposed anywhere to the client after being made
+	# * so we have to just trust this worked
+	assert info.data_id != constants.INVALID_DATAID
+
+async def test_a_rating_lock_type_which_does_not_exist(unique_data_type):
+	"""
+	Only the lock types which exist can be used
+	"""
+
+	params = rating_slots(1, lock_type=constants.RatingLockType.RATING_LOCK_PERMANENT + 1)
+
+	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=params) == "DataStore::InvalidArgument"
+
+# TODO - Is this robust enough?
+@pytest.mark.parametrize("fields", [
+	pytest.param({"range_min": 1, "range_max": 10}, id="a-range"),
+	pytest.param({"range_min": 10, "range_max": 1}, id="a-range-the-wrong-way-round"),
+	pytest.param({"range_min": 1, "range_max": 10, "initial_value": 100}, id="an-initial-value-outside-the-range"),
+	pytest.param({"flag": 0xFF}, id="every-rating-flag"),
+	pytest.param({"internal_flag": 0xFF}, id="every-internal-flag"),
+	pytest.param({"period_hour": 25}, id="an-hour-which-is-not-an-hour"),
+	pytest.param({"period_duration": -17}, id="a-negative-period-duration"),
+])
+async def test_the_rest_of_a_rating_param_is_not_checked(unique_data_type, fields):
+	"""
+	Only the slot and the lock type are looked at, so the rest is
+	taken however it comes
+	"""
+
+	info = await prepare(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=rating_slots(1, **fields))
+
+	assert info.data_id != constants.INVALID_DATAID
+
+# * persistence_init_param
+
+async def test_a_persistence_slot_puts_the_object_in_it(unique_data_type):
+	"""
+	An object can go straight into a slot without being persisted
+	afterwards
+	"""
+
+	persistence_init_param = helpers.persistence_init_param(persistence_id=0)
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, persistence_init_param=persistence_init_param)
+
+	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, 0)).data_id == data_id
+
+async def test_no_persistence_slot(unique_data_type):
+	"""
+	The invalid slot id means no slot at all, rather than a bad one
+	"""
+
+	persistence_init_param = helpers.persistence_init_param(persistence_id=constants.INVALID_PERSISTENCE_SLOT_ID)
+	info = await prepare(nex.FRIEND_A, data_type=unique_data_type, persistence_init_param=persistence_init_param)
+
+	assert info.data_id != constants.INVALID_DATAID
+
+@pytest.mark.parametrize("slot", [
+	pytest.param(constants.NUM_PERSISTENCE_SLOT, id="one-past-the-last-slot"),
+	pytest.param(constants.NUM_PERSISTENCE_SLOT + 100, id="a-much-higher-slot"),
+])
+async def test_a_persistence_slot_which_does_not_exist(unique_data_type, slot):
+	"""
+	Only slots 0 to NUM_PERSISTENCE_SLOT - 1 can be used
+	"""
+
+	persistence_init_param = helpers.persistence_init_param(persistence_id=slot)
+
+	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, persistence_init_param=persistence_init_param) == "DataStore::InvalidArgument"
+
+# * extra_data
+# *
+# * Disclaimer: these tests were not ran against a live server, as at the time
+# * of writing the only active NEX server on Nintendo Network is Pokemon Bank,
+# * which is a NEX 3.4 server, and this field was added in NEX 3.5. The tests
+# * are written to assume the current implementation is correct, and will need
+# * to be updated at some point when more testing is done on NSO
+
+async def test_no_extra_data_at_all(unique_data_type):
+	"""
+	A client older than NEX 3.5 does not send the field, which is not
+	the same as sending something wrong
+	"""
+
+	info = await prepare(nex.FRIEND_A, data_type=unique_data_type, extra_data=[])
+
+	assert info.data_id != constants.INVALID_DATAID
+
+@pytest.mark.parametrize("extra_data", [
+	pytest.param(["CTR", "0", "JPN", "1", "JP", ""], id="a-japanese-3ds"),
+	pytest.param(["CTR", "2", "EUR", "110", "GB", ""], id="a-european-3ds"),
+	pytest.param(["CTR", "6", "TWN", "128", "TW", ""], id="a-taiwanese-3ds"),
+	pytest.param(["WUP", "2", "USA", "49", "US", ""], id="an-american-wii-u"),
+	pytest.param(["WUP", "4", "EUR", "110", "GB", ""], id="a-european-wii-u"),
+	pytest.param(["WUP", "64", "TWN", "128", "TW", ""], id="a-taiwanese-wii-u"),
+	pytest.param(["WUP", "0", "Invalid", "0", "", ""], id="a-wii-u-which-does-not-know-its-region"),
+])
+async def test_extra_data_a_console_would_send(unique_data_type, extra_data):
+	"""
+	Both platforms and each of their regions are accepted
+	"""
+
+	info = await prepare(nex.FRIEND_A, data_type=unique_data_type, extra_data=extra_data)
+
+	assert info.data_id != constants.INVALID_DATAID
+
+@pytest.mark.parametrize("extra_data", [
+	pytest.param(["CTR"], id="one-element"),
+	pytest.param(["CTR", "2", "EUR"], id="half-of-them"),
+	pytest.param(["CTR", "2", "EUR", "110", "GB"], id="one-too-few"),
+	pytest.param(["CTR", "2", "EUR", "110", "GB", "", ""], id="one-too-many"),
+])
+async def test_extra_data_of_the_wrong_length(unique_data_type, extra_data):
+	"""
+	There are always exactly six elements when the field is sent at all
+	"""
+
+	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, extra_data=extra_data) == "DataStore::InvalidArgument"
+
+async def test_an_extra_data_string_which_is_too_long(unique_data_type):
+	"""
+	The console allocates eight bytes for each of these, one of which
+	is the trailing null, so seven characters is the most which fits
+	"""
+
+	extra_data = ["CTR", "2", "EUR", "110", "GB", "x" * 8]
+
+	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, extra_data=extra_data) == "DataStore::InvalidArgument"
+
+async def test_an_extra_data_string_at_the_length_limit(unique_data_type):
+	"""
+	Seven characters is allowed, which is what "Invalid" needs
+	"""
+
+	info = await prepare(nex.FRIEND_A, data_type=unique_data_type, extra_data=["CTR", "2", "EUR", "110", "GB", "x" * 7])
+
+	assert info.data_id != constants.INVALID_DATAID
+
+@pytest.mark.parametrize("extra_data", [
+	pytest.param(["XYZ", "2", "EUR", "110", "GB", ""], id="a-platform-which-does-not-exist"),
+	pytest.param(["", "2", "EUR", "110", "GB", ""], id="no-platform-at-all"),
+	pytest.param(["ctr", "2", "EUR", "110", "GB", ""], id="the-right-platform-in-lower-case"),
+])
+async def test_extra_data_with_an_unknown_platform(unique_data_type, extra_data):
+	"""
+	Only the 3DS and the Wii U are known platforms
+	"""
+
+	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, extra_data=extra_data) == "DataStore::InvalidArgument"
+
+@pytest.mark.parametrize("extra_data", [
+	pytest.param(["CTR", "two", "EUR", "110", "GB", ""], id="a-region-id-which-is-not-a-number"),
+	pytest.param(["CTR", "", "EUR", "110", "GB", ""], id="no-region-id-at-all"),
+])
+async def test_extra_data_with_a_region_id_which_is_not_a_number(unique_data_type, extra_data):
+	"""
+	The region ID is a number written out as a string
+	"""
+
+	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, extra_data=extra_data) == "DataStore::InvalidArgument"
+
+@pytest.mark.parametrize("extra_data", [
+	pytest.param(["CTR", "2", "ZZZ", "110", "GB", ""], id="a-region-which-does-not-exist"),
+	pytest.param(["CTR", "0", "Invalid", "0", "", ""], id="a-region-only-the-wii-u-has"),
+])
+async def test_extra_data_with_an_unknown_region(unique_data_type, extra_data):
+	"""
+	The region name has to be one the platform actually has
+	"""
+
+	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, extra_data=extra_data) == "DataStore::InvalidArgument"
+
+@pytest.mark.parametrize("extra_data", [
+	pytest.param(["CTR", "4", "EUR", "110", "GB", ""], id="a-3ds-using-the-wii-u-number-for-europe"),
+	pytest.param(["WUP", "2", "EUR", "110", "GB", ""], id="a-wii-u-using-the-3ds-number-for-europe"),
+	pytest.param(["CTR", "1", "EUR", "110", "GB", ""], id="a-number-for-a-different-region"),
+])
+async def test_extra_data_where_the_region_id_and_name_disagree(unique_data_type, extra_data):
+	"""
+	The two platforms number their regions differently, so the ID has
+	to be the one which goes with the name on that platform
+	"""
+
+	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, extra_data=extra_data) == "DataStore::InvalidArgument"
+
+@pytest.mark.parametrize("extra_data", [
+	pytest.param(["CTR", "2", "EUR", "9999", "GB", ""], id="a-country-id-which-does-not-exist"),
+	pytest.param(["CTR", "2", "EUR", "110", "ZZ", ""], id="a-country-code-which-does-not-match"),
+	pytest.param(["CTR", "2", "EUR", "", "", ""], id="no-country-at-all"),
+	pytest.param(["CTR", "2", "EUR", "110", "GB", "spare"], id="something-in-the-spare-element"),
+])
+async def test_the_parts_of_extra_data_which_are_not_checked(unique_data_type, extra_data):
+	"""
+	Only the platform and its region are looked at, so the country and
+	the spare element are taken however they come
+	"""
+
+	info = await prepare(nex.FRIEND_A, data_type=unique_data_type, extra_data=extra_data)
+
+	assert info.data_id != constants.INVALID_DATAID

@@ -10,6 +10,43 @@ UNKNOWN_DATA_ID = 0xFFFFFF
 UINT32_MAX = 0xFFFFFFFF
 UINT64_MAX = 0xFFFFFFFFFFFFFFFF
 
+# * Object strings go on the wire as UTF-8, but the server decodes them
+# * into 16 bit characters, so everything in the basic multilingual plane
+# * survives and nothing outside it does. These all come back unchanged
+TEXT_SAMPLES = [
+	pytest.param("hello world", id="ascii"),
+	pytest.param("caf\u00e9 na\u00efve", id="latin-1-accents"),
+	pytest.param("stra\u00dfe", id="the-german-sharp-s"),
+	pytest.param("\u03b1\u03b2\u03b3", id="greek"),
+	pytest.param("\u043f\u0440\u0438\u0432\u0435\u0442", id="cyrillic"),
+	pytest.param("\u30c6\u30b9\u30c8", id="japanese-kana"),
+	pytest.param("\u6f22\u5b57", id="japanese-kanji"),
+	pytest.param("\ud55c\uae00", id="korean"),
+	pytest.param("\u0645\u0631\u062d\u0628\u0627", id="right-to-left"),
+	pytest.param("e\u0301", id="a-combining-accent"),
+	pytest.param("\uff8a\uff9e", id="halfwidth-katakana"),
+	pytest.param("\uff28\uff25\uff2c\uff2c\uff2f", id="fullwidth-latin"),
+	pytest.param("\ufffd", id="the-replacement-character"),
+	pytest.param("   ", id="only-spaces"),
+]
+
+# * Anything above the basic multilingual plane needs a surrogate pair,
+# * which the server cannot decode. Real server throws PythonCore::ConversionError
+# * which we'd need to emulate?
+ASTRAL_TEXT_SAMPLES = [
+	pytest.param("\U0001F3AE", id="an-emoji"),
+	pytest.param("\U0001F3AE\U0001F47E", id="two-emoji"),
+	pytest.param("\U0001F468\u200D\U0001F4BB", id="emoji-joined-by-a-zero-width-joiner"),
+]
+
+# * For some reason object NAMES accept these, but object TAGS
+# * throw DataStore::InvalidArgument?
+CONTROL_TEXT_SAMPLES = [
+	pytest.param("a\tb", id="a-tab"),
+	pytest.param("a\nb", id="a-newline"),
+	pytest.param("a\rb", id="a-carriage-return"),
+]
+
 @contextlib.asynccontextmanager
 async def connect(pid: int):
 	"""
@@ -324,6 +361,19 @@ async def post_object(pid: int, **fields) -> int:
 	async with connect(pid) as client:
 		post_info = await client.prepare_post_object(post_param(**fields))
 		await client.complete_post_object(complete_post_param(data_id=post_info.data_id))
+
+		return post_info.data_id
+
+async def post_object_v1(pid: int, **fields) -> int:
+	"""
+	Posts an object which uses the file server as the given user, using the
+	older version of the method, returning its data ID. The object contents
+	is never uploaded
+	"""
+
+	async with connect(pid) as client:
+		post_info = await client.prepare_post_object_v1(post_param_v1(**fields))
+		await client.complete_post_object_v1(complete_post_param_v1(data_id=post_info.data_id))
 
 		return post_info.data_id
 
