@@ -133,7 +133,7 @@ func InsertObjectByPreparePostParam(database common_globals.Database, manager *c
 	}
 
 	if err := manager.ValidateExtraData(param.ExtraData); err != nil {
-		return 0, nil
+		return 0, err
 	}
 
 	needsReview := param.Flag.HasFlag(datastore_constants.DataFlagNeedReview)
