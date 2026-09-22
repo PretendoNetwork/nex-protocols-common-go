@@ -296,6 +296,39 @@ def touch_object_param(**fields) -> datastore.DataStoreTouchObjectParam:
 
 	return param
 
+def prepare_get_param(**fields) -> datastore.DataStorePrepareGetParam:
+	"""
+	Creates a DataStorePrepareGetParam with default parameters.
+	Any field can be overridden with a keyword argument
+	"""
+
+	param = datastore.DataStorePrepareGetParam()
+	param.data_id = constants.INVALID_DATAID
+	param.lock_id = 0
+	param.persistence_target = persistence_target()
+	param.access_password = constants.INVALID_PASSWORD
+	param.extra_data = []
+
+	for name, value in fields.items():
+		setattr(param, name, value)
+
+	return param
+
+def prepare_get_param_v1(**fields) -> datastore.DataStorePrepareGetParamV1:
+	"""
+	Creates a DataStorePrepareGetParamV1 with default parameters.
+	Any field can be overridden with a keyword argument
+	"""
+
+	param = datastore.DataStorePrepareGetParamV1()
+	param.data_id = constants.INVALID_DATAID
+	param.lock_id = 0
+
+	for name, value in fields.items():
+		setattr(param, name, value)
+
+	return param
+
 def get_meta_param(**fields) -> datastore.DataStoreGetMetaParam:
 	"""
 	Creates a DataStoreGetMetaParam with default parameters.
@@ -468,6 +501,14 @@ async def post_persisted(post, pid: int, slot: int, **fields) -> int:
 POST_METHODS = [
 	pytest.param(post_meta_binary, id="post-meta-binary"),
 	pytest.param(post_object, id="post-object"),
+]
+
+# * Used to ensure that tests involving objects which use the file server
+# * like PrepareGetObject, are ran against objects posted through both
+# * ways of creating objects on the file server
+FILE_SERVER_POST_METHODS = [
+	pytest.param(post_object, id="post-object"),
+	pytest.param(post_object_v1, id="post-object-v1"),
 ]
 
 def result_names(results: list) -> list:
