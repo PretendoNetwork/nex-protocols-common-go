@@ -80,10 +80,12 @@ async def test_access_permission_of_persisted_objects(unique_data_type, post, pe
 # * Object status tests
 # *
 # * The object status is the objects visibility status, which is
-# * separate from whether or not its upload was completed. Objects
-# * which are under review cannot be seen by anyone besides the owner,
-# * and objects which have been rejected cannot be seen by anyone
-# * INCLUDING the owner, outside of SearchObject/SearchObjectLight
+# * separate from whether or not its upload was completed
+# TODO - Previous tests before the NN shutdown indicated that DATA_STATUS_REJECTED resulted in NotFound
+#        for those objects, for everyone, including the owner, unless SearchObject was used. However tests
+#        on Pokemon Bank after the NN shutdown now contradict that. These tests are designed to match
+#        Pokemon Bank until more information is confirmed. Update the wiki about this? The previous results
+#        could also be from flawed testing prior to the shutdown
 
 async def post_pending(post, pid: int, **fields) -> int:
 	"""
@@ -127,16 +129,26 @@ async def test_pending_object_is_under_review_for_everyone_else(unique_data_type
 	assert await helpers.get_meta_error(nex.STRANGER, data_id=data_id) == "DataStore::UnderReviewing"
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_rejected_object_is_not_visible_to_anyone(unique_data_type, post):
+async def test_rejected_object_is_visible_to_its_owner(unique_data_type, post):
 	"""
-	Rejected objects behave as if they do not exist, for everyone
-	including their owner
+	Rejected objects can still be seen by their owner
+	"""
+
+	data_id = await post_rejected(post, nex.FRIEND_A, data_type=unique_data_type)
+	meta_info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	assert meta_info.data_id == data_id
+	assert meta_info.status == constants.DataStatus.DATA_STATUS_REJECTED
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_rejected_object_is_under_review_for_everyone_else(unique_data_type, post):
+	"""
+	Rejected objects appear as under review still to other users
 	"""
 
 	data_id = await post_rejected(post, nex.FRIEND_A, data_type=unique_data_type)
 
-	assert await helpers.get_meta_error(nex.STRANGER, data_id=data_id) == "DataStore::NotFound"
-	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
+	assert await helpers.get_meta_error(nex.STRANGER, data_id=data_id) == "DataStore::UnderReviewing"
 
 # * Data ID lookup tests
 
