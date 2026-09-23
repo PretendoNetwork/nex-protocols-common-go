@@ -56,6 +56,19 @@ async def connect(pid: int):
 	async with nex.connect(pid) as client:
 		yield datastore.DataStoreClient(client)
 
+def override(param, fields: dict):
+	"""
+	Overrides fields on a param, checking for invalid ones
+	"""
+
+	for name, value in fields.items():
+		if not hasattr(param, name):
+			raise AttributeError("%s has no field %r" % (type(param).__name__, name))
+
+		setattr(param, name, value)
+
+	return param
+
 def permission(**fields) -> datastore.DataStorePermission:
 	"""
 	Creates a DataStorePermission with default parameters.
@@ -66,10 +79,7 @@ def permission(**fields) -> datastore.DataStorePermission:
 	param.permission = constants.Permission.PERMISSION_PUBLIC
 	param.recipients = []
 
-	for name, value in fields.items():
-		setattr(param, name, value)
-
-	return param
+	return override(param, fields)
 
 def post_param(**fields) -> datastore.DataStorePreparePostParam:
 	"""
@@ -88,10 +98,7 @@ def post_param(**fields) -> datastore.DataStorePreparePostParam:
 	param.period = constants.DEFAULT_PERIOD
 	param.extra_data = ["WUP", "4", "EUR", "110", "GB", ""]
 
-	for name, value in fields.items():
-		setattr(param, name, value)
-
-	return param
+	return override(param, fields)
 
 def post_param_v1(**fields) -> datastore.DataStorePreparePostParamV1:
 	"""
@@ -112,10 +119,7 @@ def post_param_v1(**fields) -> datastore.DataStorePreparePostParamV1:
 	param.tags = []
 	param.rating_init_param = []
 
-	for name, value in fields.items():
-		setattr(param, name, value)
-
-	return param
+	return override(param, fields)
 
 def delete_param(**fields) -> datastore.DataStoreDeleteParam:
 	"""
@@ -127,10 +131,7 @@ def delete_param(**fields) -> datastore.DataStoreDeleteParam:
 	param.data_id = constants.INVALID_DATAID
 	param.update_password = constants.INVALID_PASSWORD
 
-	for name, value in fields.items():
-		setattr(param, name, value)
-
-	return param
+	return override(param, fields)
 
 def rating_init_param(**fields) -> datastore.DataStoreRatingInitParam:
 	"""
@@ -148,10 +149,7 @@ def rating_init_param(**fields) -> datastore.DataStoreRatingInitParam:
 	param.period_hour = 0
 	param.period_duration = 0
 
-	for name, value in fields.items():
-		setattr(param, name, value)
-
-	return param
+	return override(param, fields)
 
 def rating_init_param_with_slot(**fields) -> datastore.DataStoreRatingInitParamWithSlot:
 	"""
@@ -163,10 +161,7 @@ def rating_init_param_with_slot(**fields) -> datastore.DataStoreRatingInitParamW
 	param.slot = 0
 	param.param = rating_init_param()
 
-	for name, value in fields.items():
-		setattr(param, name, value)
-
-	return param
+	return override(param, fields)
 
 def persistence_init_param(**fields) -> datastore.DataStorePersistenceInitParam:
 	"""
@@ -179,10 +174,7 @@ def persistence_init_param(**fields) -> datastore.DataStorePersistenceInitParam:
 	param.persistence_id = constants.INVALID_PERSISTENCE_SLOT_ID
 	param.delete_last_object = True
 
-	for name, value in fields.items():
-		setattr(param, name, value)
-
-	return param
+	return override(param, fields)
 
 def persistence_target(**fields) -> datastore.DataStorePersistenceTarget:
 	"""
@@ -194,10 +186,7 @@ def persistence_target(**fields) -> datastore.DataStorePersistenceTarget:
 	param.owner_id = 0
 	param.persistence_id = constants.INVALID_PERSISTENCE_SLOT_ID
 
-	for name, value in fields.items():
-		setattr(param, name, value)
-
-	return param
+	return override(param, fields)
 
 def complete_post_param(**fields) -> datastore.DataStoreCompletePostParam:
 	"""
@@ -209,10 +198,7 @@ def complete_post_param(**fields) -> datastore.DataStoreCompletePostParam:
 	param.data_id = constants.INVALID_DATAID
 	param.success = True
 
-	for name, value in fields.items():
-		setattr(param, name, value)
-
-	return param
+	return override(param, fields)
 
 def change_meta_compare_param(**fields) -> datastore.DataStoreChangeMetaCompareParam:
 	"""
@@ -233,10 +219,26 @@ def change_meta_compare_param(**fields) -> datastore.DataStoreChangeMetaCompareP
 	param.data_type = 0
 	param.status = constants.DataStatus.DATA_STATUS_NONE
 
-	for name, value in fields.items():
-		setattr(param, name, value)
+	return override(param, fields)
 
-	return param
+def change_meta_param_v1(**fields) -> datastore.DataStoreChangeMetaParamV1:
+	"""
+	Creates a DataStoreChangeMetaParamV1 with default parameters, which
+	changes nothing. Any field can be overridden with a keyword argument
+	"""
+
+	param = datastore.DataStoreChangeMetaParamV1()
+	param.data_id = constants.INVALID_DATAID
+	param.modifies_flag = constants.ModificationFlag.MODIFICATION_FLAG_NONE
+	param.name = ""
+	param.permission = permission()
+	param.delete_permission = permission()
+	param.period = constants.DEFAULT_PERIOD
+	param.meta_binary = b""
+	param.tags = []
+	param.update_password = constants.INVALID_PASSWORD
+
+	return override(param, fields)
 
 def change_meta_param(**fields) -> datastore.DataStoreChangeMetaParam:
 	"""
@@ -260,10 +262,7 @@ def change_meta_param(**fields) -> datastore.DataStoreChangeMetaParam:
 	param.compare_param = change_meta_compare_param()
 	param.persistence_target = persistence_target()
 
-	for name, value in fields.items():
-		setattr(param, name, value)
-
-	return param
+	return override(param, fields)
 
 def complete_post_param_v1(**fields) -> datastore.DataStoreCompletePostParamV1:
 	"""
@@ -275,10 +274,7 @@ def complete_post_param_v1(**fields) -> datastore.DataStoreCompletePostParamV1:
 	param.data_id = constants.INVALID_DATAID
 	param.success = True
 
-	for name, value in fields.items():
-		setattr(param, name, value)
-
-	return param
+	return override(param, fields)
 
 def touch_object_param(**fields) -> datastore.DataStoreTouchObjectParam:
 	"""
@@ -291,10 +287,7 @@ def touch_object_param(**fields) -> datastore.DataStoreTouchObjectParam:
 	param.lock_id = 0
 	param.access_password = constants.INVALID_PASSWORD
 
-	for name, value in fields.items():
-		setattr(param, name, value)
-
-	return param
+	return override(param, fields)
 
 def prepare_get_param(**fields) -> datastore.DataStorePrepareGetParam:
 	"""
@@ -309,10 +302,7 @@ def prepare_get_param(**fields) -> datastore.DataStorePrepareGetParam:
 	param.access_password = constants.INVALID_PASSWORD
 	param.extra_data = []
 
-	for name, value in fields.items():
-		setattr(param, name, value)
-
-	return param
+	return override(param, fields)
 
 def prepare_get_param_v1(**fields) -> datastore.DataStorePrepareGetParamV1:
 	"""
@@ -324,10 +314,7 @@ def prepare_get_param_v1(**fields) -> datastore.DataStorePrepareGetParamV1:
 	param.data_id = constants.INVALID_DATAID
 	param.lock_id = 0
 
-	for name, value in fields.items():
-		setattr(param, name, value)
-
-	return param
+	return override(param, fields)
 
 def get_meta_param(**fields) -> datastore.DataStoreGetMetaParam:
 	"""
@@ -341,10 +328,7 @@ def get_meta_param(**fields) -> datastore.DataStoreGetMetaParam:
 	param.result_option = 0
 	param.access_password = 0
 
-	for name, value in fields.items():
-		setattr(param, name, value)
-
-	return param
+	return override(param, fields)
 
 async def post_meta_binary(pid: int, **fields) -> int:
 	"""
