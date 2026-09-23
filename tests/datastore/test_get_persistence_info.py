@@ -21,7 +21,7 @@ ACCESS_PERMISSIONS = [
 
 # * What the slot holds
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_returns_the_object_in_the_slot(unique_data_type, post):
 	"""
 	The slot holds the data ID of the object which is in it
@@ -34,7 +34,7 @@ async def test_returns_the_object_in_the_slot(unique_data_type, post):
 	assert info.slot_id == SLOT
 	assert info.data_id == data_id
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_the_newest_object_wins(unique_data_type, post):
 	"""
 	Putting another object in a slot replaces the one which was there
@@ -45,7 +45,7 @@ async def test_the_newest_object_wins(unique_data_type, post):
 
 	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, SLOT)).data_id == second
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_deleting_the_object_empties_the_slot(unique_data_type, post):
 	"""
 	Deleting a persisted object leaves the slot with nothing in it
@@ -58,7 +58,7 @@ async def test_deleting_the_object_empties_the_slot(unique_data_type, post):
 
 # * Who may read somebody elses slot
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 @pytest.mark.parametrize("permission, recipients, allowed, denied", ACCESS_PERMISSIONS)
 async def test_the_access_permission_of_the_object(unique_data_type, post, permission, recipients, allowed, denied):
 	"""
@@ -73,7 +73,7 @@ async def test_the_access_permission_of_the_object(unique_data_type, post, permi
 	if denied is not None:
 		assert await helpers.get_persistence_info_error(denied, nex.FRIEND_A, SLOT) == "DataStore::PermissionDenied"
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 @pytest.mark.parametrize("caller", [
 	pytest.param(nex.FRIEND_B, id="a-friend"),
 	pytest.param(nex.STRANGER, id="a-stranger"),
@@ -89,7 +89,7 @@ async def test_a_private_object_is_closed_to_everybody(unique_data_type, post, c
 	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, SLOT)).data_id == data_id
 	assert await helpers.get_persistence_info_error(caller, nex.FRIEND_A, SLOT) == "DataStore::PermissionDenied"
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_an_object_under_review(unique_data_type, post):
 	"""
 	An object waiting to be reviewed reports as such, but is viewable to
@@ -103,7 +103,7 @@ async def test_an_object_under_review(unique_data_type, post):
 
 # * The owner being asked about
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_an_owner_of_zero_means_the_caller(unique_data_type, post):
 	"""
 	Asking about nobody in particular reads the callers own slots

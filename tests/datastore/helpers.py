@@ -479,10 +479,17 @@ async def post_persisted(post, pid: int, slot: int, **fields) -> int:
 
 	return await post(pid, persistence_init_param=init_param, **fields)
 
-# * Objects can be posted with or without the file server. Tests which
-# * upload one are run against both, to make sure the method being
-# * tested behaves the same either way
+# * Every way an object can be created, in general. Used when general object
+# * creation in the database is needed
 POST_METHODS = [
+	pytest.param(post_meta_binary, id="post-meta-binary"),
+	pytest.param(post_object, id="post-object"),
+	pytest.param(post_object_v1, id="post-object-v1"),
+]
+
+# * Every way an object can be created with a persistence slot set. Used for
+# * when a test needs to test slots
+PERSISTENCE_POST_METHODS = [
 	pytest.param(post_meta_binary, id="post-meta-binary"),
 	pytest.param(post_object, id="post-object"),
 ]

@@ -109,7 +109,7 @@ async def test_deleting_a_read_locked_object(unique_data_type, post):
 	await helpers.touch_object(nex.STRANGER, data_id=data_id, lock_id=1234)
 	await helpers.delete_object(nex.FRIEND_A, data_id=data_id)
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_deleting_a_persisted_object_empties_the_slot(unique_data_type, post):
 	"""
 	Deleting an object which is being persisted leaves its

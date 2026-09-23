@@ -58,7 +58,7 @@ async def test_access_permission(unique_data_type, post, permission, recipients,
 
 	assert meta_info.data_id == data_id
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 @pytest.mark.parametrize("permission, recipients, viewer, visible", ACCESS_PERMISSION_CASES)
 async def test_access_permission_of_persisted_objects(unique_data_type, post, permission, recipients, viewer, visible):
 	"""
@@ -170,7 +170,7 @@ async def test_data_id(unique_data_type, post):
 	assert meta_info.permission.permission == constants.Permission.PERMISSION_PUBLIC
 	assert meta_info.delete_permission.permission == constants.Permission.PERMISSION_PRIVATE
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_persistence_target_is_used_over_data_id(unique_data_type, post):
 	"""
 	If both a persistence target and a data ID are set, the
@@ -222,7 +222,7 @@ async def test_no_data_id_or_persistence_target():
 # * Somewhat redundant due to the access permission
 # * tests, but cover all our bases anyway
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_persistence_target(unique_data_type, post):
 	"""
 	Tests that an object can be looked up by its persistence slot
@@ -235,7 +235,7 @@ async def test_persistence_target(unique_data_type, post):
 
 	assert meta_info.data_id == data_id
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_persistence_target_of_another_user(unique_data_type, post):
 	"""
 	Tests that another users persistence slot can be checked, assuming
@@ -266,7 +266,7 @@ async def test_persistence_target_without_a_slot_is_ignored(unique_data_type, po
 
 	assert meta_info.data_id == data_id
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_persistence_target_returns_the_newest_object(unique_data_type, post):
 	"""
 	Posting another object into a slot which is already in use
@@ -281,7 +281,7 @@ async def test_persistence_target_returns_the_newest_object(unique_data_type, po
 
 	assert meta_info.data_id == newest
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_persistence_slots_are_per_user(unique_data_type, post):
 	"""
 	Persistence slots are tied to a user, so the same slot ID
@@ -297,7 +297,7 @@ async def test_persistence_slots_are_per_user(unique_data_type, post):
 	assert (await helpers.get_meta(nex.FRIEND_A, persistence_target=first_target)).data_id == first
 	assert (await helpers.get_meta(nex.FRIEND_A, persistence_target=second_target)).data_id == second
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_persistence_target_without_an_owner(unique_data_type, post):
 	"""
 	A persistence target with a slot but no owner is still used, and

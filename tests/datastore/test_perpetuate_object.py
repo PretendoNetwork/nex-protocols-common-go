@@ -91,7 +91,7 @@ async def test_an_object_can_only_be_in_one_slot(unique_data_type, post):
 	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, SLOT_0)).data_id == data_id
 	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, SLOT_1) == "DataStore::NotFound"
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 @pytest.mark.parametrize("delete_last_object", [
 	pytest.param(False, id="keeping-the-old-object"),
 	pytest.param(True, id="deleting-the-old-object"),
@@ -113,7 +113,7 @@ async def test_an_object_in_a_slot_cannot_take_over_another_one(unique_data_type
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=mover)).data_id == mover
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=sitter)).data_id == sitter
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_an_object_with_no_slot_can_take_over_one(unique_data_type, post):
 	"""
 	An object not in a slot can take over an occupied slot. The rejection in
@@ -280,7 +280,7 @@ async def test_a_data_id_of_zero_into_an_empty_slot():
 
 	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, EMPTY_SLOT) == "DataStore::NotFound"
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_a_data_id_of_zero_into_a_filled_slot(unique_data_type, post):
 	"""
 	The slot keeps what it had

@@ -55,7 +55,7 @@ def slots_of(response) -> list[int]:
 
 # * What the slots hold
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_returns_an_info_for_every_slot(unique_data_type, post):
 	"""
 	Every slot in the list gets its own entry back
@@ -69,7 +69,7 @@ async def test_returns_an_info_for_every_slot(unique_data_type, post):
 	assert helpers.result_names(response.results) == [None, None]
 	assert helpers.data_ids_of(response) == [first, second]
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_the_slots_come_back_in_the_order_they_were_asked_for(unique_data_type, post):
 	"""
 	The caller matches the results by position
@@ -83,7 +83,7 @@ async def test_the_slots_come_back_in_the_order_they_were_asked_for(unique_data_
 	assert slots_of(response) == [SLOT_1, SLOT_0]
 	assert helpers.data_ids_of(response) == [second, first]
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_an_empty_slot_only_fails_its_own_entry(unique_data_type, post):
 	"""
 	Empty slots fail on their own, rather than failing the whole request
@@ -96,7 +96,7 @@ async def test_an_empty_slot_only_fails_its_own_entry(unique_data_type, post):
 	assert response.infos[SLOT_0].data_id == data_id
 	assert response.infos[SLOT_1].data_id == 0
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_the_same_slot_twice(unique_data_type, post):
 	"""
 	Reading the same slot multiple times is supported
@@ -108,7 +108,7 @@ async def test_the_same_slot_twice(unique_data_type, post):
 	assert helpers.result_names(response.results) == [None, None]
 	assert helpers.data_ids_of(response) == [data_id, data_id]
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_no_slots_returns_every_slot(unique_data_type, post):
 	"""
 	An empty list of slots returns all of the users slots, including
@@ -123,7 +123,7 @@ async def test_no_slots_returns_every_slot(unique_data_type, post):
 	assert response.results[SLOT_0].is_success()
 	assert response.results[EMPTY_SLOT].is_error()
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_more_entries_than_there_are_slots(unique_data_type, post):
 	"""
 	Nothing stops the same slot being listed over and over, so a list
@@ -139,7 +139,7 @@ async def test_more_entries_than_there_are_slots(unique_data_type, post):
 
 # * Who may read somebody elses slots
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 @pytest.mark.parametrize("permission, recipients, allowed, denied", ACCESS_PERMISSIONS)
 async def test_the_access_permission_of_the_object(unique_data_type, post, permission, recipients, allowed, denied):
 	"""
@@ -160,7 +160,7 @@ async def test_the_access_permission_of_the_object(unique_data_type, post, permi
 
 		assert helpers.result_names(closed.results) == ["DataStore::PermissionDenied"]
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 @pytest.mark.parametrize("caller", [
 	pytest.param(nex.FRIEND_B, id="a-friend"),
 	pytest.param(nex.STRANGER, id="a-stranger"),
@@ -177,7 +177,7 @@ async def test_a_private_object_is_closed_to_everybody(unique_data_type, post, c
 
 	assert helpers.result_names(response.results) == ["DataStore::PermissionDenied"]
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_an_object_under_review(unique_data_type, post):
 	"""
 	An object waiting to be reviewed reports as such, but is viewable to
@@ -194,7 +194,7 @@ async def test_an_object_under_review(unique_data_type, post):
 
 # * The owner being asked about
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_an_owner_of_zero_means_the_caller(unique_data_type, post):
 	"""
 	Asking about nobody in particular reads the callers own slots
@@ -206,7 +206,7 @@ async def test_an_owner_of_zero_means_the_caller(unique_data_type, post):
 	assert helpers.result_names(response.results) == [None]
 	assert response.infos[SLOT_0].data_id == data_id
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_an_owner_of_zero_with_no_slots(unique_data_type, post):
 	"""
 	Using no PID and an empty list returns all of the callers slots

@@ -36,7 +36,7 @@ async def unperpetuate_error(pid: int, slot: int, delete_last_object: bool = Fal
 
 # * Emptying a slot, and what happens to the object which was in it
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_empties_the_slot(unique_data_type, post):
 	"""
 	The slot is simply emptied when delete_last_object=False
@@ -48,7 +48,7 @@ async def test_empties_the_slot(unique_data_type, post):
 	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, SLOT_0) == "DataStore::NotFound"
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).data_id == data_id
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_can_delete_the_object_too(unique_data_type, post):
 	"""
 	The object which was in the slot is deleted when delete_last_object=True
@@ -60,7 +60,7 @@ async def test_can_delete_the_object_too(unique_data_type, post):
 	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, SLOT_0) == "DataStore::NotFound"
 	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_an_object_under_review(unique_data_type, post):
 	"""
 	An object waiting to be reviewed can be let out of its slot like any other
@@ -72,7 +72,7 @@ async def test_an_object_under_review(unique_data_type, post):
 	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, SLOT_0) == "DataStore::NotFound"
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).data_id == data_id
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_the_object_expires_again(unique_data_type, post):
 	"""
 	An object in a slot is kept forever, so letting it out has to put
@@ -102,7 +102,7 @@ async def test_empty_slot(delete_last_object):
 
 	assert await unperpetuate_error(nex.FRIEND_A, EMPTY_SLOT, delete_last_object) == "DataStore::NotFound"
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_emptying_a_slot_twice(unique_data_type, post):
 	"""
 	The slot is already empty the second time
@@ -113,7 +113,7 @@ async def test_emptying_a_slot_twice(unique_data_type, post):
 
 	assert await unperpetuate_error(nex.FRIEND_A, SLOT_0) == "DataStore::NotFound"
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_a_slot_whose_object_was_deleted(unique_data_type, post):
 	"""
 	Deleting the object empties the slot on its own
@@ -137,7 +137,7 @@ async def test_invalid_slot(slot):
 
 	assert await unperpetuate_error(nex.FRIEND_A, slot) == "DataStore::InvalidArgument"
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_slots_are_per_user(unique_data_type, post):
 	"""
 	Emptying a slot only affects the callers own slots
