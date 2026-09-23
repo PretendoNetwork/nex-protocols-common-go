@@ -78,6 +78,18 @@ def rating_slots(count: int, first: int = 0, **fields) -> list:
 
 	return [helpers.rating_init_param_with_slot(slot=first + i, param=helpers.rating_init_param(**fields)) for i in range(count)]
 
+async def slot_holds(pid: int, slot: int) -> int:
+	"""
+	The data ID in one of a users own slots, or INVALID_DATAID when the
+	slot is empty
+	"""
+
+	async with helpers.connect(pid) as client:
+		try:
+			return (await client.get_persistence_info(pid, slot)).data_id
+		except common.RMCError:
+			return constants.INVALID_DATAID
+
 # * What the server hands back
 
 async def test_returns_somewhere_to_upload_to(unique_data_type):
@@ -736,3 +748,20 @@ async def test_the_rest_of_a_rating_param_is_not_checked(unique_data_type, field
 	info = await prepare(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=rating_slots(1, **fields))
 
 	assert info.data_id != constants.INVALID_DATAID
+
+# * Persisting an object is asked for through persistence_init_param,
+# * which V1 has no field for at all, so a V1 post can never put an
+# * object into a slot
+
+async def test_an_object_is_not_persisted(unique_data_type):
+	"""
+	Ensure a v1 object cannot be initted into a slot
+	"""
+
+	data_id = await helpers.post_object_v1(nex.FRIEND_A, data_type=unique_data_type)
+	info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	assert info.expire_time.value() != constants.PERMANENT_DATE_TIME
+
+	for slot in range(constants.NUM_PERSISTENCE_SLOT):
+		assert await slot_holds(nex.FRIEND_A, slot) != data_id, "the object was put into slot %i without being asked" % slot
