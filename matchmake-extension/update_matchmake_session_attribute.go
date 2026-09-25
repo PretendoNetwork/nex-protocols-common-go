@@ -48,7 +48,7 @@ func (commonProtocol *CommonProtocol) updateMatchmakeSessionAttribute(err error,
 	rmcResponse.MethodID = matchmake_extension.MethodUpdateMatchmakeSessionAttribute
 	rmcResponse.CallID = callID
 
-	if commonProtocol.OnAfterModifyCurrentGameAttribute != nil {
+	if commonProtocol.OnAfterUpdateMatchmakeSessionAttribute != nil {
 		go commonProtocol.OnAfterUpdateMatchmakeSessionAttribute(packet, gid, attribs)
 	}
 
