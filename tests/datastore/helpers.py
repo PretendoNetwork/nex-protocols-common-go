@@ -47,6 +47,15 @@ CONTROL_TEXT_SAMPLES = [
 	pytest.param("a\rb", id="a-carriage-return"),
 ]
 
+# * Every permission, with a recipient for the ones which use them
+PERMISSIONS = [
+	pytest.param(constants.Permission.PERMISSION_PUBLIC, [], id="public"),
+	pytest.param(constants.Permission.PERMISSION_FRIEND, [], id="friend"),
+	pytest.param(constants.Permission.PERMISSION_SPECIFIED, [nex.STRANGER], id="specified"),
+	pytest.param(constants.Permission.PERMISSION_PRIVATE, [], id="private"),
+	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.FRIEND_B], id="specified-friend"),
+]
+
 @contextlib.asynccontextmanager
 async def connect(pid: int):
 	"""
@@ -240,13 +249,97 @@ def change_meta_param_v1(**fields) -> datastore.DataStoreChangeMetaParamV1:
 
 	return override(param, fields)
 
-def change_meta_param(**fields) -> datastore.DataStoreChangeMetaParam:
+# TODO - Remove this once NintendoClients checks the revision itself, and go
+#        back to datastore.DataStoreChangeMetaParam
+#
+# * The NintendoClients version of DataStoreChangeMetaParam always encodes
+# * persistence_target, which breaks when testing on Pokemon Bank since that
+# * field wasn't added until revision 1, and Bank predates class headers. This
+# * would cause ChangeMetas to fail since the list of params had data the server
+# * couldn't handle
+class DataStoreChangeMetaParam(common.Structure):
+	def __init__(self):
+		super().__init__()
+		self.data_id = None
+		self.modifies_flag = None
+		self.name = None
+		self.permission = datastore.DataStorePermission()
+		self.delete_permission = datastore.DataStorePermission()
+		self.period = None
+		self.meta_binary = None
+		self.tags = None
+		self.update_password = None
+		self.referred_count = None
+		self.data_type = None
+		self.status = None
+		self.compare_param = datastore.DataStoreChangeMetaCompareParam()
+		self.persistence_target = datastore.DataStorePersistenceTarget()
+
+	def __key(self):
+		return (self.data_id, self.modifies_flag, self.name, self.permission, self.delete_permission, self.period, self.meta_binary, self.tags, self.update_password, self.referred_count, self.data_type, self.status, self.compare_param, self.persistence_target, )
+
+	def __hash__(self):
+		return hash(common.make_hashable(self.__key()))
+
+	def __eq__(self, other):
+		if type(self) is not type(other):
+			return NotImplemented
+		return self.__key() == other.__key()
+
+	def max_version(self, settings):
+		# * This is a guess, Bank doesn't have this and it's NEX 3.4.7
+		version = 0
+		if settings["nex.version"] >= 30500:
+			version = 1
+		return version
+
+	def check_required(self, settings, version):
+		for field in ['data_id', 'modifies_flag', 'name', 'period', 'meta_binary', 'tags', 'update_password', 'referred_count', 'data_type', 'status']:
+			if getattr(self, field) is None:
+				raise ValueError("No value assigned to required field: %s" %field)
+
+	def load(self, stream, version):
+		self.data_id = stream.u64()
+		self.modifies_flag = stream.u32()
+		self.name = stream.string()
+		self.permission = stream.extract(datastore.DataStorePermission)
+		self.delete_permission = stream.extract(datastore.DataStorePermission)
+		self.period = stream.u16()
+		self.meta_binary = stream.qbuffer()
+		self.tags = stream.list(stream.string)
+		self.update_password = stream.u64()
+		self.referred_count = stream.u32()
+		self.data_type = stream.u16()
+		self.status = stream.u8()
+		self.compare_param = stream.extract(datastore.DataStoreChangeMetaCompareParam)
+		if version >= 1:
+			self.persistence_target = stream.extract(datastore.DataStorePersistenceTarget)
+
+	def save(self, stream, version):
+		self.check_required(stream.settings, version)
+		stream.u64(self.data_id)
+		stream.u32(self.modifies_flag)
+		stream.string(self.name)
+		stream.add(self.permission)
+		stream.add(self.delete_permission)
+		stream.u16(self.period)
+		stream.qbuffer(self.meta_binary)
+		stream.list(self.tags, stream.string)
+		stream.u64(self.update_password)
+		stream.u32(self.referred_count)
+		stream.u16(self.data_type)
+		stream.u8(self.status)
+		stream.add(self.compare_param)
+		if version >= 1:
+			stream.add(self.persistence_target)
+
+def change_meta_param(**fields) -> DataStoreChangeMetaParam:
 	"""
 	Creates a DataStoreChangeMetaParam with default parameters, which
 	changes nothing. Any field can be overridden with a keyword argument
 	"""
 
-	param = datastore.DataStoreChangeMetaParam()
+	param = DataStoreChangeMetaParam()
 	param.data_id = constants.INVALID_DATAID
 	param.modifies_flag = constants.ModificationFlag.MODIFICATION_FLAG_NONE
 	param.name = ""

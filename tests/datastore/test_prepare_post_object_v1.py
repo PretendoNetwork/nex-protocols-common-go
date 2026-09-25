@@ -31,13 +31,6 @@ UNDEFINED_FLAGS = [
 	pytest.param(helpers.UINT32_MAX, id="every-bit"),
 ]
 
-PERMISSIONS = [
-	pytest.param(constants.Permission.PERMISSION_PUBLIC, [], id="public"),
-	pytest.param(constants.Permission.PERMISSION_FRIEND, [], id="friend"),
-	pytest.param(constants.Permission.PERMISSION_SPECIFIED, [nex.STRANGER], id="specified"),
-	pytest.param(constants.Permission.PERMISSION_PRIVATE, [], id="private"),
-	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.FRIEND_B], id="specified-friend"),
-]
 
 RATING_LOCK_TYPES = [
 	pytest.param(constants.RatingLockType.RATING_LOCK_NONE, id="none"),
@@ -324,7 +317,7 @@ async def test_the_meta_binary_is_kept_on_the_object(unique_data_type):
 
 # * permission
 
-@pytest.mark.parametrize("permission, recipients", PERMISSIONS)
+@pytest.mark.parametrize("permission, recipients", helpers.PERMISSIONS)
 async def test_an_access_permission_is_kept_on_the_object(unique_data_type, permission, recipients):
 	"""
 	Every access permission is allowed, and both it and its recipients
@@ -364,7 +357,7 @@ async def test_how_many_access_recipients_are_allowed(unique_data_type, count):
 
 # * delete_permission
 
-@pytest.mark.parametrize("permission, recipients", PERMISSIONS)
+@pytest.mark.parametrize("permission, recipients", helpers.PERMISSIONS)
 async def test_a_delete_permission_is_kept_on_the_object(unique_data_type, permission, recipients):
 	"""
 	The delete permission is stored the same way the access one is,

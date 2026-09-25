@@ -573,8 +573,8 @@ class ComparisonFlag(IntFlag):
 	COMPARISON_FLAG_STATUS = 0x100
 	"""Compare statuses"""
 
-	COMPARISON_FLAG_ALL = 0x200
-	"""Compare everything"""
+	COMPARISON_FLAG_ALL = 0xFFFF
+	"""Compare everything. The same as setting every other flag"""
 
 class ResultFlag(IntFlag):
 	"""
@@ -593,6 +593,9 @@ class ResultFlag(IntFlag):
 
 	RESULT_FLAG_PERMITTED_IDS = 0x8
 	"""Return the recipient ID lists from both permissions"""
+
+	RESULT_FLAG_ALL = RESULT_FLAG_TAGS | RESULT_FLAG_RATINGS | RESULT_FLAG_METABINARY | RESULT_FLAG_PERMITTED_IDS
+	"""Not a real constant, only defined here for testing purposes"""
 
 class RatingFlag(IntFlag):
 	"""Determines how to handle how user ratings are applied to objects"""
