@@ -24,10 +24,6 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithGatheringIDPostpone(err e
 
 	commonProtocol.manager.Mutex.Lock()
 
-	// * A client may disconnect from a session without leaving reliably,
-	// * so let's make sure the client is removed from the session
-	database.EndMatchmakeSessionsParticipation(commonProtocol.manager, connection)
-
 	resultSessions, nexError := database.FindMatchmakeSessionsByID(commonProtocol.manager, endpoint, lstGid)
 	if nexError != nil {
 		commonProtocol.manager.Mutex.Unlock()

@@ -95,6 +95,10 @@ func FindMatchmakeSessionsByID(manager *common_globals.MatchmakingManager, endpo
 			&resultMatchmakeSession.CodeWord,
 			&systemPassword,
 		)
+		if err != nil {
+			common_globals.Logger.Critical(err.Error())
+			continue
+		}
 
 		resultMatchmakeSession.StartedTime = resultMatchmakeSession.StartedTime.FromTimestamp(startedTime)
 
