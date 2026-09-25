@@ -6,8 +6,8 @@ import (
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 )
 
-// UpdateGameAttributes updates all attributes on a matchmake session
-func UpdateGameAttributes(manager *common_globals.MatchmakingManager, gatheringID uint32, attributes types.List[types.UInt32]) *nex.Error {
+// UpdateMatchmakeSessionsAttributes updates all attributes on a matchmake session
+func UpdateMatchmakeSessionsAttributes(manager *common_globals.MatchmakingManager, gatheringID uint32, attributes types.List[types.UInt32]) *nex.Error {
 	attribs := make([]uint32, len(attributes))
 	for i, value := range attributes {
 		attribs[i] = uint32(value)

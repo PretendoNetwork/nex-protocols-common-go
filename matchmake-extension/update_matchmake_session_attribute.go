@@ -35,7 +35,7 @@ func (commonProtocol *CommonProtocol) updateMatchmakeSessionAttribute(err error,
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	nexError = database.UpdateGameAttributes(commonProtocol.manager, uint32(gid), attribs)
+	nexError = database.UpdateMatchmakeSessionsAttributes(commonProtocol.manager, uint32(gid), attribs)
 	if nexError != nil {
 		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
