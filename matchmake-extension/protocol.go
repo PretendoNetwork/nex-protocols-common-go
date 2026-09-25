@@ -93,18 +93,6 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.Matchma
 		return
 	}
 
-	_, err = manager.Database.Exec(`CREATE TABLE IF NOT EXISTS matchmaking.community_participations (
-		id bigserial PRIMARY KEY,
-		user_pid numeric(20),
-		gathering_id bigint,
-		participation_count bigint,
-		UNIQUE (user_pid, gathering_id)
-	)`)
-	if err != nil {
-		common_globals.Logger.Error(err.Error())
-		return
-	}
-
 	_, err = manager.Database.Exec(`CREATE TABLE IF NOT EXISTS matchmaking.notifications (
 		id bigserial PRIMARY KEY,
 		source_pid numeric(20),

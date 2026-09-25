@@ -16,14 +16,12 @@ func LogParticipateCommunity(db *sql.DB, sourcePID types.PID, communityGID uint3
 		date,
 		source_pid,
 		community_gid,
-		gathering_id,
-		participation_count
+		gathering_id
 	) VALUES (
 		$1,
 		$2,
 		$3,
-		$4,
-		$5
+		$4
 	)`, eventTime, uint64(sourcePID), communityGID, gatheringID, participationCount)
 	if err != nil {
 		return nex.NewError(nex.ResultCodes.Core.Unknown, err.Error())
