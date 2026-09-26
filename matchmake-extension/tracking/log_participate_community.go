@@ -9,7 +9,7 @@ import (
 )
 
 // LogParticipateCommunity logs a persistent gathering participation event on the given database
-func LogParticipateCommunity(db *sql.DB, sourcePID types.PID, communityGID uint32, gatheringID uint32, participationCount uint32) *nex.Error {
+func LogParticipateCommunity(db *sql.DB, sourcePID types.PID, communityGID uint32, gatheringID uint32) *nex.Error {
 	eventTime := time.Now().UTC()
 
 	_, err := db.Exec(`INSERT INTO tracking.participate_community (
@@ -22,7 +22,7 @@ func LogParticipateCommunity(db *sql.DB, sourcePID types.PID, communityGID uint3
 		$2,
 		$3,
 		$4
-	)`, eventTime, uint64(sourcePID), communityGID, gatheringID, participationCount)
+	)`, eventTime, uint64(sourcePID), communityGID, gatheringID)
 	if err != nil {
 		return nex.NewError(nex.ResultCodes.Core.Unknown, err.Error())
 	}
