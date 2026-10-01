@@ -9,7 +9,7 @@ import (
 	matchmake_extension "github.com/PretendoNetwork/nex-protocols-go/v2/matchmake-extension"
 )
 
-func (commonProtocol *CommonProtocol) autoMatchmakeWithGatheringIDPostpone(err error, packet nex.PacketInterface, callID uint32, lstGid types.List[types.UInt32], anyGathering match_making_types.GatheringHolder, strMessage types.String) (*nex.RMCMessage, *nex.Error) {
+func (commonProtocol *CommonProtocol) autoMatchmakeWithGatheringIDPostpone(err error, packet nex.PacketInterface, callID uint32, lstGID types.List[types.UInt32], anyGathering match_making_types.GatheringHolder, strMessage types.String) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, err.Error())
@@ -24,7 +24,22 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithGatheringIDPostpone(err e
 
 	commonProtocol.manager.Mutex.Lock()
 
-	resultSessions, nexError := database.FindMatchmakeSessionsByID(commonProtocol.manager, endpoint, lstGid)
+	var matchmakeSession match_making_types.MatchmakeSession
+
+	if anyGathering.Object.GatheringObjectID().Equals(types.NewString("MatchmakeSession")) {
+		matchmakeSession = anyGathering.Object.(match_making_types.MatchmakeSession)
+	} else {
+		common_globals.Logger.Critical("Non-MatchmakeSession DataType?!")
+		commonProtocol.manager.Mutex.Unlock()
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
+	}
+
+	if !common_globals.CheckValidMatchmakeSession(matchmakeSession) {
+		commonProtocol.manager.Mutex.Unlock()
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
+	}
+
+	resultSessions, nexError := database.FindMatchmakeSessionsByID(commonProtocol.manager, endpoint, lstGID)
 	if nexError != nil {
 		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
@@ -68,7 +83,7 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithGatheringIDPostpone(err e
 	rmcResponse.CallID = callID
 
 	if commonProtocol.OnAfterAutoMatchmakeWithParamPostpone != nil {
-		go commonProtocol.OnAfterAutoMatchmakeWithGatheringIDPostpone(packet, lstGid)
+		go commonProtocol.OnAfterAutoMatchmakeWithGatheringIDPostpone(packet, lstGID)
 	}
 
 	return rmcResponse, nil
