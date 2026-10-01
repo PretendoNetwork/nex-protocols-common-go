@@ -47,7 +47,7 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithGatheringIDPostpone(err e
 
 	var resultSession match_making_types.MatchmakeSession
 	if len(resultSessions) == 0 {
-		resultSession = anyGathering.Copy().(match_making_types.MatchmakeSession)
+		resultSession = anyGathering.Object.Copy().(match_making_types.MatchmakeSession)
 		nexError = database.CreateMatchmakeSession(commonProtocol.manager, connection, &resultSession)
 		if nexError != nil {
 			common_globals.Logger.Error(nexError.Error())
