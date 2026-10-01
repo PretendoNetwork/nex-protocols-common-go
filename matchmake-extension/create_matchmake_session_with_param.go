@@ -19,7 +19,7 @@ func (commonProtocol *CommonProtocol) createMatchmakeSessionWithParam(err error,
 	connection := packet.Sender().(*nex.PRUDPConnection)
 	endpoint := connection.Endpoint().(*nex.PRUDPEndPoint)
 
-	if !common_globals.CheckValidMatchmakeSession(createMatchmakeSessionParam.SourceMatchmakeSession) {
+	if !commonProtocol.manager.CheckValidMatchmakeSession(createMatchmakeSessionParam.SourceMatchmakeSession) {
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 

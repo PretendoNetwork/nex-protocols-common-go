@@ -6,7 +6,6 @@ import (
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/constants"
 	"github.com/PretendoNetwork/nex-go/v2/types"
-	match_making_constants "github.com/PretendoNetwork/nex-protocols-go/v2/match-making/constants"
 	match_making_types "github.com/PretendoNetwork/nex-protocols-go/v2/match-making/types"
 	message_delivery "github.com/PretendoNetwork/nex-protocols-go/v2/message-delivery"
 	messaging_constants "github.com/PretendoNetwork/nex-protocols-go/v2/messaging/constants"
@@ -40,91 +39,6 @@ func RemoveDuplicates[T comparable](sliceList []T) []T {
 // ResizeString resizes the string with the specified length in characters (runes)
 func ResizeString(str string, length int) string {
 	return string([]rune(str)[:length])
-}
-
-// CheckValidGathering checks if a Gathering is valid
-func CheckValidGathering(gathering match_making_types.Gathering) bool {
-	if len(gathering.Description) > 256 {
-		return false
-	}
-
-	return true
-}
-
-// CheckValidMatchmakeSession checks if a MatchmakeSession is valid
-func CheckValidMatchmakeSession(matchmakeSession match_making_types.MatchmakeSession) bool {
-	if !CheckValidGathering(matchmakeSession.Gathering) {
-		return false
-	}
-
-	if len(matchmakeSession.Attributes) != 6 {
-		return false
-	}
-
-	if matchmakeSession.ProgressScore > 100 {
-		return false
-	}
-
-	if len(matchmakeSession.UserPassword) > 32 {
-		return false
-	}
-
-	// * Except for UserPassword, all strings must have a length lower than 256
-	if len(matchmakeSession.CodeWord) > 256 {
-		return false
-	}
-
-	// * All buffers must have a length lower than 512
-	if len(matchmakeSession.ApplicationBuffer) > 512 {
-		return false
-	}
-
-	if len(matchmakeSession.SessionKey) > 512 {
-		return false
-	}
-
-	return true
-}
-
-// CheckValidPersistentGathering checks if a PersistentGathering is valid
-func CheckValidPersistentGathering(persistentGathering match_making_types.PersistentGathering) bool {
-	if !CheckValidGathering(persistentGathering.Gathering) {
-		return false
-	}
-
-	// * Only allow normal and password-protected community types
-	if uint32(persistentGathering.CommunityType) != uint32(match_making_constants.PersistentGatheringTypeOpen) && uint32(persistentGathering.CommunityType) != uint32(match_making_constants.PersistentGatheringTypePasswordLocked) {
-		return false
-	}
-
-	// * The UserPassword from a MatchmakeSession can be up to 32 characters, assuming the same here
-	//
-	// TODO - IS this actually the case?
-	if len(persistentGathering.Password) > 32 {
-		return false
-	}
-
-	if len(persistentGathering.Attribs) != 6 {
-		return false
-	}
-
-	// * All buffers must have a length lower than 512
-	if len(persistentGathering.ApplicationBuffer) > 512 {
-		return false
-	}
-
-	// * Check that the participation dates are within bounds of the current date
-	currentTime := types.NewDateTime(0).Now()
-
-	if persistentGathering.ParticipationStartDate != 0 && persistentGathering.ParticipationStartDate > currentTime {
-		return false
-	}
-
-	if persistentGathering.ParticipationEndDate != 0 && persistentGathering.ParticipationEndDate < currentTime {
-		return false
-	}
-
-	return true
 }
 
 // CanJoinMatchmakeSession checks if a PID is allowed to join a matchmake session
