@@ -308,6 +308,28 @@ async def test_replacing_an_object_can_keep_the_old_one(unique_data_type, post):
 	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, SLOT_0)).data_id == second
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=first)).data_id == first
 
+@pytest.mark.parametrize("delete_last_object, notified", [
+	pytest.param(True, [], id="deleting-the-old-object"),
+	pytest.param(False, [nex.STRANGER], id="keeping-the-old-object")
+])
+async def test_replacing_an_object_and_its_notifications(unique_data_type, delete_last_object, notified):
+	"""
+	The notifications for the object which was in the slot are deleted
+	along with it, and kept when it is kept
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_SPECIFIED, recipients=[nex.STRANGER])
+	old = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, permission=permission, flag=constants.DataFlag.DATA_FLAG_USE_NOTIFICATION_ON_POST)
+	new = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type)
+
+	await perpetuate(nex.FRIEND_A, SLOT_0, old)
+
+	assert await helpers.notified(old) == [nex.STRANGER]
+
+	await perpetuate(nex.FRIEND_A, SLOT_0, new, delete_last_object=delete_last_object)
+
+	assert await helpers.notified(old) == notified
+
 # * The owner and status of the object
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)

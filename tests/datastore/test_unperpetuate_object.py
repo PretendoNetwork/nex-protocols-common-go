@@ -181,6 +181,25 @@ async def test_keeping_the_object_does_not_refer_to_it(unique_data_type, post):
 	assert after.referred_count == before.referred_count
 	assert after.referred_time.value() == before.referred_time.value()
 
+@pytest.mark.parametrize("delete_last_object, notified", [
+	pytest.param(True, [], id="deleting-the-object"),
+	pytest.param(False, [nex.STRANGER], id="keeping-the-object")
+])
+async def test_emptying_a_slot_and_the_notifications(unique_data_type, delete_last_object, notified):
+	"""
+	The notifications for the object in the slot are deleted along with
+	it, and kept when it is kept
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_SPECIFIED, recipients=[nex.STRANGER])
+	data_id = await helpers.post_persisted(helpers.post_meta_binary, nex.FRIEND_A, SLOT_0, data_type=unique_data_type, permission=permission, flag=constants.DataFlag.DATA_FLAG_USE_NOTIFICATION_ON_POST)
+
+	assert await helpers.notified(data_id) == [nex.STRANGER]
+
+	await unperpetuate(nex.FRIEND_A, SLOT_0, delete_last_object=delete_last_object)
+
+	assert await helpers.notified(data_id) == notified
+
 # * The object status
 
 @pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)

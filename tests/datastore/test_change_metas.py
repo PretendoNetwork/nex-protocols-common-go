@@ -415,6 +415,22 @@ async def test_recipients_on_a_permission_which_does_not_use_them(unique_data_ty
 
 	assert await change_error(nex.FRIEND_A, data_id=data_id, modifies_flag=flag, **{field: bad}) == "DataStore::InvalidArgument"
 
+async def test_changing_the_access_permission_keeps_the_notifications(unique_data_type):
+	"""
+	A notification is not taken back from a recipient who loses access,
+	and nobody who gains access is notified
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_SPECIFIED, recipients=[nex.STRANGER])
+	data_id = await post_object(helpers.post_meta_binary, nex.FRIEND_A, data_type=unique_data_type, permission=permission, flag=constants.DataFlag.DATA_FLAG_USE_NOTIFICATION_ON_POST)
+	access = helpers.permission(permission=constants.Permission.PERMISSION_SPECIFIED, recipients=[nex.FRIEND_B])
+
+	assert await helpers.notified(data_id) == [nex.STRANGER]
+
+	await change(nex.FRIEND_A, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_ACCESS_PERMISSION, permission=access)
+
+	assert await helpers.notified(data_id) == [nex.STRANGER]
+
 # * period
 
 @pytest.mark.parametrize("period", [
@@ -818,6 +834,21 @@ async def test_anybody_can_change_the_status_of_an_object_which_allows_it(unique
 	await change(nex.STRANGER, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_STATUS, status=constants.DataStatus.DATA_STATUS_REJECTED)
 
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).status == constants.DataStatus.DATA_STATUS_REJECTED
+
+async def test_rejecting_the_object_keeps_the_notifications(unique_data_type):
+	"""
+	A rejected object is hidden rather than deleted, so the notifications
+	for it are kept
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_SPECIFIED, recipients=[nex.STRANGER])
+	data_id = await post_object(helpers.post_meta_binary, nex.FRIEND_A, data_type=unique_data_type, permission=permission, flag=constants.DataFlag.DATA_FLAG_USE_NOTIFICATION_ON_POST)
+
+	assert await helpers.notified(data_id) == [nex.STRANGER]
+
+	await change(nex.FRIEND_A, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_STATUS, status=constants.DataStatus.DATA_STATUS_REJECTED)
+
+	assert await helpers.notified(data_id) == [nex.STRANGER]
 
 # * compare_param
 # *

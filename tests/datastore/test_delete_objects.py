@@ -241,6 +241,31 @@ async def test_transactional_the_same_object_twice(unique_data_type, post):
 	assert await delete_error(nex.FRIEND_A, [{"data_id": data_id}, {"data_id": data_id}], True) == "DataStore::NotFound"
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).data_id == data_id
 
+async def test_transactional_removes_the_notifications_for_every_object(unique_data_type):
+	"""
+	Recipients are no longer notified of any of the deleted objects
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_SPECIFIED, recipients=[nex.STRANGER])
+	first = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, permission=permission, flag=constants.DataFlag.DATA_FLAG_USE_NOTIFICATION_ON_POST)
+	second = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, permission=permission, flag=constants.DataFlag.DATA_FLAG_USE_NOTIFICATION_ON_POST)
+
+	await delete(nex.FRIEND_A, [{"data_id": first}, {"data_id": second}], True)
+
+	assert await helpers.notified(first) == []
+	assert await helpers.notified(second) == []
+
+async def test_transactional_keeps_the_notifications_when_one_fails(unique_data_type):
+	"""
+	Rolling back the request brings the notifications back with the object
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_SPECIFIED, recipients=[nex.STRANGER])
+	data_id = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, permission=permission, flag=constants.DataFlag.DATA_FLAG_USE_NOTIFICATION_ON_POST)
+
+	assert await delete_error(nex.FRIEND_A, [{"data_id": data_id}, {"data_id": helpers.UNKNOWN_DATA_ID}], True) == "DataStore::NotFound"
+	assert await helpers.notified(data_id) == [nex.STRANGER]
+
 # * transactional, set to false
 # *
 # * Without the transactional flag each object is dealt with on its own,
@@ -302,6 +327,21 @@ async def test_deleting_twice(unique_data_type, post):
 
 	assert helpers.result_names(await delete(nex.FRIEND_A, [{"data_id": data_id}], False)) == [None]
 	assert helpers.result_names(await delete(nex.FRIEND_A, [{"data_id": data_id}], False)) == ["DataStore::NotFound"]
+
+async def test_removes_the_notifications_for_what_it_deletes(unique_data_type):
+	"""
+	The objects which are deleted lose their notifications, even when
+	another entry in the request fails
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_SPECIFIED, recipients=[nex.STRANGER])
+	data_id = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, permission=permission, flag=constants.DataFlag.DATA_FLAG_USE_NOTIFICATION_ON_POST)
+
+	assert await helpers.notified(data_id) == [nex.STRANGER]
+
+	await delete(nex.FRIEND_A, [{"data_id": data_id}, {"data_id": helpers.UNKNOWN_DATA_ID}], False)
+
+	assert await helpers.notified(data_id) == []
 
 # * Deleting an object is gated by the objects delete permission, which
 # * is separate from the access permission used to read it

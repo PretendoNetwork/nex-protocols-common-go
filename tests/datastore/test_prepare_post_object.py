@@ -796,6 +796,25 @@ async def test_a_persistence_slot_which_does_not_exist(unique_data_type):
 
 	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, persistence_init_param=persistence_init_param) == "DataStore::InvalidArgument"
 
+@pytest.mark.parametrize("delete_last_object, notified", [
+	pytest.param(True, [], id="deleting-the-old-object"),
+	pytest.param(False, [nex.STRANGER], id="keeping-the-old-object")
+])
+async def test_replacing_an_object_and_its_notifications(unique_data_type, delete_last_object, notified):
+	"""
+	The notifications for the object which was in the slot are deleted
+	along with it, and kept when it is kept
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_SPECIFIED, recipients=[nex.STRANGER])
+	old = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, permission=permission, flag=constants.DataFlag.DATA_FLAG_USE_NOTIFICATION_ON_POST, persistence_init_param=helpers.persistence_init_param(persistence_id=0))
+
+	assert await helpers.notified(old) == [nex.STRANGER]
+
+	await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, persistence_init_param=helpers.persistence_init_param(persistence_id=0, delete_last_object=delete_last_object))
+
+	assert await helpers.notified(old) == notified
+
 # * extra_data
 # *
 # * Disclaimer: these tests were not ran against a live server, as at the time

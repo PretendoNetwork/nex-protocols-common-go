@@ -63,6 +63,20 @@ async def test_deleting_a_persisted_object_empties_the_slot(unique_data_type, po
 
 	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, SLOT) == "DataStore::NotFound"
 
+async def test_deleting_removes_the_notifications_for_the_object(unique_data_type):
+	"""
+	Recipients are no longer notified of an object which is gone
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_SPECIFIED, recipients=[nex.STRANGER])
+	data_id = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, permission=permission, flag=constants.DataFlag.DATA_FLAG_USE_NOTIFICATION_ON_POST)
+
+	assert await helpers.notified(data_id) == [nex.STRANGER]
+
+	await helpers.delete_object(nex.FRIEND_A, data_id=data_id)
+
+	assert await helpers.notified(data_id) == []
+
 # * data_id
 
 @pytest.mark.parametrize("data_id", [
@@ -233,6 +247,17 @@ async def test_the_access_permission_is_not_used(unique_data_type, post):
 	assert await helpers.get_meta_error(nex.STRANGER, data_id=data_id) == "DataStore::PermissionDenied"
 
 	await helpers.delete_object(nex.STRANGER, data_id=data_id)
+
+async def test_a_refused_delete_keeps_the_notifications(unique_data_type):
+	"""
+	The object is still there, so the notifications for it are too
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_SPECIFIED, recipients=[nex.STRANGER])
+	data_id = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, permission=permission, flag=constants.DataFlag.DATA_FLAG_USE_NOTIFICATION_ON_POST)
+
+	assert await delete_error(nex.STRANGER, data_id=data_id) == "DataStore::PermissionDenied"
+	assert await helpers.notified(data_id) == [nex.STRANGER]
 
 # * Objects which are in an unusual state
 
