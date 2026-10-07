@@ -144,11 +144,11 @@ async def test_nothing_is_completed_when_an_object_belongs_to_someone_else(uniqu
 	Someone elses object in the list leaves the callers own objects alone
 	"""
 
-	mine = await helpers.prepare_post_object(nex.STRANGER, data_type=unique_data_type)
-	theirs = await helpers.prepare_post_object(nex.FRIEND_A, data_type=unique_data_type)
+	mine = await helpers.prepare_post_object(nex.FRIEND_A, data_type=unique_data_type)
+	theirs = await helpers.prepare_post_object(nex.STRANGER, data_type=unique_data_type)
 
-	assert await complete_error(nex.STRANGER, [mine, theirs]) == "DataStore::PermissionDenied"
-	assert await helpers.get_meta_error(nex.STRANGER, data_id=mine) == "DataStore::NotFound"
+	assert await complete_error(nex.FRIEND_A, [mine, theirs]) == "DataStore::PermissionDenied"
+	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=mine) == "DataStore::NotFound"
 
 async def test_the_same_object_twice_in_one_call(unique_data_type):
 	"""
