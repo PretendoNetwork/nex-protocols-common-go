@@ -106,6 +106,18 @@ async def test_every_object_gets_its_own_data_id(unique_data_type):
 
 	assert first.data_id != second.data_id
 
+async def test_a_new_object_has_never_been_referred_to(unique_data_type):
+	"""
+	Posting an object is not a reference, so it starts with no
+	references, and a referred time of when it was created
+	"""
+
+	data_id = await helpers.post_object_v1(nex.FRIEND_A, data_type=unique_data_type)
+	meta_info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	assert meta_info.referred_count == 0
+	assert meta_info.referred_time.value() == meta_info.create_time.value()
+
 # * size
 
 @pytest.mark.parametrize("size", [
