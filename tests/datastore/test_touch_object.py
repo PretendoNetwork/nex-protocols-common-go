@@ -65,6 +65,43 @@ async def test_the_reference_count_stops_at_its_limit(unique_data_type, post):
 
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).referred_count == helpers.UINT32_MAX
 
+@pytest.mark.parametrize("touches, referred_count", [
+	pytest.param(0, 10, id="raised"),
+	pytest.param(3, 1, id="lowered")
+])
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_references_carry_on_from_a_changed_referred_count(unique_data_type, touches, referred_count, post):
+	"""
+	The next reference counts up from the value which was set, not from
+	what the count was before
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
+
+	for _ in range(touches):
+		await helpers.touch_object(nex.FRIEND_A, data_id=data_id)
+
+	await helpers.change_meta(nex.FRIEND_A, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_REFERRED_COUNT, referred_count=referred_count)
+	await helpers.touch_object(nex.FRIEND_A, data_id=data_id)
+
+	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).referred_count == referred_count + 1
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_a_failed_touch_does_not_refer_to_the_object(unique_data_type, post):
+	"""
+	Being refused the object does not count as having referred to it
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_PRIVATE)
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, permission=permission)
+	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	assert await touch_error(nex.STRANGER, data_id=data_id) == "DataStore::PermissionDenied"
+
+	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	assert after.referred_count == before.referred_count
+
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_updates_the_reference_time_and_validity_period(unique_data_type, post):
 	"""
