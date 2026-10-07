@@ -6,8 +6,7 @@ go 1.25.0
 replace github.com/PretendoNetwork/nex-protocols-common-go/v2 => ../../
 
 require (
-	// TODO - Use a tagged release once the numeric() scanning fixes are released
-	github.com/PretendoNetwork/nex-go/v2 v2.3.2-0.20260810050017-00a6f97b4e9f
+	github.com/PretendoNetwork/nex-go/v2 v2.3.2
 	github.com/PretendoNetwork/nex-protocols-common-go/v2 v2.6.1
 	// TODO - Use a tagged release once the ComparisonFlag size fix is released
 	github.com/PretendoNetwork/nex-protocols-go/v2 v2.3.8-0.20260916230930-75ef35cf2e37
@@ -27,7 +26,7 @@ require (
 	github.com/klauspost/compress v1.19.1 // indirect
 	github.com/klauspost/cpuid/v2 v2.4.0 // indirect
 	github.com/klauspost/crc32 v1.3.0 // indirect
-	github.com/lxzan/gws v1.10.0 // indirect
+	github.com/lxzan/gws v1.10.1 // indirect
 	github.com/mattn/go-colorable v0.1.15 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/minio/crc64nvme v1.1.1 // indirect
@@ -47,7 +46,7 @@ require (
 	github.com/zeebo/xxh3 v1.1.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/crypto v0.54.0 // indirect
-	golang.org/x/exp v0.0.0-20260718201538-764159d718ef // indirect
+	golang.org/x/exp v0.0.0-20260727155853-b88d891fe743 // indirect
 	golang.org/x/mod v0.38.0 // indirect
 	golang.org/x/net v0.57.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
