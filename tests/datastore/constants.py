@@ -260,7 +260,7 @@ class SearchTarget(IntEnum):
 	"""Objects owned by the friends of the current user"""
 
 	SEARCH_TARGET_ANYBODY_EXCLUDE_SPECIFIED = 2
-	"""Exclude objects owned by the users specified in the search paramaters"""
+	"""Exclude objects owned by the users specified in the search parameters"""
 
 class SearchSortColumn(IntEnum):
 	"""Determines the database column to sort search results by"""
@@ -461,7 +461,7 @@ class DataFlag(IntFlag):
 	"""The object needs to be reviewed before it becomes available. See `DataStatus`"""
 
 	DATA_FLAG_PERIOD_FROM_LAST_REFERRED = 0x02
-	"""The object can have it's validity period extended when referenced"""
+	"""The object can have its validity period extended when referenced"""
 
 	DATA_FLAG_USE_READ_LOCK = 0x04
 	"""Enables object read locking. See the object lock ID"""
@@ -515,7 +515,10 @@ class ModificationFlag(IntFlag):
 	"""The object update permission (also seen as "delete permission") has been updated"""
 
 	MODIFICATION_FLAG_PERIOD = 0x008
-	"""The object validity period has been updated"""
+	"""
+	The object period has been updated. The object then expires this number of
+	days after it was last updated, rather than after the time of the call
+	"""
 
 	MODIFICATION_FLAG_METABINARY = 0x010
 	"""The object MetaBinary has been updated"""
@@ -524,7 +527,11 @@ class ModificationFlag(IntFlag):
 	"""The object tags have been updated"""
 
 	MODIFICATION_FLAG_UPDATED_TIME = 0x040
-	"""The object modified time has been updated"""
+	"""
+	Forces the server to update the objects "updated time". This also extends
+	the objects validity period by either the current period, or the new
+	period if `MODIFICATION_FLAG_PERIOD` is also set
+	"""
 
 	MODIFICATION_FLAG_DATA_TYPE = 0x080
 	"""The object data type has been updated"""
