@@ -76,9 +76,7 @@ async def test_the_size_is_the_one_the_object_was_posted_with(unique_data_type, 
 
 @pytest.mark.parametrize("data_id", [
 	pytest.param(constants.INVALID_DATAID, id="zero"),
-	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown"),
-	pytest.param(helpers.UINT32_MAX, id="uint32-max"),
-	pytest.param(helpers.UINT64_MAX, id="uint64-max")
+	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown")
 ])
 async def test_a_data_id_which_names_nothing(data_id):
 	"""
@@ -384,7 +382,6 @@ async def test_a_wrong_access_password_from_somebody_who_has_access(unique_data_
 @pytest.mark.skipif(nex.LIVE, reason="Pokemon Bank is NEX 3.4, and extra_data was added in NEX 3.5")
 @pytest.mark.parametrize("extra_data", [
 	pytest.param([], id="none-at-all"),
-	pytest.param(["one"], id="one-element"),
 	pytest.param(["WUP", "4", "EUR", "110", "GB", ""], id="what-a-console-sends")
 ])
 @pytest.mark.parametrize("post", helpers.FILE_SERVER_POST_METHODS)

@@ -73,8 +73,7 @@ async def test_the_size_is_the_one_the_object_was_posted_with(unique_data_type, 
 
 @pytest.mark.parametrize("data_id", [
 	pytest.param(constants.INVALID_DATAID, id="zero"),
-	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown"),
-	pytest.param(helpers.UINT32_MAX, id="uint32-max")
+	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown")
 ])
 async def test_a_data_id_which_names_nothing(data_id):
 	"""

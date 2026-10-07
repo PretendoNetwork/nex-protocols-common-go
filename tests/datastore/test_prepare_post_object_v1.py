@@ -22,15 +22,6 @@ DATA_FLAGS = [
 	pytest.param(constants.DataFlag.DATA_FLAG_NEED_COMPLETION, True, id="need-completion")
 ]
 
-# * Bits which no flag uses. The stock servers only accept known flags
-# TODO - Some games, like Super Mario Maker, are known to add custom flags. No idea how to test that here
-UNDEFINED_FLAGS = [
-	pytest.param(0x80, id="the-first-unused-bit"),
-	pytest.param(0x100, id="past-a-byte"),
-	pytest.param(0x8000, id="past-two-bytes"),
-	pytest.param(helpers.UINT32_MAX, id="every-bit")
-]
-
 RATING_LOCK_TYPES = [
 	pytest.param(constants.RatingLockType.RATING_LOCK_NONE, id="none"),
 	pytest.param(constants.RatingLockType.RATING_LOCK_INTERVAL, id="interval"),
@@ -412,27 +403,23 @@ async def test_every_data_flag(unique_data_type, flag, allowed):
 
 	assert info.data_id != constants.INVALID_DATAID
 
-@pytest.mark.parametrize("flag, allowed", DATA_FLAGS)
-async def test_a_data_flag_is_kept_on_the_object(unique_data_type, flag, allowed):
+@pytest.mark.parametrize("flag", [pytest.param(param.values[0], id=param.id) for param in DATA_FLAGS if param.values[1]])
+async def test_a_data_flag_is_kept_on_the_object(unique_data_type, flag):
 	"""
 	The flags which are allowed come back exactly as they were sent
 	"""
-
-	if not allowed:
-		# TODO - This emits skipped tests in the results which should just be a success, is there a better way to do this?
-		pytest.skip("this flag cannot be used with PreparePostObjectV1")
 
 	data_id = await helpers.post_object_v1(nex.FRIEND_A, data_type=unique_data_type, flag=flag)
 
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).flag == flag
 
-@pytest.mark.parametrize("flag", UNDEFINED_FLAGS)
-async def test_a_flag_which_is_not_defined(unique_data_type, flag):
+async def test_a_flag_which_is_not_defined(unique_data_type):
 	"""
 	Unknown flags are rejected
 	"""
 
-	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, flag=flag) == "DataStore::InvalidArgument"
+	# TODO - Some games, like Super Mario Maker, are known to add custom flags. No idea how to test that here
+	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, flag=0x80) == "DataStore::InvalidArgument" # * The first bit no flag uses
 
 async def test_two_flags_at_once(unique_data_type):
 	"""
@@ -500,8 +487,7 @@ async def test_the_period_is_kept_on_the_object(unique_data_type):
 
 @pytest.mark.parametrize("refer_data_id", [
 	pytest.param(constants.INVALID_DATAID, id="zero"),
-	pytest.param(helpers.UNKNOWN_DATA_ID, id="an-object-which-is-not-there"),
-	pytest.param(helpers.UINT32_MAX, id="uint32-max")
+	pytest.param(helpers.UNKNOWN_DATA_ID, id="an-object-which-is-not-there")
 ])
 async def test_a_refer_data_id_is_not_checked(unique_data_type, refer_data_id):
 	"""

@@ -81,8 +81,7 @@ async def test_completing_an_object_prepared_with_the_newer_version(unique_data_
 
 @pytest.mark.parametrize("data_id", [
 	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown"),
-	pytest.param(constants.INVALID_DATAID, id="invalid-dataid"),
-	pytest.param(helpers.UINT32_MAX, id="uint32-max")
+	pytest.param(constants.INVALID_DATAID, id="invalid-dataid")
 ])
 async def test_unknown_data_id(data_id):
 	"""

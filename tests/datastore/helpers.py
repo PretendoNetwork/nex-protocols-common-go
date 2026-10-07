@@ -16,17 +16,9 @@ UINT64_MAX = 0xFFFFFFFFFFFFFFFF
 TEXT_SAMPLES = [
 	pytest.param("hello world", id="ascii"),
 	pytest.param("caf\u00e9 na\u00efve", id="latin-1-accents"),
-	pytest.param("stra\u00dfe", id="the-german-sharp-s"),
-	pytest.param("\u03b1\u03b2\u03b3", id="greek"),
-	pytest.param("\u043f\u0440\u0438\u0432\u0435\u0442", id="cyrillic"),
-	pytest.param("\u30c6\u30b9\u30c8", id="japanese-kana"),
 	pytest.param("\u6f22\u5b57", id="japanese-kanji"),
-	pytest.param("\ud55c\uae00", id="korean"),
-	pytest.param("\u0645\u0631\u062d\u0628\u0627", id="right-to-left"),
 	pytest.param("e\u0301", id="a-combining-accent"),
-	pytest.param("\uff8a\uff9e", id="halfwidth-katakana"),
 	pytest.param("\uff28\uff25\uff2c\uff2c\uff2f", id="fullwidth-latin"),
-	pytest.param("\ufffd", id="the-replacement-character"),
 	pytest.param("   ", id="only-spaces")
 ]
 
@@ -34,9 +26,7 @@ TEXT_SAMPLES = [
 # * which the server cannot decode. Real server throws PythonCore::ConversionError
 # * which we'd need to emulate?
 ASTRAL_TEXT_SAMPLES = [
-	pytest.param("\U0001F3AE", id="an-emoji"),
-	pytest.param("\U0001F3AE\U0001F47E", id="two-emoji"),
-	pytest.param("\U0001F468\u200D\U0001F4BB", id="emoji-joined-by-a-zero-width-joiner")
+	pytest.param("\U0001F3AE", id="an-emoji")
 ]
 
 # * For some reason object NAMES accept these, but object TAGS

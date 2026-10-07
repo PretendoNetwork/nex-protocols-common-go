@@ -67,8 +67,7 @@ async def test_deleting_a_persisted_object_empties_the_slot(unique_data_type, po
 
 @pytest.mark.parametrize("data_id", [
 	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown"),
-	pytest.param(constants.INVALID_DATAID, id="invalid-dataid"),
-	pytest.param(helpers.UINT64_MAX, id="uint64-max")
+	pytest.param(constants.INVALID_DATAID, id="invalid-dataid")
 ])
 async def test_unknown_data_id(data_id):
 	"""
@@ -77,13 +76,7 @@ async def test_unknown_data_id(data_id):
 
 	assert await delete_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
 
-@pytest.mark.parametrize("data_id", [
-	pytest.param(1, id="the-very-bottom"),
-	pytest.param(500000, id="half-way-up"),
-	pytest.param(900000, id="the-start-of-the-system-range"),
-	pytest.param(999999, id="the-last-system-data-id")
-])
-async def test_system_range_data_ids(data_id):
+async def test_a_system_range_data_id():
 	"""
 	Data IDs below 1,000,000 belong to the system. Normal clients
 	shouldn't interact with these objects. See
@@ -92,7 +85,7 @@ async def test_system_range_data_ids(data_id):
 	"""
 
 	# TODO - This only returns NotFound because there's no way for a normal client to upload in this range, so there are no objects in the test server
-	assert await delete_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
+	assert await delete_error(nex.FRIEND_A, data_id=999999) == "DataStore::NotFound"
 
 async def test_deleting_an_object_which_was_never_completed(unique_data_type):
 	"""

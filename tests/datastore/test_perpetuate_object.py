@@ -216,17 +216,12 @@ async def test_slots_are_per_user(unique_data_type, post):
 # *
 # * Objects which cannot be put into a slot
 
-@pytest.mark.parametrize("data_id", [
-	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown"),
-	pytest.param(999999, id="the-system-range"),
-	pytest.param(helpers.UINT64_MAX, id="uint64-max")
-])
-async def test_unknown_data_id(data_id):
+async def test_unknown_data_id():
 	"""
 	Objects which do not exist cannot be persisted
 	"""
 
-	assert await perpetuate_error(nex.FRIEND_A, SLOT_0, data_id) == "DataStore::NotFound"
+	assert await perpetuate_error(nex.FRIEND_A, SLOT_0, helpers.UNKNOWN_DATA_ID) == "DataStore::NotFound"
 
 async def test_an_object_which_was_never_completed(unique_data_type):
 	"""

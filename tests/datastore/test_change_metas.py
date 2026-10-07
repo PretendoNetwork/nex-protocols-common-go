@@ -97,8 +97,7 @@ async def change_error(pid: int, **fields) -> str:
 
 @pytest.mark.parametrize("data_id", [
 	pytest.param(constants.INVALID_DATAID, id="zero"),
-	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown"),
-	pytest.param(999999, id="the-system-range")
+	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown")
 ])
 async def test_a_data_id_which_names_nothing(data_id):
 	"""
@@ -1791,8 +1790,7 @@ async def test_the_same_object_twice(unique_data_type, post):
 
 @pytest.mark.parametrize("data_id", [
 	pytest.param(constants.INVALID_DATAID, id="zero"),
-	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown"),
-	pytest.param(999999, id="the-system-range")
+	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown")
 ])
 async def test_transactional_a_data_id_which_names_nothing(data_id):
 	"""

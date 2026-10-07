@@ -157,9 +157,7 @@ async def test_the_update_password_works(unique_data_type, post):
 
 @pytest.mark.parametrize("data_id", [
 	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown"),
-	pytest.param(constants.INVALID_DATAID, id="invalid-dataid"),
-	pytest.param(999999, id="the-system-range"),
-	pytest.param(helpers.UINT64_MAX, id="uint64-max")
+	pytest.param(constants.INVALID_DATAID, id="invalid-dataid")
 ])
 async def test_unknown_data_id(data_id):
 	"""

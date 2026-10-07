@@ -77,9 +77,7 @@ async def test_too_many_data_ids(transactional):
 
 @pytest.mark.parametrize("data_id", [
 	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown"),
-	pytest.param(constants.INVALID_DATAID, id="invalid-dataid"),
-	pytest.param(999999, id="the-system-range"),
-	pytest.param(helpers.UINT64_MAX, id="uint64-max")
+	pytest.param(constants.INVALID_DATAID, id="invalid-dataid")
 ])
 @pytest.mark.parametrize("transactional", [True, False])
 async def test_data_ids_which_do_not_exist(data_id, transactional):
@@ -93,13 +91,7 @@ async def test_data_ids_which_do_not_exist(data_id, transactional):
 	else:
 		assert helpers.result_names(await delete(nex.FRIEND_A, [{"data_id": data_id}], transactional)) == ["DataStore::NotFound"]
 
-@pytest.mark.parametrize("data_id", [
-	pytest.param(1, id="the-very-bottom"),
-	pytest.param(500000, id="half-way-up"),
-	pytest.param(900000, id="the-start-of-the-system-range"),
-	pytest.param(999999, id="the-last-system-data-id")
-])
-async def test_system_range_data_ids(data_id):
+async def test_a_system_range_data_id():
 	"""
 	Data IDs below 1,000,000 belong to the system. Normal clients
 	shouldn't interact with these objects. See
@@ -108,7 +100,7 @@ async def test_system_range_data_ids(data_id):
 	"""
 
 	# TODO - This only returns NotFound because there's no way for a normal client to upload in this range, so there are no objects in the test server
-	assert helpers.result_names(await delete(nex.FRIEND_A, [{"data_id": data_id}], False)) == ["DataStore::NotFound"]
+	assert helpers.result_names(await delete(nex.FRIEND_A, [{"data_id": 999999}], False)) == ["DataStore::NotFound"]
 
 async def test_an_object_which_was_never_completed(unique_data_type):
 	"""

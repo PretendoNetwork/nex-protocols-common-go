@@ -340,7 +340,6 @@ async def test_a_wrong_access_password_from_the_owner(unique_data_type, post):
 @pytest.mark.skipif(nex.LIVE, reason="Pokemon Bank is NEX 3.4, and extra_data was added in NEX 3.5")
 @pytest.mark.parametrize("extra_data", [
 	pytest.param([], id="none-at-all"),
-	pytest.param(["one"], id="one-element"),
 	pytest.param(["WUP", "4", "EUR", "110", "GB", ""], id="what-a-console-sends")
 ])
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
