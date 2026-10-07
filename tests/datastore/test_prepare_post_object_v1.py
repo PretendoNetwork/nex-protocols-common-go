@@ -31,7 +31,6 @@ UNDEFINED_FLAGS = [
 	pytest.param(helpers.UINT32_MAX, id="every-bit")
 ]
 
-
 RATING_LOCK_TYPES = [
 	pytest.param(constants.RatingLockType.RATING_LOCK_NONE, id="none"),
 	pytest.param(constants.RatingLockType.RATING_LOCK_INTERVAL, id="interval"),
@@ -185,6 +184,8 @@ async def test_the_name_is_kept_on_the_object(unique_data_type):
 
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).name == "a name"
 
+# * name
+# *
 # * Object strings are UTF-8 on the wire but 16 bit characters on the server
 
 @pytest.mark.parametrize("text", helpers.TEXT_SAMPLES)

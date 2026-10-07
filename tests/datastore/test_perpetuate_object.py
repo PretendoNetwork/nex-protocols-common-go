@@ -129,17 +129,6 @@ async def test_an_object_with_no_slot_can_take_over_one(unique_data_type, post):
 
 	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, SLOT_1)).data_id == loose
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_an_object_under_review(unique_data_type, post):
-	"""
-	An object waiting to be reviewed can still be put into a slot
-	"""
-
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
-	await perpetuate(nex.FRIEND_A, SLOT_0, data_id)
-
-	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, SLOT_0)).data_id == data_id
-
 # * An object in a slot is exempt from expiry
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
@@ -191,38 +180,40 @@ async def test_the_object_let_out_of_a_slot_expires_again(unique_data_type, post
 	assert expire_time.value() != constants.PERMANENT_DATE_TIME
 	assert expire_time.value() > (await helpers.get_meta(nex.FRIEND_A, data_id=second)).create_time.value()
 
-# * Replacing whatever was in the slot already
+# * persistence_slot_id
+# *
+# * Slots which are not slots at all
+
+@pytest.mark.parametrize("slot", [
+	pytest.param(constants.NUM_PERSISTENCE_SLOT, id="one-past-the-last-slot"),
+	pytest.param(constants.INVALID_PERSISTENCE_SLOT_ID, id="invalid-slot")
+])
+async def test_invalid_slot(unique_data_type, slot):
+	"""
+	Only slots 0 to NUM_PERSISTENCE_SLOT - 1 can be used
+	"""
+
+	data_id = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type)
+
+	assert await perpetuate_error(nex.FRIEND_A, slot, data_id) == "DataStore::InvalidArgument"
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_replacing_an_object_deletes_the_old_one(unique_data_type, post):
+async def test_slots_are_per_user(unique_data_type, post):
 	"""
-	The object which was in the slot is deleted when delete_last_object is set
-	"""
-
-	first = await post(nex.FRIEND_A, data_type=unique_data_type)
-	second = await post(nex.FRIEND_A, data_type=unique_data_type)
-
-	await perpetuate(nex.FRIEND_A, SLOT_0, first)
-	await perpetuate(nex.FRIEND_A, SLOT_0, second, delete_last_object=True)
-
-	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, SLOT_0)).data_id == second
-	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=first) == "DataStore::NotFound"
-
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_replacing_an_object_can_keep_the_old_one(unique_data_type, post):
-	"""
-	The object which was in the slot is kept when delete_last_object is not set
+	Filling a slot only affects the callers own slots
 	"""
 
-	first = await post(nex.FRIEND_A, data_type=unique_data_type)
-	second = await post(nex.FRIEND_A, data_type=unique_data_type)
+	mine = await post(nex.FRIEND_A, data_type=unique_data_type)
+	theirs = await post(nex.STRANGER, data_type=unique_data_type)
 
-	await perpetuate(nex.FRIEND_A, SLOT_0, first)
-	await perpetuate(nex.FRIEND_A, SLOT_0, second, delete_last_object=False)
+	await perpetuate(nex.FRIEND_A, SLOT_0, mine)
+	await perpetuate(nex.STRANGER, SLOT_0, theirs)
 
-	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, SLOT_0)).data_id == second
-	assert (await helpers.get_meta(nex.FRIEND_A, data_id=first)).data_id == first
+	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, SLOT_0)).data_id == mine
+	assert (await helpers.get_persistence_info(nex.STRANGER, nex.STRANGER, SLOT_0)).data_id == theirs
 
+# * data_id
+# *
 # * Objects which cannot be put into a slot
 
 @pytest.mark.parametrize("data_id", [
@@ -258,17 +249,8 @@ async def test_a_deleted_object(unique_data_type, post):
 
 	assert await perpetuate_error(nex.FRIEND_A, SLOT_0, data_id) == "DataStore::NotFound"
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_only_the_owner_can_perpetuate(unique_data_type, post):
-	"""
-	Only the object owner can put it into a persistence slot
-	"""
-
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
-
-	assert await perpetuate_error(nex.STRANGER, SLOT_0, data_id) == "DataStore::PermissionDenied"
-	assert await perpetuate_error(nex.FRIEND_B, SLOT_0, data_id) == "DataStore::PermissionDenied"
-
+# * data_id, of 0
+# *
 # * A data ID of 0 names no object
 
 async def test_a_data_id_of_zero_into_an_empty_slot():
@@ -291,32 +273,60 @@ async def test_a_data_id_of_zero_into_a_filled_slot(unique_data_type, post):
 	assert await perpetuate_error(nex.FRIEND_A, SLOT_0, constants.INVALID_DATAID) == "DataStore::NotFound"
 	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, SLOT_0)).data_id == data_id
 
-# * Slots which are not slots at all
-
-@pytest.mark.parametrize("slot", [
-	pytest.param(constants.NUM_PERSISTENCE_SLOT, id="one-past-the-last-slot"),
-	pytest.param(constants.INVALID_PERSISTENCE_SLOT_ID, id="invalid-slot")
-])
-async def test_invalid_slot(unique_data_type, slot):
-	"""
-	Only slots 0 to NUM_PERSISTENCE_SLOT - 1 can be used
-	"""
-
-	data_id = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type)
-
-	assert await perpetuate_error(nex.FRIEND_A, slot, data_id) == "DataStore::InvalidArgument"
+# * delete_last_object
+# *
+# * Replacing whatever was in the slot already
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_slots_are_per_user(unique_data_type, post):
+async def test_replacing_an_object_deletes_the_old_one(unique_data_type, post):
 	"""
-	Filling a slot only affects the callers own slots
+	The object which was in the slot is deleted when delete_last_object is set
 	"""
 
-	mine = await post(nex.FRIEND_A, data_type=unique_data_type)
-	theirs = await post(nex.STRANGER, data_type=unique_data_type)
+	first = await post(nex.FRIEND_A, data_type=unique_data_type)
+	second = await post(nex.FRIEND_A, data_type=unique_data_type)
 
-	await perpetuate(nex.FRIEND_A, SLOT_0, mine)
-	await perpetuate(nex.STRANGER, SLOT_0, theirs)
+	await perpetuate(nex.FRIEND_A, SLOT_0, first)
+	await perpetuate(nex.FRIEND_A, SLOT_0, second, delete_last_object=True)
 
-	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, SLOT_0)).data_id == mine
-	assert (await helpers.get_persistence_info(nex.STRANGER, nex.STRANGER, SLOT_0)).data_id == theirs
+	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, SLOT_0)).data_id == second
+	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=first) == "DataStore::NotFound"
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_replacing_an_object_can_keep_the_old_one(unique_data_type, post):
+	"""
+	The object which was in the slot is kept when delete_last_object is not set
+	"""
+
+	first = await post(nex.FRIEND_A, data_type=unique_data_type)
+	second = await post(nex.FRIEND_A, data_type=unique_data_type)
+
+	await perpetuate(nex.FRIEND_A, SLOT_0, first)
+	await perpetuate(nex.FRIEND_A, SLOT_0, second, delete_last_object=False)
+
+	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, SLOT_0)).data_id == second
+	assert (await helpers.get_meta(nex.FRIEND_A, data_id=first)).data_id == first
+
+# * The owner and status of the object
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_only_the_owner_can_perpetuate(unique_data_type, post):
+	"""
+	Only the object owner can put it into a persistence slot
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
+
+	assert await perpetuate_error(nex.STRANGER, SLOT_0, data_id) == "DataStore::PermissionDenied"
+	assert await perpetuate_error(nex.FRIEND_B, SLOT_0, data_id) == "DataStore::PermissionDenied"
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_an_object_under_review(unique_data_type, post):
+	"""
+	An object waiting to be reviewed can still be put into a slot
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
+	await perpetuate(nex.FRIEND_A, SLOT_0, data_id)
+
+	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, SLOT_0)).data_id == data_id

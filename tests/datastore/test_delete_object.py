@@ -25,6 +25,8 @@ async def delete_error(pid: int, **fields) -> str:
 
 	pytest.fail("DataStoreProtocol::DeleteObject did not throw an error")
 
+# * What deleting does
+
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_deletes_an_object(unique_data_type, post):
 	"""
@@ -46,6 +48,22 @@ async def test_deleting_twice(unique_data_type, post):
 	await helpers.delete_object(nex.FRIEND_A, data_id=data_id)
 
 	assert await delete_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
+
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
+async def test_deleting_a_persisted_object_empties_the_slot(unique_data_type, post):
+	"""
+	Deleting an object which is being persisted leaves its
+	persistence slot empty
+	"""
+
+	persistence_init_param = helpers.persistence_init_param(persistence_id=SLOT)
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, persistence_init_param=persistence_init_param)
+
+	await helpers.delete_object(nex.FRIEND_A, data_id=data_id)
+
+	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, SLOT) == "DataStore::NotFound"
+
+# * data_id
 
 @pytest.mark.parametrize("data_id", [
 	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown"),
@@ -86,42 +104,55 @@ async def test_deleting_an_object_which_was_never_completed(unique_data_type):
 
 	assert await delete_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_deleting_an_object_under_review(unique_data_type, post):
-	"""
-	Objects which are under review are hidden from everybody, but
-	their owner can still delete them
-	"""
-
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
-
-	await helpers.delete_object(nex.FRIEND_A, data_id=data_id)
+# * update_password
+# *
+# * Objects may carry an update password, which acts in place of the
+# * delete permission
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_deleting_a_read_locked_object(unique_data_type, post):
+async def test_update_password_replaces_the_permission(unique_data_type, post):
 	"""
-	Read locks only gate downloads of an object, so one which is
-	locked by somebody else can still be deleted
-	"""
-
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_USE_READ_LOCK)
-
-	await helpers.touch_object(nex.STRANGER, data_id=data_id, lock_id=1234)
-	await helpers.delete_object(nex.FRIEND_A, data_id=data_id)
-
-@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
-async def test_deleting_a_persisted_object_empties_the_slot(unique_data_type, post):
-	"""
-	Deleting an object which is being persisted leaves its
-	persistence slot empty
+	The correct update password lets anybody delete the object
 	"""
 
-	persistence_init_param = helpers.persistence_init_param(persistence_id=SLOT)
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, persistence_init_param=persistence_init_param)
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
+	password_info = await helpers.get_password_info(nex.FRIEND_A, data_id)
 
-	await helpers.delete_object(nex.FRIEND_A, data_id=data_id)
+	await helpers.delete_object(nex.STRANGER, data_id=data_id, update_password=password_info.update_password)
 
-	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, SLOT) == "DataStore::NotFound"
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_wrong_update_password(unique_data_type, post):
+	"""
+	Sending the wrong password fails
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
+
+	assert await delete_error(nex.STRANGER, data_id=data_id, update_password=1234) == "DataStore::InvalidPassword"
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_the_access_password_is_not_the_update_password(unique_data_type, post):
+	"""
+	Passwords only work for what they were made for, so the access
+	password of an object is no use for deleting it
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
+	password_info = await helpers.get_password_info(nex.FRIEND_A, data_id)
+
+	assert await delete_error(nex.STRANGER, data_id=data_id, update_password=password_info.access_password) == "DataStore::InvalidPassword"
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_wrong_update_password_as_the_owner(unique_data_type, post):
+	"""
+	The password is only checked when the caller would be denied
+	without one, so the owner can send anything
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
+	await helpers.delete_object(nex.FRIEND_A, data_id=data_id, update_password=1234)
+
+	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
 
 # * Deleting an object is gated by the objects delete permission, which
 # * is separate from the access permission used to read it
@@ -210,50 +241,27 @@ async def test_the_access_permission_is_not_used(unique_data_type, post):
 
 	await helpers.delete_object(nex.STRANGER, data_id=data_id)
 
-# * Objects may carry an update password, which acts in place of the
-# * delete permission
+# * Objects which are in an unusual state
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_update_password_replaces_the_permission(unique_data_type, post):
+async def test_deleting_an_object_under_review(unique_data_type, post):
 	"""
-	The correct update password lets anybody delete the object
+	Objects which are under review are hidden from everybody, but
+	their owner can still delete them
 	"""
 
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
-	password_info = await helpers.get_password_info(nex.FRIEND_A, data_id)
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
 
-	await helpers.delete_object(nex.STRANGER, data_id=data_id, update_password=password_info.update_password)
+	await helpers.delete_object(nex.FRIEND_A, data_id=data_id)
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_wrong_update_password(unique_data_type, post):
+async def test_deleting_a_read_locked_object(unique_data_type, post):
 	"""
-	Sending the wrong password fails
-	"""
-
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
-
-	assert await delete_error(nex.STRANGER, data_id=data_id, update_password=1234) == "DataStore::InvalidPassword"
-
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_the_access_password_is_not_the_update_password(unique_data_type, post):
-	"""
-	Passwords only work for what they were made for, so the access
-	password of an object is no use for deleting it
+	Read locks only gate downloads of an object, so one which is
+	locked by somebody else can still be deleted
 	"""
 
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
-	password_info = await helpers.get_password_info(nex.FRIEND_A, data_id)
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_USE_READ_LOCK)
 
-	assert await delete_error(nex.STRANGER, data_id=data_id, update_password=password_info.access_password) == "DataStore::InvalidPassword"
-
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_wrong_update_password_as_the_owner(unique_data_type, post):
-	"""
-	The password is only checked when the caller would be denied
-	without one, so the owner can send anything
-	"""
-
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
-	await helpers.delete_object(nex.FRIEND_A, data_id=data_id, update_password=1234)
-
-	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
+	await helpers.touch_object(nex.STRANGER, data_id=data_id, lock_id=1234)
+	await helpers.delete_object(nex.FRIEND_A, data_id=data_id)

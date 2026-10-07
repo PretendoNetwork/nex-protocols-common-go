@@ -6,6 +6,13 @@ from datastore import constants, helpers
 
 pytestmark = pytest.mark.anyio
 
+ACCESS_PERMISSIONS = [
+	pytest.param(constants.Permission.PERMISSION_PUBLIC, [], nex.STRANGER, id="public"),
+	pytest.param(constants.Permission.PERMISSION_FRIEND, [], nex.FRIEND_B, id="friend"),
+	pytest.param(constants.Permission.PERMISSION_SPECIFIED, [nex.STRANGER], nex.STRANGER, id="specified"),
+	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.FRIEND_B], nex.FRIEND_B, id="specified-friend")
+]
+
 async def get_password_info_error(pid: int, data_id: int) -> str:
 	"""
 	Gets an objects passwords and expects an error to be thrown,
@@ -144,15 +151,45 @@ async def test_the_update_password_works(unique_data_type, post):
 
 	await helpers.delete_object(nex.STRANGER, data_id=data_id, update_password=info.update_password)
 
+# * data_id
+# *
+# * Objects which are not there
+
+@pytest.mark.parametrize("data_id", [
+	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown"),
+	pytest.param(constants.INVALID_DATAID, id="invalid-dataid"),
+	pytest.param(999999, id="the-system-range"),
+	pytest.param(helpers.UINT64_MAX, id="uint64-max")
+])
+async def test_unknown_data_id(data_id):
+	"""
+	Reading the passwords of an object which does not exist fails
+	"""
+
+	assert await get_password_info_error(nex.FRIEND_A, data_id) == "DataStore::NotFound"
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_a_deleted_object(unique_data_type, post):
+	"""
+	Deleted objects have no passwords to read
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
+	await helpers.delete_object(nex.FRIEND_A, data_id=data_id)
+
+	assert await get_password_info_error(nex.FRIEND_A, data_id) == "DataStore::NotFound"
+
+async def test_an_object_which_was_never_completed(unique_data_type):
+	"""
+	An object whose upload was never completed does not exist yet
+	"""
+
+	data_id = await helpers.prepare_post_object(nex.FRIEND_A, data_type=unique_data_type)
+
+	assert await get_password_info_error(nex.FRIEND_A, data_id) == "DataStore::NotFound"
+
 # * Only the owner may read an objects passwords. The access permission
 # * is a separate thing which says who may read the object itself
-
-ACCESS_PERMISSIONS = [
-	pytest.param(constants.Permission.PERMISSION_PUBLIC, [], nex.STRANGER, id="public"),
-	pytest.param(constants.Permission.PERMISSION_FRIEND, [], nex.FRIEND_B, id="friend"),
-	pytest.param(constants.Permission.PERMISSION_SPECIFIED, [nex.STRANGER], nex.STRANGER, id="specified"),
-	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.FRIEND_B], nex.FRIEND_B, id="specified-friend")
-]
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 @pytest.mark.parametrize("permission, recipients, caller", ACCESS_PERMISSIONS)
@@ -211,38 +248,3 @@ async def test_the_owner_of_a_private_object(unique_data_type, post):
 	info = await helpers.get_password_info(nex.FRIEND_A, data_id)
 
 	assert info.data_id == data_id
-
-# * Objects which are not there
-
-@pytest.mark.parametrize("data_id", [
-	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown"),
-	pytest.param(constants.INVALID_DATAID, id="invalid-dataid"),
-	pytest.param(999999, id="the-system-range"),
-	pytest.param(helpers.UINT64_MAX, id="uint64-max")
-])
-async def test_unknown_data_id(data_id):
-	"""
-	Reading the passwords of an object which does not exist fails
-	"""
-
-	assert await get_password_info_error(nex.FRIEND_A, data_id) == "DataStore::NotFound"
-
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_a_deleted_object(unique_data_type, post):
-	"""
-	Deleted objects have no passwords to read
-	"""
-
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
-	await helpers.delete_object(nex.FRIEND_A, data_id=data_id)
-
-	assert await get_password_info_error(nex.FRIEND_A, data_id) == "DataStore::NotFound"
-
-async def test_an_object_which_was_never_completed(unique_data_type):
-	"""
-	An object whose upload was never completed does not exist yet
-	"""
-
-	data_id = await helpers.prepare_post_object(nex.FRIEND_A, data_type=unique_data_type)
-
-	assert await get_password_info_error(nex.FRIEND_A, data_id) == "DataStore::NotFound"

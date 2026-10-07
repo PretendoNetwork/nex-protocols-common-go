@@ -159,6 +159,8 @@ async def test_a_flag_which_is_not_defined(unique_data_type, post):
 
 	assert await helpers.get_meta(nex.FRIEND_A, data_id=data_id, result_option=constants.ResultFlag.RESULT_FLAG_ALL) == before
 
+# * modifies_flag, the update time and the expiry
+# *
 # * The update time and the expiry move together, and which of them
 # * moves depends on the two flags which touch them
 
@@ -764,32 +766,6 @@ async def test_anybody_can_change_the_status_of_an_object_which_allows_it(unique
 
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).status == constants.DataStatus.DATA_STATUS_REJECTED
 
-# * The object status
-
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_a_pending_object_can_be_changed_by_its_owner(unique_data_type, post):
-	"""
-	An object under review can still be changed by its owner
-	"""
-
-	data_id = await post_object(post, nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
-
-	await change(nex.FRIEND_A, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_NAME, name="after")
-
-	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).name == "after"
-
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_a_pending_object_is_under_review_for_everyone_else(unique_data_type, post):
-	"""
-	Everyone but the owner is told it is under review, whatever their
-	update permission is
-	"""
-
-	update = helpers.permission(permission=constants.Permission.PERMISSION_PUBLIC)
-	data_id = await post_object(post, nex.FRIEND_A, data_type=unique_data_type, delete_permission=update, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
-
-	assert await change_error(nex.STRANGER, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_NAME, name="after") == "DataStore::UnderReviewing"
-
 # * compare_param
 # *
 # * The change is only made if the fields named in comparison_flag still
@@ -1111,3 +1087,29 @@ async def test_the_update_permission_of_an_object_in_a_slot(unique_data_type, po
 
 	assert await change_error(nex.STRANGER, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_NAME, name="after", persistence_target=target) == "DataStore::PermissionDenied"
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).name == BEFORE_NAME
+
+# * The object status
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_a_pending_object_can_be_changed_by_its_owner(unique_data_type, post):
+	"""
+	An object under review can still be changed by its owner
+	"""
+
+	data_id = await post_object(post, nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
+
+	await change(nex.FRIEND_A, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_NAME, name="after")
+
+	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).name == "after"
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_a_pending_object_is_under_review_for_everyone_else(unique_data_type, post):
+	"""
+	Everyone but the owner is told it is under review, whatever their
+	update permission is
+	"""
+
+	update = helpers.permission(permission=constants.Permission.PERMISSION_PUBLIC)
+	data_id = await post_object(post, nex.FRIEND_A, data_type=unique_data_type, delete_permission=update, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
+
+	assert await change_error(nex.STRANGER, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_NAME, name="after") == "DataStore::UnderReviewing"

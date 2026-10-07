@@ -56,6 +56,48 @@ async def test_deleting_the_object_empties_the_slot(unique_data_type, post):
 
 	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, SLOT) == "DataStore::NotFound"
 
+# * owner_id
+
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
+async def test_an_owner_of_zero_means_the_caller(unique_data_type, post):
+	"""
+	Asking about nobody in particular reads the callers own slots
+	"""
+
+	data_id = await helpers.post_persisted(post, nex.FRIEND_A, SLOT, data_type=unique_data_type)
+	info = await helpers.get_persistence_info(nex.FRIEND_A, 0, SLOT)
+
+	assert info.data_id == data_id
+
+async def test_unknown_owner():
+	"""
+	A user who has never persisted anything has no slots to read
+	"""
+
+	assert await helpers.get_persistence_info_error(nex.FRIEND_A, 1234, SLOT) == "DataStore::NotFound"
+
+# * slot_id
+# *
+# * Slots which hold nothing, or are not slots at all
+
+async def test_empty_slot():
+	"""
+	A slot with no object in it has nothing to return
+	"""
+
+	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, EMPTY_SLOT) == "DataStore::NotFound"
+
+@pytest.mark.parametrize("slot", [
+	pytest.param(constants.NUM_PERSISTENCE_SLOT, id="out-of-range-slot"),
+	pytest.param(constants.INVALID_PERSISTENCE_SLOT_ID, id="invalid-slot")
+])
+async def test_invalid_slot(slot):
+	"""
+	Only slots 0 to NUM_PERSISTENCE_SLOT - 1 can be used
+	"""
+
+	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, slot) == "DataStore::InvalidArgument"
+
 # * Who may read somebody elses slot
 
 @pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
@@ -100,43 +142,3 @@ async def test_an_object_under_review(unique_data_type, post):
 
 	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, SLOT)).data_id == data_id
 	assert await helpers.get_persistence_info_error(nex.STRANGER, nex.FRIEND_A, SLOT) == "DataStore::UnderReviewing"
-
-# * The owner being asked about
-
-@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
-async def test_an_owner_of_zero_means_the_caller(unique_data_type, post):
-	"""
-	Asking about nobody in particular reads the callers own slots
-	"""
-
-	data_id = await helpers.post_persisted(post, nex.FRIEND_A, SLOT, data_type=unique_data_type)
-	info = await helpers.get_persistence_info(nex.FRIEND_A, 0, SLOT)
-
-	assert info.data_id == data_id
-
-async def test_unknown_owner():
-	"""
-	A user who has never persisted anything has no slots to read
-	"""
-
-	assert await helpers.get_persistence_info_error(nex.FRIEND_A, 1234, SLOT) == "DataStore::NotFound"
-
-# * Slots which hold nothing, or are not slots at all
-
-async def test_empty_slot():
-	"""
-	A slot with no object in it has nothing to return
-	"""
-
-	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, EMPTY_SLOT) == "DataStore::NotFound"
-
-@pytest.mark.parametrize("slot", [
-	pytest.param(constants.NUM_PERSISTENCE_SLOT, id="out-of-range-slot"),
-	pytest.param(constants.INVALID_PERSISTENCE_SLOT_ID, id="invalid-slot")
-])
-async def test_invalid_slot(slot):
-	"""
-	Only slots 0 to NUM_PERSISTENCE_SLOT - 1 can be used
-	"""
-
-	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, slot) == "DataStore::InvalidArgument"

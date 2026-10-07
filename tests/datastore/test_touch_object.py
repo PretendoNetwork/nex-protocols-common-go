@@ -134,7 +134,43 @@ async def test_updates_the_reference_time_and_validity_period(unique_data_type, 
 	assert after[plain].expire_time.value() == before[plain].expire_time.value()
 	assert after[extends].expire_time.value() > before[extends].expire_time.value()
 
-# * Lock IDs
+# * data_id
+# *
+# * Objects which cannot be touched
+
+@pytest.mark.parametrize("data_id", [
+	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown"),
+	pytest.param(constants.INVALID_DATAID, id="invalid-dataid"),
+	pytest.param(helpers.UINT64_MAX, id="uint64-max")
+])
+async def test_unknown_data_id(data_id):
+	"""
+	Touching an object which does not exist fails
+	"""
+
+	assert await touch_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_touching_a_deleted_object(unique_data_type, post):
+	"""
+	Deleted objects cannot be touched
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
+	await helpers.delete_object(nex.FRIEND_A, data_id=data_id)
+
+	assert await touch_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
+
+async def test_touching_an_object_which_was_never_completed(unique_data_type):
+	"""
+	Objects whose upload was never completed do not exist yet
+	"""
+
+	data_id = await helpers.prepare_post_object(nex.FRIEND_A, data_type=unique_data_type)
+
+	assert await touch_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
+
+# * lock_id
 # *
 # * Objects posted with DATA_FLAG_USE_READ_LOCK remember the lock ID they
 # * were last referenced with, and only that lock ID may be used until
@@ -207,6 +243,43 @@ async def test_lock_ids_are_ignored_without_the_flag(unique_data_type, post):
 
 	await helpers.touch_object(nex.FRIEND_A, data_id=data_id, lock_id=1234)
 	await helpers.touch_object(nex.FRIEND_A, data_id=data_id, lock_id=5678)
+
+# * access_password
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_access_password_bypasses_permissions(unique_data_type, post):
+	"""
+	The correct password lets anyone touch the object
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_PRIVATE)
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, permission=permission)
+	password_info = await helpers.get_password_info(nex.FRIEND_A, data_id)
+
+	await helpers.touch_object(nex.STRANGER, data_id=data_id, access_password=password_info.access_password)
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_wrong_access_password_without_permission(unique_data_type, post):
+	"""
+	Using the wrong password on an object the caller has no access to fails
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_PRIVATE)
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, permission=permission)
+
+	assert await touch_error(nex.STRANGER, data_id=data_id, access_password=1234) == "DataStore::InvalidPassword"
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_wrong_access_password_as_the_owner(unique_data_type, post):
+	"""
+	The password is only checked when the caller would be denied
+	access without one, so the owner can send anything
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_PRIVATE)
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, permission=permission)
+
+	await helpers.touch_object(nex.FRIEND_A, data_id=data_id, access_password=1234)
 
 # * Access permissions
 
@@ -290,74 +363,3 @@ async def test_pending_object_can_be_touched_by_its_owner(unique_data_type, post
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
 
 	await helpers.touch_object(nex.FRIEND_A, data_id=data_id)
-
-# * Access passwords
-
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_access_password_bypasses_permissions(unique_data_type, post):
-	"""
-	The correct password lets anyone touch the object
-	"""
-
-	permission = helpers.permission(permission=constants.Permission.PERMISSION_PRIVATE)
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, permission=permission)
-	password_info = await helpers.get_password_info(nex.FRIEND_A, data_id)
-
-	await helpers.touch_object(nex.STRANGER, data_id=data_id, access_password=password_info.access_password)
-
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_wrong_access_password_without_permission(unique_data_type, post):
-	"""
-	Using the wrong password on an object the caller has no access to fails
-	"""
-
-	permission = helpers.permission(permission=constants.Permission.PERMISSION_PRIVATE)
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, permission=permission)
-
-	assert await touch_error(nex.STRANGER, data_id=data_id, access_password=1234) == "DataStore::InvalidPassword"
-
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_wrong_access_password_as_the_owner(unique_data_type, post):
-	"""
-	The password is only checked when the caller would be denied
-	access without one, so the owner can send anything
-	"""
-
-	permission = helpers.permission(permission=constants.Permission.PERMISSION_PRIVATE)
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, permission=permission)
-
-	await helpers.touch_object(nex.FRIEND_A, data_id=data_id, access_password=1234)
-
-# * Objects which cannot be touched
-
-@pytest.mark.parametrize("data_id", [
-	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown"),
-	pytest.param(constants.INVALID_DATAID, id="invalid-dataid"),
-	pytest.param(helpers.UINT64_MAX, id="uint64-max")
-])
-async def test_unknown_data_id(data_id):
-	"""
-	Touching an object which does not exist fails
-	"""
-
-	assert await touch_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
-
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_touching_a_deleted_object(unique_data_type, post):
-	"""
-	Deleted objects cannot be touched
-	"""
-
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
-	await helpers.delete_object(nex.FRIEND_A, data_id=data_id)
-
-	assert await touch_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
-
-async def test_touching_an_object_which_was_never_completed(unique_data_type):
-	"""
-	Objects whose upload was never completed do not exist yet
-	"""
-
-	data_id = await helpers.prepare_post_object(nex.FRIEND_A, data_type=unique_data_type)
-
-	assert await touch_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"

@@ -48,47 +48,8 @@ async def test_empties_the_slot(unique_data_type, post):
 	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, SLOT_0) == "DataStore::NotFound"
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).data_id == data_id
 
-@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
-async def test_can_delete_the_object_too(unique_data_type, post):
-	"""
-	The object which was in the slot is deleted when delete_last_object=True
-	"""
-
-	data_id = await helpers.post_persisted(post, nex.FRIEND_A, SLOT_0, data_type=unique_data_type)
-	await unperpetuate(nex.FRIEND_A, SLOT_0, delete_last_object=True)
-
-	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, SLOT_0) == "DataStore::NotFound"
-	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
-
-@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
-async def test_an_object_under_review(unique_data_type, post):
-	"""
-	An object waiting to be reviewed can be let out of its slot like any other
-	"""
-
-	data_id = await helpers.post_persisted(post, nex.FRIEND_A, SLOT_0, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
-	await unperpetuate(nex.FRIEND_A, SLOT_0, delete_last_object=False)
-
-	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, SLOT_0) == "DataStore::NotFound"
-	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).data_id == data_id
-
-@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
-async def test_the_object_expires_again(unique_data_type, post):
-	"""
-	An object in a slot is kept forever, so letting it out has to put
-	it back on a normal expiry
-	"""
-
-	data_id = await helpers.post_persisted(post, nex.FRIEND_A, SLOT_0, data_type=unique_data_type)
-
-	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).expire_time.value() == constants.PERMANENT_DATE_TIME
-
-	await unperpetuate(nex.FRIEND_A, SLOT_0, delete_last_object=False)
-	expire_time = (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).expire_time
-
-	assert expire_time.value() != constants.PERMANENT_DATE_TIME
-	assert expire_time.value() > (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).create_time.value()
-
+# * persistence_slot_id
+# *
 # * Slots with nothing in them
 
 @pytest.mark.parametrize("delete_last_object", [
@@ -124,7 +85,7 @@ async def test_a_slot_whose_object_was_deleted(unique_data_type, post):
 
 	assert await unperpetuate_error(nex.FRIEND_A, SLOT_0) == "DataStore::NotFound"
 
-# * Slots which are not slots at all
+# * persistence_slot_id, which is not a slot at all
 
 @pytest.mark.parametrize("slot", [
 	pytest.param(constants.NUM_PERSISTENCE_SLOT, id="one-past-the-last-slot"),
@@ -149,3 +110,48 @@ async def test_slots_are_per_user(unique_data_type, post):
 	await unperpetuate(nex.STRANGER, SLOT_0)
 
 	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, SLOT_0)).data_id == mine
+
+# * delete_last_object
+
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
+async def test_can_delete_the_object_too(unique_data_type, post):
+	"""
+	The object which was in the slot is deleted when delete_last_object=True
+	"""
+
+	data_id = await helpers.post_persisted(post, nex.FRIEND_A, SLOT_0, data_type=unique_data_type)
+	await unperpetuate(nex.FRIEND_A, SLOT_0, delete_last_object=True)
+
+	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, SLOT_0) == "DataStore::NotFound"
+	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
+
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
+async def test_the_object_expires_again(unique_data_type, post):
+	"""
+	An object in a slot is kept forever, so letting it out has to put
+	it back on a normal expiry
+	"""
+
+	data_id = await helpers.post_persisted(post, nex.FRIEND_A, SLOT_0, data_type=unique_data_type)
+
+	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).expire_time.value() == constants.PERMANENT_DATE_TIME
+
+	await unperpetuate(nex.FRIEND_A, SLOT_0, delete_last_object=False)
+	expire_time = (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).expire_time
+
+	assert expire_time.value() != constants.PERMANENT_DATE_TIME
+	assert expire_time.value() > (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).create_time.value()
+
+# * The object status
+
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
+async def test_an_object_under_review(unique_data_type, post):
+	"""
+	An object waiting to be reviewed can be let out of its slot like any other
+	"""
+
+	data_id = await helpers.post_persisted(post, nex.FRIEND_A, SLOT_0, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
+	await unperpetuate(nex.FRIEND_A, SLOT_0, delete_last_object=False)
+
+	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, SLOT_0) == "DataStore::NotFound"
+	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).data_id == data_id

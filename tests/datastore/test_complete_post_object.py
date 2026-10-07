@@ -31,6 +31,8 @@ async def complete_error(pid: int, **fields) -> str:
 
 	pytest.fail("DataStoreProtocol::CompletePostObject did not throw an error")
 
+# * What completing an upload does
+
 @pytest.mark.parametrize("flag", [
 	pytest.param(constants.DataFlag.DATA_FLAG_NONE, id="no-flags"),
 	pytest.param(constants.DataFlag.DATA_FLAG_NEED_COMPLETION, id="need-completion")
@@ -59,6 +61,62 @@ async def test_completing_twice(unique_data_type):
 	await complete(nex.FRIEND_A, data_id=data_id)
 
 	assert await complete_error(nex.FRIEND_A, data_id=data_id) == "DataStore::Unknown"
+
+async def test_completing_an_object_prepared_with_the_older_version(unique_data_type):
+	"""
+	This method can complete an object which was started with
+	PreparePostObjectV1, the two versions can be mixed
+	"""
+
+	data_id = await helpers.prepare_post_object_v1(nex.FRIEND_A, data_type=unique_data_type)
+
+	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
+
+	await complete(nex.FRIEND_A, data_id=data_id)
+	meta_info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	assert meta_info.data_id == data_id
+
+# * data_id
+
+@pytest.mark.parametrize("data_id", [
+	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown"),
+	pytest.param(constants.INVALID_DATAID, id="invalid-dataid"),
+	pytest.param(helpers.UINT32_MAX, id="uint32-max"),
+	pytest.param(helpers.UINT64_MAX, id="uint64-max")
+])
+async def test_unknown_data_id(data_id):
+	"""
+	Completing an object which does not exist fails
+	"""
+
+	assert await complete_error(nex.FRIEND_A, data_id=data_id) == "DataStore::Unknown"
+
+async def test_object_which_does_not_use_the_file_server(unique_data_type):
+	"""
+	Objects which do not use the file server have nothing to upload, so
+	they are available right away and cannot be completed
+	"""
+
+	data_id = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type)
+	meta_info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	assert meta_info.data_id == data_id
+	assert await complete_error(nex.FRIEND_A, data_id=data_id) == "DataStore::Unknown"
+
+async def test_completing_a_deleted_object(unique_data_type):
+	"""
+	Deleted objects cannot be completed
+	"""
+
+	data_id = await helpers.prepare_post_object(nex.FRIEND_A, data_type=unique_data_type)
+
+	await complete(nex.FRIEND_A, data_id=data_id)
+	await helpers.delete_object(nex.FRIEND_A, data_id=data_id)
+
+	assert await complete_error(nex.FRIEND_A, data_id=data_id) == "DataStore::Unknown"
+
+# * success
 
 async def test_failed_upload(unique_data_type):
 	"""
@@ -104,18 +162,7 @@ async def test_reporting_a_failure_after_completing(unique_data_type):
 
 	assert meta_info.data_id == data_id
 
-@pytest.mark.parametrize("data_id", [
-	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown"),
-	pytest.param(constants.INVALID_DATAID, id="invalid-dataid"),
-	pytest.param(helpers.UINT32_MAX, id="uint32-max"),
-	pytest.param(helpers.UINT64_MAX, id="uint64-max")
-])
-async def test_unknown_data_id(data_id):
-	"""
-	Completing an object which does not exist fails
-	"""
-
-	assert await complete_error(nex.FRIEND_A, data_id=data_id) == "DataStore::Unknown"
+# * The owner and status of the object
 
 async def test_only_the_owner_can_complete(unique_data_type):
 	"""
@@ -125,30 +172,6 @@ async def test_only_the_owner_can_complete(unique_data_type):
 	data_id = await helpers.prepare_post_object(nex.FRIEND_A, data_type=unique_data_type)
 
 	assert await complete_error(nex.STRANGER, data_id=data_id) == "DataStore::PermissionDenied"
-
-async def test_object_which_does_not_use_the_file_server(unique_data_type):
-	"""
-	Objects which do not use the file server have nothing to upload, so
-	they are available right away and cannot be completed
-	"""
-
-	data_id = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type)
-	meta_info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
-
-	assert meta_info.data_id == data_id
-	assert await complete_error(nex.FRIEND_A, data_id=data_id) == "DataStore::Unknown"
-
-async def test_completing_a_deleted_object(unique_data_type):
-	"""
-	Deleted objects cannot be completed
-	"""
-
-	data_id = await helpers.prepare_post_object(nex.FRIEND_A, data_type=unique_data_type)
-
-	await complete(nex.FRIEND_A, data_id=data_id)
-	await helpers.delete_object(nex.FRIEND_A, data_id=data_id)
-
-	assert await complete_error(nex.FRIEND_A, data_id=data_id) == "DataStore::Unknown"
 
 async def test_completing_an_object_which_needs_review(unique_data_type):
 	"""
@@ -162,18 +185,3 @@ async def test_completing_an_object_which_needs_review(unique_data_type):
 	meta_info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
 
 	assert meta_info.status == constants.DataStatus.DATA_STATUS_PENDING
-
-async def test_completing_an_object_prepared_with_the_older_version(unique_data_type):
-	"""
-	This method can complete an object which was started with
-	PreparePostObjectV1, the two versions can be mixed
-	"""
-
-	data_id = await helpers.prepare_post_object_v1(nex.FRIEND_A, data_type=unique_data_type)
-
-	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
-
-	await complete(nex.FRIEND_A, data_id=data_id)
-	meta_info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
-
-	assert meta_info.data_id == data_id

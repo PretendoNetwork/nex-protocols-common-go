@@ -31,6 +31,8 @@ async def complete_error(pid: int, data_ids: list[int]) -> str:
 
 	pytest.fail("DataStoreProtocol::CompletePostObjects did not throw an error")
 
+# * What completing an upload does
+
 async def test_completes_several_uploads(unique_data_type):
 	"""
 	Every object in the list is completed
@@ -62,13 +64,6 @@ async def test_completes_an_upload(unique_data_type, flag):
 
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).data_id == data_id
 
-async def test_no_data_ids():
-	"""
-	Completing nothing at all is not an error
-	"""
-
-	await complete(nex.FRIEND_A, [])
-
 async def test_completing_twice(unique_data_type):
 	"""
 	Objects which were already completed cannot be completed again.
@@ -79,6 +74,47 @@ async def test_completing_twice(unique_data_type):
 	await complete(nex.FRIEND_A, [data_id])
 
 	assert await complete_error(nex.FRIEND_A, [data_id]) == "DataStore::OperationNotAllowed"
+
+async def test_completing_an_object_prepared_with_the_older_version(unique_data_type):
+	"""
+	This method can complete an object which was started with
+	PreparePostObjectV1, the two versions can be mixed
+	"""
+
+	data_id = await helpers.prepare_post_object_v1(nex.FRIEND_A, data_type=unique_data_type)
+
+	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
+
+	await complete(nex.FRIEND_A, [data_id])
+
+	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).data_id == data_id
+
+# * data_ids
+
+async def test_no_data_ids():
+	"""
+	Completing nothing at all is not an error
+	"""
+
+	await complete(nex.FRIEND_A, [])
+
+async def test_too_many_data_ids():
+	"""
+	No more than BATCH_PROCESSING_CAPACITY objects can be completed at once
+	"""
+
+	data_ids = [helpers.UNKNOWN_DATA_ID] * (constants.BATCH_PROCESSING_CAPACITY + 1)
+
+	assert await complete_error(nex.FRIEND_A, data_ids) == "DataStore::OverCapacity"
+
+async def test_the_most_data_ids_allowed():
+	"""
+	Exactly BATCH_PROCESSING_CAPACITY objects is allowed
+	"""
+
+	data_ids = [helpers.UNKNOWN_DATA_ID] * constants.BATCH_PROCESSING_CAPACITY
+
+	assert await complete_error(nex.FRIEND_A, data_ids) == "DataStore::NotFound"
 
 @pytest.mark.parametrize("data_id", [
 	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown"),
@@ -93,15 +129,6 @@ async def test_unknown_data_id(data_id):
 	"""
 
 	assert await complete_error(nex.FRIEND_A, [data_id]) == "DataStore::NotFound"
-
-async def test_only_the_owner_can_complete(unique_data_type):
-	"""
-	Only the object owner can complete its upload
-	"""
-
-	data_id = await helpers.prepare_post_object(nex.FRIEND_A, data_type=unique_data_type)
-
-	assert await complete_error(nex.STRANGER, [data_id]) == "DataStore::PermissionDenied"
 
 async def test_object_which_does_not_use_the_file_server(unique_data_type):
 	"""
@@ -125,52 +152,7 @@ async def test_completing_a_deleted_object(unique_data_type):
 
 	assert await complete_error(nex.FRIEND_A, [data_id]) == "DataStore::NotFound"
 
-async def test_completing_an_object_which_needs_review(unique_data_type):
-	"""
-	Completing an upload only marks the object as uploaded. An object
-	which needs review is still under review afterwards
-	"""
-
-	data_id = await helpers.prepare_post_object(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
-
-	await complete(nex.FRIEND_A, [data_id])
-	meta_info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
-
-	assert meta_info.status == constants.DataStatus.DATA_STATUS_PENDING
-
-async def test_completing_an_object_prepared_with_the_older_version(unique_data_type):
-	"""
-	This method can complete an object which was started with
-	PreparePostObjectV1, the two versions can be mixed
-	"""
-
-	data_id = await helpers.prepare_post_object_v1(nex.FRIEND_A, data_type=unique_data_type)
-
-	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
-
-	await complete(nex.FRIEND_A, [data_id])
-
-	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).data_id == data_id
-
-async def test_too_many_data_ids():
-	"""
-	No more than BATCH_PROCESSING_CAPACITY objects can be completed at once
-	"""
-
-	data_ids = [helpers.UNKNOWN_DATA_ID] * (constants.BATCH_PROCESSING_CAPACITY + 1)
-
-	assert await complete_error(nex.FRIEND_A, data_ids) == "DataStore::OverCapacity"
-
-async def test_the_most_data_ids_allowed():
-	"""
-	Exactly BATCH_PROCESSING_CAPACITY objects is allowed
-	"""
-
-	data_ids = [helpers.UNKNOWN_DATA_ID] * constants.BATCH_PROCESSING_CAPACITY
-
-	assert await complete_error(nex.FRIEND_A, data_ids) == "DataStore::NotFound"
-
-# * Rollback tests
+# * data_ids, when one of them cannot be completed
 # *
 # * When any object in the list cannot be completed, none of the
 # * objects in that list are completed
@@ -223,3 +205,27 @@ async def test_the_same_object_twice_in_one_call(unique_data_type):
 	await complete(nex.FRIEND_A, [data_id])
 
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).data_id == data_id
+
+# * The owner and status of the object
+
+async def test_only_the_owner_can_complete(unique_data_type):
+	"""
+	Only the object owner can complete its upload
+	"""
+
+	data_id = await helpers.prepare_post_object(nex.FRIEND_A, data_type=unique_data_type)
+
+	assert await complete_error(nex.STRANGER, [data_id]) == "DataStore::PermissionDenied"
+
+async def test_completing_an_object_which_needs_review(unique_data_type):
+	"""
+	Completing an upload only marks the object as uploaded. An object
+	which needs review is still under review afterwards
+	"""
+
+	data_id = await helpers.prepare_post_object(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
+
+	await complete(nex.FRIEND_A, [data_id])
+	meta_info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	assert meta_info.status == constants.DataStatus.DATA_STATUS_PENDING

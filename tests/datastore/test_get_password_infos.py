@@ -6,6 +6,13 @@ from datastore import constants, helpers
 
 pytestmark = pytest.mark.anyio
 
+ACCESS_PERMISSIONS = [
+	pytest.param(constants.Permission.PERMISSION_PUBLIC, [], nex.STRANGER, id="public"),
+	pytest.param(constants.Permission.PERMISSION_FRIEND, [], nex.FRIEND_B, id="friend"),
+	pytest.param(constants.Permission.PERMISSION_SPECIFIED, [nex.STRANGER], nex.STRANGER, id="specified"),
+	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.FRIEND_B], nex.FRIEND_B, id="specified-friend")
+]
+
 async def get_password_infos(pid: int, data_ids: list[int]):
 	"""
 	Gets the passwords of several objects as the given user
@@ -155,98 +162,8 @@ async def test_the_update_password_works(unique_data_type, post):
 
 	await helpers.delete_object(nex.STRANGER, data_id=data_id, update_password=info.update_password)
 
-# * Only the owner may read an objects passwords. The access permission
-# * is a separate thing which says who may read the object itself
-
-ACCESS_PERMISSIONS = [
-	pytest.param(constants.Permission.PERMISSION_PUBLIC, [], nex.STRANGER, id="public"),
-	pytest.param(constants.Permission.PERMISSION_FRIEND, [], nex.FRIEND_B, id="friend"),
-	pytest.param(constants.Permission.PERMISSION_SPECIFIED, [nex.STRANGER], nex.STRANGER, id="specified"),
-	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.FRIEND_B], nex.FRIEND_B, id="specified-friend")
-]
-
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-@pytest.mark.parametrize("permission, recipients, caller", ACCESS_PERMISSIONS)
-async def test_the_access_permission_does_not_open_the_passwords(unique_data_type, post, permission, recipients, caller):
-	"""
-	Whoever the access permission lets in can read the object itself,
-	but still cannot read its passwords
-	"""
-
-	access = helpers.permission(permission=permission, recipients=recipients)
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, permission=access)
-
-	assert (await helpers.get_meta(caller, data_id=data_id)).data_id == data_id
-
-	response = await get_password_infos(caller, [data_id])
-
-	assert helpers.result_names(response.results) == ["DataStore::PermissionDenied"]
-	assert helpers.data_ids_of(response) == [constants.INVALID_DATAID]
-
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-@pytest.mark.parametrize("caller", [
-	pytest.param(nex.FRIEND_B, id="a-friend"),
-	pytest.param(nex.STRANGER, id="a-stranger")
-])
-async def test_nobody_else_can_read_a_private_objects_passwords(unique_data_type, post, caller):
-	"""
-	A private object lets nobody in at all. Tested separately because we
-	expect the GetMeta call to fail
-	"""
-
-	permission = helpers.permission(permission=constants.Permission.PERMISSION_PRIVATE)
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, permission=permission)
-
-	assert await helpers.get_meta_error(caller, data_id=data_id) == "DataStore::PermissionDenied"
-
-	response = await get_password_infos(caller, [data_id])
-
-	assert helpers.result_names(response.results) == ["DataStore::PermissionDenied"]
-
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_somebody_elses_object_only_fails_its_own_entry(unique_data_type, post):
-	"""
-	An object the caller does not own fails on its own, leaving the
-	rest of the list to go through
-	"""
-
-	mine = await post(nex.FRIEND_A, data_type=unique_data_type)
-	theirs = await post(nex.STRANGER, data_type=unique_data_type)
-
-	response = await get_password_infos(nex.FRIEND_A, [mine, theirs])
-
-	assert helpers.result_names(response.results) == [None, "DataStore::PermissionDenied"]
-	assert helpers.data_ids_of(response) == [mine, constants.INVALID_DATAID]
-
-# * Objects the owner can still read the passwords of
-
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_an_object_under_review(unique_data_type, post):
-	"""
-	An object which is under review is hidden from everybody else,
-	but its owner can still read its passwords
-	"""
-
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
-	response = await get_password_infos(nex.FRIEND_A, [data_id])
-
-	assert helpers.result_names(response.results) == [None]
-	assert helpers.data_ids_of(response) == [data_id]
-
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_the_owner_of_a_private_object(unique_data_type, post):
-	"""
-	The access permission of the object makes no difference to its
-	owner reading its passwords
-	"""
-
-	permission = helpers.permission(permission=constants.Permission.PERMISSION_PRIVATE)
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, permission=permission)
-	response = await get_password_infos(nex.FRIEND_A, [data_id])
-
-	assert helpers.result_names(response.results) == [None]
-	assert helpers.data_ids_of(response) == [data_id]
-
+# * data_ids
+# *
 # * Objects which are not there
 
 @pytest.mark.parametrize("data_id", [
@@ -289,6 +206,8 @@ async def test_an_object_which_was_never_completed(unique_data_type):
 
 	assert helpers.result_names(response.results) == ["DataStore::NotFound"]
 
+# * data_ids, and the lists which come back
+# *
 # * The response is two lists which line up with the data IDs which were
 # * asked for, one of infos and one of results
 
@@ -371,3 +290,88 @@ async def test_too_many_data_ids():
 	data_ids = [helpers.UNKNOWN_DATA_ID] * (constants.BATCH_PROCESSING_CAPACITY + 1)
 
 	assert await get_password_infos_error(nex.FRIEND_A, data_ids) == "DataStore::OverCapacity"
+
+# * Only the owner may read an objects passwords. The access permission
+# * is a separate thing which says who may read the object itself
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("permission, recipients, caller", ACCESS_PERMISSIONS)
+async def test_the_access_permission_does_not_open_the_passwords(unique_data_type, post, permission, recipients, caller):
+	"""
+	Whoever the access permission lets in can read the object itself,
+	but still cannot read its passwords
+	"""
+
+	access = helpers.permission(permission=permission, recipients=recipients)
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, permission=access)
+
+	assert (await helpers.get_meta(caller, data_id=data_id)).data_id == data_id
+
+	response = await get_password_infos(caller, [data_id])
+
+	assert helpers.result_names(response.results) == ["DataStore::PermissionDenied"]
+	assert helpers.data_ids_of(response) == [constants.INVALID_DATAID]
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("caller", [
+	pytest.param(nex.FRIEND_B, id="a-friend"),
+	pytest.param(nex.STRANGER, id="a-stranger")
+])
+async def test_nobody_else_can_read_a_private_objects_passwords(unique_data_type, post, caller):
+	"""
+	A private object lets nobody in at all. Tested separately because we
+	expect the GetMeta call to fail
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_PRIVATE)
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, permission=permission)
+
+	assert await helpers.get_meta_error(caller, data_id=data_id) == "DataStore::PermissionDenied"
+
+	response = await get_password_infos(caller, [data_id])
+
+	assert helpers.result_names(response.results) == ["DataStore::PermissionDenied"]
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_somebody_elses_object_only_fails_its_own_entry(unique_data_type, post):
+	"""
+	An object the caller does not own fails on its own, leaving the
+	rest of the list to go through
+	"""
+
+	mine = await post(nex.FRIEND_A, data_type=unique_data_type)
+	theirs = await post(nex.STRANGER, data_type=unique_data_type)
+
+	response = await get_password_infos(nex.FRIEND_A, [mine, theirs])
+
+	assert helpers.result_names(response.results) == [None, "DataStore::PermissionDenied"]
+	assert helpers.data_ids_of(response) == [mine, constants.INVALID_DATAID]
+
+# * Objects the owner can still read the passwords of
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_an_object_under_review(unique_data_type, post):
+	"""
+	An object which is under review is hidden from everybody else,
+	but its owner can still read its passwords
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
+	response = await get_password_infos(nex.FRIEND_A, [data_id])
+
+	assert helpers.result_names(response.results) == [None]
+	assert helpers.data_ids_of(response) == [data_id]
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_the_owner_of_a_private_object(unique_data_type, post):
+	"""
+	The access permission of the object makes no difference to its
+	owner reading its passwords
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_PRIVATE)
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, permission=permission)
+	response = await get_password_infos(nex.FRIEND_A, [data_id])
+
+	assert helpers.result_names(response.results) == [None]
+	assert helpers.data_ids_of(response) == [data_id]

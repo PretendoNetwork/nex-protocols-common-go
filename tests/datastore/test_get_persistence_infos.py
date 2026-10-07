@@ -164,6 +164,60 @@ async def test_more_entries_than_there_are_slots(unique_data_type, post):
 
 	assert helpers.result_names(response.results) == [None] * len(slots)
 
+# * owner_id
+
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
+async def test_an_owner_of_zero_means_the_caller(unique_data_type, post):
+	"""
+	Asking about nobody in particular reads the callers own slots
+	"""
+
+	data_id = await helpers.post_persisted(post, nex.FRIEND_A, SLOT_0, data_type=unique_data_type)
+	response = await get_persistence_infos(nex.FRIEND_A, 0, [SLOT_0])
+
+	assert helpers.result_names(response.results) == [None]
+	assert response.infos[SLOT_0].data_id == data_id
+
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
+async def test_an_owner_of_zero_with_no_slots(unique_data_type, post):
+	"""
+	Using no PID and an empty list returns all of the callers slots
+	"""
+
+	data_id = await helpers.post_persisted(post, nex.FRIEND_A, SLOT_0, data_type=unique_data_type)
+	response = await get_persistence_infos(nex.FRIEND_A, 0, [])
+
+	assert slots_of(response) == list(range(constants.NUM_PERSISTENCE_SLOT))
+	assert [info.owner_id for info in response.infos] == [nex.FRIEND_A] * constants.NUM_PERSISTENCE_SLOT
+	assert response.infos[SLOT_0].data_id == data_id
+	assert response.results[SLOT_0].is_success()
+	assert response.results[EMPTY_SLOT].is_error()
+
+async def test_unknown_owner():
+	"""
+	A user who has never persisted anything has no slots to read, and
+	that fails per slot rather than failing the request
+	"""
+
+	response = await get_persistence_infos(nex.FRIEND_A, 1234, [SLOT_0])
+
+	assert helpers.result_names(response.results) == ["DataStore::NotFound"]
+
+# * slot_ids
+# *
+# * Slots which are not slots at all
+
+@pytest.mark.parametrize("slot", [
+	pytest.param(constants.NUM_PERSISTENCE_SLOT, id="one-past-the-last-slot"),
+	pytest.param(constants.INVALID_PERSISTENCE_SLOT_ID, id="invalid-slot")
+])
+async def test_an_invalid_slot_fails_the_whole_request(slot):
+	"""
+	A slot which cannot exist is a bad request, which throws instead of failing only its own entry
+	"""
+
+	assert await get_persistence_infos_error(nex.FRIEND_A, nex.FRIEND_A, [SLOT_0, slot]) == "DataStore::InvalidArgument"
+
 # * Who may read somebody elses slots
 
 @pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
@@ -218,55 +272,3 @@ async def test_an_object_under_review(unique_data_type, post):
 
 	assert mine.infos[SLOT_0].data_id == data_id
 	assert helpers.result_names(theirs.results) == ["DataStore::UnderReviewing"]
-
-# * The owner being asked about
-
-@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
-async def test_an_owner_of_zero_means_the_caller(unique_data_type, post):
-	"""
-	Asking about nobody in particular reads the callers own slots
-	"""
-
-	data_id = await helpers.post_persisted(post, nex.FRIEND_A, SLOT_0, data_type=unique_data_type)
-	response = await get_persistence_infos(nex.FRIEND_A, 0, [SLOT_0])
-
-	assert helpers.result_names(response.results) == [None]
-	assert response.infos[SLOT_0].data_id == data_id
-
-@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
-async def test_an_owner_of_zero_with_no_slots(unique_data_type, post):
-	"""
-	Using no PID and an empty list returns all of the callers slots
-	"""
-
-	data_id = await helpers.post_persisted(post, nex.FRIEND_A, SLOT_0, data_type=unique_data_type)
-	response = await get_persistence_infos(nex.FRIEND_A, 0, [])
-
-	assert slots_of(response) == list(range(constants.NUM_PERSISTENCE_SLOT))
-	assert [info.owner_id for info in response.infos] == [nex.FRIEND_A] * constants.NUM_PERSISTENCE_SLOT
-	assert response.infos[SLOT_0].data_id == data_id
-	assert response.results[SLOT_0].is_success()
-	assert response.results[EMPTY_SLOT].is_error()
-
-async def test_unknown_owner():
-	"""
-	A user who has never persisted anything has no slots to read, and
-	that fails per slot rather than failing the request
-	"""
-
-	response = await get_persistence_infos(nex.FRIEND_A, 1234, [SLOT_0])
-
-	assert helpers.result_names(response.results) == ["DataStore::NotFound"]
-
-# * Slots which are not slots at all
-
-@pytest.mark.parametrize("slot", [
-	pytest.param(constants.NUM_PERSISTENCE_SLOT, id="one-past-the-last-slot"),
-	pytest.param(constants.INVALID_PERSISTENCE_SLOT_ID, id="invalid-slot")
-])
-async def test_an_invalid_slot_fails_the_whole_request(slot):
-	"""
-	A slot which cannot exist is a bad request, which throws instead of failing only its own entry
-	"""
-
-	assert await get_persistence_infos_error(nex.FRIEND_A, nex.FRIEND_A, [SLOT_0, slot]) == "DataStore::InvalidArgument"

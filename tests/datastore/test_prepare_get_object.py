@@ -184,185 +184,6 @@ async def test_a_lock_id_on_an_object_which_has_no_read_lock(unique_data_type, p
 	await prepare_get(nex.FRIEND_A, data_id=data_id, lock_id=999)
 	await prepare_get(nex.FRIEND_A, data_id=data_id, lock_id=1)
 
-# * The access permission of the object
-
-@pytest.mark.parametrize("permission, recipients, allowed, denied", ACCESS_PERMISSIONS)
-@pytest.mark.parametrize("post", helpers.FILE_SERVER_POST_METHODS)
-async def test_the_access_permission_of_the_object(unique_data_type, permission, recipients, allowed, denied, post):
-	"""
-	Downloading is gated the same way reading the metadata is
-	"""
-
-	access = helpers.permission(permission=permission, recipients=recipients)
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, permission=access)
-
-	assert (await prepare_get(allowed, data_id=data_id)).url != ""
-
-	if denied is not None:
-		assert await prepare_get_error(denied, data_id=data_id) == "DataStore::PermissionDenied"
-
-@pytest.mark.parametrize("caller", [
-	pytest.param(nex.FRIEND_B, id="a-friend"),
-	pytest.param(nex.STRANGER, id="a-stranger")
-])
-@pytest.mark.parametrize("post", helpers.FILE_SERVER_POST_METHODS)
-async def test_a_private_object_is_closed_to_everybody(unique_data_type, caller, post):
-	"""
-	A private object lets nobody in at all
-	"""
-
-	permission = helpers.permission(permission=constants.Permission.PERMISSION_PRIVATE)
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, permission=permission)
-
-	assert (await prepare_get(nex.FRIEND_A, data_id=data_id)).url != ""
-	assert await prepare_get_error(caller, data_id=data_id) == "DataStore::PermissionDenied"
-
-# * The object status
-
-@pytest.mark.parametrize("post", helpers.FILE_SERVER_POST_METHODS)
-async def test_a_pending_object_is_downloadable_by_its_owner(unique_data_type, post):
-	"""
-	An object under review can still be fetched by its owner
-	"""
-
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
-
-	assert (await prepare_get(nex.FRIEND_A, data_id=data_id)).url != ""
-
-@pytest.mark.parametrize("post", helpers.FILE_SERVER_POST_METHODS)
-async def test_a_pending_object_is_under_review_for_everyone_else(unique_data_type, post):
-	"""
-	Everyone but the owner is told it is under review
-	"""
-
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
-
-	assert await prepare_get_error(nex.STRANGER, data_id=data_id) == "DataStore::UnderReviewing"
-
-@pytest.mark.parametrize("post", helpers.FILE_SERVER_POST_METHODS)
-async def test_a_rejected_object_is_downloadable_by_its_owner(unique_data_type, post):
-	"""
-	A rejected object can still be fetched by its owner
-	"""
-
-	data_id = await helpers.post_rejected(post, nex.FRIEND_A, data_type=unique_data_type)
-
-	assert (await prepare_get(nex.FRIEND_A, data_id=data_id)).url != ""
-
-@pytest.mark.parametrize("post", helpers.FILE_SERVER_POST_METHODS)
-async def test_a_rejected_object_is_under_review_for_everyone_else(unique_data_type, post):
-	"""
-	Being rejected is not told apart from being under review
-	"""
-
-	data_id = await helpers.post_rejected(post, nex.FRIEND_A, data_type=unique_data_type)
-
-	assert await prepare_get_error(nex.STRANGER, data_id=data_id) == "DataStore::UnderReviewing"
-
-# * Asking where to download an object counts as referring to it
-
-@pytest.mark.parametrize("post", helpers.FILE_SERVER_POST_METHODS)
-async def test_getting_an_object_refers_to_it(unique_data_type, post):
-	"""
-	The reference count goes up and the referred time moves, without
-	the caller having to touch the object separately
-	"""
-
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
-	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
-
-	await anyio.sleep(TIMESTAMP_DELAY)
-	await prepare_get(nex.FRIEND_A, data_id=data_id)
-
-	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
-
-	assert after.referred_count == before.referred_count + 1
-	assert after.referred_time.value() > before.referred_time.value() # TODO - More accurate check for this, right now this isn't super accurate
-
-@pytest.mark.parametrize("post", helpers.FILE_SERVER_POST_METHODS)
-async def test_the_reference_count_stops_at_its_limit(unique_data_type, post):
-	"""
-	A count already at UINT32_MAX stays there rather than wrapping
-	back around to 0
-	"""
-
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
-
-	await helpers.change_meta(nex.FRIEND_A, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_REFERRED_COUNT, referred_count=helpers.UINT32_MAX)
-	await prepare_get(nex.FRIEND_A, data_id=data_id)
-
-	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).referred_count == helpers.UINT32_MAX
-
-@pytest.mark.parametrize("gets, referred_count", [
-	pytest.param(0, 10, id="raised"),
-	pytest.param(3, 1, id="lowered")
-])
-@pytest.mark.parametrize("post", helpers.FILE_SERVER_POST_METHODS)
-async def test_references_carry_on_from_a_changed_referred_count(unique_data_type, gets, referred_count, post):
-	"""
-	The next reference counts up from the value which was set, not from
-	what the count was before
-	"""
-
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
-
-	for _ in range(gets):
-		await prepare_get(nex.FRIEND_A, data_id=data_id)
-
-	await helpers.change_meta(nex.FRIEND_A, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_REFERRED_COUNT, referred_count=referred_count)
-	await prepare_get(nex.FRIEND_A, data_id=data_id)
-
-	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).referred_count == referred_count + 1
-
-@pytest.mark.parametrize("post", helpers.FILE_SERVER_POST_METHODS)
-async def test_getting_an_object_does_not_move_the_expiry(unique_data_type, post):
-	"""
-	An object without DATA_FLAG_PERIOD_FROM_LAST_REFERRED set does not
-	have its expiry updated
-	"""
-
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
-	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
-
-	await anyio.sleep(TIMESTAMP_DELAY)
-	await prepare_get(nex.FRIEND_A, data_id=data_id)
-
-	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
-
-	assert after.expire_time.value() == before.expire_time.value()
-
-@pytest.mark.parametrize("post", helpers.FILE_SERVER_POST_METHODS)
-async def test_getting_an_object_can_push_the_expiry_back(unique_data_type, post):
-	"""
-	An object with DATA_FLAG_PERIOD_FROM_LAST_REFERRED set has its expiry updated
-	"""
-
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_PERIOD_FROM_LAST_REFERRED)
-	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
-
-	await anyio.sleep(TIMESTAMP_DELAY)
-	await prepare_get(nex.FRIEND_A, data_id=data_id)
-
-	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
-
-	assert after.expire_time.value() > before.expire_time.value() # TODO - More accurate check for this, right now this isn't super accurate
-
-@pytest.mark.parametrize("post", helpers.FILE_SERVER_POST_METHODS)
-async def test_a_failed_get_does_not_refer_to_the_object(unique_data_type, post):
-	"""
-	Being refused the object does not count as having referred to it
-	"""
-
-	permission = helpers.permission(permission=constants.Permission.PERMISSION_PRIVATE)
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, permission=permission)
-	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
-
-	assert await prepare_get_error(nex.STRANGER, data_id=data_id) == "DataStore::PermissionDenied"
-
-	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
-
-	assert after.referred_count == before.referred_count
-
 # * persistence_target
 # *
 # * An object can be asked for by the slot it sits in rather than by its data ID
@@ -575,3 +396,182 @@ async def test_the_extra_data_is_not_in_the_way(unique_data_type, extra_data, po
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
 
 	assert (await prepare_get(nex.FRIEND_A, data_id=data_id, extra_data=extra_data)).url != ""
+
+# * The access permission of the object
+
+@pytest.mark.parametrize("permission, recipients, allowed, denied", ACCESS_PERMISSIONS)
+@pytest.mark.parametrize("post", helpers.FILE_SERVER_POST_METHODS)
+async def test_the_access_permission_of_the_object(unique_data_type, permission, recipients, allowed, denied, post):
+	"""
+	Downloading is gated the same way reading the metadata is
+	"""
+
+	access = helpers.permission(permission=permission, recipients=recipients)
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, permission=access)
+
+	assert (await prepare_get(allowed, data_id=data_id)).url != ""
+
+	if denied is not None:
+		assert await prepare_get_error(denied, data_id=data_id) == "DataStore::PermissionDenied"
+
+@pytest.mark.parametrize("caller", [
+	pytest.param(nex.FRIEND_B, id="a-friend"),
+	pytest.param(nex.STRANGER, id="a-stranger")
+])
+@pytest.mark.parametrize("post", helpers.FILE_SERVER_POST_METHODS)
+async def test_a_private_object_is_closed_to_everybody(unique_data_type, caller, post):
+	"""
+	A private object lets nobody in at all
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_PRIVATE)
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, permission=permission)
+
+	assert (await prepare_get(nex.FRIEND_A, data_id=data_id)).url != ""
+	assert await prepare_get_error(caller, data_id=data_id) == "DataStore::PermissionDenied"
+
+# * The object status
+
+@pytest.mark.parametrize("post", helpers.FILE_SERVER_POST_METHODS)
+async def test_a_pending_object_is_downloadable_by_its_owner(unique_data_type, post):
+	"""
+	An object under review can still be fetched by its owner
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
+
+	assert (await prepare_get(nex.FRIEND_A, data_id=data_id)).url != ""
+
+@pytest.mark.parametrize("post", helpers.FILE_SERVER_POST_METHODS)
+async def test_a_pending_object_is_under_review_for_everyone_else(unique_data_type, post):
+	"""
+	Everyone but the owner is told it is under review
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
+
+	assert await prepare_get_error(nex.STRANGER, data_id=data_id) == "DataStore::UnderReviewing"
+
+@pytest.mark.parametrize("post", helpers.FILE_SERVER_POST_METHODS)
+async def test_a_rejected_object_is_downloadable_by_its_owner(unique_data_type, post):
+	"""
+	A rejected object can still be fetched by its owner
+	"""
+
+	data_id = await helpers.post_rejected(post, nex.FRIEND_A, data_type=unique_data_type)
+
+	assert (await prepare_get(nex.FRIEND_A, data_id=data_id)).url != ""
+
+@pytest.mark.parametrize("post", helpers.FILE_SERVER_POST_METHODS)
+async def test_a_rejected_object_is_under_review_for_everyone_else(unique_data_type, post):
+	"""
+	Being rejected is not told apart from being under review
+	"""
+
+	data_id = await helpers.post_rejected(post, nex.FRIEND_A, data_type=unique_data_type)
+
+	assert await prepare_get_error(nex.STRANGER, data_id=data_id) == "DataStore::UnderReviewing"
+
+# * Asking where to download an object counts as referring to it
+
+@pytest.mark.parametrize("post", helpers.FILE_SERVER_POST_METHODS)
+async def test_getting_an_object_refers_to_it(unique_data_type, post):
+	"""
+	The reference count goes up and the referred time moves, without
+	the caller having to touch the object separately
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
+	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	await anyio.sleep(TIMESTAMP_DELAY)
+	await prepare_get(nex.FRIEND_A, data_id=data_id)
+
+	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	assert after.referred_count == before.referred_count + 1
+	assert after.referred_time.value() > before.referred_time.value() # TODO - More accurate check for this, right now this isn't super accurate
+
+@pytest.mark.parametrize("post", helpers.FILE_SERVER_POST_METHODS)
+async def test_the_reference_count_stops_at_its_limit(unique_data_type, post):
+	"""
+	A count already at UINT32_MAX stays there rather than wrapping
+	back around to 0
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
+
+	await helpers.change_meta(nex.FRIEND_A, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_REFERRED_COUNT, referred_count=helpers.UINT32_MAX)
+	await prepare_get(nex.FRIEND_A, data_id=data_id)
+
+	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).referred_count == helpers.UINT32_MAX
+
+@pytest.mark.parametrize("gets, referred_count", [
+	pytest.param(0, 10, id="raised"),
+	pytest.param(3, 1, id="lowered")
+])
+@pytest.mark.parametrize("post", helpers.FILE_SERVER_POST_METHODS)
+async def test_references_carry_on_from_a_changed_referred_count(unique_data_type, gets, referred_count, post):
+	"""
+	The next reference counts up from the value which was set, not from
+	what the count was before
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
+
+	for _ in range(gets):
+		await prepare_get(nex.FRIEND_A, data_id=data_id)
+
+	await helpers.change_meta(nex.FRIEND_A, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_REFERRED_COUNT, referred_count=referred_count)
+	await prepare_get(nex.FRIEND_A, data_id=data_id)
+
+	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).referred_count == referred_count + 1
+
+@pytest.mark.parametrize("post", helpers.FILE_SERVER_POST_METHODS)
+async def test_getting_an_object_does_not_move_the_expiry(unique_data_type, post):
+	"""
+	An object without DATA_FLAG_PERIOD_FROM_LAST_REFERRED set does not
+	have its expiry updated
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
+	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	await anyio.sleep(TIMESTAMP_DELAY)
+	await prepare_get(nex.FRIEND_A, data_id=data_id)
+
+	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	assert after.expire_time.value() == before.expire_time.value()
+
+@pytest.mark.parametrize("post", helpers.FILE_SERVER_POST_METHODS)
+async def test_getting_an_object_can_push_the_expiry_back(unique_data_type, post):
+	"""
+	An object with DATA_FLAG_PERIOD_FROM_LAST_REFERRED set has its expiry updated
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_PERIOD_FROM_LAST_REFERRED)
+	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	await anyio.sleep(TIMESTAMP_DELAY)
+	await prepare_get(nex.FRIEND_A, data_id=data_id)
+
+	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	assert after.expire_time.value() > before.expire_time.value() # TODO - More accurate check for this, right now this isn't super accurate
+
+@pytest.mark.parametrize("post", helpers.FILE_SERVER_POST_METHODS)
+async def test_a_failed_get_does_not_refer_to_the_object(unique_data_type, post):
+	"""
+	Being refused the object does not count as having referred to it
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_PRIVATE)
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, permission=permission)
+	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	assert await prepare_get_error(nex.STRANGER, data_id=data_id) == "DataStore::PermissionDenied"
+
+	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	assert after.referred_count == before.referred_count

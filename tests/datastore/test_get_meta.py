@@ -7,20 +7,6 @@ pytestmark = pytest.mark.anyio
 
 PERSISTENCE_SLOT = 0
 
-async def post_persisted(post, pid: int, **fields) -> int:
-	"""
-	Posts an object as the given user, in the users persistence slot
-	"""
-
-	persistence_init_param = helpers.persistence_init_param(persistence_id=PERSISTENCE_SLOT)
-
-	return await post(pid, persistence_init_param=persistence_init_param, **fields)
-
-# * Access permission tests
-# *
-# * Objects are always visible to their owner. For everyone else, it
-# * depends on the access permission of the object
-
 ACCESS_PERMISSION_CASES = [
 	pytest.param(constants.Permission.PERMISSION_PUBLIC, [], nex.FRIEND_A, True, id="public-owner"),
 	pytest.param(constants.Permission.PERMISSION_PUBLIC, [], nex.FRIEND_B, True, id="public-friend"),
@@ -40,106 +26,16 @@ ACCESS_PERMISSION_CASES = [
 	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.STRANGER], nex.FRIEND_B, False, id="specified-friend-friend-not-recipient")
 ]
 
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-@pytest.mark.parametrize("permission, recipients, viewer, visible", ACCESS_PERMISSION_CASES)
-async def test_access_permission(unique_data_type, post, permission, recipients, viewer, visible):
+async def post_persisted(post, pid: int, **fields) -> int:
 	"""
-	Tests general object visibility
+	Posts an object as the given user, in the users persistence slot
 	"""
 
-	permission = helpers.permission(permission=permission, recipients=recipients)
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, permission=permission)
+	persistence_init_param = helpers.persistence_init_param(persistence_id=PERSISTENCE_SLOT)
 
-	if not visible:
-		assert await helpers.get_meta_error(viewer, data_id=data_id) == "DataStore::PermissionDenied"
-		return
+	return await post(pid, persistence_init_param=persistence_init_param, **fields)
 
-	meta_info = await helpers.get_meta(viewer, data_id=data_id)
-
-	assert meta_info.data_id == data_id
-
-@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
-@pytest.mark.parametrize("permission, recipients, viewer, visible", ACCESS_PERMISSION_CASES)
-async def test_access_permission_of_persisted_objects(unique_data_type, post, permission, recipients, viewer, visible):
-	"""
-	Tests persistence slot visibility
-	"""
-
-	permission = helpers.permission(permission=permission, recipients=recipients)
-	data_id = await post_persisted(post, nex.FRIEND_A, data_type=unique_data_type, permission=permission)
-	target = helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=PERSISTENCE_SLOT)
-
-	if not visible:
-		assert await helpers.get_meta_error(viewer, persistence_target=target) == "DataStore::PermissionDenied"
-		return
-
-	meta_info = await helpers.get_meta(viewer, persistence_target=target)
-
-	assert meta_info.data_id == data_id
-
-# * Object status tests
-# *
-# * The object status is the objects visibility status, which is
-# * separate from whether or not its upload was completed
-# TODO - Previous tests before the NN shutdown indicated that DATA_STATUS_REJECTED resulted in NotFound
-#        for those objects, for everyone, including the owner, unless SearchObject was used. However tests
-#        on Pokemon Bank after the NN shutdown now contradict that. These tests are designed to match
-#        Pokemon Bank until more information is confirmed. Update the wiki about this? The previous results
-#        could also be from flawed testing prior to the shutdown
-
-async def post_pending(post, pid: int, **fields) -> int:
-	"""
-	Posts an object which needs to be reviewed, as the given user
-	"""
-
-	return await post(pid, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW, **fields)
-
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_pending_object_is_visible_to_its_owner(unique_data_type, post):
-	"""
-	Objects under review can still be seen by their owner
-	"""
-
-	data_id = await post_pending(post, nex.FRIEND_A, data_type=unique_data_type)
-	meta_info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
-
-	assert meta_info.data_id == data_id
-	assert meta_info.status == constants.DataStatus.DATA_STATUS_PENDING
-
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_pending_object_is_under_review_for_everyone_else(unique_data_type, post):
-	"""
-	Objects under review are not visible to anyone but their owner,
-	even when the object is public
-	"""
-
-	data_id = await post_pending(post, nex.FRIEND_A, data_type=unique_data_type)
-
-	assert await helpers.get_meta_error(nex.STRANGER, data_id=data_id) == "DataStore::UnderReviewing"
-
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_rejected_object_is_visible_to_its_owner(unique_data_type, post):
-	"""
-	Rejected objects can still be seen by their owner
-	"""
-
-	data_id = await helpers.post_rejected(post, nex.FRIEND_A, data_type=unique_data_type)
-	meta_info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
-
-	assert meta_info.data_id == data_id
-	assert meta_info.status == constants.DataStatus.DATA_STATUS_REJECTED
-
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_rejected_object_is_under_review_for_everyone_else(unique_data_type, post):
-	"""
-	Rejected objects appear as under review still to other users
-	"""
-
-	data_id = await helpers.post_rejected(post, nex.FRIEND_A, data_type=unique_data_type)
-
-	assert await helpers.get_meta_error(nex.STRANGER, data_id=data_id) == "DataStore::UnderReviewing"
-
-# * Data ID lookup tests
+# * data_id
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_data_id(unique_data_type, post):
@@ -206,7 +102,7 @@ async def test_no_data_id_or_persistence_target():
 
 	assert await helpers.get_meta_error(nex.FRIEND_A) == "DataStore::NotFound"
 
-# * Object persistence tests
+# * persistence_target
 # *
 # * Somewhat redundant due to the access permission
 # * tests, but cover all our bases anyway
@@ -307,7 +203,7 @@ async def test_empty_persistence_slot():
 
 	assert await helpers.get_meta_error(nex.FRIEND_A, persistence_target=target) == "DataStore::NotFound"
 
-# * ResultFlag tests
+# * result_option
 # *
 # * ResultFlag determines what data is returned in the response
 
@@ -403,38 +299,7 @@ async def test_result_option_every_flag(unique_data_type, post):
 	assert meta_info.permission.recipients == [nex.FRIEND_B]
 	assert [(rating.slot, rating.info.total_value) for rating in meta_info.ratings] == [(0, 7)]
 
-# * Read lock tests
-# *
-# * Read locks only gate downloading an object, so they never stop
-# * anyone from reading its metadata
-
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_read_locks_do_not_hide_metadata(unique_data_type, post):
-	"""
-	An object which is locked by someone else can still have its
-	metadata read, by anyone who has access to it
-	"""
-
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_USE_READ_LOCK)
-
-	# * Touching the object with a lock ID locks it
-	await helpers.touch_object(nex.FRIEND_A, data_id=data_id, lock_id=1234)
-
-	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).data_id == data_id
-	assert (await helpers.get_meta(nex.STRANGER, data_id=data_id)).data_id == data_id
-
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_the_read_lock_flag_is_returned(unique_data_type, post):
-	"""
-	Objects posted with DATA_FLAG_USE_READ_LOCK say so in their metadata
-	"""
-
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_USE_READ_LOCK)
-	meta_info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
-
-	assert meta_info.flag & constants.DataFlag.DATA_FLAG_USE_READ_LOCK
-
-# * Access password tests
+# * access_password
 # *
 # * The server assigns every object a random access password, which the
 # * owner can share with other users. A correct password bypasses every
@@ -489,3 +354,138 @@ async def test_access_password_bypasses_permissions(unique_data_type, post):
 	meta_info = await helpers.get_meta(nex.STRANGER, data_id=data_id, access_password=password_info.access_password)
 
 	assert meta_info.data_id == data_id
+
+# * Access permission tests
+# *
+# * Objects are always visible to their owner. For everyone else, it
+# * depends on the access permission of the object
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("permission, recipients, viewer, visible", ACCESS_PERMISSION_CASES)
+async def test_access_permission(unique_data_type, post, permission, recipients, viewer, visible):
+	"""
+	Tests general object visibility
+	"""
+
+	permission = helpers.permission(permission=permission, recipients=recipients)
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, permission=permission)
+
+	if not visible:
+		assert await helpers.get_meta_error(viewer, data_id=data_id) == "DataStore::PermissionDenied"
+		return
+
+	meta_info = await helpers.get_meta(viewer, data_id=data_id)
+
+	assert meta_info.data_id == data_id
+
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
+@pytest.mark.parametrize("permission, recipients, viewer, visible", ACCESS_PERMISSION_CASES)
+async def test_access_permission_of_persisted_objects(unique_data_type, post, permission, recipients, viewer, visible):
+	"""
+	Tests persistence slot visibility
+	"""
+
+	permission = helpers.permission(permission=permission, recipients=recipients)
+	data_id = await post_persisted(post, nex.FRIEND_A, data_type=unique_data_type, permission=permission)
+	target = helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=PERSISTENCE_SLOT)
+
+	if not visible:
+		assert await helpers.get_meta_error(viewer, persistence_target=target) == "DataStore::PermissionDenied"
+		return
+
+	meta_info = await helpers.get_meta(viewer, persistence_target=target)
+
+	assert meta_info.data_id == data_id
+
+# * Object status tests
+# *
+# * The object status is the objects visibility status, which is
+# * separate from whether or not its upload was completed
+# TODO - Previous tests before the NN shutdown indicated that DATA_STATUS_REJECTED resulted in NotFound
+#        for those objects, for everyone, including the owner, unless SearchObject was used. However tests
+#        on Pokemon Bank after the NN shutdown now contradict that. These tests are designed to match
+#        Pokemon Bank until more information is confirmed. Update the wiki about this? The previous results
+#        could also be from flawed testing prior to the shutdown
+
+async def post_pending(post, pid: int, **fields) -> int:
+	"""
+	Posts an object which needs to be reviewed, as the given user
+	"""
+
+	return await post(pid, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW, **fields)
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_pending_object_is_visible_to_its_owner(unique_data_type, post):
+	"""
+	Objects under review can still be seen by their owner
+	"""
+
+	data_id = await post_pending(post, nex.FRIEND_A, data_type=unique_data_type)
+	meta_info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	assert meta_info.data_id == data_id
+	assert meta_info.status == constants.DataStatus.DATA_STATUS_PENDING
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_pending_object_is_under_review_for_everyone_else(unique_data_type, post):
+	"""
+	Objects under review are not visible to anyone but their owner,
+	even when the object is public
+	"""
+
+	data_id = await post_pending(post, nex.FRIEND_A, data_type=unique_data_type)
+
+	assert await helpers.get_meta_error(nex.STRANGER, data_id=data_id) == "DataStore::UnderReviewing"
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_rejected_object_is_visible_to_its_owner(unique_data_type, post):
+	"""
+	Rejected objects can still be seen by their owner
+	"""
+
+	data_id = await helpers.post_rejected(post, nex.FRIEND_A, data_type=unique_data_type)
+	meta_info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	assert meta_info.data_id == data_id
+	assert meta_info.status == constants.DataStatus.DATA_STATUS_REJECTED
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_rejected_object_is_under_review_for_everyone_else(unique_data_type, post):
+	"""
+	Rejected objects appear as under review still to other users
+	"""
+
+	data_id = await helpers.post_rejected(post, nex.FRIEND_A, data_type=unique_data_type)
+
+	assert await helpers.get_meta_error(nex.STRANGER, data_id=data_id) == "DataStore::UnderReviewing"
+
+# * Read lock tests
+# *
+# * Read locks only gate downloading an object, so they never stop
+# * anyone from reading its metadata
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_read_locks_do_not_hide_metadata(unique_data_type, post):
+	"""
+	An object which is locked by someone else can still have its
+	metadata read, by anyone who has access to it
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_USE_READ_LOCK)
+
+	# * Touching the object with a lock ID locks it
+	await helpers.touch_object(nex.FRIEND_A, data_id=data_id, lock_id=1234)
+
+	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).data_id == data_id
+	assert (await helpers.get_meta(nex.STRANGER, data_id=data_id)).data_id == data_id
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_the_read_lock_flag_is_returned(unique_data_type, post):
+	"""
+	Objects posted with DATA_FLAG_USE_READ_LOCK say so in their metadata
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_USE_READ_LOCK)
+	meta_info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	assert meta_info.flag & constants.DataFlag.DATA_FLAG_USE_READ_LOCK

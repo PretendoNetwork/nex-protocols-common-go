@@ -185,6 +185,8 @@ async def test_a_flag_which_is_not_defined(unique_data_type, post):
 
 	assert await helpers.get_meta(nex.FRIEND_A, data_id=data_id, result_option=constants.ResultFlag.RESULT_FLAG_ALL) == before
 
+# * modifies_flag, the update time and the expiry
+# *
 # * The update time and the expiry move together, and which of them
 # * moves depends on the two flags which touch them
 

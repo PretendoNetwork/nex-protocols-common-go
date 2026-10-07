@@ -197,6 +197,8 @@ async def test_a_flag_which_is_not_defined(unique_data_type, post):
 
 	assert await helpers.get_meta(nex.FRIEND_A, data_id=data_id, result_option=constants.ResultFlag.RESULT_FLAG_ALL) == before
 
+# * modifies_flag, the update time and the expiry
+# *
 # * The update time and the expiry move together, and which of them
 # * moves depends on the two flags which touch them
 
@@ -802,32 +804,6 @@ async def test_anybody_can_change_the_status_of_an_object_which_allows_it(unique
 
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).status == constants.DataStatus.DATA_STATUS_REJECTED
 
-# * The object status
-
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_a_pending_object_can_be_changed_by_its_owner(unique_data_type, post):
-	"""
-	An object under review can still be changed by its owner
-	"""
-
-	data_id = await post_object(post, nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
-
-	await change(nex.FRIEND_A, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_NAME, name="after")
-
-	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).name == "after"
-
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_a_pending_object_is_under_review_for_everyone_else(unique_data_type, post):
-	"""
-	Everyone but the owner is told it is under review, whatever their
-	update permission is
-	"""
-
-	update = helpers.permission(permission=constants.Permission.PERMISSION_PUBLIC)
-	data_id = await post_object(post, nex.FRIEND_A, data_type=unique_data_type, delete_permission=update, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
-
-	assert await change_error(nex.STRANGER, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_NAME, name="after") == "DataStore::UnderReviewing"
-
 # * compare_param
 # *
 # * The change is only made if the fields named in comparison_flag still
@@ -1150,7 +1126,35 @@ async def test_the_update_permission_of_an_object_in_a_slot(unique_data_type, po
 	assert await change_error(nex.STRANGER, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_NAME, name="after", persistence_target=target) == "DataStore::PermissionDenied"
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).name == BEFORE_NAME
 
+# * The object status
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_a_pending_object_can_be_changed_by_its_owner(unique_data_type, post):
+	"""
+	An object under review can still be changed by its owner
+	"""
+
+	data_id = await post_object(post, nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
+
+	await change(nex.FRIEND_A, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_NAME, name="after")
+
+	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).name == "after"
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_a_pending_object_is_under_review_for_everyone_else(unique_data_type, post):
+	"""
+	Everyone but the owner is told it is under review, whatever their
+	update permission is
+	"""
+
+	update = helpers.permission(permission=constants.Permission.PERMISSION_PUBLIC)
+	data_id = await post_object(post, nex.FRIEND_A, data_type=unique_data_type, delete_permission=update, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
+
+	assert await change_error(nex.STRANGER, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_NAME, name="after") == "DataStore::UnderReviewing"
+
 # * Tests specific to the batch version
+
+# * data_ids and params
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_one_param_for_several_data_ids(unique_data_type, post):
@@ -1253,6 +1257,8 @@ async def test_a_request_of_neither_shape(data_ids, entries, transactional):
 
 	assert await change_metas_error(nex.FRIEND_A, data_ids, entries, transactional) == "DataStore::InvalidArgument"
 
+# * data_ids and params, at the capacity
+# *
 # * BATCH_PROCESSING_CAPACITY limits the number of objects in one request
 
 @pytest.mark.parametrize("transactional", [True, False])
@@ -1301,6 +1307,217 @@ async def test_too_many_params(transactional):
 
 	assert await change_metas_error(nex.FRIEND_A, [], entries, transactional) == "DataStore::OverCapacity"
 
+# * params
+# *
+# * Every param is a change of its own, with its own flag and password
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_every_param_uses_its_own_flag(unique_data_type, post):
+	"""
+	Two params changing different fields of one object both apply
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
+
+	entries = [
+		{
+			"data_id": data_id,
+			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
+			"name": "after"
+		},
+		{
+			"data_id": data_id,
+			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_TAGS,
+			"tags": ["after"]
+		}
+	]
+
+	assert helpers.result_names(await change_metas(nex.FRIEND_A, [], entries, False)) == [None, None]
+
+	info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id, result_option=constants.ResultFlag.RESULT_FLAG_TAGS)
+
+	assert info.name == "after"
+	assert info.tags == ["after"]
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_every_param_uses_its_own_password(unique_data_type, post):
+	"""
+	The password is read off each param, not just the first one
+	"""
+
+	first = await post(nex.FRIEND_A, data_type=unique_data_type)
+	second = await post(nex.FRIEND_A, data_type=unique_data_type)
+
+	first_password = (await helpers.get_password_info(nex.FRIEND_A, first)).update_password
+	second_password = (await helpers.get_password_info(nex.FRIEND_A, second)).update_password
+
+	entries = [
+		{
+			"data_id": first,
+			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
+			"name": "after",
+			"update_password": first_password
+		},
+		{
+			"data_id": second,
+			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
+			"name": "after",
+			"update_password": second_password
+		}
+	]
+
+	assert helpers.result_names(await change_metas(nex.STRANGER, [], entries, False)) == [None, None]
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_a_wrong_password_only_fails_its_own_entry(unique_data_type, post):
+	"""
+	A bad password fails that entry alone, and says the password was wrong
+	"""
+
+	first = await post(nex.FRIEND_A, data_type=unique_data_type)
+	second = await post(nex.FRIEND_A, data_type=unique_data_type)
+	password = (await helpers.get_password_info(nex.FRIEND_A, first)).update_password
+
+	entries = [
+		{
+			"data_id": first,
+			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
+			"name": "after",
+			"update_password": password
+		},
+		{
+			"data_id": second,
+			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
+			"name": "after",
+			"update_password": 1234
+		}
+	]
+
+	assert helpers.result_names(await change_metas(nex.STRANGER, [], entries, False)) == [None, "DataStore::InvalidPassword"]
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_one_password_for_several_data_ids(unique_data_type, post):
+	"""
+	With one param for several data IDs, its password only gets in to
+	the object it belongs to
+	"""
+
+	first = await post(nex.FRIEND_A, data_type=unique_data_type)
+	second = await post(nex.FRIEND_A, data_type=unique_data_type)
+	password = (await helpers.get_password_info(nex.FRIEND_A, first)).update_password
+
+	entries = [
+		{
+			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
+			"name": "after",
+			"update_password": password
+		}
+	]
+
+	assert helpers.result_names(await change_metas(nex.STRANGER, [first, second], entries, False)) == [None, "DataStore::InvalidPassword"]
+
+# * compare_param, with several objects in one request
+# *
+# * Each object is compared on its own, against what it holds at the
+# * moment its turn comes
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_every_object_is_compared(unique_data_type, post):
+	"""
+	With one param for several data IDs, the comparison is made against
+	each object, and only the ones which match are changed
+	"""
+
+	matching = await post(nex.FRIEND_A, data_type=unique_data_type, name="before")
+	other = await post(nex.FRIEND_A, data_type=unique_data_type, name="other")
+
+	entries = [
+		{
+			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
+			"name": "after",
+			"compare_param": helpers.change_meta_compare_param(comparison_flag=constants.ComparisonFlag.COMPARISON_FLAG_NAME, name="before")
+		}
+	]
+
+	results = await change_metas(nex.FRIEND_A, [matching, other], entries, False)
+
+	assert helpers.result_names(results) == [None, "DataStore::ValueNotEqual"]
+	assert (await helpers.get_meta(nex.FRIEND_A, data_id=matching)).name == "after"
+	assert (await helpers.get_meta(nex.FRIEND_A, data_id=other)).name == "other"
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_the_same_object_twice_is_compared_after_the_first_change(unique_data_type, post):
+	"""
+	The second time an object comes up it already holds the first
+	change, so a comparison against what it held before no longer matches
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, name="before")
+
+	entries = [
+		{
+			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
+			"name": "after",
+			"compare_param": helpers.change_meta_compare_param(comparison_flag=constants.ComparisonFlag.COMPARISON_FLAG_NAME, name="before")
+		}
+	]
+
+	results = await change_metas(nex.FRIEND_A, [data_id, data_id], entries, False)
+
+	assert helpers.result_names(results) == [None, "DataStore::ValueNotEqual"]
+	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).name == "after"
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_transactional_rolls_back_a_comparison_which_does_not_match(unique_data_type, post):
+	"""
+	An object which does not match fails the request, and the object
+	which did match is left alone
+	"""
+
+	matching = await post(nex.FRIEND_A, data_type=unique_data_type, name="before")
+	other = await post(nex.FRIEND_A, data_type=unique_data_type, name="other")
+	before = await helpers.get_meta(nex.FRIEND_A, data_id=matching, result_option=constants.ResultFlag.RESULT_FLAG_ALL)
+
+	entries = [
+		{
+			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
+			"name": "after",
+			"compare_param": helpers.change_meta_compare_param(comparison_flag=constants.ComparisonFlag.COMPARISON_FLAG_NAME, name="before")
+		}
+	]
+
+	assert await change_metas_error(nex.FRIEND_A, [matching, other], entries, True) == "DataStore::ValueNotEqual"
+	assert await helpers.get_meta(nex.FRIEND_A, data_id=matching, result_option=constants.ResultFlag.RESULT_FLAG_ALL) == before
+
+# * persistence_target
+# *
+# * Disclaimer: these tests were not ran against a live server, for the same
+# * reason as the persistence_target tests in test_change_meta.py
+
+@pytest.mark.skipif(nex.LIVE, reason="Pokemon Bank predates revision 1 of DataStoreChangeMetaParam, which added persistence_target")
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
+async def test_a_param_can_name_its_object_by_persistence_target(unique_data_type, post):
+	"""
+	With no data_ids, a param can name its object through the slot it
+	sits in rather than by its data ID
+	"""
+
+	init_param = helpers.persistence_init_param(persistence_id=PERSISTENCE_SLOT)
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, persistence_init_param=init_param)
+
+	entries = [
+		{
+			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
+			"name": "after",
+			"persistence_target": helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=PERSISTENCE_SLOT)
+		}
+	]
+
+	assert helpers.result_names(await change_metas(nex.FRIEND_A, [], entries, False)) == [None]
+	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).name == "after"
+
+# * transactional, set to true
+# *
 # * A transactional request is all or nothing. It throws the first error
 # * it runs into, leaves every object alone, and has no per-object
 # * results to give back
@@ -1447,6 +1664,8 @@ async def test_transactional_the_same_object_twice(unique_data_type, post):
 	assert await change_metas(nex.FRIEND_A, [], entries, True) == []
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).name == "second"
 
+# * transactional, set to false
+# *
 # * Without the transactional flag each object is dealt with on its own,
 # * the request always succeeds, and the results list says what happened
 # * to each one
@@ -1568,113 +1787,6 @@ async def test_the_same_object_twice(unique_data_type, post):
 	assert helpers.result_names(await change_metas(nex.FRIEND_A, [], entries, False)) == [None, None]
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).name == "second"
 
-# * Every param is a change of its own, with its own flag and password
-
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_every_param_uses_its_own_flag(unique_data_type, post):
-	"""
-	Two params changing different fields of one object both apply
-	"""
-
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
-
-	entries = [
-		{
-			"data_id": data_id,
-			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
-			"name": "after"
-		},
-		{
-			"data_id": data_id,
-			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_TAGS,
-			"tags": ["after"]
-		}
-	]
-
-	assert helpers.result_names(await change_metas(nex.FRIEND_A, [], entries, False)) == [None, None]
-
-	info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id, result_option=constants.ResultFlag.RESULT_FLAG_TAGS)
-
-	assert info.name == "after"
-	assert info.tags == ["after"]
-
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_every_param_uses_its_own_password(unique_data_type, post):
-	"""
-	The password is read off each param, not just the first one
-	"""
-
-	first = await post(nex.FRIEND_A, data_type=unique_data_type)
-	second = await post(nex.FRIEND_A, data_type=unique_data_type)
-
-	first_password = (await helpers.get_password_info(nex.FRIEND_A, first)).update_password
-	second_password = (await helpers.get_password_info(nex.FRIEND_A, second)).update_password
-
-	entries = [
-		{
-			"data_id": first,
-			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
-			"name": "after",
-			"update_password": first_password
-		},
-		{
-			"data_id": second,
-			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
-			"name": "after",
-			"update_password": second_password
-		}
-	]
-
-	assert helpers.result_names(await change_metas(nex.STRANGER, [], entries, False)) == [None, None]
-
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_a_wrong_password_only_fails_its_own_entry(unique_data_type, post):
-	"""
-	A bad password fails that entry alone, and says the password was wrong
-	"""
-
-	first = await post(nex.FRIEND_A, data_type=unique_data_type)
-	second = await post(nex.FRIEND_A, data_type=unique_data_type)
-	password = (await helpers.get_password_info(nex.FRIEND_A, first)).update_password
-
-	entries = [
-		{
-			"data_id": first,
-			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
-			"name": "after",
-			"update_password": password
-		},
-		{
-			"data_id": second,
-			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
-			"name": "after",
-			"update_password": 1234
-		}
-	]
-
-	assert helpers.result_names(await change_metas(nex.STRANGER, [], entries, False)) == [None, "DataStore::InvalidPassword"]
-
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_one_password_for_several_data_ids(unique_data_type, post):
-	"""
-	With one param for several data IDs, its password only gets in to
-	the object it belongs to
-	"""
-
-	first = await post(nex.FRIEND_A, data_type=unique_data_type)
-	second = await post(nex.FRIEND_A, data_type=unique_data_type)
-	password = (await helpers.get_password_info(nex.FRIEND_A, first)).update_password
-
-	entries = [
-		{
-			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
-			"name": "after",
-			"update_password": password
-		}
-	]
-
-	assert helpers.result_names(await change_metas(nex.STRANGER, [first, second], entries, False)) == [None, "DataStore::InvalidPassword"]
-
 # * Objects which cannot be changed, in a transactional request
 
 @pytest.mark.parametrize("data_id", [
@@ -1699,103 +1811,3 @@ async def test_transactional_a_pending_object_is_under_review(unique_data_type, 
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, delete_permission=update, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
 
 	assert await change_metas_error(nex.STRANGER, [data_id], [{}], True) == "DataStore::UnderReviewing"
-
-# * compare_param, with several objects in one request
-# *
-# * Each object is compared on its own, against what it holds at the
-# * moment its turn comes
-
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_every_object_is_compared(unique_data_type, post):
-	"""
-	With one param for several data IDs, the comparison is made against
-	each object, and only the ones which match are changed
-	"""
-
-	matching = await post(nex.FRIEND_A, data_type=unique_data_type, name="before")
-	other = await post(nex.FRIEND_A, data_type=unique_data_type, name="other")
-
-	entries = [
-		{
-			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
-			"name": "after",
-			"compare_param": helpers.change_meta_compare_param(comparison_flag=constants.ComparisonFlag.COMPARISON_FLAG_NAME, name="before")
-		}
-	]
-
-	results = await change_metas(nex.FRIEND_A, [matching, other], entries, False)
-
-	assert helpers.result_names(results) == [None, "DataStore::ValueNotEqual"]
-	assert (await helpers.get_meta(nex.FRIEND_A, data_id=matching)).name == "after"
-	assert (await helpers.get_meta(nex.FRIEND_A, data_id=other)).name == "other"
-
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_the_same_object_twice_is_compared_after_the_first_change(unique_data_type, post):
-	"""
-	The second time an object comes up it already holds the first
-	change, so a comparison against what it held before no longer matches
-	"""
-
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, name="before")
-
-	entries = [
-		{
-			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
-			"name": "after",
-			"compare_param": helpers.change_meta_compare_param(comparison_flag=constants.ComparisonFlag.COMPARISON_FLAG_NAME, name="before")
-		}
-	]
-
-	results = await change_metas(nex.FRIEND_A, [data_id, data_id], entries, False)
-
-	assert helpers.result_names(results) == [None, "DataStore::ValueNotEqual"]
-	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).name == "after"
-
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_transactional_rolls_back_a_comparison_which_does_not_match(unique_data_type, post):
-	"""
-	An object which does not match fails the request, and the object
-	which did match is left alone
-	"""
-
-	matching = await post(nex.FRIEND_A, data_type=unique_data_type, name="before")
-	other = await post(nex.FRIEND_A, data_type=unique_data_type, name="other")
-	before = await helpers.get_meta(nex.FRIEND_A, data_id=matching, result_option=constants.ResultFlag.RESULT_FLAG_ALL)
-
-	entries = [
-		{
-			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
-			"name": "after",
-			"compare_param": helpers.change_meta_compare_param(comparison_flag=constants.ComparisonFlag.COMPARISON_FLAG_NAME, name="before")
-		}
-	]
-
-	assert await change_metas_error(nex.FRIEND_A, [matching, other], entries, True) == "DataStore::ValueNotEqual"
-	assert await helpers.get_meta(nex.FRIEND_A, data_id=matching, result_option=constants.ResultFlag.RESULT_FLAG_ALL) == before
-
-# * persistence_target
-# *
-# * Disclaimer: these tests were not ran against a live server, for the same
-# * reason as the persistence_target tests in test_change_meta.py
-
-@pytest.mark.skipif(nex.LIVE, reason="Pokemon Bank predates revision 1 of DataStoreChangeMetaParam, which added persistence_target")
-@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
-async def test_a_param_can_name_its_object_by_persistence_target(unique_data_type, post):
-	"""
-	With no data_ids, a param can name its object through the slot it
-	sits in rather than by its data ID
-	"""
-
-	init_param = helpers.persistence_init_param(persistence_id=PERSISTENCE_SLOT)
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, persistence_init_param=init_param)
-
-	entries = [
-		{
-			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
-			"name": "after",
-			"persistence_target": helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=PERSISTENCE_SLOT)
-		}
-	]
-
-	assert helpers.result_names(await change_metas(nex.FRIEND_A, [], entries, False)) == [None]
-	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).name == "after"

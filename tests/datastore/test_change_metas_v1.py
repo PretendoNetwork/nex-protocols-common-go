@@ -223,6 +223,8 @@ async def test_a_flag_which_is_not_defined(unique_data_type, post):
 
 	assert await helpers.get_meta(nex.FRIEND_A, data_id=data_id, result_option=constants.ResultFlag.RESULT_FLAG_ALL) == before
 
+# * modifies_flag, the update time and the expiry
+# *
 # * The update time and the expiry move together, and which of them
 # * moves depends on the two flags which touch them
 
@@ -690,6 +692,8 @@ async def test_a_pending_object_is_under_review_for_everyone_else(unique_data_ty
 
 # * Tests specific to the batch version
 
+# * data_ids and params
+
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_one_param_for_several_data_ids(unique_data_type, post):
 	"""
@@ -791,6 +795,8 @@ async def test_a_request_of_neither_shape(data_ids, entries, transactional):
 
 	assert await change_metas_error(nex.FRIEND_A, data_ids, entries, transactional) == "DataStore::InvalidArgument"
 
+# * data_ids and params, at the capacity
+# *
 # * BATCH_PROCESSING_CAPACITY limits the number of objects in one request
 
 @pytest.mark.parametrize("transactional", [True, False])
@@ -839,6 +845,117 @@ async def test_too_many_params(transactional):
 
 	assert await change_metas_error(nex.FRIEND_A, [], entries, transactional) == "DataStore::OverCapacity"
 
+# * params
+# *
+# * Every param is a change of its own, with its own flag and password
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_every_param_uses_its_own_flag(unique_data_type, post):
+	"""
+	Two params changing different fields of one object both apply
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
+
+	entries = [
+		{
+			"data_id": data_id,
+			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
+			"name": "after"
+		},
+		{
+			"data_id": data_id,
+			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_TAGS,
+			"tags": ["after"]
+		}
+	]
+
+	assert helpers.result_names(await change_metas(nex.FRIEND_A, [], entries, False)) == [None, None]
+
+	info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id, result_option=constants.ResultFlag.RESULT_FLAG_TAGS)
+
+	assert info.name == "after"
+	assert info.tags == ["after"]
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_every_param_uses_its_own_password(unique_data_type, post):
+	"""
+	The password is read off each param, not just the first one
+	"""
+
+	first = await post(nex.FRIEND_A, data_type=unique_data_type)
+	second = await post(nex.FRIEND_A, data_type=unique_data_type)
+
+	first_password = (await helpers.get_password_info(nex.FRIEND_A, first)).update_password
+	second_password = (await helpers.get_password_info(nex.FRIEND_A, second)).update_password
+
+	entries = [
+		{
+			"data_id": first,
+			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
+			"name": "after",
+			"update_password": first_password
+		},
+		{
+			"data_id": second,
+			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
+			"name": "after",
+			"update_password": second_password
+		}
+	]
+
+	assert helpers.result_names(await change_metas(nex.STRANGER, [], entries, False)) == [None, None]
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_a_wrong_password_only_fails_its_own_entry(unique_data_type, post):
+	"""
+	A bad password fails that entry alone, and says the password was wrong
+	"""
+
+	first = await post(nex.FRIEND_A, data_type=unique_data_type)
+	second = await post(nex.FRIEND_A, data_type=unique_data_type)
+	password = (await helpers.get_password_info(nex.FRIEND_A, first)).update_password
+
+	entries = [
+		{
+			"data_id": first,
+			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
+			"name": "after",
+			"update_password": password
+		},
+		{
+			"data_id": second,
+			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
+			"name": "after",
+			"update_password": 1234
+		}
+	]
+
+	assert helpers.result_names(await change_metas(nex.STRANGER, [], entries, False)) == [None, "DataStore::InvalidPassword"]
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_one_password_for_several_data_ids(unique_data_type, post):
+	"""
+	With one param for several data IDs, its password only gets in to
+	the object it belongs to
+	"""
+
+	first = await post(nex.FRIEND_A, data_type=unique_data_type)
+	second = await post(nex.FRIEND_A, data_type=unique_data_type)
+	password = (await helpers.get_password_info(nex.FRIEND_A, first)).update_password
+
+	entries = [
+		{
+			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
+			"name": "after",
+			"update_password": password
+		}
+	]
+
+	assert helpers.result_names(await change_metas(nex.STRANGER, [first, second], entries, False)) == [None, "DataStore::InvalidPassword"]
+
+# * transactional, set to true
+# *
 # * A transactional request is all or nothing. It throws the first error
 # * it runs into, leaves every object alone, and has no per-object
 # * results to give back
@@ -985,6 +1102,8 @@ async def test_transactional_the_same_object_twice(unique_data_type, post):
 	assert await change_metas(nex.FRIEND_A, [], entries, True) == []
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).name == "second"
 
+# * transactional, set to false
+# *
 # * Without the transactional flag each object is dealt with on its own,
 # * the request always succeeds, and the results list says what happened
 # * to each one
@@ -1105,113 +1224,6 @@ async def test_the_same_object_twice(unique_data_type, post):
 
 	assert helpers.result_names(await change_metas(nex.FRIEND_A, [], entries, False)) == [None, None]
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).name == "second"
-
-# * Every param is a change of its own, with its own flag and password
-
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_every_param_uses_its_own_flag(unique_data_type, post):
-	"""
-	Two params changing different fields of one object both apply
-	"""
-
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
-
-	entries = [
-		{
-			"data_id": data_id,
-			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
-			"name": "after"
-		},
-		{
-			"data_id": data_id,
-			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_TAGS,
-			"tags": ["after"]
-		}
-	]
-
-	assert helpers.result_names(await change_metas(nex.FRIEND_A, [], entries, False)) == [None, None]
-
-	info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id, result_option=constants.ResultFlag.RESULT_FLAG_TAGS)
-
-	assert info.name == "after"
-	assert info.tags == ["after"]
-
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_every_param_uses_its_own_password(unique_data_type, post):
-	"""
-	The password is read off each param, not just the first one
-	"""
-
-	first = await post(nex.FRIEND_A, data_type=unique_data_type)
-	second = await post(nex.FRIEND_A, data_type=unique_data_type)
-
-	first_password = (await helpers.get_password_info(nex.FRIEND_A, first)).update_password
-	second_password = (await helpers.get_password_info(nex.FRIEND_A, second)).update_password
-
-	entries = [
-		{
-			"data_id": first,
-			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
-			"name": "after",
-			"update_password": first_password
-		},
-		{
-			"data_id": second,
-			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
-			"name": "after",
-			"update_password": second_password
-		}
-	]
-
-	assert helpers.result_names(await change_metas(nex.STRANGER, [], entries, False)) == [None, None]
-
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_a_wrong_password_only_fails_its_own_entry(unique_data_type, post):
-	"""
-	A bad password fails that entry alone, and says the password was wrong
-	"""
-
-	first = await post(nex.FRIEND_A, data_type=unique_data_type)
-	second = await post(nex.FRIEND_A, data_type=unique_data_type)
-	password = (await helpers.get_password_info(nex.FRIEND_A, first)).update_password
-
-	entries = [
-		{
-			"data_id": first,
-			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
-			"name": "after",
-			"update_password": password
-		},
-		{
-			"data_id": second,
-			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
-			"name": "after",
-			"update_password": 1234
-		}
-	]
-
-	assert helpers.result_names(await change_metas(nex.STRANGER, [], entries, False)) == [None, "DataStore::InvalidPassword"]
-
-@pytest.mark.parametrize("post", helpers.POST_METHODS)
-async def test_one_password_for_several_data_ids(unique_data_type, post):
-	"""
-	With one param for several data IDs, its password only gets in to
-	the object it belongs to
-	"""
-
-	first = await post(nex.FRIEND_A, data_type=unique_data_type)
-	second = await post(nex.FRIEND_A, data_type=unique_data_type)
-	password = (await helpers.get_password_info(nex.FRIEND_A, first)).update_password
-
-	entries = [
-		{
-			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
-			"name": "after",
-			"update_password": password
-		}
-	]
-
-	assert helpers.result_names(await change_metas(nex.STRANGER, [first, second], entries, False)) == [None, "DataStore::InvalidPassword"]
 
 # * Objects which cannot be changed, in a transactional request
 
