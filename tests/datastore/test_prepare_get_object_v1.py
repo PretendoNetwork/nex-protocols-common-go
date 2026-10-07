@@ -287,6 +287,41 @@ async def test_getting_an_object_refers_to_it(unique_data_type, post):
 	assert after.referred_time.value() > before.referred_time.value() # TODO - More accurate check for this, right now this isn't super accurate
 
 @pytest.mark.parametrize("post", helpers.FILE_SERVER_POST_METHODS)
+async def test_the_reference_count_stops_at_its_limit(unique_data_type, post):
+	"""
+	A count already at UINT32_MAX stays there rather than wrapping
+	back around to 0
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
+
+	await helpers.change_meta(nex.FRIEND_A, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_REFERRED_COUNT, referred_count=helpers.UINT32_MAX)
+	await prepare_get(nex.FRIEND_A, data_id=data_id)
+
+	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).referred_count == helpers.UINT32_MAX
+
+@pytest.mark.parametrize("gets, referred_count", [
+	pytest.param(0, 10, id="raised"),
+	pytest.param(3, 1, id="lowered")
+])
+@pytest.mark.parametrize("post", helpers.FILE_SERVER_POST_METHODS)
+async def test_references_carry_on_from_a_changed_referred_count(unique_data_type, gets, referred_count, post):
+	"""
+	The next reference counts up from the value which was set, not from
+	what the count was before
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
+
+	for _ in range(gets):
+		await prepare_get(nex.FRIEND_A, data_id=data_id)
+
+	await helpers.change_meta(nex.FRIEND_A, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_REFERRED_COUNT, referred_count=referred_count)
+	await prepare_get(nex.FRIEND_A, data_id=data_id)
+
+	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).referred_count == referred_count + 1
+
+@pytest.mark.parametrize("post", helpers.FILE_SERVER_POST_METHODS)
 async def test_getting_an_object_does_not_move_the_expiry(unique_data_type, post):
 	"""
 	An object without DATA_FLAG_PERIOD_FROM_LAST_REFERRED set does not
