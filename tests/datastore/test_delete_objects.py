@@ -113,11 +113,11 @@ async def test_transactional_rolls_back_a_permission_failure(unique_data_type, p
 	own object in the same list is left alone
 	"""
 
-	mine = await post(nex.STRANGER, data_type=unique_data_type)
-	theirs = await post(nex.FRIEND_A, data_type=unique_data_type)
+	mine = await post(nex.FRIEND_A, data_type=unique_data_type)
+	theirs = await post(nex.STRANGER, data_type=unique_data_type)
 
-	assert await delete_error(nex.STRANGER, [{"data_id": mine}, {"data_id": theirs}], True) == "DataStore::PermissionDenied"
-	assert (await helpers.get_meta(nex.STRANGER, data_id=mine)).data_id == mine
+	assert await delete_error(nex.FRIEND_A, [{"data_id": mine}, {"data_id": theirs}], True) == "DataStore::PermissionDenied"
+	assert (await helpers.get_meta(nex.FRIEND_A, data_id=mine)).data_id == mine
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_transactional_the_same_object_twice(unique_data_type, post):
