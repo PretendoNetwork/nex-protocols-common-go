@@ -33,6 +33,10 @@ def server_process() -> Iterator[subprocess.Popen[str]]:
 	Builds and starts the test server for the test run
 	"""
 
+	if nex.LIVE:
+		yield None
+		return
+
 	subprocess.run(["go", "build", "-o", SERVER_BINARY_PATH, "."], cwd=SERVER_SOURCE_PATH, check=True)
 
 	env = os.environ | {
@@ -76,7 +80,7 @@ def stop_on_server_crash(server_process: subprocess.Popen[str]) -> Iterator[None
 
 	yield
 
-	if server_process.poll() is not None:
+	if server_process is not None and server_process.poll() is not None:
 		pytest.exit(f"Test server crashed, see {SERVER_LOG_PATH}", returncode=1)
 
 @pytest.fixture

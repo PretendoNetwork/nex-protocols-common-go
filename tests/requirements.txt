@@ -1,3 +1,4 @@
 # * Lock NintendoClients to latest commit, since breaking changes have happened before
 nintendoclients @ git+https://github.com/kinnay/NintendoClients@9b3a880631cc817a9dd8c45c1015e76723e25b0e
 pytest==9.1.1
+python-dotenv==1.2.4
