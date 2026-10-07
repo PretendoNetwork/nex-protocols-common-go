@@ -572,6 +572,17 @@ async def post_persisted(post, pid: int, slot: int, **fields) -> int:
 
 	return await post(pid, persistence_init_param=init_param, **fields)
 
+async def post_rejected(post, pid: int, **fields) -> int:
+	"""
+	Posts an object and marks it as rejected, as the given user
+	"""
+
+	data_id = await post(pid, **fields)
+
+	await change_meta(pid, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_STATUS, status=constants.DataStatus.DATA_STATUS_REJECTED)
+
+	return data_id
+
 # * Every way an object can be created, in general. Used when general object
 # * creation in the database is needed
 POST_METHODS = [

@@ -44,17 +44,6 @@ async def prepare_get_error(pid: int, **fields) -> str:
 
 	pytest.fail("DataStoreProtocol::PrepareGetObjectV1 did not throw an error")
 
-async def post_rejected(post, pid: int, **fields) -> int:
-	"""
-	Posts an object and marks it as rejected, as the given user
-	"""
-
-	data_id = await post(pid, **fields)
-
-	await helpers.change_meta(pid, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_STATUS, status=constants.DataStatus.DATA_STATUS_REJECTED)
-
-	return data_id
-
 # * What the server hands back
 
 @pytest.mark.parametrize("post", helpers.FILE_SERVER_POST_METHODS)
@@ -252,7 +241,7 @@ async def test_a_rejected_object_is_downloadable_by_its_owner(unique_data_type, 
 	A rejected object can still be fetched by its owner
 	"""
 
-	data_id = await post_rejected(post, nex.FRIEND_A, data_type=unique_data_type)
+	data_id = await helpers.post_rejected(post, nex.FRIEND_A, data_type=unique_data_type)
 
 	assert (await prepare_get(nex.FRIEND_A, data_id=data_id)).url != ""
 
@@ -262,7 +251,7 @@ async def test_a_rejected_object_is_under_review_for_everyone_else(unique_data_t
 	Being rejected is not told apart from being under review
 	"""
 
-	data_id = await post_rejected(post, nex.FRIEND_A, data_type=unique_data_type)
+	data_id = await helpers.post_rejected(post, nex.FRIEND_A, data_type=unique_data_type)
 
 	assert await prepare_get_error(nex.STRANGER, data_id=data_id) == "DataStore::UnderReviewing"
 

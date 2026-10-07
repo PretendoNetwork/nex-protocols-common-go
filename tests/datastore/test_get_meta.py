@@ -94,17 +94,6 @@ async def post_pending(post, pid: int, **fields) -> int:
 
 	return await post(pid, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW, **fields)
 
-async def post_rejected(post, pid: int, **fields) -> int:
-	"""
-	Posts an object and marks it as rejected, as the given user
-	"""
-
-	data_id = await post(pid, **fields)
-
-	await helpers.change_meta(pid, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_STATUS, status=constants.DataStatus.DATA_STATUS_REJECTED)
-
-	return data_id
-
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_pending_object_is_visible_to_its_owner(unique_data_type, post):
 	"""
@@ -134,7 +123,7 @@ async def test_rejected_object_is_visible_to_its_owner(unique_data_type, post):
 	Rejected objects can still be seen by their owner
 	"""
 
-	data_id = await post_rejected(post, nex.FRIEND_A, data_type=unique_data_type)
+	data_id = await helpers.post_rejected(post, nex.FRIEND_A, data_type=unique_data_type)
 	meta_info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
 
 	assert meta_info.data_id == data_id
@@ -146,7 +135,7 @@ async def test_rejected_object_is_under_review_for_everyone_else(unique_data_typ
 	Rejected objects appear as under review still to other users
 	"""
 
-	data_id = await post_rejected(post, nex.FRIEND_A, data_type=unique_data_type)
+	data_id = await helpers.post_rejected(post, nex.FRIEND_A, data_type=unique_data_type)
 
 	assert await helpers.get_meta_error(nex.STRANGER, data_id=data_id) == "DataStore::UnderReviewing"
 
