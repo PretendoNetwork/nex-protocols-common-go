@@ -97,6 +97,33 @@ async def test_an_empty_slot_only_fails_its_own_entry(unique_data_type, post):
 	assert response.infos[SLOT_1].data_id == 0
 
 @pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
+async def test_the_newest_object_wins(unique_data_type, post):
+	"""
+	Putting another object in a slot replaces the one which was there
+	"""
+
+	await helpers.post_persisted(post, nex.FRIEND_A, SLOT_0, data_type=unique_data_type)
+	second = await helpers.post_persisted(post, nex.FRIEND_A, SLOT_0, data_type=unique_data_type)
+
+	response = await get_persistence_infos(nex.FRIEND_A, nex.FRIEND_A, [SLOT_0])
+
+	assert helpers.result_names(response.results) == [None]
+	assert helpers.data_ids_of(response) == [second]
+
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
+async def test_deleting_the_object_empties_the_slot(unique_data_type, post):
+	"""
+	Deleting a persisted object leaves the slot with nothing in it
+	"""
+
+	data_id = await helpers.post_persisted(post, nex.FRIEND_A, SLOT_0, data_type=unique_data_type)
+	await helpers.delete_object(nex.FRIEND_A, data_id=data_id)
+
+	response = await get_persistence_infos(nex.FRIEND_A, nex.FRIEND_A, [SLOT_0])
+
+	assert helpers.result_names(response.results) == ["DataStore::NotFound"]
+
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_the_same_slot_twice(unique_data_type, post):
 	"""
 	Reading the same slot multiple times is supported

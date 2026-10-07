@@ -179,6 +179,18 @@ async def test_the_same_object_twice(unique_data_type, post):
 	assert helpers.result_names(results) == [None, "DataStore::NotFound"]
 	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
 
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_deleting_twice(unique_data_type, post):
+	"""
+	An object can only be deleted once, so a later request for the same
+	object fails
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
+
+	assert helpers.result_names(await delete(nex.FRIEND_A, [{"data_id": data_id}], False)) == [None]
+	assert helpers.result_names(await delete(nex.FRIEND_A, [{"data_id": data_id}], False)) == ["DataStore::NotFound"]
+
 # * Objects which are in an unusual state
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
@@ -239,6 +251,23 @@ async def test_data_ids_which_do_not_exist(data_id, transactional):
 	else:
 		assert helpers.result_names(await delete(nex.FRIEND_A, [{"data_id": data_id}], transactional)) == ["DataStore::NotFound"]
 
+@pytest.mark.parametrize("data_id", [
+	pytest.param(1, id="the-very-bottom"),
+	pytest.param(500000, id="half-way-up"),
+	pytest.param(900000, id="the-start-of-the-system-range"),
+	pytest.param(999999, id="the-last-system-data-id")
+])
+async def test_system_range_data_ids(data_id):
+	"""
+	Data IDs below 1,000,000 belong to the system. Normal clients
+	shouldn't interact with these objects. See
+	https://nintendo.wiki/wiki/Nintendo_Network/NEX/Protocols/DataStoreProtocol#Object_Data_ID
+	for details
+	"""
+
+	# TODO - This only returns NotFound because there's no way for a normal client to upload in this range, so there are no objects in the test server
+	assert helpers.result_names(await delete(nex.FRIEND_A, [{"data_id": data_id}], False)) == ["DataStore::NotFound"]
+
 async def test_an_object_which_was_never_completed(unique_data_type):
 	"""
 	An object whose upload was never completed does not exist yet, so
@@ -248,6 +277,88 @@ async def test_an_object_which_was_never_completed(unique_data_type):
 	data_id = await helpers.prepare_post_object(nex.FRIEND_A, data_type=unique_data_type)
 
 	assert helpers.result_names(await delete(nex.FRIEND_A, [{"data_id": data_id}], False)) == ["DataStore::NotFound"]
+
+# * Deleting an object is gated by the objects delete permission, which
+# * is separate from the access permission used to read it
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_delete_permission_private(unique_data_type, post):
+	"""
+	Only the owner may delete the object, which is the default
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
+
+	assert helpers.result_names(await delete(nex.STRANGER, [{"data_id": data_id}], False)) == ["DataStore::PermissionDenied"]
+	assert helpers.result_names(await delete(nex.FRIEND_B, [{"data_id": data_id}], False)) == ["DataStore::PermissionDenied"]
+	assert helpers.result_names(await delete(nex.FRIEND_A, [{"data_id": data_id}], False)) == [None]
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_delete_permission_public(unique_data_type, post):
+	"""
+	Anybody may delete the object
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_PUBLIC)
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, delete_permission=permission)
+
+	assert helpers.result_names(await delete(nex.STRANGER, [{"data_id": data_id}], False)) == [None]
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_delete_permission_friend(unique_data_type, post):
+	"""
+	Only friends of the owner may delete the object
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_FRIEND)
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, delete_permission=permission)
+
+	assert helpers.result_names(await delete(nex.STRANGER, [{"data_id": data_id}], False)) == ["DataStore::PermissionDenied"]
+	assert helpers.result_names(await delete(nex.FRIEND_B, [{"data_id": data_id}], False)) == [None]
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_delete_permission_specified(unique_data_type, post):
+	"""
+	Only the listed users may delete the object, whether or not they
+	are friends of the owner
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_SPECIFIED, recipients=[nex.STRANGER])
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, delete_permission=permission)
+
+	assert helpers.result_names(await delete(nex.FRIEND_B, [{"data_id": data_id}], False)) == ["DataStore::PermissionDenied"]
+	assert helpers.result_names(await delete(nex.STRANGER, [{"data_id": data_id}], False)) == [None]
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_delete_permission_specified_friend(unique_data_type, post):
+	"""
+	Only listed users who are also friends of the owner may delete
+	the object
+	"""
+
+	to_the_friend = helpers.permission(permission=constants.Permission.PERMISSION_SPECIFIED_FRIEND, recipients=[nex.FRIEND_B])
+	to_the_stranger = helpers.permission(permission=constants.Permission.PERMISSION_SPECIFIED_FRIEND, recipients=[nex.STRANGER])
+
+	for_the_friend = await post(nex.FRIEND_A, data_type=unique_data_type, delete_permission=to_the_friend)
+	for_the_stranger = await post(nex.FRIEND_A, data_type=unique_data_type, delete_permission=to_the_stranger)
+
+	assert helpers.result_names(await delete(nex.STRANGER, [{"data_id": for_the_stranger}], False)) == ["DataStore::PermissionDenied"]
+	assert helpers.result_names(await delete(nex.FRIEND_B, [{"data_id": for_the_stranger}], False)) == ["DataStore::PermissionDenied"]
+	assert helpers.result_names(await delete(nex.FRIEND_B, [{"data_id": for_the_friend}], False)) == [None]
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_the_access_permission_is_not_used(unique_data_type, post):
+	"""
+	The two permissions are independent, so a user who cannot even
+	read the object may still be allowed to delete it
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_PRIVATE)
+	deletable = helpers.permission(permission=constants.Permission.PERMISSION_PUBLIC)
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, permission=permission, delete_permission=deletable)
+
+	assert await helpers.get_meta_error(nex.STRANGER, data_id=data_id) == "DataStore::PermissionDenied"
+	assert helpers.result_names(await delete(nex.STRANGER, [{"data_id": data_id}], False)) == [None]
 
 # * Each entry carries its own update password, which stands in for the
 # * delete permission the same way it does for DeleteObject
@@ -287,3 +398,29 @@ async def test_a_wrong_password_only_fails_its_own_entry(unique_data_type, post)
 	assert helpers.result_names(results) == [None, "DataStore::InvalidPassword"]
 	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=public) == "DataStore::NotFound"
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=private)).data_id == private
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_the_access_password_is_not_the_update_password(unique_data_type, post):
+	"""
+	Passwords only work for what they were made for, so the access
+	password of an object is no use for deleting it
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
+	password_info = await helpers.get_password_info(nex.FRIEND_A, data_id)
+
+	entries = [{"data_id": data_id, "update_password": password_info.access_password}]
+
+	assert helpers.result_names(await delete(nex.STRANGER, entries, False)) == ["DataStore::InvalidPassword"]
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_wrong_update_password_as_the_owner(unique_data_type, post):
+	"""
+	The password is only checked when the caller would be denied
+	without one, so the owner can send anything
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
+
+	assert helpers.result_names(await delete(nex.FRIEND_A, [{"data_id": data_id, "update_password": 1234}], False)) == [None]
+	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
