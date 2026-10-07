@@ -46,6 +46,18 @@ PERMISSIONS = [
 	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.FRIEND_B], id="specified-friend")
 ]
 
+# * Every access permission, with who is notified when an object using it is
+# * posted with DATA_FLAG_USE_NOTIFICATION_ON_POST
+NOTIFIED_PERMISSIONS = [
+	pytest.param(constants.Permission.PERMISSION_PUBLIC, [], [], id="public"),
+	pytest.param(constants.Permission.PERMISSION_FRIEND, [], [nex.FRIEND_B], id="friend"),
+	pytest.param(constants.Permission.PERMISSION_SPECIFIED, [nex.STRANGER], [nex.STRANGER], id="specified"),
+	pytest.param(constants.Permission.PERMISSION_SPECIFIED, [nex.FRIEND_A, nex.STRANGER], [nex.FRIEND_A, nex.STRANGER], id="specified-with-the-owner"),
+	pytest.param(constants.Permission.PERMISSION_PRIVATE, [], [], id="private"),
+	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.FRIEND_B], [nex.FRIEND_B], id="specified-friend"),
+	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.STRANGER], [], id="specified-friend-to-a-stranger")
+]
+
 @contextlib.asynccontextmanager
 async def connect(pid: int):
 	"""
@@ -551,6 +563,37 @@ async def get_meta_error(pid: int, **fields) -> str:
 			return error.name()
 
 	pytest.fail("DataStoreProtocol::GetMeta did not throw an error")
+
+async def notified(data_id: int) -> list[int]:
+	"""
+	Every test user with an unread notification for the object
+	"""
+
+	pids = []
+
+	for pid in [nex.FRIEND_A, nex.FRIEND_B, nex.STRANGER]:
+		data_ids = []
+
+		# * Notifications come back oldest first, a page at a time. Asking
+		# * for the next page also deletes every notification before it
+		async with connect(pid) as client:
+			param = datastore.DataStoreGetNewArrivedNotificationsParam()
+			param.last_notification_id = 0
+			param.limit = 0
+
+			while True:
+				response = await client.get_new_arrived_notifications(param)
+				data_ids += [notification.data_id for notification in response.result]
+
+				if not response.has_next:
+					break
+
+				param.last_notification_id = response.result[-1].notification_id
+
+		if data_id in data_ids:
+			pids.append(pid)
+
+	return pids
 
 async def post_persisted(post, pid: int, slot: int, **fields) -> int:
 	"""

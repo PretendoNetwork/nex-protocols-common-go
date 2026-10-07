@@ -247,3 +247,58 @@ async def test_completing_an_object_which_needs_review(unique_data_type):
 	meta_info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
 
 	assert meta_info.status == constants.DataStatus.DATA_STATUS_PENDING
+
+# * Notifications
+
+@pytest.mark.parametrize("permission, recipients, notified", helpers.NOTIFIED_PERMISSIONS)
+async def test_completing_notifies_the_recipients(unique_data_type, permission, recipients, notified):
+	"""
+	An object posted with DATA_FLAG_USE_NOTIFICATION_ON_POST notifies its
+	recipients once its upload is completed
+	"""
+
+	access_permission = helpers.permission(permission=permission, recipients=recipients)
+	data_id = await helpers.prepare_post_object(nex.FRIEND_A, data_type=unique_data_type, permission=access_permission, flag=constants.DataFlag.DATA_FLAG_USE_NOTIFICATION_ON_POST)
+
+	await complete(nex.FRIEND_A, [data_id])
+
+	assert await helpers.notified(data_id) == notified
+
+async def test_completing_does_not_notify_for_an_update_notification(unique_data_type):
+	"""
+	DATA_FLAG_USE_NOTIFICATION_ON_UPDATE is only for updates, posting the
+	object does not notify anyone
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_SPECIFIED, recipients=[nex.STRANGER])
+	data_id = await helpers.prepare_post_object(nex.FRIEND_A, data_type=unique_data_type, permission=permission, flag=constants.DataFlag.DATA_FLAG_USE_NOTIFICATION_ON_UPDATE)
+
+	await complete(nex.FRIEND_A, [data_id])
+
+	assert await helpers.notified(data_id) == []
+
+async def test_completing_does_not_notify_delete_recipients(unique_data_type):
+	"""
+	Only the access permission decides who is notified
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_PRIVATE)
+	delete_permission = helpers.permission(permission=constants.Permission.PERMISSION_SPECIFIED, recipients=[nex.STRANGER])
+	data_id = await helpers.prepare_post_object(nex.FRIEND_A, data_type=unique_data_type, permission=permission, delete_permission=delete_permission, flag=constants.DataFlag.DATA_FLAG_USE_NOTIFICATION_ON_POST)
+
+	await complete(nex.FRIEND_A, [data_id])
+
+	assert await helpers.notified(data_id) == []
+
+async def test_completing_an_object_which_needs_review_notifies(unique_data_type):
+	"""
+	The recipients are notified even though the object is still pending
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_SPECIFIED, recipients=[nex.STRANGER])
+	flag = constants.DataFlag.DATA_FLAG_USE_NOTIFICATION_ON_POST | constants.DataFlag.DATA_FLAG_NEED_REVIEW
+	data_id = await helpers.prepare_post_object(nex.FRIEND_A, data_type=unique_data_type, permission=permission, flag=flag)
+
+	await complete(nex.FRIEND_A, [data_id])
+
+	assert await helpers.notified(data_id) == [nex.STRANGER]

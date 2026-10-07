@@ -459,6 +459,22 @@ async def test_the_need_review_flag_sets_the_status(unique_data_type):
 
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).status == constants.DataStatus.DATA_STATUS_PENDING
 
+async def test_the_notification_flag_waits_for_completion(unique_data_type):
+	"""
+	Recipients are not notified when the object is prepared, only once
+	its upload has been completed
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_SPECIFIED, recipients=[nex.STRANGER])
+	info = await prepare(nex.FRIEND_A, data_type=unique_data_type, permission=permission, flag=constants.DataFlag.DATA_FLAG_USE_NOTIFICATION_ON_POST)
+
+	assert await helpers.notified(info.data_id) == []
+
+	async with helpers.connect(nex.FRIEND_A) as client:
+		await client.complete_post_object(helpers.complete_post_param(data_id=info.data_id))
+
+	assert await helpers.notified(info.data_id) == [nex.STRANGER]
+
 # * period
 
 @pytest.mark.parametrize("period", [
