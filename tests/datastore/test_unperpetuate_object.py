@@ -1,3 +1,4 @@
+import anyio
 import pytest
 from nintendo.nex import common
 
@@ -8,6 +9,9 @@ pytestmark = pytest.mark.anyio
 
 SLOT_0 = 0
 EMPTY_SLOT = 15
+
+# * Long enough for a timestamp to visibly move
+TIMESTAMP_DELAY = 2
 
 async def unperpetuate(pid: int, slot: int, delete_last_object: bool = False) -> None:
 	"""
@@ -141,6 +145,23 @@ async def test_the_object_expires_again(unique_data_type, post):
 
 	assert expire_time.value() != constants.PERMANENT_DATE_TIME
 	assert expire_time.value() > (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).create_time.value()
+
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
+async def test_keeping_the_object_moves_its_update_time(unique_data_type, post):
+	"""
+	The object is treated as updated when it leaves the slot, which is
+	what its new expiry is counted from
+	"""
+
+	data_id = await helpers.post_persisted(post, nex.FRIEND_A, SLOT_0, data_type=unique_data_type)
+	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	await anyio.sleep(TIMESTAMP_DELAY)
+	await unperpetuate(nex.FRIEND_A, SLOT_0, delete_last_object=False)
+
+	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	assert after.update_time.value() > before.update_time.value()
 
 # * The object status
 
