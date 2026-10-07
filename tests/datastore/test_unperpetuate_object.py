@@ -93,7 +93,7 @@ async def test_the_object_expires_again(unique_data_type, post):
 
 @pytest.mark.parametrize("delete_last_object", [
 	pytest.param(False, id="keeping-the-object"),
-	pytest.param(True, id="deleting-the-object"),
+	pytest.param(True, id="deleting-the-object")
 ])
 async def test_empty_slot(delete_last_object):
 	"""
@@ -128,7 +128,7 @@ async def test_a_slot_whose_object_was_deleted(unique_data_type, post):
 
 @pytest.mark.parametrize("slot", [
 	pytest.param(constants.NUM_PERSISTENCE_SLOT, id="one-past-the-last-slot"),
-	pytest.param(constants.INVALID_PERSISTENCE_SLOT_ID, id="invalid-slot"),
+	pytest.param(constants.INVALID_PERSISTENCE_SLOT_ID, id="invalid-slot")
 ])
 async def test_invalid_slot(slot):
 	"""

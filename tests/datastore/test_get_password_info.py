@@ -151,7 +151,7 @@ ACCESS_PERMISSIONS = [
 	pytest.param(constants.Permission.PERMISSION_PUBLIC, [], nex.STRANGER, id="public"),
 	pytest.param(constants.Permission.PERMISSION_FRIEND, [], nex.FRIEND_B, id="friend"),
 	pytest.param(constants.Permission.PERMISSION_SPECIFIED, [nex.STRANGER], nex.STRANGER, id="specified"),
-	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.FRIEND_B], nex.FRIEND_B, id="specified-friend"),
+	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.FRIEND_B], nex.FRIEND_B, id="specified-friend")
 ]
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
@@ -171,7 +171,7 @@ async def test_the_access_permission_does_not_open_the_passwords(unique_data_typ
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 @pytest.mark.parametrize("caller", [
 	pytest.param(nex.FRIEND_B, id="a-friend"),
-	pytest.param(nex.STRANGER, id="a-stranger"),
+	pytest.param(nex.STRANGER, id="a-stranger")
 ])
 async def test_nobody_else_can_read_a_private_objects_passwords(unique_data_type, post, caller):
 	"""
@@ -218,7 +218,7 @@ async def test_the_owner_of_a_private_object(unique_data_type, post):
 	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown"),
 	pytest.param(constants.INVALID_DATAID, id="invalid-dataid"),
 	pytest.param(999999, id="the-system-range"),
-	pytest.param(helpers.UINT64_MAX, id="uint64-max"),
+	pytest.param(helpers.UINT64_MAX, id="uint64-max")
 ])
 async def test_unknown_data_id(data_id):
 	"""

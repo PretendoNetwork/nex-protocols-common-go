@@ -78,7 +78,7 @@ async def test_updates_the_reference_time_and_validity_period(unique_data_type, 
 
 	before = {
 		plain: await helpers.get_meta(nex.FRIEND_A, data_id=plain),
-		extends: await helpers.get_meta(nex.FRIEND_A, data_id=extends),
+		extends: await helpers.get_meta(nex.FRIEND_A, data_id=extends)
 	}
 
 	await anyio.sleep(TIMESTAMP_DELAY)
@@ -88,7 +88,7 @@ async def test_updates_the_reference_time_and_validity_period(unique_data_type, 
 
 	after = {
 		plain: await helpers.get_meta(nex.FRIEND_A, data_id=plain),
-		extends: await helpers.get_meta(nex.FRIEND_A, data_id=extends),
+		extends: await helpers.get_meta(nex.FRIEND_A, data_id=extends)
 	}
 
 	assert after[plain].referred_time.value() > before[plain].referred_time.value()
@@ -296,7 +296,7 @@ async def test_wrong_access_password_as_the_owner(unique_data_type, post):
 @pytest.mark.parametrize("data_id", [
 	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown"),
 	pytest.param(constants.INVALID_DATAID, id="invalid-dataid"),
-	pytest.param(helpers.UINT64_MAX, id="uint64-max"),
+	pytest.param(helpers.UINT64_MAX, id="uint64-max")
 ])
 async def test_unknown_data_id(data_id):
 	"""

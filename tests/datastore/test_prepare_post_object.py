@@ -19,7 +19,7 @@ DATA_FLAGS = [
 	pytest.param(constants.DataFlag.DATA_FLAG_USE_NOTIFICATION_ON_POST, True, id="use-notification-on-post"),
 	pytest.param(constants.DataFlag.DATA_FLAG_USE_NOTIFICATION_ON_UPDATE, True, id="use-notification-on-update"),
 	pytest.param(constants.DataFlag.DATA_FLAG_NOT_USE_FILESERVER, False, id="not-use-fileserver"),
-	pytest.param(constants.DataFlag.DATA_FLAG_NEED_COMPLETION, True, id="need-completion"),
+	pytest.param(constants.DataFlag.DATA_FLAG_NEED_COMPLETION, True, id="need-completion")
 ]
 
 # * Bits which no flag uses. The stock servers only accept known flags
@@ -28,7 +28,7 @@ UNDEFINED_FLAGS = [
 	pytest.param(0x80, id="the-first-unused-bit"),
 	pytest.param(0x100, id="past-a-byte"),
 	pytest.param(0x8000, id="past-two-bytes"),
-	pytest.param(helpers.UINT32_MAX, id="every-bit"),
+	pytest.param(helpers.UINT32_MAX, id="every-bit")
 ]
 
 
@@ -36,7 +36,7 @@ RATING_LOCK_TYPES = [
 	pytest.param(constants.RatingLockType.RATING_LOCK_NONE, id="none"),
 	pytest.param(constants.RatingLockType.RATING_LOCK_INTERVAL, id="interval"),
 	pytest.param(constants.RatingLockType.RATING_LOCK_PERIOD, id="period"),
-	pytest.param(constants.RatingLockType.RATING_LOCK_PERMANENT, id="permanent"),
+	pytest.param(constants.RatingLockType.RATING_LOCK_PERMANENT, id="permanent")
 ]
 
 async def prepare(pid: int, **fields) -> datastore.DataStoreReqPostInfo:
@@ -108,7 +108,7 @@ async def test_every_object_gets_its_own_data_id(unique_data_type):
 
 @pytest.mark.parametrize("size", [
 	pytest.param(0, id="zero"),
-	pytest.param(MAX_OBJECT_SIZE, id="at-the-limit"),
+	pytest.param(MAX_OBJECT_SIZE, id="at-the-limit")
 ])
 async def test_a_size_which_is_allowed(unique_data_type, size):
 	"""
@@ -218,7 +218,7 @@ async def test_a_name_with_a_null_in_it(unique_data_type):
 
 @pytest.mark.parametrize("text, allowed", [
 	pytest.param("\u6f22" * constants.MAX_NAME_LENGTH, True, id="at-the-limit"),
-	pytest.param("\u6f22" * (constants.MAX_NAME_LENGTH + 1), False, id="one-over-the-limit"),
+	pytest.param("\u6f22" * (constants.MAX_NAME_LENGTH + 1), False, id="one-over-the-limit")
 ])
 async def test_the_name_limit_counts_characters_not_bytes(unique_data_type, text, allowed):
 	"""
@@ -237,7 +237,7 @@ async def test_the_name_limit_counts_characters_not_bytes(unique_data_type, text
 
 @pytest.mark.parametrize("data_type", [
 	pytest.param(0, id="the-lowest"),
-	pytest.param(constants.INVALID_DATA_TYPE - 1, id="the-highest-real-one"),
+	pytest.param(constants.INVALID_DATA_TYPE - 1, id="the-highest-real-one")
 ])
 async def test_a_data_type_which_is_allowed(data_type):
 	"""
@@ -330,7 +330,7 @@ async def test_an_unknown_access_permission(unique_data_type):
 
 @pytest.mark.parametrize("count", [
 	pytest.param(constants.DATASTOREPERMISSION_RECIPIENTIDS_MAX, id="at-the-limit"),
-	pytest.param(constants.DATASTOREPERMISSION_RECIPIENTIDS_MAX + 1, id="one-over-the-limit"),
+	pytest.param(constants.DATASTOREPERMISSION_RECIPIENTIDS_MAX + 1, id="one-over-the-limit")
 ])
 async def test_how_many_access_recipients_are_allowed(unique_data_type, count):
 	"""
@@ -371,7 +371,7 @@ async def test_an_unknown_delete_permission(unique_data_type):
 
 @pytest.mark.parametrize("count", [
 	pytest.param(constants.DATASTOREPERMISSION_RECIPIENTIDS_MAX, id="at-the-limit"),
-	pytest.param(constants.DATASTOREPERMISSION_RECIPIENTIDS_MAX + 1, id="one-over-the-limit"),
+	pytest.param(constants.DATASTOREPERMISSION_RECIPIENTIDS_MAX + 1, id="one-over-the-limit")
 ])
 async def test_how_many_delete_recipients_are_allowed(unique_data_type, count):
 	"""
@@ -444,7 +444,7 @@ async def test_the_need_review_flag_sets_the_status(unique_data_type):
 
 @pytest.mark.parametrize("period", [
 	pytest.param(constants.MAX_PERIOD, id="at-the-limit"),
-	pytest.param(0, id="zero"),
+	pytest.param(0, id="zero")
 ])
 async def test_a_period_which_is_allowed(unique_data_type, period):
 	"""
@@ -488,7 +488,7 @@ async def test_the_period_is_kept_on_the_object(unique_data_type):
 @pytest.mark.parametrize("refer_data_id", [
 	pytest.param(constants.INVALID_DATAID, id="zero"),
 	pytest.param(helpers.UNKNOWN_DATA_ID, id="an-object-which-is-not-there"),
-	pytest.param(helpers.UINT32_MAX, id="uint32-max"),
+	pytest.param(helpers.UINT32_MAX, id="uint32-max")
 ])
 async def test_a_refer_data_id_is_not_checked(unique_data_type, refer_data_id):
 	"""
@@ -615,7 +615,7 @@ async def test_a_tag_with_control_characters(unique_data_type, text):
 
 @pytest.mark.parametrize("text, allowed", [
 	pytest.param("\u6f22" * constants.MAX_TAG_LENGTH, True, id="at-the-limit"),
-	pytest.param("\u6f22" * (constants.MAX_TAG_LENGTH + 1), False, id="one-over-the-limit"),
+	pytest.param("\u6f22" * (constants.MAX_TAG_LENGTH + 1), False, id="one-over-the-limit")
 ])
 async def test_the_tag_limit_counts_characters_not_bytes(unique_data_type, text, allowed):
 	"""
@@ -718,7 +718,7 @@ async def test_a_rating_lock_type_which_does_not_exist(unique_data_type):
 	pytest.param({"flag": 0xFF}, id="every-rating-flag"),
 	pytest.param({"internal_flag": 0xFF}, id="every-internal-flag"),
 	pytest.param({"period_hour": 25}, id="an-hour-which-is-not-an-hour"),
-	pytest.param({"period_duration": -17}, id="a-negative-period-duration"),
+	pytest.param({"period_duration": -17}, id="a-negative-period-duration")
 ])
 async def test_the_rest_of_a_rating_param_is_not_checked(unique_data_type, fields):
 	"""
@@ -755,7 +755,7 @@ async def test_no_persistence_slot(unique_data_type):
 
 @pytest.mark.parametrize("slot", [
 	pytest.param(constants.NUM_PERSISTENCE_SLOT, id="one-past-the-last-slot"),
-	pytest.param(constants.NUM_PERSISTENCE_SLOT + 100, id="a-much-higher-slot"),
+	pytest.param(constants.NUM_PERSISTENCE_SLOT + 100, id="a-much-higher-slot")
 ])
 async def test_a_persistence_slot_which_does_not_exist(unique_data_type, slot):
 	"""
@@ -793,7 +793,7 @@ async def test_no_extra_data_at_all(unique_data_type):
 	pytest.param(["WUP", "2", "USA", "49", "US", ""], id="an-american-wii-u"),
 	pytest.param(["WUP", "4", "EUR", "110", "GB", ""], id="a-european-wii-u"),
 	pytest.param(["WUP", "64", "TWN", "128", "TW", ""], id="a-taiwanese-wii-u"),
-	pytest.param(["WUP", "0", "Invalid", "0", "", ""], id="a-wii-u-which-does-not-know-its-region"),
+	pytest.param(["WUP", "0", "Invalid", "0", "", ""], id="a-wii-u-which-does-not-know-its-region")
 ])
 async def test_extra_data_a_console_would_send(unique_data_type, extra_data):
 	"""
@@ -809,7 +809,7 @@ async def test_extra_data_a_console_would_send(unique_data_type, extra_data):
 	pytest.param(["CTR"], id="one-element"),
 	pytest.param(["CTR", "2", "EUR"], id="half-of-them"),
 	pytest.param(["CTR", "2", "EUR", "110", "GB"], id="one-too-few"),
-	pytest.param(["CTR", "2", "EUR", "110", "GB", "", ""], id="one-too-many"),
+	pytest.param(["CTR", "2", "EUR", "110", "GB", "", ""], id="one-too-many")
 ])
 async def test_extra_data_of_the_wrong_length(unique_data_type, extra_data):
 	"""
@@ -843,7 +843,7 @@ async def test_an_extra_data_string_at_the_length_limit(unique_data_type):
 @pytest.mark.parametrize("extra_data", [
 	pytest.param(["XYZ", "2", "EUR", "110", "GB", ""], id="a-platform-which-does-not-exist"),
 	pytest.param(["", "2", "EUR", "110", "GB", ""], id="no-platform-at-all"),
-	pytest.param(["ctr", "2", "EUR", "110", "GB", ""], id="the-right-platform-in-lower-case"),
+	pytest.param(["ctr", "2", "EUR", "110", "GB", ""], id="the-right-platform-in-lower-case")
 ])
 async def test_extra_data_with_an_unknown_platform(unique_data_type, extra_data):
 	"""
@@ -855,7 +855,7 @@ async def test_extra_data_with_an_unknown_platform(unique_data_type, extra_data)
 @pytest.mark.skipif(nex.LIVE, reason="Pokemon Bank is NEX 3.4, and extra_data was added in NEX 3.5")
 @pytest.mark.parametrize("extra_data", [
 	pytest.param(["CTR", "two", "EUR", "110", "GB", ""], id="a-region-id-which-is-not-a-number"),
-	pytest.param(["CTR", "", "EUR", "110", "GB", ""], id="no-region-id-at-all"),
+	pytest.param(["CTR", "", "EUR", "110", "GB", ""], id="no-region-id-at-all")
 ])
 async def test_extra_data_with_a_region_id_which_is_not_a_number(unique_data_type, extra_data):
 	"""
@@ -867,7 +867,7 @@ async def test_extra_data_with_a_region_id_which_is_not_a_number(unique_data_typ
 @pytest.mark.skipif(nex.LIVE, reason="Pokemon Bank is NEX 3.4, and extra_data was added in NEX 3.5")
 @pytest.mark.parametrize("extra_data", [
 	pytest.param(["CTR", "2", "ZZZ", "110", "GB", ""], id="a-region-which-does-not-exist"),
-	pytest.param(["CTR", "0", "Invalid", "0", "", ""], id="a-region-only-the-wii-u-has"),
+	pytest.param(["CTR", "0", "Invalid", "0", "", ""], id="a-region-only-the-wii-u-has")
 ])
 async def test_extra_data_with_an_unknown_region(unique_data_type, extra_data):
 	"""
@@ -880,7 +880,7 @@ async def test_extra_data_with_an_unknown_region(unique_data_type, extra_data):
 @pytest.mark.parametrize("extra_data", [
 	pytest.param(["CTR", "4", "EUR", "110", "GB", ""], id="a-3ds-using-the-wii-u-number-for-europe"),
 	pytest.param(["WUP", "2", "EUR", "110", "GB", ""], id="a-wii-u-using-the-3ds-number-for-europe"),
-	pytest.param(["CTR", "1", "EUR", "110", "GB", ""], id="a-number-for-a-different-region"),
+	pytest.param(["CTR", "1", "EUR", "110", "GB", ""], id="a-number-for-a-different-region")
 ])
 async def test_extra_data_where_the_region_id_and_name_disagree(unique_data_type, extra_data):
 	"""
@@ -895,7 +895,7 @@ async def test_extra_data_where_the_region_id_and_name_disagree(unique_data_type
 	pytest.param(["CTR", "2", "EUR", "9999", "GB", ""], id="a-country-id-which-does-not-exist"),
 	pytest.param(["CTR", "2", "EUR", "110", "ZZ", ""], id="a-country-code-which-does-not-match"),
 	pytest.param(["CTR", "2", "EUR", "", "", ""], id="no-country-at-all"),
-	pytest.param(["CTR", "2", "EUR", "110", "GB", "spare"], id="something-in-the-spare-element"),
+	pytest.param(["CTR", "2", "EUR", "110", "GB", "spare"], id="something-in-the-spare-element")
 ])
 async def test_the_parts_of_extra_data_which_are_not_checked(unique_data_type, extra_data):
 	"""

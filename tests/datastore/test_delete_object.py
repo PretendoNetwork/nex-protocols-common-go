@@ -50,7 +50,7 @@ async def test_deleting_twice(unique_data_type, post):
 @pytest.mark.parametrize("data_id", [
 	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown"),
 	pytest.param(constants.INVALID_DATAID, id="invalid-dataid"),
-	pytest.param(helpers.UINT64_MAX, id="uint64-max"),
+	pytest.param(helpers.UINT64_MAX, id="uint64-max")
 ])
 async def test_unknown_data_id(data_id):
 	"""
@@ -63,7 +63,7 @@ async def test_unknown_data_id(data_id):
 	pytest.param(1, id="the-very-bottom"),
 	pytest.param(500000, id="half-way-up"),
 	pytest.param(900000, id="the-start-of-the-system-range"),
-	pytest.param(999999, id="the-last-system-data-id"),
+	pytest.param(999999, id="the-last-system-data-id")
 ])
 async def test_system_range_data_ids(data_id):
 	"""

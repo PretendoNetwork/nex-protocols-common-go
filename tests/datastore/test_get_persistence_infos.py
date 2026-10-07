@@ -18,7 +18,7 @@ ACCESS_PERMISSIONS = [
 	pytest.param(constants.Permission.PERMISSION_PUBLIC, [], nex.STRANGER, None, id="public"),
 	pytest.param(constants.Permission.PERMISSION_FRIEND, [], nex.FRIEND_B, nex.STRANGER, id="friend"),
 	pytest.param(constants.Permission.PERMISSION_SPECIFIED, [nex.STRANGER], nex.STRANGER, nex.FRIEND_B, id="specified"),
-	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.FRIEND_B], nex.FRIEND_B, nex.STRANGER, id="specified-friend"),
+	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.FRIEND_B], nex.FRIEND_B, nex.STRANGER, id="specified-friend")
 ]
 
 async def get_persistence_infos(pid: int, owner_id: int, slots: list[int]):
@@ -163,7 +163,7 @@ async def test_the_access_permission_of_the_object(unique_data_type, post, permi
 @pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 @pytest.mark.parametrize("caller", [
 	pytest.param(nex.FRIEND_B, id="a-friend"),
-	pytest.param(nex.STRANGER, id="a-stranger"),
+	pytest.param(nex.STRANGER, id="a-stranger")
 ])
 async def test_a_private_object_is_closed_to_everybody(unique_data_type, post, caller):
 	"""
@@ -235,7 +235,7 @@ async def test_unknown_owner():
 
 @pytest.mark.parametrize("slot", [
 	pytest.param(constants.NUM_PERSISTENCE_SLOT, id="one-past-the-last-slot"),
-	pytest.param(constants.INVALID_PERSISTENCE_SLOT_ID, id="invalid-slot"),
+	pytest.param(constants.INVALID_PERSISTENCE_SLOT_ID, id="invalid-slot")
 ])
 async def test_an_invalid_slot_fails_the_whole_request(slot):
 	"""

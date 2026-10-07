@@ -94,7 +94,7 @@ async def test_an_object_can_only_be_in_one_slot(unique_data_type, post):
 @pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 @pytest.mark.parametrize("delete_last_object", [
 	pytest.param(False, id="keeping-the-old-object"),
-	pytest.param(True, id="deleting-the-old-object"),
+	pytest.param(True, id="deleting-the-old-object")
 ])
 async def test_an_object_in_a_slot_cannot_take_over_another_one(unique_data_type, post, delete_last_object):
 	"""
@@ -228,7 +228,7 @@ async def test_replacing_an_object_can_keep_the_old_one(unique_data_type, post):
 @pytest.mark.parametrize("data_id", [
 	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown"),
 	pytest.param(999999, id="the-system-range"),
-	pytest.param(helpers.UINT64_MAX, id="uint64-max"),
+	pytest.param(helpers.UINT64_MAX, id="uint64-max")
 ])
 async def test_unknown_data_id(data_id):
 	"""
@@ -295,7 +295,7 @@ async def test_a_data_id_of_zero_into_a_filled_slot(unique_data_type, post):
 
 @pytest.mark.parametrize("slot", [
 	pytest.param(constants.NUM_PERSISTENCE_SLOT, id="one-past-the-last-slot"),
-	pytest.param(constants.INVALID_PERSISTENCE_SLOT_ID, id="invalid-slot"),
+	pytest.param(constants.INVALID_PERSISTENCE_SLOT_ID, id="invalid-slot")
 ])
 async def test_invalid_slot(unique_data_type, slot):
 	"""

@@ -42,7 +42,7 @@ def server_process() -> Iterator[subprocess.Popen[str]]:
 	env = os.environ | {
 		"PN_NEX_COMMON_TEST_DATABASE_PORT": str(nex.DATABASE_PORT),
 		"PN_NEX_COMMON_TEST_AUTH_PORT": str(nex.AUTH_PORT),
-		"PN_NEX_COMMON_TEST_SECURE_PORT": str(nex.SECURE_PORT),
+		"PN_NEX_COMMON_TEST_SECURE_PORT": str(nex.SECURE_PORT)
 	}
 
 	with open(SERVER_LOG_PATH, "w") as log:

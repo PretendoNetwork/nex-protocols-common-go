@@ -37,7 +37,7 @@ ACCESS_PERMISSION_CASES = [
 	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.FRIEND_B, nex.STRANGER], nex.FRIEND_A, True, id="specified-friend-owner"),
 	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.FRIEND_B, nex.STRANGER], nex.FRIEND_B, True, id="specified-friend-recipient-friend"),
 	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.FRIEND_B, nex.STRANGER], nex.STRANGER, False, id="specified-friend-recipient-stranger"),
-	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.STRANGER], nex.FRIEND_B, False, id="specified-friend-friend-not-recipient"),
+	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.STRANGER], nex.FRIEND_B, False, id="specified-friend-friend-not-recipient")
 ]
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)

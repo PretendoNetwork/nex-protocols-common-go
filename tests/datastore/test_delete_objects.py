@@ -92,7 +92,7 @@ async def test_transactional_deletes_every_object(unique_data_type, post):
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 @pytest.mark.parametrize("position", [
 	pytest.param(0, id="the-failure-comes-first"),
-	pytest.param(1, id="the-failure-comes-last"),
+	pytest.param(1, id="the-failure-comes-last")
 ])
 async def test_transactional_leaves_everything_alone_when_one_fails(unique_data_type, post, position):
 	"""
@@ -225,7 +225,7 @@ async def test_deleting_a_persisted_object_empties_the_slot(unique_data_type, po
 	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown"),
 	pytest.param(constants.INVALID_DATAID, id="invalid-dataid"),
 	pytest.param(999999, id="the-system-range"),
-	pytest.param(helpers.UINT64_MAX, id="uint64-max"),
+	pytest.param(helpers.UINT64_MAX, id="uint64-max")
 ])
 @pytest.mark.parametrize("transactional", [True, False])
 async def test_data_ids_which_do_not_exist(data_id, transactional):
@@ -266,7 +266,7 @@ async def test_every_entry_uses_its_own_password(unique_data_type, post):
 
 	entries = [
 		{"data_id": first, "update_password": first_password},
-		{"data_id": second, "update_password": second_password},
+		{"data_id": second, "update_password": second_password}
 	]
 
 	assert helpers.result_names(await delete(nex.STRANGER, entries, False)) == [None, None]

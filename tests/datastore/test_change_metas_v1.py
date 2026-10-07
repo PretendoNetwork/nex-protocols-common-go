@@ -18,7 +18,7 @@ BEFORE_PERIOD = 90
 # * For some reason these flags are accepted even though they have no field?
 FLAGS_WITH_NO_FIELD = [
 	pytest.param(constants.ModificationFlag.MODIFICATION_FLAG_REFERRED_COUNT, id="referred-count"),
-	pytest.param(constants.ModificationFlag.MODIFICATION_FLAG_STATUS, id="status"),
+	pytest.param(constants.ModificationFlag.MODIFICATION_FLAG_STATUS, id="status")
 ]
 
 async def post_object(post, pid: int, **fields) -> int:
@@ -101,7 +101,7 @@ async def change_error(pid: int, **fields) -> str:
 @pytest.mark.parametrize("data_id", [
 	pytest.param(constants.INVALID_DATAID, id="zero"),
 	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown"),
-	pytest.param(999999, id="the-system-range"),
+	pytest.param(999999, id="the-system-range")
 ])
 async def test_a_data_id_which_names_nothing(data_id):
 	"""
@@ -288,7 +288,7 @@ async def test_changing_both_the_period_and_the_updated_time(unique_data_type, p
 
 @pytest.mark.parametrize("name", [
 	pytest.param("n" * constants.MAX_NAME_LENGTH, id="at-the-limit"),
-	pytest.param("", id="empty"),
+	pytest.param("", id="empty")
 ])
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_a_name_which_is_allowed(unique_data_type, name, post):
@@ -411,7 +411,7 @@ async def test_changing_the_update_permission(unique_data_type, permission, reci
 
 @pytest.mark.parametrize("flag, field", [
 	pytest.param(constants.ModificationFlag.MODIFICATION_FLAG_ACCESS_PERMISSION, "permission", id="access"),
-	pytest.param(constants.ModificationFlag.MODIFICATION_FLAG_UPDATE_PERMISSION, "delete_permission", id="update"),
+	pytest.param(constants.ModificationFlag.MODIFICATION_FLAG_UPDATE_PERMISSION, "delete_permission", id="update")
 ])
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_an_unknown_permission(unique_data_type, flag, field, post):
@@ -428,7 +428,7 @@ async def test_an_unknown_permission(unique_data_type, flag, field, post):
 
 @pytest.mark.parametrize("period", [
 	pytest.param(constants.MAX_PERIOD, id="at-the-limit"),
-	pytest.param(1, id="one-day"),
+	pytest.param(1, id="one-day")
 ])
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_a_period_which_is_allowed(unique_data_type, period, post):
@@ -468,7 +468,7 @@ async def test_a_period_of_zero_expires_the_object(unique_data_type, post):
 
 @pytest.mark.parametrize("meta_binary", [
 	pytest.param(b"m" * constants.MAX_METABIN_SIZE, id="at-the-limit"),
-	pytest.param(b"", id="empty"),
+	pytest.param(b"", id="empty")
 ])
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_a_meta_binary_which_is_allowed(unique_data_type, meta_binary, post):
@@ -512,7 +512,7 @@ async def test_the_tags_are_sorted_when_they_are_stored(unique_data_type, post):
 @pytest.mark.parametrize("tags", [
 	pytest.param(["tag%i" % i for i in range(constants.NUM_TAG_SLOT)], id="at-the-slot-limit"),
 	pytest.param(["t" * constants.MAX_TAG_LENGTH], id="a-tag-at-the-length-limit"),
-	pytest.param([], id="none-at-all"),
+	pytest.param([], id="none-at-all")
 ])
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_tags_which_are_allowed(unique_data_type, tags, post):
@@ -530,7 +530,7 @@ async def test_tags_which_are_allowed(unique_data_type, tags, post):
 @pytest.mark.parametrize("tags", [
 	pytest.param(["tag%i" % i for i in range(constants.NUM_TAG_SLOT + 1)], id="over-the-slot-limit"),
 	pytest.param(["t" * (constants.MAX_TAG_LENGTH + 1)], id="a-tag-over-the-length-limit"),
-	pytest.param(["same", "same"], id="duplicates"),
+	pytest.param(["same", "same"], id="duplicates")
 ])
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_tags_which_are_not_allowed(unique_data_type, tags, post):
@@ -703,7 +703,7 @@ async def test_one_param_for_several_data_ids(unique_data_type, post):
 		{
 			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
 			"name": "after"
-		},
+		}
 	]
 
 	assert helpers.result_names(await change_metas(nex.FRIEND_A, [first, second], entries, False)) == [None, None]
@@ -729,7 +729,7 @@ async def test_every_param_names_its_own_object(unique_data_type, post):
 			"data_id": second,
 			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
 			"name": "after"
-		},
+		}
 	]
 
 	assert helpers.result_names(await change_metas(nex.FRIEND_A, [], entries, False)) == [None, None]
@@ -749,7 +749,7 @@ async def test_the_data_ids_are_used_over_the_param_data_id(unique_data_type, po
 			"data_id": helpers.UNKNOWN_DATA_ID,
 			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
 			"name": "after"
-		},
+		}
 	]
 
 	assert helpers.result_names(await change_metas(nex.FRIEND_A, [data_id], entries, False)) == [None]
@@ -770,7 +770,7 @@ async def test_a_data_id_of_zero_does_not_fall_back_on_the_param(unique_data_typ
 			"data_id": data_id,
 			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
 			"name": "after"
-		},
+		}
 	]
 
 	assert helpers.result_names(await change_metas(nex.FRIEND_A, [constants.INVALID_DATAID], entries, False)) == ["DataStore::NotFound"]
@@ -780,7 +780,7 @@ async def test_a_data_id_of_zero_does_not_fall_back_on_the_param(unique_data_typ
 	pytest.param([helpers.UNKNOWN_DATA_ID, helpers.UNKNOWN_DATA_ID], [{}, {}], id="as-many-params-as-data-ids"),
 	pytest.param([helpers.UNKNOWN_DATA_ID], [{}, {}], id="more-params-than-data-ids"),
 	pytest.param([helpers.UNKNOWN_DATA_ID], [], id="data-ids-and-no-params"),
-	pytest.param([], [], id="nothing-at-all"),
+	pytest.param([], [], id="nothing-at-all")
 ])
 @pytest.mark.parametrize("transactional", [True, False])
 async def test_a_request_of_neither_shape(data_ids, entries, transactional):
@@ -857,7 +857,7 @@ async def test_transactional_changes_every_object(unique_data_type, post):
 		{
 			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
 			"name": "after"
-		},
+		}
 	]
 
 	assert await change_metas(nex.FRIEND_A, [first, second], entries, True) == []
@@ -867,7 +867,7 @@ async def test_transactional_changes_every_object(unique_data_type, post):
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 @pytest.mark.parametrize("position", [
 	pytest.param(0, id="the-failure-comes-first"),
-	pytest.param(1, id="the-failure-comes-last"),
+	pytest.param(1, id="the-failure-comes-last")
 ])
 async def test_transactional_leaves_everything_alone_when_one_fails(unique_data_type, post, position):
 	"""
@@ -883,7 +883,7 @@ async def test_transactional_leaves_everything_alone_when_one_fails(unique_data_
 		{
 			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
 			"name": "after"
-		},
+		}
 	]
 
 	assert await change_metas_error(nex.FRIEND_A, data_ids, entries, True) == "DataStore::NotFound"
@@ -904,7 +904,7 @@ async def test_transactional_rolls_back_a_permission_failure(unique_data_type, p
 		{
 			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
 			"name": "after"
-		},
+		}
 	]
 
 	assert await change_metas_error(nex.STRANGER, [mine, theirs], entries, True) == "DataStore::PermissionDenied"
@@ -931,7 +931,7 @@ async def test_transactional_rolls_back_an_invalid_change(unique_data_type, post
 			"data_id": second,
 			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
 			"name": "n" * (constants.MAX_NAME_LENGTH + 1)
-		},
+		}
 	]
 
 	assert await change_metas_error(nex.FRIEND_A, [], entries, True) == "DataStore::InvalidArgument"
@@ -940,7 +940,7 @@ async def test_transactional_rolls_back_an_invalid_change(unique_data_type, post
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 @pytest.mark.parametrize("unknown_first, error", [
 	pytest.param(True, "DataStore::NotFound", id="the-unknown-object-first"),
-	pytest.param(False, "DataStore::PermissionDenied", id="the-forbidden-object-first"),
+	pytest.param(False, "DataStore::PermissionDenied", id="the-forbidden-object-first")
 ])
 async def test_transactional_throws_the_first_failure(unique_data_type, post, unknown_first, error):
 	"""
@@ -955,7 +955,7 @@ async def test_transactional_throws_the_first_failure(unique_data_type, post, un
 		{
 			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
 			"name": "after"
-		},
+		}
 	]
 
 	assert await change_metas_error(nex.STRANGER, data_ids, entries, True) == error
@@ -979,7 +979,7 @@ async def test_transactional_the_same_object_twice(unique_data_type, post):
 			"data_id": data_id,
 			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
 			"name": "second"
-		},
+		}
 	]
 
 	assert await change_metas(nex.FRIEND_A, [], entries, True) == []
@@ -1002,7 +1002,7 @@ async def test_changes_what_it_can(unique_data_type, post):
 		{
 			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
 			"name": "after"
-		},
+		}
 	]
 
 	results = await change_metas(nex.FRIEND_A, [first, helpers.UNKNOWN_DATA_ID, second], entries, False)
@@ -1026,7 +1026,7 @@ async def test_a_permission_failure_only_fails_its_own_entry(unique_data_type, p
 		{
 			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
 			"name": "after"
-		},
+		}
 	]
 
 	results = await change_metas(nex.STRANGER, [mine, theirs], entries, False)
@@ -1055,7 +1055,7 @@ async def test_an_invalid_change_only_fails_its_own_entry(unique_data_type, post
 			"data_id": second,
 			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
 			"name": "n" * (constants.MAX_NAME_LENGTH + 1)
-		},
+		}
 	]
 
 	assert helpers.result_names(await change_metas(nex.FRIEND_A, [], entries, False)) == [None, "DataStore::InvalidArgument"]
@@ -1076,7 +1076,7 @@ async def test_an_invalid_param_fails_every_data_id(unique_data_type, post):
 		{
 			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
 			"name": "n" * (constants.MAX_NAME_LENGTH + 1)
-		},
+		}
 	]
 
 	assert helpers.result_names(await change_metas(nex.FRIEND_A, [first, second], entries, False)) == ["DataStore::InvalidArgument", "DataStore::InvalidArgument"]
@@ -1100,7 +1100,7 @@ async def test_the_same_object_twice(unique_data_type, post):
 			"data_id": data_id,
 			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
 			"name": "second"
-		},
+		}
 	]
 
 	assert helpers.result_names(await change_metas(nex.FRIEND_A, [], entries, False)) == [None, None]
@@ -1126,7 +1126,7 @@ async def test_every_param_uses_its_own_flag(unique_data_type, post):
 			"data_id": data_id,
 			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_TAGS,
 			"tags": ["after"]
-		},
+		}
 	]
 
 	assert helpers.result_names(await change_metas(nex.FRIEND_A, [], entries, False)) == [None, None]
@@ -1160,7 +1160,7 @@ async def test_every_param_uses_its_own_password(unique_data_type, post):
 			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
 			"name": "after",
 			"update_password": second_password
-		},
+		}
 	]
 
 	assert helpers.result_names(await change_metas(nex.STRANGER, [], entries, False)) == [None, None]
@@ -1187,7 +1187,7 @@ async def test_a_wrong_password_only_fails_its_own_entry(unique_data_type, post)
 			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
 			"name": "after",
 			"update_password": 1234
-		},
+		}
 	]
 
 	assert helpers.result_names(await change_metas(nex.STRANGER, [], entries, False)) == [None, "DataStore::InvalidPassword"]
@@ -1208,7 +1208,7 @@ async def test_one_password_for_several_data_ids(unique_data_type, post):
 			"modifies_flag": constants.ModificationFlag.MODIFICATION_FLAG_NAME,
 			"name": "after",
 			"update_password": password
-		},
+		}
 	]
 
 	assert helpers.result_names(await change_metas(nex.STRANGER, [first, second], entries, False)) == [None, "DataStore::InvalidPassword"]
@@ -1218,7 +1218,7 @@ async def test_one_password_for_several_data_ids(unique_data_type, post):
 @pytest.mark.parametrize("data_id", [
 	pytest.param(constants.INVALID_DATAID, id="zero"),
 	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown"),
-	pytest.param(999999, id="the-system-range"),
+	pytest.param(999999, id="the-system-range")
 ])
 async def test_transactional_a_data_id_which_names_nothing(data_id):
 	"""

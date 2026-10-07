@@ -19,7 +19,7 @@ DATA_FLAGS = [
 	pytest.param(constants.DataFlag.DATA_FLAG_USE_NOTIFICATION_ON_POST, True, id="use-notification-on-post"),
 	pytest.param(constants.DataFlag.DATA_FLAG_USE_NOTIFICATION_ON_UPDATE, True, id="use-notification-on-update"),
 	pytest.param(constants.DataFlag.DATA_FLAG_NOT_USE_FILESERVER, False, id="not-use-fileserver"),
-	pytest.param(constants.DataFlag.DATA_FLAG_NEED_COMPLETION, True, id="need-completion"),
+	pytest.param(constants.DataFlag.DATA_FLAG_NEED_COMPLETION, True, id="need-completion")
 ]
 
 # * Bits which no flag uses. The stock servers only accept known flags
@@ -28,7 +28,7 @@ UNDEFINED_FLAGS = [
 	pytest.param(0x80, id="the-first-unused-bit"),
 	pytest.param(0x100, id="past-a-byte"),
 	pytest.param(0x8000, id="past-two-bytes"),
-	pytest.param(helpers.UINT32_MAX, id="every-bit"),
+	pytest.param(helpers.UINT32_MAX, id="every-bit")
 ]
 
 
@@ -36,7 +36,7 @@ RATING_LOCK_TYPES = [
 	pytest.param(constants.RatingLockType.RATING_LOCK_NONE, id="none"),
 	pytest.param(constants.RatingLockType.RATING_LOCK_INTERVAL, id="interval"),
 	pytest.param(constants.RatingLockType.RATING_LOCK_PERIOD, id="period"),
-	pytest.param(constants.RatingLockType.RATING_LOCK_PERMANENT, id="permanent"),
+	pytest.param(constants.RatingLockType.RATING_LOCK_PERMANENT, id="permanent")
 ]
 
 async def prepare(pid: int, **fields) -> datastore.DataStoreReqPostInfoV1:
@@ -120,7 +120,7 @@ async def test_every_object_gets_its_own_data_id(unique_data_type):
 
 @pytest.mark.parametrize("size", [
 	pytest.param(0, id="zero"),
-	pytest.param(MAX_OBJECT_SIZE, id="at-the-limit"),
+	pytest.param(MAX_OBJECT_SIZE, id="at-the-limit")
 ])
 async def test_a_size_which_is_allowed(unique_data_type, size):
 	"""
@@ -230,7 +230,7 @@ async def test_a_name_with_a_null_in_it(unique_data_type):
 
 @pytest.mark.parametrize("text, allowed", [
 	pytest.param("\u6f22" * constants.MAX_NAME_LENGTH, True, id="at-the-limit"),
-	pytest.param("\u6f22" * (constants.MAX_NAME_LENGTH + 1), False, id="one-over-the-limit"),
+	pytest.param("\u6f22" * (constants.MAX_NAME_LENGTH + 1), False, id="one-over-the-limit")
 ])
 async def test_the_name_limit_counts_characters_not_bytes(unique_data_type, text, allowed):
 	"""
@@ -249,7 +249,7 @@ async def test_the_name_limit_counts_characters_not_bytes(unique_data_type, text
 
 @pytest.mark.parametrize("data_type", [
 	pytest.param(0, id="the-lowest"),
-	pytest.param(constants.INVALID_DATA_TYPE - 1, id="the-highest-real-one"),
+	pytest.param(constants.INVALID_DATA_TYPE - 1, id="the-highest-real-one")
 ])
 async def test_a_data_type_which_is_allowed(data_type):
 	"""
@@ -342,7 +342,7 @@ async def test_an_unknown_access_permission(unique_data_type):
 
 @pytest.mark.parametrize("count", [
 	pytest.param(constants.DATASTOREPERMISSION_RECIPIENTIDS_MAX, id="at-the-limit"),
-	pytest.param(constants.DATASTOREPERMISSION_RECIPIENTIDS_MAX + 1, id="one-over-the-limit"),
+	pytest.param(constants.DATASTOREPERMISSION_RECIPIENTIDS_MAX + 1, id="one-over-the-limit")
 ])
 async def test_how_many_access_recipients_are_allowed(unique_data_type, count):
 	"""
@@ -383,7 +383,7 @@ async def test_an_unknown_delete_permission(unique_data_type):
 
 @pytest.mark.parametrize("count", [
 	pytest.param(constants.DATASTOREPERMISSION_RECIPIENTIDS_MAX, id="at-the-limit"),
-	pytest.param(constants.DATASTOREPERMISSION_RECIPIENTIDS_MAX + 1, id="one-over-the-limit"),
+	pytest.param(constants.DATASTOREPERMISSION_RECIPIENTIDS_MAX + 1, id="one-over-the-limit")
 ])
 async def test_how_many_delete_recipients_are_allowed(unique_data_type, count):
 	"""
@@ -456,7 +456,7 @@ async def test_the_need_review_flag_sets_the_status(unique_data_type):
 
 @pytest.mark.parametrize("period", [
 	pytest.param(constants.MAX_PERIOD, id="at-the-limit"),
-	pytest.param(0, id="zero"),
+	pytest.param(0, id="zero")
 ])
 async def test_a_period_which_is_allowed(unique_data_type, period):
 	"""
@@ -500,7 +500,7 @@ async def test_the_period_is_kept_on_the_object(unique_data_type):
 @pytest.mark.parametrize("refer_data_id", [
 	pytest.param(constants.INVALID_DATAID, id="zero"),
 	pytest.param(helpers.UNKNOWN_DATA_ID, id="an-object-which-is-not-there"),
-	pytest.param(helpers.UINT32_MAX, id="uint32-max"),
+	pytest.param(helpers.UINT32_MAX, id="uint32-max")
 ])
 async def test_a_refer_data_id_is_not_checked(unique_data_type, refer_data_id):
 	"""
@@ -627,7 +627,7 @@ async def test_a_tag_with_control_characters(unique_data_type, text):
 
 @pytest.mark.parametrize("text, allowed", [
 	pytest.param("\u6f22" * constants.MAX_TAG_LENGTH, True, id="at-the-limit"),
-	pytest.param("\u6f22" * (constants.MAX_TAG_LENGTH + 1), False, id="one-over-the-limit"),
+	pytest.param("\u6f22" * (constants.MAX_TAG_LENGTH + 1), False, id="one-over-the-limit")
 ])
 async def test_the_tag_limit_counts_characters_not_bytes(unique_data_type, text, allowed):
 	"""
@@ -730,7 +730,7 @@ async def test_a_rating_lock_type_which_does_not_exist(unique_data_type):
 	pytest.param({"flag": 0xFF}, id="every-rating-flag"),
 	pytest.param({"internal_flag": 0xFF}, id="every-internal-flag"),
 	pytest.param({"period_hour": 25}, id="an-hour-which-is-not-an-hour"),
-	pytest.param({"period_duration": -17}, id="a-negative-period-duration"),
+	pytest.param({"period_duration": -17}, id="a-negative-period-duration")
 ])
 async def test_the_rest_of_a_rating_param_is_not_checked(unique_data_type, fields):
 	"""

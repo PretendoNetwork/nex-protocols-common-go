@@ -18,7 +18,7 @@ BEFORE_PERIOD = 90
 # * For some reason these flags are accepted even though they have no field?
 FLAGS_WITH_NO_FIELD = [
 	pytest.param(constants.ModificationFlag.MODIFICATION_FLAG_REFERRED_COUNT, id="referred-count"),
-	pytest.param(constants.ModificationFlag.MODIFICATION_FLAG_STATUS, id="status"),
+	pytest.param(constants.ModificationFlag.MODIFICATION_FLAG_STATUS, id="status")
 ]
 
 async def post_object(post, pid: int, **fields) -> int:
@@ -63,7 +63,7 @@ async def change_error(pid: int, **fields) -> str:
 @pytest.mark.parametrize("data_id", [
 	pytest.param(constants.INVALID_DATAID, id="zero"),
 	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown"),
-	pytest.param(999999, id="the-system-range"),
+	pytest.param(999999, id="the-system-range")
 ])
 async def test_a_data_id_which_names_nothing(data_id):
 	"""
@@ -250,7 +250,7 @@ async def test_changing_both_the_period_and_the_updated_time(unique_data_type, p
 
 @pytest.mark.parametrize("name", [
 	pytest.param("n" * constants.MAX_NAME_LENGTH, id="at-the-limit"),
-	pytest.param("", id="empty"),
+	pytest.param("", id="empty")
 ])
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_a_name_which_is_allowed(unique_data_type, name, post):
@@ -373,7 +373,7 @@ async def test_changing_the_update_permission(unique_data_type, permission, reci
 
 @pytest.mark.parametrize("flag, field", [
 	pytest.param(constants.ModificationFlag.MODIFICATION_FLAG_ACCESS_PERMISSION, "permission", id="access"),
-	pytest.param(constants.ModificationFlag.MODIFICATION_FLAG_UPDATE_PERMISSION, "delete_permission", id="update"),
+	pytest.param(constants.ModificationFlag.MODIFICATION_FLAG_UPDATE_PERMISSION, "delete_permission", id="update")
 ])
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_an_unknown_permission(unique_data_type, flag, field, post):
@@ -390,7 +390,7 @@ async def test_an_unknown_permission(unique_data_type, flag, field, post):
 
 @pytest.mark.parametrize("period", [
 	pytest.param(constants.MAX_PERIOD, id="at-the-limit"),
-	pytest.param(1, id="one-day"),
+	pytest.param(1, id="one-day")
 ])
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_a_period_which_is_allowed(unique_data_type, period, post):
@@ -430,7 +430,7 @@ async def test_a_period_of_zero_expires_the_object(unique_data_type, post):
 
 @pytest.mark.parametrize("meta_binary", [
 	pytest.param(b"m" * constants.MAX_METABIN_SIZE, id="at-the-limit"),
-	pytest.param(b"", id="empty"),
+	pytest.param(b"", id="empty")
 ])
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_a_meta_binary_which_is_allowed(unique_data_type, meta_binary, post):
@@ -474,7 +474,7 @@ async def test_the_tags_are_sorted_when_they_are_stored(unique_data_type, post):
 @pytest.mark.parametrize("tags", [
 	pytest.param(["tag%i" % i for i in range(constants.NUM_TAG_SLOT)], id="at-the-slot-limit"),
 	pytest.param(["t" * constants.MAX_TAG_LENGTH], id="a-tag-at-the-length-limit"),
-	pytest.param([], id="none-at-all"),
+	pytest.param([], id="none-at-all")
 ])
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_tags_which_are_allowed(unique_data_type, tags, post):
@@ -492,7 +492,7 @@ async def test_tags_which_are_allowed(unique_data_type, tags, post):
 @pytest.mark.parametrize("tags", [
 	pytest.param(["tag%i" % i for i in range(constants.NUM_TAG_SLOT + 1)], id="over-the-slot-limit"),
 	pytest.param(["t" * (constants.MAX_TAG_LENGTH + 1)], id="a-tag-over-the-length-limit"),
-	pytest.param(["same", "same"], id="duplicates"),
+	pytest.param(["same", "same"], id="duplicates")
 ])
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_tags_which_are_not_allowed(unique_data_type, tags, post):

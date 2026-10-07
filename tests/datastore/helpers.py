@@ -27,7 +27,7 @@ TEXT_SAMPLES = [
 	pytest.param("\uff8a\uff9e", id="halfwidth-katakana"),
 	pytest.param("\uff28\uff25\uff2c\uff2c\uff2f", id="fullwidth-latin"),
 	pytest.param("\ufffd", id="the-replacement-character"),
-	pytest.param("   ", id="only-spaces"),
+	pytest.param("   ", id="only-spaces")
 ]
 
 # * Anything above the basic multilingual plane needs a surrogate pair,
@@ -36,7 +36,7 @@ TEXT_SAMPLES = [
 ASTRAL_TEXT_SAMPLES = [
 	pytest.param("\U0001F3AE", id="an-emoji"),
 	pytest.param("\U0001F3AE\U0001F47E", id="two-emoji"),
-	pytest.param("\U0001F468\u200D\U0001F4BB", id="emoji-joined-by-a-zero-width-joiner"),
+	pytest.param("\U0001F468\u200D\U0001F4BB", id="emoji-joined-by-a-zero-width-joiner")
 ]
 
 # * For some reason object NAMES accept these, but object TAGS
@@ -44,7 +44,7 @@ ASTRAL_TEXT_SAMPLES = [
 CONTROL_TEXT_SAMPLES = [
 	pytest.param("a\tb", id="a-tab"),
 	pytest.param("a\nb", id="a-newline"),
-	pytest.param("a\rb", id="a-carriage-return"),
+	pytest.param("a\rb", id="a-carriage-return")
 ]
 
 # * Every permission, with a recipient for the ones which use them
@@ -53,7 +53,7 @@ PERMISSIONS = [
 	pytest.param(constants.Permission.PERMISSION_FRIEND, [], id="friend"),
 	pytest.param(constants.Permission.PERMISSION_SPECIFIED, [nex.STRANGER], id="specified"),
 	pytest.param(constants.Permission.PERMISSION_PRIVATE, [], id="private"),
-	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.FRIEND_B], id="specified-friend"),
+	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.FRIEND_B], id="specified-friend")
 ]
 
 @contextlib.asynccontextmanager
@@ -276,7 +276,7 @@ class DataStoreChangeMetaParam(common.Structure):
 		self.persistence_target = datastore.DataStorePersistenceTarget()
 
 	def __key(self):
-		return (self.data_id, self.modifies_flag, self.name, self.permission, self.delete_permission, self.period, self.meta_binary, self.tags, self.update_password, self.referred_count, self.data_type, self.status, self.compare_param, self.persistence_target, )
+		return (self.data_id, self.modifies_flag, self.name, self.permission, self.delete_permission, self.period, self.meta_binary, self.tags, self.update_password, self.referred_count, self.data_type, self.status, self.compare_param, self.persistence_target)
 
 	def __hash__(self):
 		return hash(common.make_hashable(self.__key()))
@@ -577,14 +577,14 @@ async def post_persisted(post, pid: int, slot: int, **fields) -> int:
 POST_METHODS = [
 	pytest.param(post_meta_binary, id="post-meta-binary"),
 	pytest.param(post_object, id="post-object"),
-	pytest.param(post_object_v1, id="post-object-v1"),
+	pytest.param(post_object_v1, id="post-object-v1")
 ]
 
 # * Every way an object can be created with a persistence slot set. Used for
 # * when a test needs to test slots
 PERSISTENCE_POST_METHODS = [
 	pytest.param(post_meta_binary, id="post-meta-binary"),
-	pytest.param(post_object, id="post-object"),
+	pytest.param(post_object, id="post-object")
 ]
 
 # * Used to ensure that tests involving objects which use the file server
@@ -592,7 +592,7 @@ PERSISTENCE_POST_METHODS = [
 # * ways of creating objects on the file server
 FILE_SERVER_POST_METHODS = [
 	pytest.param(post_object, id="post-object"),
-	pytest.param(post_object_v1, id="post-object-v1"),
+	pytest.param(post_object_v1, id="post-object-v1")
 ]
 
 def result_names(results: list) -> list:

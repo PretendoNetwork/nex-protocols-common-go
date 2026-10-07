@@ -33,7 +33,7 @@ async def complete_error(pid: int, **fields) -> str:
 
 @pytest.mark.parametrize("flag", [
 	pytest.param(constants.DataFlag.DATA_FLAG_NONE, id="no-flags"),
-	pytest.param(constants.DataFlag.DATA_FLAG_NEED_COMPLETION, id="need-completion"),
+	pytest.param(constants.DataFlag.DATA_FLAG_NEED_COMPLETION, id="need-completion")
 ])
 async def test_completes_an_upload(unique_data_type, flag):
 	"""
@@ -107,7 +107,7 @@ async def test_reporting_a_failure_after_completing(unique_data_type):
 @pytest.mark.parametrize("data_id", [
 	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown"),
 	pytest.param(constants.INVALID_DATAID, id="invalid-dataid"),
-	pytest.param(helpers.UINT32_MAX, id="uint32-max"),
+	pytest.param(helpers.UINT32_MAX, id="uint32-max")
 ])
 async def test_unknown_data_id(data_id):
 	"""
