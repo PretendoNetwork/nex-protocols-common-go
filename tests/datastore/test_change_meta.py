@@ -361,6 +361,22 @@ async def test_an_unknown_permission(unique_data_type, flag, field, post):
 
 	assert await change_error(nex.FRIEND_A, data_id=data_id, modifies_flag=flag, **{field: bad}) == "DataStore::InvalidArgument"
 
+@pytest.mark.parametrize("flag, field", [
+	pytest.param(constants.ModificationFlag.MODIFICATION_FLAG_ACCESS_PERMISSION, "permission", id="access"),
+	pytest.param(constants.ModificationFlag.MODIFICATION_FLAG_UPDATE_PERMISSION, "delete_permission", id="update")
+])
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_recipients_on_a_permission_which_does_not_use_them(unique_data_type, flag, field, post):
+	"""
+	Recipients only mean something to the specified permissions, so
+	anywhere else they are refused
+	"""
+
+	data_id = await post_object(post, nex.FRIEND_A, data_type=unique_data_type)
+	bad = helpers.permission(permission=constants.Permission.PERMISSION_PUBLIC, recipients=[nex.STRANGER])
+
+	assert await change_error(nex.FRIEND_A, data_id=data_id, modifies_flag=flag, **{field: bad}) == "DataStore::InvalidArgument"
+
 # * period
 
 @pytest.mark.parametrize("period", [

@@ -332,6 +332,16 @@ async def test_an_unknown_access_permission(unique_data_type):
 
 	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, permission=permission) == "DataStore::InvalidArgument"
 
+async def test_access_recipients_on_a_permission_which_does_not_use_them(unique_data_type):
+	"""
+	Recipients only mean something to the specified permissions, so
+	anywhere else they are refused
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_PUBLIC, recipients=[nex.STRANGER])
+
+	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, permission=permission) == "DataStore::InvalidArgument"
+
 @pytest.mark.parametrize("count", [
 	pytest.param(constants.DATASTOREPERMISSION_RECIPIENTIDS_MAX, id="at-the-limit"),
 	pytest.param(constants.DATASTOREPERMISSION_RECIPIENTIDS_MAX + 1, id="one-over-the-limit")
@@ -370,6 +380,15 @@ async def test_an_unknown_delete_permission(unique_data_type):
 	"""
 
 	delete_permission = helpers.permission(permission=constants.Permission.PERMISSION_SPECIFIED_FRIEND + 1)
+
+	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, delete_permission=delete_permission) == "DataStore::InvalidArgument"
+
+async def test_delete_recipients_on_a_permission_which_does_not_use_them(unique_data_type):
+	"""
+	The delete permission refuses stray recipients the same way
+	"""
+
+	delete_permission = helpers.permission(permission=constants.Permission.PERMISSION_PRIVATE, recipients=[nex.STRANGER])
 
 	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, delete_permission=delete_permission) == "DataStore::InvalidArgument"
 
