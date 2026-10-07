@@ -52,6 +52,20 @@ async def test_increments_the_reference_count(unique_data_type, post):
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).referred_count == 2
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_the_reference_count_stops_at_its_limit(unique_data_type, post):
+	"""
+	A count already at UINT32_MAX stays there rather than wrapping
+	back around to 0
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
+
+	await helpers.change_meta(nex.FRIEND_A, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_REFERRED_COUNT, referred_count=helpers.UINT32_MAX)
+	await helpers.touch_object(nex.FRIEND_A, data_id=data_id)
+
+	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).referred_count == helpers.UINT32_MAX
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_updates_the_reference_time_and_validity_period(unique_data_type, post):
 	"""
 	Touching always updates the time the object was last referenced, but
