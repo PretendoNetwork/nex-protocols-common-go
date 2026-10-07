@@ -247,6 +247,23 @@ async def test_changing_both_the_period_and_the_updated_time(unique_data_type, p
 	assert after.update_time.value() > before.update_time.value()
 	assert after.expire_time.value() < before.expire_time.value()
 
+async def test_changing_the_updated_time_does_not_send_an_update_notification(unique_data_type):
+	"""
+	Only updating the objects data with CompleteUpdateObject sends an
+	update notification. Marking the object as updated would replace the
+	unread post notification if it sent one
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_SPECIFIED, recipients=[nex.STRANGER])
+	flag = constants.DataFlag.DATA_FLAG_USE_NOTIFICATION_ON_POST | constants.DataFlag.DATA_FLAG_USE_NOTIFICATION_ON_UPDATE
+	data_id = await post_object(helpers.post_object, nex.FRIEND_A, data_type=unique_data_type, permission=permission, flag=flag)
+	before = await helpers.notification_ids(nex.STRANGER, data_id)
+
+	await change(nex.FRIEND_A, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_UPDATED_TIME)
+
+	assert len(before) == 1
+	assert await helpers.notification_ids(nex.STRANGER, data_id) == before
+
 # * name
 
 @pytest.mark.parametrize("name", [

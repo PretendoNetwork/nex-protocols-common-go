@@ -10,6 +10,10 @@ UNKNOWN_DATA_ID = 0xFFFFFF
 UINT32_MAX = 0xFFFFFFFF
 UINT64_MAX = 0xFFFFFFFFFFFFFFFF
 
+# * The largest object which can be uploaded
+# TODO - Make a constant for this in Go libs
+MAX_OBJECT_SIZE = 10 * 1024 * 1024
+
 # * Object strings go on the wire as UTF-8, but the server decodes them
 # * into 16 bit characters, so everything in the basic multilingual plane
 # * survives and nothing outside it does. These all come back unchanged
@@ -411,6 +415,33 @@ def prepare_get_param_v1(**fields) -> datastore.DataStorePrepareGetParamV1:
 
 	return override(param, fields)
 
+def prepare_update_param(**fields) -> datastore.DataStorePrepareUpdateParam:
+	"""
+	Creates a DataStorePrepareUpdateParam with default parameters.
+	Any field can be overridden with a keyword argument
+	"""
+
+	param = datastore.DataStorePrepareUpdateParam()
+	param.data_id = constants.INVALID_DATAID
+	param.size = 0
+	param.update_password = constants.INVALID_PASSWORD
+	param.extra_data = ["WUP", "4", "EUR", "110", "GB", ""]
+
+	return override(param, fields)
+
+def complete_update_param(**fields) -> datastore.DataStoreCompleteUpdateParam:
+	"""
+	Creates a DataStoreCompleteUpdateParam with default parameters.
+	Any field can be overridden with a keyword argument
+	"""
+
+	param = datastore.DataStoreCompleteUpdateParam()
+	param.data_id = constants.INVALID_DATAID
+	param.version = 0
+	param.success = True
+
+	return override(param, fields)
+
 def get_meta_param(**fields) -> datastore.DataStoreGetMetaParam:
 	"""
 	Creates a DataStoreGetMetaParam with default parameters.
@@ -489,6 +520,23 @@ async def post_object_v1(pid: int, **fields) -> int:
 
 		return post_info.data_id
 
+async def prepare_update_object(pid: int, **fields) -> datastore.DataStoreReqUpdateInfo:
+	"""
+	Starts updating an object as the given user, returning all the info.
+	The update is not completed
+	"""
+
+	async with connect(pid) as client:
+		return await client.prepare_update_object(prepare_update_param(**fields))
+
+async def complete_update_object(pid: int, **fields) -> None:
+	"""
+	Completes an update as the given user
+	"""
+
+	async with connect(pid) as client:
+		await client.complete_update_object(complete_update_param(**fields))
+
 async def change_meta(pid: int, **fields) -> None:
 	"""
 	Changes an objects metadata as the given user
@@ -564,6 +612,18 @@ async def get_meta_error(pid: int, **fields) -> str:
 
 	pytest.fail("DataStoreProtocol::GetMeta did not throw an error")
 
+async def version_of(data_id: int) -> int:
+	"""
+	The current version of an object. GetMeta does not have it, so this
+	uses GetSpecificMeta, which leaves out objects with a size of 0
+	"""
+
+	async with connect(nex.FRIEND_A) as client:
+		param = datastore.DataStoreGetSpecificMetaParam()
+		param.data_ids = [data_id]
+
+		return (await client.get_specific_meta(param))[0].version
+
 async def notified(data_id: int) -> list[int]:
 	"""
 	Every test user with an unread notification for the object
@@ -594,6 +654,21 @@ async def notified(data_id: int) -> list[int]:
 			pids.append(pid)
 
 	return pids
+
+async def notification_ids(pid: int, data_id: int) -> list[int]:
+	"""
+	The IDs of the users unread notifications for the object, to tell a
+	new notification apart from an old one
+	"""
+
+	async with connect(pid) as client:
+		param = datastore.DataStoreGetNewArrivedNotificationsParam()
+		param.last_notification_id = 0
+		param.limit = 99
+
+		notifications = (await client.get_new_arrived_notifications(param)).result
+
+	return [notification.notification_id for notification in notifications if notification.data_id == data_id]
 
 async def post_persisted(post, pid: int, slot: int, **fields) -> int:
 	"""

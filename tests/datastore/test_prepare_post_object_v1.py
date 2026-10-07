@@ -6,10 +6,6 @@ from datastore import constants, helpers
 
 pytestmark = pytest.mark.anyio
 
-# * The largest object which can be uploaded
-# TODO - Make a constant for this in Go libs
-MAX_OBJECT_SIZE = 10 * 1024 * 1024
-
 # * Every stock flag. Only DATA_FLAG_NOT_USE_FILESERVER cannot be used, as it's
 # * set by the game server in PostMetaBinary
 DATA_FLAGS = [
@@ -122,7 +118,7 @@ async def test_a_new_object_has_never_been_referred_to(unique_data_type):
 
 @pytest.mark.parametrize("size", [
 	pytest.param(0, id="zero"),
-	pytest.param(MAX_OBJECT_SIZE, id="at-the-limit")
+	pytest.param(helpers.MAX_OBJECT_SIZE, id="at-the-limit")
 ])
 async def test_a_size_which_is_allowed(unique_data_type, size):
 	"""
@@ -138,7 +134,7 @@ async def test_a_size_which_is_too_big(unique_data_type):
 	An object bigger than the maximum allowed size is invalid
 	"""
 
-	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, size=MAX_OBJECT_SIZE + 1) == "DataStore::InvalidArgument"
+	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, size=helpers.MAX_OBJECT_SIZE + 1) == "DataStore::InvalidArgument"
 
 async def test_the_size_is_kept_on_the_object(unique_data_type):
 	"""
