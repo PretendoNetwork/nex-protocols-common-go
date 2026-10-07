@@ -1,9 +1,13 @@
+import anyio
 import pytest
 
 import nex
 from datastore import constants, helpers
 
 pytestmark = pytest.mark.anyio
+
+# * Long enough for a timestamp to visibly move
+TIMESTAMP_DELAY = 2
 
 SLOT = 0
 EMPTY_SLOT = 15
@@ -142,3 +146,24 @@ async def test_an_object_under_review(unique_data_type, post):
 
 	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, SLOT)).data_id == data_id
 	assert await helpers.get_persistence_info_error(nex.STRANGER, nex.FRIEND_A, SLOT) == "DataStore::UnderReviewing"
+
+# * Reading a slot does not count as referring to the object in it
+
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
+async def test_reading_a_slot_does_not_refer_to_the_object_in_it(unique_data_type, post):
+	"""
+	Only downloading or touching an object refers to it, so neither the
+	reference count nor the referred time move, even for somebody other
+	than the owner
+	"""
+
+	data_id = await helpers.post_persisted(post, nex.FRIEND_A, SLOT, data_type=unique_data_type)
+	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	await anyio.sleep(TIMESTAMP_DELAY)
+	await helpers.get_persistence_info(nex.STRANGER, nex.FRIEND_A, SLOT)
+
+	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	assert after.referred_count == before.referred_count
+	assert after.referred_time.value() == before.referred_time.value()

@@ -1,3 +1,4 @@
+import anyio
 import pytest
 from nintendo.nex import common
 
@@ -5,6 +6,9 @@ import nex
 from datastore import constants, helpers
 
 pytestmark = pytest.mark.anyio
+
+# * Long enough for a timestamp to visibly move
+TIMESTAMP_DELAY = 2
 
 ACCESS_PERMISSIONS = [
 	pytest.param(constants.Permission.PERMISSION_PUBLIC, [], nex.STRANGER, id="public"),
@@ -246,3 +250,24 @@ async def test_the_owner_of_a_private_object(unique_data_type, post):
 	info = await helpers.get_password_info(nex.FRIEND_A, data_id)
 
 	assert info.data_id == data_id
+
+# * Reading the passwords does not count as referring to the object
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_reading_the_passwords_does_not_refer_to_the_object(unique_data_type, post):
+	"""
+	Only downloading or touching an object refers to it, so neither the
+	reference count nor the referred time move
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_PERIOD_FROM_LAST_REFERRED)
+	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	await anyio.sleep(TIMESTAMP_DELAY)
+	await helpers.get_password_info(nex.FRIEND_A, data_id)
+
+	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	assert after.referred_count == before.referred_count
+	assert after.referred_time.value() == before.referred_time.value()
+	assert after.expire_time.value() == before.expire_time.value()

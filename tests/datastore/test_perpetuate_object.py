@@ -1,3 +1,4 @@
+import anyio
 import pytest
 from nintendo.nex import common
 
@@ -5,6 +6,9 @@ import nex
 from datastore import constants, helpers
 
 pytestmark = pytest.mark.anyio
+
+# * Long enough for a timestamp to visibly move
+TIMESTAMP_DELAY = 2
 
 SLOT_0 = 0
 SLOT_1 = 1
@@ -156,7 +160,9 @@ async def test_perpetuating_leaves_the_reference_count_alone(unique_data_type, p
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
 	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
 
+	await anyio.sleep(TIMESTAMP_DELAY)
 	await perpetuate(nex.FRIEND_A, SLOT_0, data_id)
+
 	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
 
 	assert after.referred_count == before.referred_count

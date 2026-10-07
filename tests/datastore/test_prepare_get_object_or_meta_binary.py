@@ -515,3 +515,21 @@ async def test_a_failed_get_does_not_refer_to_the_object(unique_data_type, post)
 	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
 
 	assert after.referred_count == before.referred_count
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_a_get_blocked_by_the_read_lock_does_not_refer_to_the_object(unique_data_type, post):
+	"""
+	Being turned away by a lock ID which does not hold the read lock
+	does not count as having referred to the object
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_USE_READ_LOCK)
+
+	await prepare_get(nex.FRIEND_A, data_id=data_id, lock_id=1234)
+	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	assert await prepare_get_error(nex.STRANGER, data_id=data_id, lock_id=5678) == "DataStore::AlreadyLocked"
+
+	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	assert after.referred_count == before.referred_count

@@ -650,3 +650,26 @@ async def test_a_pending_object_is_under_review_for_everyone_else(unique_data_ty
 	data_id = await post_object(post, nex.FRIEND_A, data_type=unique_data_type, delete_permission=update, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
 
 	assert await change_error(nex.STRANGER, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_NAME, name="after") == "DataStore::UnderReviewing"
+
+# * Changing the metadata does not count as referring to the object
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_changing_the_metadata_does_not_refer_to_the_object(unique_data_type, post):
+	"""
+	Only downloading or touching an object refers to it, so neither the
+	reference count nor the referred time move, even when somebody other
+	than the owner makes the change
+	"""
+
+	update = helpers.permission(permission=constants.Permission.PERMISSION_PUBLIC)
+	data_id = await post_object(post, nex.FRIEND_A, data_type=unique_data_type, delete_permission=update, flag=constants.DataFlag.DATA_FLAG_PERIOD_FROM_LAST_REFERRED)
+	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	await anyio.sleep(TIMESTAMP_DELAY)
+	await change(nex.STRANGER, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_NAME, name="after")
+
+	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	assert after.referred_count == before.referred_count
+	assert after.referred_time.value() == before.referred_time.value()
+	assert after.expire_time.value() == before.expire_time.value()

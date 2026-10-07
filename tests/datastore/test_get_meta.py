@@ -1,3 +1,4 @@
+import anyio
 import pytest
 
 import nex
@@ -6,6 +7,9 @@ from datastore import constants, helpers
 pytestmark = pytest.mark.anyio
 
 PERSISTENCE_SLOT = 0
+
+# * Long enough for a timestamp to visibly move
+TIMESTAMP_DELAY = 2
 
 ACCESS_PERMISSION_CASES = [
 	pytest.param(constants.Permission.PERMISSION_PUBLIC, [], nex.FRIEND_A, True, id="public-owner"),
@@ -489,3 +493,25 @@ async def test_the_read_lock_flag_is_returned(unique_data_type, post):
 	meta_info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
 
 	assert meta_info.flag & constants.DataFlag.DATA_FLAG_USE_READ_LOCK
+
+# * Reading the metadata does not count as referring to the object
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_reading_the_metadata_does_not_refer_to_the_object(unique_data_type, post):
+	"""
+	Only downloading or touching an object refers to it, so neither the
+	reference count nor the referred time move, even when everything
+	about the object is asked for
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_PERIOD_FROM_LAST_REFERRED)
+	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	await anyio.sleep(TIMESTAMP_DELAY)
+	await helpers.get_meta(nex.STRANGER, data_id=data_id, result_option=constants.ResultFlag.RESULT_FLAG_ALL)
+
+	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	assert after.referred_count == before.referred_count
+	assert after.referred_time.value() == before.referred_time.value()
+	assert after.expire_time.value() == before.expire_time.value()

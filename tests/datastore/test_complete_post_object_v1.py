@@ -1,3 +1,4 @@
+import anyio
 import pytest
 from nintendo.nex import common
 
@@ -5,6 +6,9 @@ import nex
 from datastore import constants, helpers
 
 pytestmark = pytest.mark.anyio
+
+# * Long enough for a timestamp to visibly move
+TIMESTAMP_DELAY = 2
 
 async def complete(pid: int, **fields) -> None:
 	"""
@@ -51,6 +55,22 @@ async def test_completes_an_upload(unique_data_type, flag):
 	meta_info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
 
 	assert meta_info.data_id == data_id
+
+async def test_a_completed_object_has_never_been_referred_to(unique_data_type):
+	"""
+	Completing an upload is not a reference, so the object starts with
+	no references, and a referred time of when it was created
+	"""
+
+	data_id = await helpers.prepare_post_object_v1(nex.FRIEND_A, data_type=unique_data_type)
+
+	await anyio.sleep(TIMESTAMP_DELAY)
+	await complete(nex.FRIEND_A, data_id=data_id)
+
+	meta_info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	assert meta_info.referred_count == 0
+	assert meta_info.referred_time.value() == meta_info.create_time.value()
 
 async def test_completing_twice(unique_data_type):
 	"""

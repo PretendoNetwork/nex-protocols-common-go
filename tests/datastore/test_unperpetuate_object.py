@@ -163,6 +163,24 @@ async def test_keeping_the_object_moves_its_update_time(unique_data_type, post):
 
 	assert after.update_time.value() > before.update_time.value()
 
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
+async def test_keeping_the_object_does_not_refer_to_it(unique_data_type, post):
+	"""
+	The object is updated when it leaves the slot, but that is not the
+	same as referring to it
+	"""
+
+	data_id = await helpers.post_persisted(post, nex.FRIEND_A, SLOT_0, data_type=unique_data_type)
+	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	await anyio.sleep(TIMESTAMP_DELAY)
+	await unperpetuate(nex.FRIEND_A, SLOT_0, delete_last_object=False)
+
+	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	assert after.referred_count == before.referred_count
+	assert after.referred_time.value() == before.referred_time.value()
+
 # * The object status
 
 @pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
