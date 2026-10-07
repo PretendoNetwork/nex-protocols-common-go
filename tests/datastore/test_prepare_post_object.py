@@ -823,7 +823,7 @@ async def test_replacing_an_object_and_its_notifications(unique_data_type, delet
 # * are written to assume the current implementation is correct, and will need
 # * to be updated at some point when more testing is done on NSO
 
-@pytest.mark.skipif(nex.LIVE, reason="Pokemon Bank is NEX 3.4, and extra_data was added in NEX 3.5")
+@pytest.mark.skipif(nex.SERVER_NEX_VERSION < 30500, reason="extra_data was added in NEX 3.5")
 async def test_no_extra_data_at_all(unique_data_type):
 	"""
 	A client older than NEX 3.5 does not send the field, which is not
@@ -834,7 +834,7 @@ async def test_no_extra_data_at_all(unique_data_type):
 
 	assert info.data_id != constants.INVALID_DATAID
 
-@pytest.mark.skipif(nex.LIVE, reason="Pokemon Bank is NEX 3.4, and extra_data was added in NEX 3.5")
+@pytest.mark.skipif(nex.SERVER_NEX_VERSION < 30500, reason="extra_data was added in NEX 3.5")
 @pytest.mark.parametrize("extra_data", [
 	pytest.param(["CTR", "0", "JPN", "1", "JP", ""], id="a-japanese-3ds"),
 	pytest.param(["CTR", "2", "EUR", "110", "GB", ""], id="a-european-3ds"),
@@ -853,7 +853,7 @@ async def test_extra_data_a_console_would_send(unique_data_type, extra_data):
 
 	assert info.data_id != constants.INVALID_DATAID
 
-@pytest.mark.skipif(nex.LIVE, reason="Pokemon Bank is NEX 3.4, and extra_data was added in NEX 3.5")
+@pytest.mark.skipif(nex.SERVER_NEX_VERSION < 30500, reason="extra_data was added in NEX 3.5")
 @pytest.mark.parametrize("extra_data", [
 	pytest.param(["CTR", "2", "EUR", "110", "GB"], id="one-too-few"),
 	pytest.param(["CTR", "2", "EUR", "110", "GB", "", ""], id="one-too-many")
@@ -865,7 +865,7 @@ async def test_extra_data_of_the_wrong_length(unique_data_type, extra_data):
 
 	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, extra_data=extra_data) == "DataStore::InvalidArgument"
 
-@pytest.mark.skipif(nex.LIVE, reason="Pokemon Bank is NEX 3.4, and extra_data was added in NEX 3.5")
+@pytest.mark.skipif(nex.SERVER_NEX_VERSION < 30500, reason="extra_data was added in NEX 3.5")
 async def test_an_extra_data_string_which_is_too_long(unique_data_type):
 	"""
 	The console allocates eight bytes for each of these, one of which
@@ -876,7 +876,7 @@ async def test_an_extra_data_string_which_is_too_long(unique_data_type):
 
 	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, extra_data=extra_data) == "DataStore::InvalidArgument"
 
-@pytest.mark.skipif(nex.LIVE, reason="Pokemon Bank is NEX 3.4, and extra_data was added in NEX 3.5")
+@pytest.mark.skipif(nex.SERVER_NEX_VERSION < 30500, reason="extra_data was added in NEX 3.5")
 async def test_an_extra_data_string_at_the_length_limit(unique_data_type):
 	"""
 	Seven characters is allowed, which is what "Invalid" needs
@@ -886,7 +886,7 @@ async def test_an_extra_data_string_at_the_length_limit(unique_data_type):
 
 	assert info.data_id != constants.INVALID_DATAID
 
-@pytest.mark.skipif(nex.LIVE, reason="Pokemon Bank is NEX 3.4, and extra_data was added in NEX 3.5")
+@pytest.mark.skipif(nex.SERVER_NEX_VERSION < 30500, reason="extra_data was added in NEX 3.5")
 @pytest.mark.parametrize("extra_data", [
 	pytest.param(["XYZ", "2", "EUR", "110", "GB", ""], id="a-platform-which-does-not-exist"),
 	pytest.param(["", "2", "EUR", "110", "GB", ""], id="no-platform-at-all"),
@@ -899,7 +899,7 @@ async def test_extra_data_with_an_unknown_platform(unique_data_type, extra_data)
 
 	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, extra_data=extra_data) == "DataStore::InvalidArgument"
 
-@pytest.mark.skipif(nex.LIVE, reason="Pokemon Bank is NEX 3.4, and extra_data was added in NEX 3.5")
+@pytest.mark.skipif(nex.SERVER_NEX_VERSION < 30500, reason="extra_data was added in NEX 3.5")
 @pytest.mark.parametrize("extra_data", [
 	pytest.param(["CTR", "two", "EUR", "110", "GB", ""], id="a-region-id-which-is-not-a-number"),
 	pytest.param(["CTR", "", "EUR", "110", "GB", ""], id="no-region-id-at-all")
@@ -911,7 +911,7 @@ async def test_extra_data_with_a_region_id_which_is_not_a_number(unique_data_typ
 
 	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, extra_data=extra_data) == "DataStore::InvalidArgument"
 
-@pytest.mark.skipif(nex.LIVE, reason="Pokemon Bank is NEX 3.4, and extra_data was added in NEX 3.5")
+@pytest.mark.skipif(nex.SERVER_NEX_VERSION < 30500, reason="extra_data was added in NEX 3.5")
 @pytest.mark.parametrize("extra_data", [
 	pytest.param(["CTR", "2", "ZZZ", "110", "GB", ""], id="a-region-which-does-not-exist"),
 	pytest.param(["CTR", "0", "Invalid", "0", "", ""], id="a-region-only-the-wii-u-has")
@@ -923,7 +923,7 @@ async def test_extra_data_with_an_unknown_region(unique_data_type, extra_data):
 
 	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, extra_data=extra_data) == "DataStore::InvalidArgument"
 
-@pytest.mark.skipif(nex.LIVE, reason="Pokemon Bank is NEX 3.4, and extra_data was added in NEX 3.5")
+@pytest.mark.skipif(nex.SERVER_NEX_VERSION < 30500, reason="extra_data was added in NEX 3.5")
 @pytest.mark.parametrize("extra_data", [
 	pytest.param(["CTR", "4", "EUR", "110", "GB", ""], id="a-3ds-using-the-wii-u-number-for-europe"),
 	pytest.param(["WUP", "2", "EUR", "110", "GB", ""], id="a-wii-u-using-the-3ds-number-for-europe"),
@@ -937,7 +937,7 @@ async def test_extra_data_where_the_region_id_and_name_disagree(unique_data_type
 
 	assert await prepare_error(nex.FRIEND_A, data_type=unique_data_type, extra_data=extra_data) == "DataStore::InvalidArgument"
 
-@pytest.mark.skipif(nex.LIVE, reason="Pokemon Bank is NEX 3.4, and extra_data was added in NEX 3.5")
+@pytest.mark.skipif(nex.SERVER_NEX_VERSION < 30500, reason="extra_data was added in NEX 3.5")
 @pytest.mark.parametrize("extra_data", [
 	pytest.param(["CTR", "2", "EUR", "9999", "GB", ""], id="a-country-id-which-does-not-exist"),
 	pytest.param(["CTR", "2", "EUR", "110", "ZZ", ""], id="a-country-code-which-does-not-match"),

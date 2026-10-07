@@ -379,7 +379,7 @@ async def test_a_wrong_access_password_from_somebody_who_has_access(unique_data_
 # * extra_data
 # TODO - The only NN NEX server available at the time of writing is Pokemon Bank, which doesn't support this field. These tests are written assuming the current implementations work
 
-@pytest.mark.skipif(nex.LIVE, reason="Pokemon Bank is NEX 3.4, and extra_data was added in NEX 3.5")
+@pytest.mark.skipif(nex.SERVER_NEX_VERSION < 30500, reason="extra_data was added in NEX 3.5")
 @pytest.mark.parametrize("extra_data", [
 	pytest.param([], id="none-at-all"),
 	pytest.param(["WUP", "4", "EUR", "110", "GB", ""], id="what-a-console-sends")

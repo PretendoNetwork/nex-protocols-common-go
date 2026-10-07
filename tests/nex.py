@@ -61,6 +61,9 @@ if LIVE:
 
 	FRIEND_A, FRIEND_B, STRANGER = list(LIVE_ACCOUNTS)
 
+# * Used to disable tests based on NEX version if the target server can't handle certain features
+SERVER_NEX_VERSION = LIVE_NEX_VERSION if LIVE else NEX_VERSION
+
 def make_settings() -> settings.Settings:
 	s = settings.default()
 	s.configure(ACCESS_KEY, NEX_VERSION, 0)

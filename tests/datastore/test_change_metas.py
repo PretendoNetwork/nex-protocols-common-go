@@ -1061,7 +1061,7 @@ async def test_the_new_values_are_checked_before_the_comparison(unique_data_type
 # * PrepareGetObject resolves one, which was tested live, and will need to be
 # * updated at some point when more testing is done on NSO
 
-@pytest.mark.skipif(nex.LIVE, reason="Pokemon Bank predates revision 1 of DataStoreChangeMetaParam, which added persistence_target")
+@pytest.mark.skipif(nex.SERVER_NEX_VERSION < 30500, reason="persistence_target was added in revision 1 of DataStoreChangeMetaParam, which is assumed to have been added in NEX 3.5")
 @pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_changing_by_persistence_target(unique_data_type, post):
 	"""
@@ -1076,7 +1076,7 @@ async def test_changing_by_persistence_target(unique_data_type, post):
 
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).name == "after"
 
-@pytest.mark.skipif(nex.LIVE, reason="Pokemon Bank predates revision 1 of DataStoreChangeMetaParam, which added persistence_target")
+@pytest.mark.skipif(nex.SERVER_NEX_VERSION < 30500, reason="persistence_target was added in revision 1 of DataStoreChangeMetaParam, which is assumed to have been added in NEX 3.5")
 @pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_the_target_is_used_over_the_data_id(unique_data_type, post):
 	"""
@@ -1093,7 +1093,7 @@ async def test_the_target_is_used_over_the_data_id(unique_data_type, post):
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=persisted)).name == "after"
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=other)).name == BEFORE_NAME
 
-@pytest.mark.skipif(nex.LIVE, reason="Pokemon Bank predates revision 1 of DataStoreChangeMetaParam, which added persistence_target")
+@pytest.mark.skipif(nex.SERVER_NEX_VERSION < 30500, reason="persistence_target was added in revision 1 of DataStoreChangeMetaParam, which is assumed to have been added in NEX 3.5")
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_a_target_with_no_slot_falls_back_on_the_data_id(unique_data_type, post):
 	"""
@@ -1107,7 +1107,7 @@ async def test_a_target_with_no_slot_falls_back_on_the_data_id(unique_data_type,
 
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).name == "after"
 
-@pytest.mark.skipif(nex.LIVE, reason="Pokemon Bank predates revision 1 of DataStoreChangeMetaParam, which added persistence_target")
+@pytest.mark.skipif(nex.SERVER_NEX_VERSION < 30500, reason="persistence_target was added in revision 1 of DataStoreChangeMetaParam, which is assumed to have been added in NEX 3.5")
 @pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_a_target_with_an_owner_of_zero(unique_data_type, post):
 	"""
@@ -1124,7 +1124,7 @@ async def test_a_target_with_an_owner_of_zero(unique_data_type, post):
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=persisted)).name == BEFORE_NAME
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=other)).name == BEFORE_NAME
 
-@pytest.mark.skipif(nex.LIVE, reason="Pokemon Bank predates revision 1 of DataStoreChangeMetaParam, which added persistence_target")
+@pytest.mark.skipif(nex.SERVER_NEX_VERSION < 30500, reason="persistence_target was added in revision 1 of DataStoreChangeMetaParam, which is assumed to have been added in NEX 3.5")
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_a_target_naming_an_empty_slot(unique_data_type, post):
 	"""
@@ -1137,7 +1137,7 @@ async def test_a_target_naming_an_empty_slot(unique_data_type, post):
 	assert await change_error(nex.FRIEND_A, data_id=other, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_NAME, name="after", persistence_target=target) == "DataStore::NotFound"
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=other)).name == BEFORE_NAME
 
-@pytest.mark.skipif(nex.LIVE, reason="Pokemon Bank predates revision 1 of DataStoreChangeMetaParam, which added persistence_target")
+@pytest.mark.skipif(nex.SERVER_NEX_VERSION < 30500, reason="persistence_target was added in revision 1 of DataStoreChangeMetaParam, which is assumed to have been added in NEX 3.5")
 async def test_a_target_naming_an_owner_who_has_nothing():
 	"""
 	A user who has never persisted anything has no slots to change
@@ -1147,7 +1147,7 @@ async def test_a_target_naming_an_owner_who_has_nothing():
 
 	assert await change_error(nex.FRIEND_A, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_NAME, name="after", persistence_target=target) == "DataStore::NotFound"
 
-@pytest.mark.skipif(nex.LIVE, reason="Pokemon Bank predates revision 1 of DataStoreChangeMetaParam, which added persistence_target")
+@pytest.mark.skipif(nex.SERVER_NEX_VERSION < 30500, reason="persistence_target was added in revision 1 of DataStoreChangeMetaParam, which is assumed to have been added in NEX 3.5")
 async def test_a_target_naming_a_slot_which_cannot_exist():
 	"""
 	A slot out of range is simply empty
@@ -1157,7 +1157,7 @@ async def test_a_target_naming_a_slot_which_cannot_exist():
 
 	assert await change_error(nex.FRIEND_A, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_NAME, name="after", persistence_target=target) == "DataStore::NotFound"
 
-@pytest.mark.skipif(nex.LIVE, reason="Pokemon Bank predates revision 1 of DataStoreChangeMetaParam, which added persistence_target")
+@pytest.mark.skipif(nex.SERVER_NEX_VERSION < 30500, reason="persistence_target was added in revision 1 of DataStoreChangeMetaParam, which is assumed to have been added in NEX 3.5")
 @pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_the_update_permission_of_an_object_in_a_slot(unique_data_type, post):
 	"""
@@ -1563,7 +1563,7 @@ async def test_transactional_rolls_back_a_comparison_which_does_not_match(unique
 # * Disclaimer: these tests were not ran against a live server, for the same
 # * reason as the persistence_target tests in test_change_meta.py
 
-@pytest.mark.skipif(nex.LIVE, reason="Pokemon Bank predates revision 1 of DataStoreChangeMetaParam, which added persistence_target")
+@pytest.mark.skipif(nex.SERVER_NEX_VERSION < 30500, reason="persistence_target was added in revision 1 of DataStoreChangeMetaParam, which is assumed to have been added in NEX 3.5")
 @pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_a_param_can_name_its_object_by_persistence_target(unique_data_type, post):
 	"""
