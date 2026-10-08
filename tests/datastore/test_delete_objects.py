@@ -86,10 +86,16 @@ async def test_data_ids_which_do_not_exist(data_id, transactional):
 	DeleteObject reports them
 	"""
 
+	entries = [
+		{
+			"data_id": data_id
+		}
+	]
+
 	if transactional:
-		assert await delete_error(nex.FRIEND_A, [{"data_id": data_id}], transactional) == "DataStore::NotFound"
+		assert await delete_error(nex.FRIEND_A, entries, transactional) == "DataStore::NotFound"
 	else:
-		assert helpers.result_names(await delete(nex.FRIEND_A, [{"data_id": data_id}], transactional)) == ["DataStore::NotFound"]
+		assert helpers.result_names(await delete(nex.FRIEND_A, entries, transactional)) == ["DataStore::NotFound"]
 
 async def test_a_system_range_data_id():
 	"""
@@ -99,8 +105,14 @@ async def test_a_system_range_data_id():
 	for details
 	"""
 
+	entries = [
+		{
+			"data_id": 999999
+		}
+	]
+
 	# TODO - This only returns NotFound because there's no way for a normal client to upload in this range, so there are no objects in the test server
-	assert helpers.result_names(await delete(nex.FRIEND_A, [{"data_id": 999999}], False)) == ["DataStore::NotFound"]
+	assert helpers.result_names(await delete(nex.FRIEND_A, entries, False)) == ["DataStore::NotFound"]
 
 async def test_an_object_which_was_never_completed(unique_data_type):
 	"""
@@ -110,7 +122,13 @@ async def test_an_object_which_was_never_completed(unique_data_type):
 
 	data_id = await helpers.prepare_post_object(nex.FRIEND_A, data_type=unique_data_type)
 
-	assert helpers.result_names(await delete(nex.FRIEND_A, [{"data_id": data_id}], False)) == ["DataStore::NotFound"]
+	entries = [
+		{
+			"data_id": data_id
+		}
+	]
+
+	assert helpers.result_names(await delete(nex.FRIEND_A, entries, False)) == ["DataStore::NotFound"]
 
 # * update_password
 # *
@@ -130,8 +148,14 @@ async def test_every_entry_uses_its_own_password(unique_data_type, post):
 	second_password = (await helpers.get_password_info(nex.FRIEND_A, second)).update_password
 
 	entries = [
-		{"data_id": first, "update_password": first_password},
-		{"data_id": second, "update_password": second_password}
+		{
+			"data_id": first,
+			"update_password": first_password
+		},
+		{
+			"data_id": second,
+			"update_password": second_password
+		}
 	]
 
 	assert helpers.result_names(await delete(nex.STRANGER, entries, False)) == [None, None]
@@ -146,7 +170,15 @@ async def test_a_wrong_password_only_fails_its_own_entry(unique_data_type, post)
 	public = await post(nex.FRIEND_A, data_type=unique_data_type, delete_permission=deletable)
 	private = await post(nex.FRIEND_A, data_type=unique_data_type)
 
-	entries = [{"data_id": public}, {"data_id": private, "update_password": 1234}]
+	entries = [
+		{
+			"data_id": public
+		},
+		{
+			"data_id": private,
+			"update_password": 1234
+		}
+	]
 	results = await delete(nex.STRANGER, entries, False)
 
 	assert helpers.result_names(results) == [None, "DataStore::InvalidPassword"]
@@ -163,7 +195,12 @@ async def test_the_access_password_is_not_the_update_password(unique_data_type, 
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
 	password_info = await helpers.get_password_info(nex.FRIEND_A, data_id)
 
-	entries = [{"data_id": data_id, "update_password": password_info.access_password}]
+	entries = [
+		{
+			"data_id": data_id,
+			"update_password": password_info.access_password
+		}
+	]
 
 	assert helpers.result_names(await delete(nex.STRANGER, entries, False)) == ["DataStore::InvalidPassword"]
 
@@ -176,7 +213,14 @@ async def test_wrong_update_password_as_the_owner(unique_data_type, post):
 
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
 
-	assert helpers.result_names(await delete(nex.FRIEND_A, [{"data_id": data_id, "update_password": 1234}], False)) == [None]
+	entries = [
+		{
+			"data_id": data_id,
+			"update_password": 1234
+		}
+	]
+
+	assert helpers.result_names(await delete(nex.FRIEND_A, entries, False)) == [None]
 	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
 
 # * transactional, set to true
@@ -195,7 +239,16 @@ async def test_transactional_deletes_every_object(unique_data_type, post):
 	first = await post(nex.FRIEND_A, data_type=unique_data_type)
 	second = await post(nex.FRIEND_A, data_type=unique_data_type)
 
-	assert await delete(nex.FRIEND_A, [{"data_id": first}, {"data_id": second}], True) == []
+	entries = [
+		{
+			"data_id": first
+		},
+		{
+			"data_id": second
+		}
+	]
+
+	assert await delete(nex.FRIEND_A, entries, True) == []
 	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=first) == "DataStore::NotFound"
 	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=second) == "DataStore::NotFound"
 
@@ -211,7 +264,18 @@ async def test_transactional_leaves_everything_alone_when_one_fails(unique_data_
 	"""
 
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
-	entries = [{"data_id": helpers.UNKNOWN_DATA_ID}, {"data_id": data_id}] if position == 0 else [{"data_id": data_id}, {"data_id": helpers.UNKNOWN_DATA_ID}]
+
+	entries = [
+		{
+			"data_id": helpers.UNKNOWN_DATA_ID
+		},
+		{
+			"data_id": data_id
+		}
+	]
+
+	if position == 1:
+		entries.reverse()
 
 	assert await delete_error(nex.FRIEND_A, entries, True) == "DataStore::NotFound"
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).data_id == data_id
@@ -226,7 +290,16 @@ async def test_transactional_rolls_back_a_permission_failure(unique_data_type, p
 	mine = await post(nex.FRIEND_A, data_type=unique_data_type)
 	theirs = await post(nex.STRANGER, data_type=unique_data_type)
 
-	assert await delete_error(nex.FRIEND_A, [{"data_id": mine}, {"data_id": theirs}], True) == "DataStore::PermissionDenied"
+	entries = [
+		{
+			"data_id": mine
+		},
+		{
+			"data_id": theirs
+		}
+	]
+
+	assert await delete_error(nex.FRIEND_A, entries, True) == "DataStore::PermissionDenied"
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=mine)).data_id == mine
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
@@ -238,7 +311,16 @@ async def test_transactional_the_same_object_twice(unique_data_type, post):
 
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
 
-	assert await delete_error(nex.FRIEND_A, [{"data_id": data_id}, {"data_id": data_id}], True) == "DataStore::NotFound"
+	entries = [
+		{
+			"data_id": data_id
+		},
+		{
+			"data_id": data_id
+		}
+	]
+
+	assert await delete_error(nex.FRIEND_A, entries, True) == "DataStore::NotFound"
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).data_id == data_id
 
 async def test_transactional_removes_the_notifications_for_every_object(unique_data_type):
@@ -250,7 +332,16 @@ async def test_transactional_removes_the_notifications_for_every_object(unique_d
 	first = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, permission=permission, flag=constants.DataFlag.DATA_FLAG_USE_NOTIFICATION_ON_POST)
 	second = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, permission=permission, flag=constants.DataFlag.DATA_FLAG_USE_NOTIFICATION_ON_POST)
 
-	await delete(nex.FRIEND_A, [{"data_id": first}, {"data_id": second}], True)
+	entries = [
+		{
+			"data_id": first
+		},
+		{
+			"data_id": second
+		}
+	]
+
+	await delete(nex.FRIEND_A, entries, True)
 
 	assert await helpers.notified(first) == []
 	assert await helpers.notified(second) == []
@@ -263,7 +354,16 @@ async def test_transactional_keeps_the_notifications_when_one_fails(unique_data_
 	permission = helpers.permission(permission=constants.Permission.PERMISSION_SPECIFIED, recipients=[nex.STRANGER])
 	data_id = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, permission=permission, flag=constants.DataFlag.DATA_FLAG_USE_NOTIFICATION_ON_POST)
 
-	assert await delete_error(nex.FRIEND_A, [{"data_id": data_id}, {"data_id": helpers.UNKNOWN_DATA_ID}], True) == "DataStore::NotFound"
+	entries = [
+		{
+			"data_id": data_id
+		},
+		{
+			"data_id": helpers.UNKNOWN_DATA_ID
+		}
+	]
+
+	assert await delete_error(nex.FRIEND_A, entries, True) == "DataStore::NotFound"
 	assert await helpers.notified(data_id) == [nex.STRANGER]
 
 # * transactional, set to false
@@ -281,7 +381,19 @@ async def test_deletes_what_it_can(unique_data_type, post):
 	first = await post(nex.FRIEND_A, data_type=unique_data_type)
 	second = await post(nex.FRIEND_A, data_type=unique_data_type)
 
-	results = await delete(nex.FRIEND_A, [{"data_id": first}, {"data_id": helpers.UNKNOWN_DATA_ID}, {"data_id": second}], False)
+	entries = [
+		{
+			"data_id": first
+		},
+		{
+			"data_id": helpers.UNKNOWN_DATA_ID
+		},
+		{
+			"data_id": second
+		}
+	]
+
+	results = await delete(nex.FRIEND_A, entries, False)
 
 	assert helpers.result_names(results) == [None, "DataStore::NotFound", None]
 	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=first) == "DataStore::NotFound"
@@ -297,7 +409,16 @@ async def test_a_permission_failure_only_fails_its_own_entry(unique_data_type, p
 	mine = await post(nex.FRIEND_A, data_type=unique_data_type)
 	theirs = await post(nex.STRANGER, data_type=unique_data_type)
 
-	results = await delete(nex.FRIEND_A, [{"data_id": mine}, {"data_id": theirs}], False)
+	entries = [
+		{
+			"data_id": mine
+		},
+		{
+			"data_id": theirs
+		}
+	]
+
+	results = await delete(nex.FRIEND_A, entries, False)
 
 	assert helpers.result_names(results) == [None, "DataStore::PermissionDenied"]
 	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=mine) == "DataStore::NotFound"
@@ -311,7 +432,16 @@ async def test_the_same_object_twice(unique_data_type, post):
 
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
 
-	results = await delete(nex.FRIEND_A, [{"data_id": data_id}, {"data_id": data_id}], False)
+	entries = [
+		{
+			"data_id": data_id
+		},
+		{
+			"data_id": data_id
+		}
+	]
+
+	results = await delete(nex.FRIEND_A, entries, False)
 
 	assert helpers.result_names(results) == [None, "DataStore::NotFound"]
 	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
@@ -325,8 +455,14 @@ async def test_deleting_twice(unique_data_type, post):
 
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
 
-	assert helpers.result_names(await delete(nex.FRIEND_A, [{"data_id": data_id}], False)) == [None]
-	assert helpers.result_names(await delete(nex.FRIEND_A, [{"data_id": data_id}], False)) == ["DataStore::NotFound"]
+	entries = [
+		{
+			"data_id": data_id
+		}
+	]
+
+	assert helpers.result_names(await delete(nex.FRIEND_A, entries, False)) == [None]
+	assert helpers.result_names(await delete(nex.FRIEND_A, entries, False)) == ["DataStore::NotFound"]
 
 async def test_removes_the_notifications_for_what_it_deletes(unique_data_type):
 	"""
@@ -339,7 +475,16 @@ async def test_removes_the_notifications_for_what_it_deletes(unique_data_type):
 
 	assert await helpers.notified(data_id) == [nex.STRANGER]
 
-	await delete(nex.FRIEND_A, [{"data_id": data_id}, {"data_id": helpers.UNKNOWN_DATA_ID}], False)
+	entries = [
+		{
+			"data_id": data_id
+		},
+		{
+			"data_id": helpers.UNKNOWN_DATA_ID
+		}
+	]
+
+	await delete(nex.FRIEND_A, entries, False)
 
 	assert await helpers.notified(data_id) == []
 
@@ -354,9 +499,15 @@ async def test_delete_permission_private(unique_data_type, post):
 
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
 
-	assert helpers.result_names(await delete(nex.STRANGER, [{"data_id": data_id}], False)) == ["DataStore::PermissionDenied"]
-	assert helpers.result_names(await delete(nex.FRIEND_B, [{"data_id": data_id}], False)) == ["DataStore::PermissionDenied"]
-	assert helpers.result_names(await delete(nex.FRIEND_A, [{"data_id": data_id}], False)) == [None]
+	entries = [
+		{
+			"data_id": data_id
+		}
+	]
+
+	assert helpers.result_names(await delete(nex.STRANGER, entries, False)) == ["DataStore::PermissionDenied"]
+	assert helpers.result_names(await delete(nex.FRIEND_B, entries, False)) == ["DataStore::PermissionDenied"]
+	assert helpers.result_names(await delete(nex.FRIEND_A, entries, False)) == [None]
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_delete_permission_public(unique_data_type, post):
@@ -367,7 +518,13 @@ async def test_delete_permission_public(unique_data_type, post):
 	permission = helpers.permission(permission=constants.Permission.PERMISSION_PUBLIC)
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, delete_permission=permission)
 
-	assert helpers.result_names(await delete(nex.STRANGER, [{"data_id": data_id}], False)) == [None]
+	entries = [
+		{
+			"data_id": data_id
+		}
+	]
+
+	assert helpers.result_names(await delete(nex.STRANGER, entries, False)) == [None]
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_delete_permission_friend(unique_data_type, post):
@@ -378,8 +535,14 @@ async def test_delete_permission_friend(unique_data_type, post):
 	permission = helpers.permission(permission=constants.Permission.PERMISSION_FRIEND)
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, delete_permission=permission)
 
-	assert helpers.result_names(await delete(nex.STRANGER, [{"data_id": data_id}], False)) == ["DataStore::PermissionDenied"]
-	assert helpers.result_names(await delete(nex.FRIEND_B, [{"data_id": data_id}], False)) == [None]
+	entries = [
+		{
+			"data_id": data_id
+		}
+	]
+
+	assert helpers.result_names(await delete(nex.STRANGER, entries, False)) == ["DataStore::PermissionDenied"]
+	assert helpers.result_names(await delete(nex.FRIEND_B, entries, False)) == [None]
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_delete_permission_specified(unique_data_type, post):
@@ -391,8 +554,14 @@ async def test_delete_permission_specified(unique_data_type, post):
 	permission = helpers.permission(permission=constants.Permission.PERMISSION_SPECIFIED, recipients=[nex.STRANGER])
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, delete_permission=permission)
 
-	assert helpers.result_names(await delete(nex.FRIEND_B, [{"data_id": data_id}], False)) == ["DataStore::PermissionDenied"]
-	assert helpers.result_names(await delete(nex.STRANGER, [{"data_id": data_id}], False)) == [None]
+	entries = [
+		{
+			"data_id": data_id
+		}
+	]
+
+	assert helpers.result_names(await delete(nex.FRIEND_B, entries, False)) == ["DataStore::PermissionDenied"]
+	assert helpers.result_names(await delete(nex.STRANGER, entries, False)) == [None]
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_delete_permission_specified_friend(unique_data_type, post):
@@ -407,9 +576,21 @@ async def test_delete_permission_specified_friend(unique_data_type, post):
 	for_the_friend = await post(nex.FRIEND_A, data_type=unique_data_type, delete_permission=to_the_friend)
 	for_the_stranger = await post(nex.FRIEND_A, data_type=unique_data_type, delete_permission=to_the_stranger)
 
-	assert helpers.result_names(await delete(nex.STRANGER, [{"data_id": for_the_stranger}], False)) == ["DataStore::PermissionDenied"]
-	assert helpers.result_names(await delete(nex.FRIEND_B, [{"data_id": for_the_stranger}], False)) == ["DataStore::PermissionDenied"]
-	assert helpers.result_names(await delete(nex.FRIEND_B, [{"data_id": for_the_friend}], False)) == [None]
+	for_the_stranger_entries = [
+		{
+			"data_id": for_the_stranger
+		}
+	]
+
+	for_the_friend_entries = [
+		{
+			"data_id": for_the_friend
+		}
+	]
+
+	assert helpers.result_names(await delete(nex.STRANGER, for_the_stranger_entries, False)) == ["DataStore::PermissionDenied"]
+	assert helpers.result_names(await delete(nex.FRIEND_B, for_the_stranger_entries, False)) == ["DataStore::PermissionDenied"]
+	assert helpers.result_names(await delete(nex.FRIEND_B, for_the_friend_entries, False)) == [None]
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_the_access_permission_is_not_used(unique_data_type, post):
@@ -422,8 +603,14 @@ async def test_the_access_permission_is_not_used(unique_data_type, post):
 	deletable = helpers.permission(permission=constants.Permission.PERMISSION_PUBLIC)
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, permission=permission, delete_permission=deletable)
 
+	entries = [
+		{
+			"data_id": data_id
+		}
+	]
+
 	assert await helpers.get_meta_error(nex.STRANGER, data_id=data_id) == "DataStore::PermissionDenied"
-	assert helpers.result_names(await delete(nex.STRANGER, [{"data_id": data_id}], False)) == [None]
+	assert helpers.result_names(await delete(nex.STRANGER, entries, False)) == [None]
 
 # * Objects which are in an unusual state
 
@@ -436,7 +623,13 @@ async def test_deleting_an_object_under_review(unique_data_type, post):
 
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
 
-	assert helpers.result_names(await delete(nex.FRIEND_A, [{"data_id": data_id}], False)) == [None]
+	entries = [
+		{
+			"data_id": data_id
+		}
+	]
+
+	assert helpers.result_names(await delete(nex.FRIEND_A, entries, False)) == [None]
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_deleting_a_read_locked_object(unique_data_type, post):
@@ -449,7 +642,13 @@ async def test_deleting_a_read_locked_object(unique_data_type, post):
 
 	await helpers.touch_object(nex.STRANGER, data_id=data_id, lock_id=1234)
 
-	assert helpers.result_names(await delete(nex.FRIEND_A, [{"data_id": data_id}], False)) == [None]
+	entries = [
+		{
+			"data_id": data_id
+		}
+	]
+
+	assert helpers.result_names(await delete(nex.FRIEND_A, entries, False)) == [None]
 
 @pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_deleting_a_persisted_object_empties_the_slot(unique_data_type, post):
@@ -461,6 +660,12 @@ async def test_deleting_a_persisted_object_empties_the_slot(unique_data_type, po
 	persistence_init_param = helpers.persistence_init_param(persistence_id=SLOT)
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, persistence_init_param=persistence_init_param)
 
-	assert helpers.result_names(await delete(nex.FRIEND_A, [{"data_id": data_id}], False)) == [None]
+	entries = [
+		{
+			"data_id": data_id
+		}
+	]
+
+	assert helpers.result_names(await delete(nex.FRIEND_A, entries, False)) == [None]
 
 	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, SLOT) == "DataStore::NotFound"
