@@ -1,6 +1,6 @@
 import anyio
 import pytest
-from nintendo.nex import common, datastore
+from nintendo.nex import common
 
 import nex
 from datastore import constants, helpers
@@ -47,35 +47,6 @@ async def get_one(pid: int, data_id: int, **fields):
 	response = await get_metas(pid, [data_id], **fields)
 
 	return response.info[0], helpers.result_names(response.results)[0]
-
-def empty_meta_info() -> datastore.DataStoreMetaInfo:
-	"""
-	The entry given for an object which could not be returned. Every
-	field is zeroed, whatever the error was
-	"""
-
-	meta_info = datastore.DataStoreMetaInfo()
-	meta_info.data_id = constants.INVALID_DATAID
-	meta_info.owner_id = 0
-	meta_info.size = 0
-	meta_info.name = ""
-	meta_info.data_type = 0
-	meta_info.meta_binary = b""
-	meta_info.permission = helpers.permission(permission=0)
-	meta_info.delete_permission = helpers.permission(permission=0)
-	meta_info.create_time = common.DateTime(0)
-	meta_info.update_time = common.DateTime(0)
-	meta_info.period = 0
-	meta_info.status = 0
-	meta_info.referred_count = 0
-	meta_info.refer_data_id = 0
-	meta_info.flag = 0
-	meta_info.referred_time = common.DateTime(0)
-	meta_info.expire_time = common.DateTime(0)
-	meta_info.tags = []
-	meta_info.ratings = []
-
-	return meta_info
 
 # * data_ids
 
@@ -164,7 +135,7 @@ async def test_a_data_id_which_names_nothing(unique_data_type, missing):
 
 	assert helpers.result_names(response.results) == [None, "DataStore::NotFound"]
 	assert response.info[0].data_id == data_id
-	assert response.info[1] == empty_meta_info()
+	assert response.info[1] == helpers.empty_meta_info()
 
 async def test_a_system_range_data_id():
 	"""
@@ -463,7 +434,7 @@ async def test_no_access_password_without_permission(unique_data_type, post):
 	meta_info, result = await get_one(nex.STRANGER, data_id, access_password=constants.INVALID_PASSWORD, result_option=constants.ResultFlag.RESULT_FLAG_ALL)
 
 	assert result == "DataStore::PermissionDenied"
-	assert meta_info == empty_meta_info()
+	assert meta_info == helpers.empty_meta_info()
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_wrong_access_password_without_permission(unique_data_type, post):
@@ -477,7 +448,7 @@ async def test_wrong_access_password_without_permission(unique_data_type, post):
 	meta_info, result = await get_one(nex.STRANGER, data_id, access_password=1234, result_option=constants.ResultFlag.RESULT_FLAG_ALL)
 
 	assert result == "DataStore::InvalidPassword"
-	assert meta_info == empty_meta_info()
+	assert meta_info == helpers.empty_meta_info()
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_wrong_access_password_with_permission(unique_data_type, post):
@@ -596,7 +567,7 @@ async def test_pending_object_is_under_review_for_everyone_else(unique_data_type
 	meta_info, result = await get_one(nex.STRANGER, data_id, result_option=constants.ResultFlag.RESULT_FLAG_ALL)
 
 	assert result == "DataStore::UnderReviewing"
-	assert meta_info == empty_meta_info()
+	assert meta_info == helpers.empty_meta_info()
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_rejected_object_is_visible_to_its_owner(unique_data_type, post):

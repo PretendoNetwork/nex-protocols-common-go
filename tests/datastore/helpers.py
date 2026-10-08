@@ -477,6 +477,35 @@ def get_meta_param(**fields) -> datastore.DataStoreGetMetaParam:
 
 	return override(param, fields)
 
+def empty_meta_info() -> datastore.DataStoreMetaInfo:
+	"""
+	The metadata given in a batch for an object which could not be
+	returned. Every field is zeroed, whatever the error was
+	"""
+
+	meta_info = datastore.DataStoreMetaInfo()
+	meta_info.data_id = constants.INVALID_DATAID
+	meta_info.owner_id = 0
+	meta_info.size = 0
+	meta_info.name = ""
+	meta_info.data_type = 0
+	meta_info.meta_binary = b""
+	meta_info.permission = permission(permission=0)
+	meta_info.delete_permission = permission(permission=0)
+	meta_info.create_time = common.DateTime(0)
+	meta_info.update_time = common.DateTime(0)
+	meta_info.period = 0
+	meta_info.status = 0
+	meta_info.referred_count = 0
+	meta_info.refer_data_id = 0
+	meta_info.flag = 0
+	meta_info.referred_time = common.DateTime(0)
+	meta_info.expire_time = common.DateTime(0)
+	meta_info.tags = []
+	meta_info.ratings = []
+
+	return meta_info
+
 async def post_meta_binary(pid: int, **fields) -> int:
 	"""
 	Posts an object which does not use the file server as the
