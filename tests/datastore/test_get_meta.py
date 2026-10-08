@@ -11,25 +11,6 @@ PERSISTENCE_SLOT = 0
 # * Long enough for a timestamp to visibly move
 TIMESTAMP_DELAY = 2
 
-ACCESS_PERMISSION_CASES = [
-	pytest.param(constants.Permission.PERMISSION_PUBLIC, [], nex.FRIEND_A, True, id="public-owner"),
-	pytest.param(constants.Permission.PERMISSION_PUBLIC, [], nex.FRIEND_B, True, id="public-friend"),
-	pytest.param(constants.Permission.PERMISSION_PUBLIC, [], nex.STRANGER, True, id="public-stranger"),
-	pytest.param(constants.Permission.PERMISSION_FRIEND, [], nex.FRIEND_A, True, id="friend-owner"),
-	pytest.param(constants.Permission.PERMISSION_FRIEND, [], nex.FRIEND_B, True, id="friend-friend"),
-	pytest.param(constants.Permission.PERMISSION_FRIEND, [], nex.STRANGER, False, id="friend-stranger"),
-	pytest.param(constants.Permission.PERMISSION_SPECIFIED, [nex.STRANGER], nex.FRIEND_A, True, id="specified-owner"),
-	pytest.param(constants.Permission.PERMISSION_SPECIFIED, [nex.STRANGER], nex.STRANGER, True, id="specified-recipient"),
-	pytest.param(constants.Permission.PERMISSION_SPECIFIED, [nex.STRANGER], nex.FRIEND_B, False, id="specified-not-recipient"),
-	pytest.param(constants.Permission.PERMISSION_PRIVATE, [], nex.FRIEND_A, True, id="private-owner"),
-	pytest.param(constants.Permission.PERMISSION_PRIVATE, [], nex.FRIEND_B, False, id="private-friend"),
-	pytest.param(constants.Permission.PERMISSION_PRIVATE, [], nex.STRANGER, False, id="private-stranger"),
-	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.FRIEND_B, nex.STRANGER], nex.FRIEND_A, True, id="specified-friend-owner"),
-	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.FRIEND_B, nex.STRANGER], nex.FRIEND_B, True, id="specified-friend-recipient-friend"),
-	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.FRIEND_B, nex.STRANGER], nex.STRANGER, False, id="specified-friend-recipient-stranger"),
-	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.STRANGER], nex.FRIEND_B, False, id="specified-friend-friend-not-recipient")
-]
-
 async def post_persisted(post, pid: int, **fields) -> int:
 	"""
 	Posts an object as the given user, in the users persistence slot
@@ -365,7 +346,7 @@ async def test_access_password_bypasses_permissions(unique_data_type, post):
 # * depends on the access permission of the object
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
-@pytest.mark.parametrize("permission, recipients, viewer, visible", ACCESS_PERMISSION_CASES)
+@pytest.mark.parametrize("permission, recipients, viewer, visible", helpers.ACCESS_PERMISSION_CASES)
 async def test_access_permission(unique_data_type, post, permission, recipients, viewer, visible):
 	"""
 	Tests general object visibility
@@ -383,7 +364,7 @@ async def test_access_permission(unique_data_type, post, permission, recipients,
 	assert meta_info.data_id == data_id
 
 @pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
-@pytest.mark.parametrize("permission, recipients, viewer, visible", ACCESS_PERMISSION_CASES)
+@pytest.mark.parametrize("permission, recipients, viewer, visible", helpers.ACCESS_PERMISSION_CASES)
 async def test_access_permission_of_persisted_objects(unique_data_type, post, permission, recipients, viewer, visible):
 	"""
 	Tests persistence slot visibility

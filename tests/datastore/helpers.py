@@ -50,6 +50,27 @@ PERMISSIONS = [
 	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.FRIEND_B], id="specified-friend")
 ]
 
+# * Every access permission, with who reads an object using it and whether
+# * they can see it. Objects are always visible to their owner
+ACCESS_PERMISSION_CASES = [
+	pytest.param(constants.Permission.PERMISSION_PUBLIC, [], nex.FRIEND_A, True, id="public-owner"),
+	pytest.param(constants.Permission.PERMISSION_PUBLIC, [], nex.FRIEND_B, True, id="public-friend"),
+	pytest.param(constants.Permission.PERMISSION_PUBLIC, [], nex.STRANGER, True, id="public-stranger"),
+	pytest.param(constants.Permission.PERMISSION_FRIEND, [], nex.FRIEND_A, True, id="friend-owner"),
+	pytest.param(constants.Permission.PERMISSION_FRIEND, [], nex.FRIEND_B, True, id="friend-friend"),
+	pytest.param(constants.Permission.PERMISSION_FRIEND, [], nex.STRANGER, False, id="friend-stranger"),
+	pytest.param(constants.Permission.PERMISSION_SPECIFIED, [nex.STRANGER], nex.FRIEND_A, True, id="specified-owner"),
+	pytest.param(constants.Permission.PERMISSION_SPECIFIED, [nex.STRANGER], nex.STRANGER, True, id="specified-recipient"),
+	pytest.param(constants.Permission.PERMISSION_SPECIFIED, [nex.STRANGER], nex.FRIEND_B, False, id="specified-not-recipient"),
+	pytest.param(constants.Permission.PERMISSION_PRIVATE, [], nex.FRIEND_A, True, id="private-owner"),
+	pytest.param(constants.Permission.PERMISSION_PRIVATE, [], nex.FRIEND_B, False, id="private-friend"),
+	pytest.param(constants.Permission.PERMISSION_PRIVATE, [], nex.STRANGER, False, id="private-stranger"),
+	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.FRIEND_B, nex.STRANGER], nex.FRIEND_A, True, id="specified-friend-owner"),
+	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.FRIEND_B, nex.STRANGER], nex.FRIEND_B, True, id="specified-friend-recipient-friend"),
+	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.FRIEND_B, nex.STRANGER], nex.STRANGER, False, id="specified-friend-recipient-stranger"),
+	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.STRANGER], nex.FRIEND_B, False, id="specified-friend-friend-not-recipient")
+]
+
 # * Every access permission, with who is notified when an object using it is
 # * posted with DATA_FLAG_USE_NOTIFICATION_ON_POST
 NOTIFIED_PERMISSIONS = [

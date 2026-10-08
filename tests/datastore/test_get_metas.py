@@ -1,0 +1,675 @@
+import anyio
+import pytest
+from nintendo.nex import common, datastore
+
+import nex
+from datastore import constants, helpers
+
+pytestmark = pytest.mark.anyio
+
+PERSISTENCE_SLOT = 0
+
+# * Long enough for a timestamp to visibly move
+TIMESTAMP_DELAY = 2
+
+async def get_metas(pid: int, data_ids: list[int], **fields):
+	"""
+	Gets the metadata of several objects as the given user, using one
+	param for all of them. Each field is a field of that param
+	"""
+
+	async with helpers.connect(pid) as client:
+		return await client.get_metas(data_ids, helpers.get_meta_param(**fields))
+
+async def get_metas_error(pid: int, data_ids: list[int], **fields) -> str:
+	"""
+	Gets the metadata of several objects and expects an error to be
+	thrown for the whole request, returning the name of the error
+	"""
+
+	# * The error has to be caught inside the connection. If it leaves the
+	# * connection NintendoClients wraps it in an ExceptionGroup, and so
+	# * does anything else raised in here, such as a failed assertion
+	async with helpers.connect(pid) as client:
+		try:
+			await client.get_metas(data_ids, helpers.get_meta_param(**fields))
+		except common.RMCError as error:
+			return error.name()
+
+	pytest.fail("DataStoreProtocol::GetMetas did not throw an error")
+
+async def get_one(pid: int, data_id: int, **fields):
+	"""
+	Gets the metadata of a single object, returning its entry and the
+	result for it
+	"""
+
+	response = await get_metas(pid, [data_id], **fields)
+
+	return response.info[0], helpers.result_names(response.results)[0]
+
+def empty_meta_info() -> datastore.DataStoreMetaInfo:
+	"""
+	The entry given for an object which could not be returned. Every
+	field is zeroed, whatever the error was
+	"""
+
+	meta_info = datastore.DataStoreMetaInfo()
+	meta_info.data_id = constants.INVALID_DATAID
+	meta_info.owner_id = 0
+	meta_info.size = 0
+	meta_info.name = ""
+	meta_info.data_type = 0
+	meta_info.meta_binary = b""
+	meta_info.permission = helpers.permission(permission=0)
+	meta_info.delete_permission = helpers.permission(permission=0)
+	meta_info.create_time = common.DateTime(0)
+	meta_info.update_time = common.DateTime(0)
+	meta_info.period = 0
+	meta_info.status = 0
+	meta_info.referred_count = 0
+	meta_info.refer_data_id = 0
+	meta_info.flag = 0
+	meta_info.referred_time = common.DateTime(0)
+	meta_info.expire_time = common.DateTime(0)
+	meta_info.tags = []
+	meta_info.ratings = []
+
+	return meta_info
+
+# * data_ids
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_data_ids(unique_data_type, post):
+	"""
+	Every object asked for gets an entry, and a result saying it worked
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, name="object", period=30)
+	other = await post(nex.FRIEND_A, data_type=unique_data_type)
+	response = await get_metas(nex.FRIEND_A, [data_id, other])
+	meta_info = response.info[0]
+
+	assert helpers.result_names(response.results) == [None, None]
+	assert meta_info.data_id == data_id
+	assert meta_info.owner_id == nex.FRIEND_A
+	assert meta_info.name == "object"
+	assert meta_info.data_type == unique_data_type
+	assert meta_info.period == 30
+	assert meta_info.status == constants.DataStatus.DATA_STATUS_NONE
+	assert meta_info.permission.permission == constants.Permission.PERMISSION_PUBLIC
+	assert meta_info.delete_permission.permission == constants.Permission.PERMISSION_PRIVATE
+
+async def test_the_entries_are_in_the_order_asked_for(unique_data_type):
+	"""
+	The entries are not sorted
+	"""
+
+	data_ids = [await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type) for _ in range(3)]
+	response = await get_metas(nex.FRIEND_A, list(reversed(data_ids)))
+
+	assert [meta_info.data_id for meta_info in response.info] == list(reversed(data_ids))
+
+async def test_a_data_id_asked_for_twice_comes_back_twice(unique_data_type):
+	"""
+	Each data ID gets its own entry, even when it's sent more than once
+	"""
+
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type)
+	response = await get_metas(nex.FRIEND_A, [data_id, data_id])
+
+	assert [meta_info.data_id for meta_info in response.info] == [data_id, data_id]
+
+async def test_no_data_ids():
+	"""
+	Asking for nothing is not an error
+	"""
+
+	response = await get_metas(nex.FRIEND_A, [])
+
+	assert response.info == []
+	assert response.results == []
+
+async def test_exactly_the_capacity(unique_data_type):
+	"""
+	BATCH_PROCESSING_CAPACITY data IDs are allowed
+	"""
+
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type)
+	response = await get_metas(nex.FRIEND_A, [data_id] * constants.BATCH_PROCESSING_CAPACITY)
+
+	assert len(response.info) == constants.BATCH_PROCESSING_CAPACITY
+
+async def test_too_many_data_ids(unique_data_type):
+	"""
+	More than BATCH_PROCESSING_CAPACITY data IDs fails the whole request
+	"""
+
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type)
+
+	assert await get_metas_error(nex.FRIEND_A, [data_id] * (constants.BATCH_PROCESSING_CAPACITY + 1)) == "DataStore::OverCapacity"
+
+@pytest.mark.parametrize("missing", [
+	pytest.param(constants.INVALID_DATAID, id="invalid-dataid"),
+	pytest.param(helpers.UNKNOWN_DATA_ID, id="unknown")
+])
+async def test_a_data_id_which_names_nothing(unique_data_type, missing):
+	"""
+	An object which cannot be found only fails its own entry, which is
+	left empty. The rest still come back
+	"""
+
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type)
+	response = await get_metas(nex.FRIEND_A, [data_id, missing], result_option=constants.ResultFlag.RESULT_FLAG_ALL)
+
+	assert helpers.result_names(response.results) == [None, "DataStore::NotFound"]
+	assert response.info[0].data_id == data_id
+	assert response.info[1] == empty_meta_info()
+
+async def test_a_system_range_data_id():
+	"""
+	Data IDs below 1,000,000 belong to the system. Normal clients
+	shouldn't interact with these objects. See
+	https://nintendo.wiki/wiki/Nintendo_Network/NEX/Protocols/DataStoreProtocol#Object_Data_ID
+	for details
+	"""
+
+	# TODO - This only returns NotFound because there's no way for a normal client to upload in this range, so there are no objects in the test server
+	_, result = await get_one(nex.FRIEND_A, 999999)
+
+	assert result == "DataStore::NotFound"
+
+async def test_a_deleted_object(unique_data_type):
+	"""
+	Deleted objects cannot be found
+	"""
+
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type)
+	await helpers.delete_object(nex.FRIEND_A, data_id=data_id)
+
+	_, result = await get_one(nex.FRIEND_A, data_id)
+
+	assert result == "DataStore::NotFound"
+
+async def test_an_object_which_was_never_completed(unique_data_type):
+	"""
+	Objects whose upload was never completed do not exist yet
+	"""
+
+	data_id = await helpers.prepare_post_object(nex.FRIEND_A, data_type=unique_data_type)
+	_, result = await get_one(nex.FRIEND_A, data_id)
+
+	assert result == "DataStore::NotFound"
+
+async def test_an_expired_object(unique_data_type):
+	"""
+	An object with a period of 0 has already expired
+	"""
+
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type)
+	await helpers.change_meta(nex.FRIEND_A, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_PERIOD, period=0)
+
+	_, result = await get_one(nex.FRIEND_A, data_id)
+
+	assert result == "DataStore::NotFound"
+
+async def test_data_id_file_server_flag(unique_data_type):
+	"""
+	Objects uploaded with PostMetaBinary have DATA_FLAG_NOT_USE_FILESERVER,
+	objects on the file server do not
+	"""
+
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type)
+	meta_binary_data_id = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type)
+	response = await get_metas(nex.FRIEND_A, [data_id, meta_binary_data_id])
+
+	assert not response.info[0].flag & constants.DataFlag.DATA_FLAG_NOT_USE_FILESERVER
+	assert response.info[1].flag & constants.DataFlag.DATA_FLAG_NOT_USE_FILESERVER
+
+# * param.data_id
+
+async def test_the_data_id_in_the_param_is_ignored(unique_data_type):
+	"""
+	The data ID in the shared param is ignored
+	"""
+
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type)
+	other = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type)
+
+	assert (await get_metas(nex.FRIEND_A, [], data_id=data_id)).info == []
+	assert [meta_info.data_id for meta_info in (await get_metas(nex.FRIEND_A, [other], data_id=data_id)).info] == [other]
+
+# * param.persistence_target
+
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
+async def test_persistence_target(unique_data_type, post):
+	"""
+	Tests that an object can be looked up by its persistence slot
+	"""
+
+	data_id = await helpers.post_persisted(post, nex.FRIEND_A, PERSISTENCE_SLOT, data_type=unique_data_type)
+	target = helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=PERSISTENCE_SLOT)
+	meta_info, result = await get_one(nex.FRIEND_A, constants.INVALID_DATAID, persistence_target=target)
+
+	assert result is None
+	assert meta_info.data_id == data_id
+
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
+async def test_a_persistence_target_replaces_every_data_id(unique_data_type, post):
+	"""
+	The persistence target is shared by every entry, so when it is used
+	every entry is the object in the slot, and the data IDs are ignored
+	"""
+
+	persisted = await helpers.post_persisted(post, nex.FRIEND_A, PERSISTENCE_SLOT, data_type=unique_data_type)
+	other = await post(nex.FRIEND_A, data_type=unique_data_type)
+	target = helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=PERSISTENCE_SLOT)
+	response = await get_metas(nex.FRIEND_A, [other, helpers.UNKNOWN_DATA_ID], persistence_target=target)
+
+	assert helpers.result_names(response.results) == [None, None]
+	assert [meta_info.data_id for meta_info in response.info] == [persisted, persisted]
+
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
+async def test_a_persistence_target_with_no_data_ids(unique_data_type, post):
+	"""
+	The persistence target only replaces entries, it does not add one
+	"""
+
+	await helpers.post_persisted(post, nex.FRIEND_A, PERSISTENCE_SLOT, data_type=unique_data_type)
+	target = helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=PERSISTENCE_SLOT)
+
+	assert (await get_metas(nex.FRIEND_A, [], persistence_target=target)).info == []
+
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
+async def test_persistence_target_of_another_user(unique_data_type, post):
+	"""
+	Tests that another users persistence slot can be checked, assuming
+	the caller has permission
+	"""
+
+	data_id = await helpers.post_persisted(post, nex.FRIEND_A, PERSISTENCE_SLOT, data_type=unique_data_type)
+	target = helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=PERSISTENCE_SLOT)
+	meta_info, _ = await get_one(nex.STRANGER, constants.INVALID_DATAID, persistence_target=target)
+
+	assert meta_info.data_id == data_id
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_persistence_target_without_a_slot_is_ignored(unique_data_type, post):
+	"""
+	A persistence target which uses INVALID_PERSISTENCE_SLOT_ID is not
+	used, even when it has an owner, and the data IDs are used instead
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
+
+	# * persistence_target defaults to using INVALID_PERSISTENCE_SLOT_ID
+	target = helpers.persistence_target(owner_id=nex.FRIEND_A)
+	meta_info, _ = await get_one(nex.FRIEND_A, data_id, persistence_target=target)
+
+	assert meta_info.data_id == data_id
+
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
+async def test_persistence_target_returns_the_newest_object(unique_data_type, post):
+	"""
+	Posting another object into a slot which is already in use
+	replaces the object which was in it
+	"""
+
+	await helpers.post_persisted(post, nex.FRIEND_A, PERSISTENCE_SLOT, data_type=unique_data_type)
+	newest = await helpers.post_persisted(post, nex.FRIEND_A, PERSISTENCE_SLOT, data_type=unique_data_type)
+	target = helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=PERSISTENCE_SLOT)
+	meta_info, _ = await get_one(nex.FRIEND_A, constants.INVALID_DATAID, persistence_target=target)
+
+	assert meta_info.data_id == newest
+
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
+async def test_persistence_slots_are_per_user(unique_data_type, post):
+	"""
+	Persistence slots are tied to a user, so the same slot ID
+	holds a different object for every user
+	"""
+
+	first = await helpers.post_persisted(post, nex.FRIEND_A, PERSISTENCE_SLOT, data_type=unique_data_type)
+	second = await helpers.post_persisted(post, nex.FRIEND_B, PERSISTENCE_SLOT, data_type=unique_data_type)
+
+	first_target = helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=PERSISTENCE_SLOT)
+	second_target = helpers.persistence_target(owner_id=nex.FRIEND_B, persistence_id=PERSISTENCE_SLOT)
+
+	assert (await get_one(nex.FRIEND_A, constants.INVALID_DATAID, persistence_target=first_target))[0].data_id == first
+	assert (await get_one(nex.FRIEND_A, constants.INVALID_DATAID, persistence_target=second_target))[0].data_id == second
+
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
+async def test_persistence_target_without_an_owner(unique_data_type, post):
+	"""
+	A persistence target with a slot but no owner is still used, and
+	fails every entry because slots are tied to a user
+	"""
+
+	data_id = await helpers.post_persisted(post, nex.FRIEND_A, PERSISTENCE_SLOT, data_type=unique_data_type)
+	target = helpers.persistence_target(owner_id=0, persistence_id=PERSISTENCE_SLOT)
+	response = await get_metas(nex.FRIEND_A, [data_id, data_id], persistence_target=target)
+
+	assert helpers.result_names(response.results) == ["DataStore::NotFound", "DataStore::NotFound"]
+
+async def test_empty_persistence_slot(unique_data_type):
+	"""
+	Looking up a persistence slot which has no object in it fails
+	every entry but not the whole request
+	"""
+
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type)
+	target = helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=constants.NUM_PERSISTENCE_SLOT - 1)
+	response = await get_metas(nex.FRIEND_A, [data_id, data_id], persistence_target=target)
+
+	assert helpers.result_names(response.results) == ["DataStore::NotFound", "DataStore::NotFound"]
+
+# * param.result_option
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_result_option_empty_by_default(unique_data_type, post):
+	"""
+	Optional metadata fields are left empty when no result flags are set
+	"""
+
+	rating_init_param = helpers.rating_init_param_with_slot()
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, tags=["a"], rating_init_param=[rating_init_param])
+	meta_info, _ = await get_one(nex.FRIEND_A, data_id)
+
+	assert meta_info.tags == []
+	assert meta_info.meta_binary == b""
+	assert meta_info.ratings == []
+	assert meta_info.permission.recipients == []
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_result_option_tags(unique_data_type, post):
+	"""
+	RESULT_FLAG_TAGS returns the object tags
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, tags=["a", "b"])
+	meta_info, _ = await get_one(nex.FRIEND_A, data_id, result_option=constants.ResultFlag.RESULT_FLAG_TAGS)
+
+	assert meta_info.tags == ["a", "b"]
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_result_option_ratings(unique_data_type, post):
+	"""
+	RESULT_FLAG_RATINGS returns every rating slot of the object
+	"""
+
+	rating_init_param = helpers.rating_init_param_with_slot(param=helpers.rating_init_param(initial_value=7))
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=[rating_init_param])
+	meta_info, _ = await get_one(nex.FRIEND_A, data_id, result_option=constants.ResultFlag.RESULT_FLAG_RATINGS)
+
+	assert [(rating.slot, rating.info.total_value) for rating in meta_info.ratings] == [(0, 7)]
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_result_option_metabinary(unique_data_type, post):
+	"""
+	RESULT_FLAG_METABINARY returns the object MetaBinary
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, meta_binary=b"\x01\x02")
+	meta_info, _ = await get_one(nex.FRIEND_A, data_id, result_option=constants.ResultFlag.RESULT_FLAG_METABINARY)
+
+	assert meta_info.meta_binary == b"\x01\x02"
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_result_option_permitted_ids(unique_data_type, post):
+	"""
+	RESULT_FLAG_PERMITTED_IDS returns the recipient ID lists
+	from both the access and update permissions
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_SPECIFIED, recipients=[nex.FRIEND_B])
+	delete_permission = helpers.permission(permission=constants.Permission.PERMISSION_SPECIFIED, recipients=[nex.STRANGER])
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, permission=permission, delete_permission=delete_permission)
+	meta_info, _ = await get_one(nex.FRIEND_A, data_id, result_option=constants.ResultFlag.RESULT_FLAG_PERMITTED_IDS)
+
+	assert meta_info.permission.recipients == [nex.FRIEND_B]
+	assert meta_info.delete_permission.recipients == [nex.STRANGER]
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_result_option_every_flag(unique_data_type, post):
+	"""
+	Every optional metadata field is returned for every entry when all
+	result flags are set
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_SPECIFIED, recipients=[nex.FRIEND_B])
+	rating_init_param = helpers.rating_init_param_with_slot(param=helpers.rating_init_param(initial_value=7))
+	first = await post(nex.FRIEND_A, data_type=unique_data_type, tags=["a"], meta_binary=b"\x01\x02", permission=permission, rating_init_param=[rating_init_param])
+	second = await post(nex.FRIEND_A, data_type=unique_data_type, tags=["b"])
+	response = await get_metas(nex.FRIEND_A, [first, second], result_option=constants.ResultFlag.RESULT_FLAG_ALL)
+	meta_info = response.info[0]
+
+	assert meta_info.tags == ["a"]
+	assert meta_info.meta_binary == b"\x01\x02"
+	assert meta_info.permission.recipients == [nex.FRIEND_B]
+	assert [(rating.slot, rating.info.total_value) for rating in meta_info.ratings] == [(0, 7)]
+	assert response.info[1].tags == ["b"]
+
+# * param.access_password
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_no_access_password_without_permission(unique_data_type, post):
+	"""
+	Using INVALID_PASSWORD on an object the caller has no
+	access to fails its entry with PermissionDenied
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_PRIVATE)
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, permission=permission)
+	meta_info, result = await get_one(nex.STRANGER, data_id, access_password=constants.INVALID_PASSWORD, result_option=constants.ResultFlag.RESULT_FLAG_ALL)
+
+	assert result == "DataStore::PermissionDenied"
+	assert meta_info == empty_meta_info()
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_wrong_access_password_without_permission(unique_data_type, post):
+	"""
+	Using the wrong password on an object the caller has no access
+	to fails its entry with InvalidPassword
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_PRIVATE)
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, permission=permission)
+	meta_info, result = await get_one(nex.STRANGER, data_id, access_password=1234, result_option=constants.ResultFlag.RESULT_FLAG_ALL)
+
+	assert result == "DataStore::InvalidPassword"
+	assert meta_info == empty_meta_info()
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_wrong_access_password_with_permission(unique_data_type, post):
+	"""
+	Using the wrong password on an object the user already access to
+	should not throw any errors
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
+	meta_info, result = await get_one(nex.STRANGER, data_id, access_password=1234)
+
+	assert result is None
+	assert meta_info.data_id == data_id
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_access_password_bypasses_permissions(unique_data_type, post):
+	"""
+	Using the correct password bypasses every permission check
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_PRIVATE)
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, permission=permission)
+	password_info = await helpers.get_password_info(nex.FRIEND_A, data_id)
+	meta_info, result = await get_one(nex.STRANGER, data_id, access_password=password_info.access_password)
+
+	assert result is None
+	assert meta_info.data_id == data_id
+
+async def test_one_access_password_for_every_entry(unique_data_type):
+	"""
+	The password only opens the object it belongs to. Every other object
+	the caller has no access to is given the wrong password
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_PRIVATE)
+	public = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type)
+	first = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, permission=permission)
+	second = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, permission=permission)
+	password_info = await helpers.get_password_info(nex.FRIEND_A, first)
+	response = await get_metas(nex.STRANGER, [public, first, second], access_password=password_info.access_password)
+
+	assert helpers.result_names(response.results) == [None, None, "DataStore::InvalidPassword"]
+
+# * Access permission tests
+# *
+# * Objects are always visible to their owner. For everyone else, it
+# * depends on the access permission of the object
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+@pytest.mark.parametrize("permission, recipients, viewer, visible", helpers.ACCESS_PERMISSION_CASES)
+async def test_access_permission(unique_data_type, post, permission, recipients, viewer, visible):
+	"""
+	Tests general object visibility. An object the viewer cannot see
+	only fails its own entry
+	"""
+
+	permission = helpers.permission(permission=permission, recipients=recipients)
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, permission=permission)
+	meta_info, result = await get_one(viewer, data_id)
+
+	if not visible:
+		assert result == "DataStore::PermissionDenied"
+		return
+
+	assert result is None
+	assert meta_info.data_id == data_id
+
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
+@pytest.mark.parametrize("permission, recipients, viewer, visible", helpers.ACCESS_PERMISSION_CASES)
+async def test_access_permission_of_persisted_objects(unique_data_type, post, permission, recipients, viewer, visible):
+	"""
+	Tests persistence slot visibility
+	"""
+
+	permission = helpers.permission(permission=permission, recipients=recipients)
+	data_id = await helpers.post_persisted(post, nex.FRIEND_A, PERSISTENCE_SLOT, data_type=unique_data_type, permission=permission)
+	target = helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=PERSISTENCE_SLOT)
+	meta_info, result = await get_one(viewer, constants.INVALID_DATAID, persistence_target=target)
+
+	if not visible:
+		assert result == "DataStore::PermissionDenied"
+		return
+
+	assert result is None
+	assert meta_info.data_id == data_id
+
+# * Object status tests
+# *
+# * The object status is the objects visibility status, which is
+# * separate from whether or not its upload was completed
+# TODO - Previous tests before the NN shutdown indicated that DATA_STATUS_REJECTED resulted in NotFound
+#        for those objects, for everyone, including the owner, unless SearchObject was used. However tests
+#        on Pokemon Bank after the NN shutdown now contradict that. These tests are designed to match
+#        Pokemon Bank until more information is confirmed
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_pending_object_is_visible_to_its_owner(unique_data_type, post):
+	"""
+	Objects under review can still be seen by their owner
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
+	meta_info, result = await get_one(nex.FRIEND_A, data_id)
+
+	assert result is None
+	assert meta_info.status == constants.DataStatus.DATA_STATUS_PENDING
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_pending_object_is_under_review_for_everyone_else(unique_data_type, post):
+	"""
+	Objects under review are not visible to anyone but their owner,
+	even when the object is public
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
+	meta_info, result = await get_one(nex.STRANGER, data_id, result_option=constants.ResultFlag.RESULT_FLAG_ALL)
+
+	assert result == "DataStore::UnderReviewing"
+	assert meta_info == empty_meta_info()
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_rejected_object_is_visible_to_its_owner(unique_data_type, post):
+	"""
+	Rejected objects can still be seen by their owner
+	"""
+
+	data_id = await helpers.post_rejected(post, nex.FRIEND_A, data_type=unique_data_type)
+	meta_info, result = await get_one(nex.FRIEND_A, data_id)
+
+	assert result is None
+	assert meta_info.status == constants.DataStatus.DATA_STATUS_REJECTED
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_rejected_object_is_under_review_for_everyone_else(unique_data_type, post):
+	"""
+	Rejected objects appear as under review still to other users
+	"""
+
+	data_id = await helpers.post_rejected(post, nex.FRIEND_A, data_type=unique_data_type)
+	_, result = await get_one(nex.STRANGER, data_id)
+
+	assert result == "DataStore::UnderReviewing"
+
+# * Read lock tests
+# *
+# * Read locks only gate downloading an object, so they never stop
+# * anyone from reading its metadata
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_read_locks_do_not_hide_metadata(unique_data_type, post):
+	"""
+	An object which is locked by someone else can still have its
+	metadata read, by anyone who has access to it
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_USE_READ_LOCK)
+
+	# * Touching the object with a lock ID locks it
+	await helpers.touch_object(nex.FRIEND_A, data_id=data_id, lock_id=1234)
+
+	assert (await get_one(nex.FRIEND_A, data_id))[0].data_id == data_id
+	assert (await get_one(nex.STRANGER, data_id))[0].data_id == data_id
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_the_read_lock_flag_is_returned(unique_data_type, post):
+	"""
+	Objects posted with DATA_FLAG_USE_READ_LOCK say so in their metadata
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_USE_READ_LOCK)
+	meta_info, _ = await get_one(nex.FRIEND_A, data_id)
+
+	assert meta_info.flag & constants.DataFlag.DATA_FLAG_USE_READ_LOCK
+
+# * Reading the metadata does not count as referring to the object
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_reading_the_metadata_does_not_refer_to_the_object(unique_data_type, post):
+	"""
+	Only downloading or touching an object refers to it, so neither the
+	reference count nor the referred time move, even when everything
+	about the object is asked for
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_PERIOD_FROM_LAST_REFERRED)
+	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	await anyio.sleep(TIMESTAMP_DELAY)
+	await get_metas(nex.STRANGER, [data_id], result_option=constants.ResultFlag.RESULT_FLAG_ALL)
+
+	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	assert after.referred_count == before.referred_count
+	assert after.referred_time.value() == before.referred_time.value()
+	assert after.expire_time.value() == before.expire_time.value()
