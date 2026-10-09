@@ -32,20 +32,6 @@ async def reset_error(pid: int, data_id: int, slot: int = 0, update_password: in
 
 	pytest.fail("DataStoreProtocol::ResetRating did not throw an error")
 
-async def rate_error(pid: int, data_id: int, slot: int = 0) -> str | None:
-	"""
-	Rates one slot of an object, returning the name of the error, or
-	None if it worked. Used to see whether a user is locked out
-	"""
-
-	async with helpers.connect(pid) as client:
-		try:
-			await client.rate_object(helpers.rating_target(data_id, slot), helpers.rate_object_param(1, constants.INVALID_PASSWORD), True)
-		except common.RMCError as error:
-			return error.name()
-
-	return None
-
 # * What a reset does
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
@@ -361,9 +347,9 @@ async def test_a_reset_lifts_every_rating_lock(unique_data_type, lock):
 	await helpers.rate_object(nex.STRANGER, data_id, 1)
 	await reset(nex.FRIEND_A, data_id)
 
-	assert await rate_error(nex.FRIEND_A, data_id) is None
-	assert await rate_error(nex.STRANGER, data_id) is None
-	assert await rate_error(nex.STRANGER, data_id) == "DataStore::OperationNotAllowed"
+	assert await helpers.rate_object_result(nex.FRIEND_A, data_id) is None
+	assert await helpers.rate_object_result(nex.STRANGER, data_id) is None
+	assert await helpers.rate_object_result(nex.STRANGER, data_id) == "DataStore::OperationNotAllowed"
 
 async def test_the_locks_on_other_slots_are_kept(unique_data_type):
 	"""
@@ -377,7 +363,7 @@ async def test_the_locks_on_other_slots_are_kept(unique_data_type):
 	await helpers.rate_object(nex.FRIEND_A, data_id, 1, slot=1)
 	await reset(nex.FRIEND_A, data_id)
 
-	assert await rate_error(nex.FRIEND_A, data_id, slot=1) == "DataStore::OperationNotAllowed"
+	assert await helpers.rate_object_result(nex.FRIEND_A, data_id, slot=1) == "DataStore::OperationNotAllowed"
 
 async def test_modifiable_starts_a_new_rating_after_a_reset(unique_data_type):
 	"""

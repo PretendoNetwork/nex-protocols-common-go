@@ -757,6 +757,20 @@ async def rating_slot_info(data_id: int, slot: int = 0) -> tuple[int, int, int]:
 
 	return rating.info.total_value, rating.info.count, rating.info.initial_value
 
+async def rate_object_result(pid: int, data_id: int, slot: int = 0) -> str | None:
+	"""
+	Rates one slot of an object, returning the name of the error, or
+	None if it worked. Used to see whether a user is locked out
+	"""
+
+	async with connect(pid) as client:
+		try:
+			await client.rate_object(rating_target(data_id, slot), rate_object_param(1, constants.INVALID_PASSWORD), True)
+		except common.RMCError as error:
+			return error.name()
+
+	return None
+
 async def change_meta(pid: int, **fields) -> None:
 	"""
 	Changes an objects metadata as the given user
