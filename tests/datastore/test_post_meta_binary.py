@@ -810,11 +810,141 @@ async def test_a_rating_lock_type_which_does_not_exist(unique_data_type):
 ])
 async def test_the_rest_of_a_rating_param_is_not_checked(unique_data_type, fields):
 	"""
-	Only the slot and the lock type are looked at, so the rest is
-	taken however it comes
+	Without the range flags, or a lock type which uses the duration and
+	hour, the rest is taken however it comes
 	"""
 
 	data_id = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=rating_slots(1, **fields))
+
+	assert data_id != constants.INVALID_DATAID
+
+@pytest.mark.parametrize("internal_flag, allowed", [
+	pytest.param(constants.RatingInternalFlag.RATING_INTERNAL_FLAG_USE_RANGE_MIN | constants.RatingInternalFlag.RATING_INTERNAL_FLAG_USE_RANGE_MAX, False, id="both-ends"),
+	pytest.param(constants.RatingInternalFlag.RATING_INTERNAL_FLAG_USE_RANGE_MIN, True, id="only-the-minimum"),
+	pytest.param(constants.RatingInternalFlag.RATING_INTERNAL_FLAG_USE_RANGE_MAX, True, id="only-the-maximum")
+])
+async def test_a_range_the_wrong_way_round(unique_data_type, internal_flag, allowed):
+	"""
+	A range whose minimum is above its maximum is only refused when both
+	ends of it are used
+	"""
+
+	params = rating_slots(1, internal_flag=internal_flag, range_min=10, range_max=1)
+
+	if not allowed:
+		assert await post_error(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=params) == "DataStore::InvalidArgument"
+		return
+
+	data_id = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=params)
+
+	assert data_id != constants.INVALID_DATAID
+
+async def test_an_interval_lock_with_a_negative_duration(unique_data_type):
+	"""
+	An interval lock cannot last for less than no time at all
+	"""
+
+	params = rating_slots(1, lock_type=constants.RatingLockType.RATING_LOCK_INTERVAL, period_duration=-1)
+
+	assert await post_error(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=params) == "DataStore::InvalidArgument"
+
+# * Positive values up to 365 are also taken, presumably as a number of days
+@pytest.mark.parametrize("period_duration, allowed", [
+	pytest.param(constants.RatingLockPeriod.RATING_LOCK_PERIOD_MON, True, id="monday"),
+	pytest.param(constants.RatingLockPeriod.RATING_LOCK_PERIOD_SUN, True, id="sunday"),
+	pytest.param(constants.RatingLockPeriod.RATING_LOCK_PERIOD_SUN - 1, False, id="past-sunday"),
+	pytest.param(constants.RatingLockPeriod.RATING_LOCK_PERIOD_DAY1 - 1, False, id="past-the-first-of-the-month"),
+	pytest.param(0, True, id="zero"),
+	pytest.param(365, True, id="365"),
+	pytest.param(366, False, id="366")
+])
+async def test_the_day_a_period_lock_lifts(unique_data_type, period_duration, allowed):
+	"""
+	A period lock only takes days it knows
+	"""
+
+	params = rating_slots(1, lock_type=constants.RatingLockType.RATING_LOCK_PERIOD, period_duration=period_duration)
+
+	if not allowed:
+		assert await post_error(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=params) == "DataStore::InvalidArgument"
+		return
+
+	data_id = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=params)
+
+	assert data_id != constants.INVALID_DATAID
+
+# * RATING_LOCK_PERIOD_DAY1 is a real value, and works as described on the
+# * wiki, but Pokemon Bank (a NEX 3.4 server) crashes on it. It is assumed to
+# * have been added in NEX 3.5, like several other things Pokemon Bank lacks
+
+@pytest.mark.skipif(nex.SERVER_NEX_VERSION >= 30500, reason="RATING_LOCK_PERIOD_DAY1 was added in NEX 3.5")
+async def test_a_period_lock_on_the_first_of_the_month_before_nex_3_5(unique_data_type):
+	"""
+	The server recognizes RATING_LOCK_PERIOD_DAY1, but crashes on it
+	rather than refusing it
+	"""
+
+	params = rating_slots(1, lock_type=constants.RatingLockType.RATING_LOCK_PERIOD, period_duration=constants.RatingLockPeriod.RATING_LOCK_PERIOD_DAY1)
+
+	assert await post_error(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=params) == "PythonCore::Exception"
+
+# * Disclaimer: these tests were not ran against a live server, as at the time
+# * of writing the only active NEX server on Nintendo Network is Pokemon Bank,
+# * which is a NEX 3.4 server. The tests are written to assume the current
+# * implementation is correct, and will need to be updated at some point when
+# * more testing is done on NSO
+
+@pytest.mark.skipif(nex.SERVER_NEX_VERSION < 30500, reason="RATING_LOCK_PERIOD_DAY1 was added in NEX 3.5")
+@pytest.mark.parametrize("period_hour", [
+	pytest.param(0, id="midnight"),
+	pytest.param(-5, id="a-negative-hour")
+])
+async def test_a_period_lock_on_the_first_of_the_month(unique_data_type, period_hour):
+	"""
+	RATING_LOCK_PERIOD_DAY1 can be used, including with a negative hour,
+	which goes back into the last day of the month before
+	"""
+
+	params = rating_slots(1, lock_type=constants.RatingLockType.RATING_LOCK_PERIOD, period_duration=constants.RatingLockPeriod.RATING_LOCK_PERIOD_DAY1, period_hour=period_hour)
+
+	data_id = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=params)
+
+	assert data_id != constants.INVALID_DATAID
+
+@pytest.mark.parametrize("period_hour, allowed", [
+	pytest.param(23, True, id="the-last-hour"),
+	pytest.param(-23, True, id="the-last-hour-going-back"),
+	pytest.param(24, False, id="past-the-last-hour"),
+	pytest.param(-24, False, id="past-the-last-hour-going-back")
+])
+async def test_the_hour_a_period_lock_lifts(unique_data_type, period_hour, allowed):
+	"""
+	A period lock only takes hours between -23 and 23
+	"""
+
+	params = rating_slots(1, lock_type=constants.RatingLockType.RATING_LOCK_PERIOD, period_duration=constants.RatingLockPeriod.RATING_LOCK_PERIOD_MON, period_hour=period_hour)
+
+	if not allowed:
+		assert await post_error(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=params) == "DataStore::InvalidArgument"
+		return
+
+	data_id = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=params)
+
+	assert data_id != constants.INVALID_DATAID
+
+@pytest.mark.parametrize("fields", [
+	pytest.param({"lock_type": constants.RatingLockType.RATING_LOCK_INTERVAL, "period_duration": 5, "period_hour": 25}, id="an-interval-lock-with-an-hour-which-is-not-an-hour"),
+	pytest.param({"lock_type": constants.RatingLockType.RATING_LOCK_PERMANENT, "period_duration": -1, "period_hour": 25}, id="a-permanent-lock-with-a-negative-duration-and-an-hour-which-is-not-an-hour")
+])
+async def test_lock_settings_are_only_checked_for_the_lock_which_uses_them(unique_data_type, fields):
+	"""
+	The duration and hour are only checked by the lock types which use
+	them
+	"""
+
+	params = rating_slots(1, **fields)
+
+	data_id = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=params)
 
 	assert data_id != constants.INVALID_DATAID
 
