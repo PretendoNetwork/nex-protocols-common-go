@@ -180,6 +180,7 @@ func NewCommonProtocol(protocol matchmake_extension.Interface) *CommonProtocol {
 	protocol.SetHandlerUpdateApplicationBuffer(commonProtocol.updateApplicationBuffer)
 	protocol.SetHandlerJoinMatchmakeSession(commonProtocol.joinMatchmakeSession)
 	protocol.SetHandlerJoinMatchmakeSessionWithParam(commonProtocol.joinMatchmakeSessionWithParam)
+	protocol.SetHandlerJoinCommunity(commonProtocol.JoinCommunity)
 	protocol.SetHandlerModifyCurrentGameAttribute(commonProtocol.modifyCurrentGameAttribute)
 	protocol.SetHandlerBrowseMatchmakeSession(commonProtocol.browseMatchmakeSession)
 	protocol.SetHandlerJoinMatchmakeSessionEx(commonProtocol.joinMatchmakeSessionEx)
