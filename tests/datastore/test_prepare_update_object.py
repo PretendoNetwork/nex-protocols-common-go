@@ -13,17 +13,6 @@ TIMESTAMP_DELAY = 2
 POSTED_SIZE = 10
 UPDATED_SIZE = 20
 
-# * Each update permission, who tries to update with it, and whether they may
-UPDATE_PERMISSIONS = [
-	pytest.param(constants.Permission.PERMISSION_PRIVATE, [], nex.STRANGER, False, id="private"),
-	pytest.param(constants.Permission.PERMISSION_PUBLIC, [], nex.STRANGER, True, id="public"),
-	pytest.param(constants.Permission.PERMISSION_FRIEND, [], nex.FRIEND_B, True, id="friend-to-a-friend"),
-	pytest.param(constants.Permission.PERMISSION_FRIEND, [], nex.STRANGER, False, id="friend-to-a-stranger"),
-	pytest.param(constants.Permission.PERMISSION_SPECIFIED, [nex.STRANGER], nex.STRANGER, True, id="specified-to-a-recipient"),
-	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.FRIEND_B], nex.FRIEND_B, True, id="specified-friend-to-a-friend"),
-	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.STRANGER], nex.STRANGER, False, id="specified-friend-to-a-stranger")
-]
-
 async def prepare(pid: int, **fields) -> datastore.DataStoreReqUpdateInfo:
 	"""
 	Starts updating an object, returning all the info
@@ -297,7 +286,7 @@ async def test_extra_data_a_console_would_send(unique_data_type, extra_data):
 # * Updating an object is gated by the objects update permission, which
 # * is separate from the access permission used to read it
 
-@pytest.mark.parametrize("permission, recipients, pid, allowed", UPDATE_PERMISSIONS)
+@pytest.mark.parametrize("permission, recipients, pid, allowed", helpers.UPDATE_PERMISSIONS)
 async def test_the_update_permission(unique_data_type, permission, recipients, pid, allowed):
 	"""
 	Only users the update permission allows can update the object. The

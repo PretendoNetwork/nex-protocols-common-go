@@ -75,6 +75,18 @@ ACCESS_PERMISSION_CASES = [
 	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.STRANGER], nex.FRIEND_B, False, id="specified-friend-friend-not-recipient")
 ]
 
+# * Each update permission, who tries to update or reset with it, and whether
+# * they may. The owner always may
+UPDATE_PERMISSIONS = [
+	pytest.param(constants.Permission.PERMISSION_PRIVATE, [], nex.STRANGER, False, id="private"),
+	pytest.param(constants.Permission.PERMISSION_PUBLIC, [], nex.STRANGER, True, id="public"),
+	pytest.param(constants.Permission.PERMISSION_FRIEND, [], nex.FRIEND_B, True, id="friend-to-a-friend"),
+	pytest.param(constants.Permission.PERMISSION_FRIEND, [], nex.STRANGER, False, id="friend-to-a-stranger"),
+	pytest.param(constants.Permission.PERMISSION_SPECIFIED, [nex.STRANGER], nex.STRANGER, True, id="specified-to-a-recipient"),
+	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.FRIEND_B], nex.FRIEND_B, True, id="specified-friend-to-a-friend"),
+	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.STRANGER], nex.STRANGER, False, id="specified-friend-to-a-stranger")
+]
+
 # * Every access permission, with who is notified when an object using it is
 # * posted with DATA_FLAG_USE_NOTIFICATION_ON_POST
 NOTIFIED_PERMISSIONS = [
@@ -644,6 +656,16 @@ async def rate_object(pid: int, data_id: int, rating_value: int, slot: int = 0) 
 
 	async with connect(pid) as client:
 		return await client.rate_object(rating_target(data_id, slot), rate_object_param(rating_value, constants.INVALID_PASSWORD), True)
+
+async def rating_slot_info(data_id: int, slot: int = 0) -> tuple[int, int, int]:
+	"""
+	The total, count and initial value of a slot, as GetMeta gives them
+	"""
+
+	meta_info = await get_meta(nex.FRIEND_A, data_id=data_id, result_option=constants.ResultFlag.RESULT_FLAG_RATINGS)
+	[rating] = [rating for rating in meta_info.ratings if rating.slot == slot]
+
+	return rating.info.total_value, rating.info.count, rating.info.initial_value
 
 async def change_meta(pid: int, **fields) -> None:
 	"""

@@ -52,16 +52,6 @@ async def rate_with(client, data_id: int, rating_value: int) -> str | None:
 
 	return None
 
-async def slot_info(data_id: int, slot: int = 0) -> tuple[int, int, int]:
-	"""
-	The total, count and initial value of a slot, as GetMeta gives them
-	"""
-
-	meta_info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id, result_option=constants.ResultFlag.RESULT_FLAG_RATINGS)
-	[rating] = [rating for rating in meta_info.ratings if rating.slot == slot]
-
-	return rating.info.total_value, rating.info.count, rating.info.initial_value
-
 # * What rating does
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
@@ -86,7 +76,7 @@ async def test_everyones_ratings_add_up(unique_data_type):
 	await rate(nex.FRIEND_A, data_id, 5)
 	await rate(nex.STRANGER, data_id, 3)
 
-	assert await slot_info(data_id) == (8, 2, 0)
+	assert await helpers.rating_slot_info(data_id) == (8, 2, 0)
 
 async def test_each_slot_is_rated_on_its_own(unique_data_type):
 	"""
@@ -97,8 +87,8 @@ async def test_each_slot_is_rated_on_its_own(unique_data_type):
 
 	await rate(nex.FRIEND_A, data_id, 5, slot=1)
 
-	assert await slot_info(data_id, 0) == (1, 0, 1)
-	assert await slot_info(data_id, 1) == (105, 1, 100)
+	assert await helpers.rating_slot_info(data_id, 0) == (1, 0, 1)
+	assert await helpers.rating_slot_info(data_id, 1) == (105, 1, 100)
 
 # * target.data_id
 
@@ -243,7 +233,7 @@ async def test_the_total_cannot_go_past_an_sint64(unique_data_type, initial_valu
 	data_id = await helpers.post_rated(data_type=unique_data_type, slots=[helpers.rating_slot(initial_value=initial_value)])
 
 	assert await rate_error(nex.FRIEND_A, data_id, rating_value) == "PythonCore::Exception"
-	assert await slot_info(data_id) == (initial_value, 0, initial_value)
+	assert await helpers.rating_slot_info(data_id) == (initial_value, 0, initial_value)
 
 # * param.access_password
 
@@ -329,7 +319,7 @@ async def test_fetch_ratings(unique_data_type, fetch_ratings):
 	else:
 		assert helpers.rating_totals(info) == (0, 0, 0)
 
-	assert await slot_info(data_id) == (15, 1, 10)
+	assert await helpers.rating_slot_info(data_id) == (15, 1, 10)
 
 # * Access permission tests
 # *
@@ -480,7 +470,7 @@ async def test_disable_self_rating_refuses_the_owner(unique_data_type):
 	data_id = await helpers.post_rated(data_type=unique_data_type, slots=[helpers.rating_slot(flag=constants.RatingFlag.RATING_FLAG_DISABLE_SELF_RATING)])
 
 	assert await rate_error(nex.FRIEND_A, data_id, 1) == "DataStore::OperationNotAllowed"
-	assert await slot_info(data_id) == (0, 0, 0)
+	assert await helpers.rating_slot_info(data_id) == (0, 0, 0)
 
 async def test_disable_self_rating_lets_everyone_else_rate(unique_data_type):
 	"""
@@ -513,7 +503,7 @@ async def test_a_rating_flag_which_is_not_defined(unique_data_type, flag, error)
 
 	if error is not None:
 		assert await rate_error(nex.STRANGER, data_id, 1) == error
-		assert await slot_info(data_id) == (0, 0, 0)
+		assert await helpers.rating_slot_info(data_id) == (0, 0, 0)
 		return
 
 	assert helpers.rating_totals(await rate(nex.STRANGER, data_id, 1)) == (1, 1, 0)
@@ -547,7 +537,7 @@ async def test_a_rating_outside_the_range(unique_data_type, rating_value):
 	data_id = await helpers.post_rated(data_type=unique_data_type, slots=[helpers.rating_slot(internal_flag=USE_RANGE, range_min=1, range_max=5)])
 
 	assert await rate_error(nex.FRIEND_A, data_id, rating_value) == "DataStore::InvalidArgument"
-	assert await slot_info(data_id) == (0, 0, 0)
+	assert await helpers.rating_slot_info(data_id) == (0, 0, 0)
 
 @pytest.mark.parametrize("internal_flag, rating_value", [
 	pytest.param(constants.RatingInternalFlag.RATING_INTERNAL_FLAG_USE_RANGE_MIN, 100, id="only-the-minimum"),
@@ -596,7 +586,7 @@ async def test_a_change_outside_the_range_keeps_the_old_rating(unique_data_type)
 	await rate(nex.FRIEND_A, data_id, 5)
 
 	assert await rate_error(nex.FRIEND_A, data_id, 6) == "DataStore::InvalidArgument"
-	assert await slot_info(data_id) == (5, 1, 0)
+	assert await helpers.rating_slot_info(data_id) == (5, 1, 0)
 
 # * The rating slot, the lock
 # *
@@ -613,7 +603,7 @@ async def test_a_permanent_lock(unique_data_type):
 	await rate(nex.FRIEND_A, data_id, 1)
 
 	assert await rate_error(nex.FRIEND_A, data_id, 1) == "DataStore::OperationNotAllowed"
-	assert await slot_info(data_id) == (1, 1, 0)
+	assert await helpers.rating_slot_info(data_id) == (1, 1, 0)
 
 async def test_a_lock_is_per_user(unique_data_type):
 	"""
@@ -714,7 +704,7 @@ async def test_modifiable_does_not_get_around_a_lock(unique_data_type):
 	await rate(nex.FRIEND_A, data_id, 5)
 
 	assert await rate_error(nex.FRIEND_A, data_id, 7) == "DataStore::OperationNotAllowed"
-	assert await slot_info(data_id) == (5, 1, 0)
+	assert await helpers.rating_slot_info(data_id) == (5, 1, 0)
 
 async def test_a_refused_rating_does_not_lock(unique_data_type):
 	"""
