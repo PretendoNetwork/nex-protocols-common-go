@@ -9,6 +9,10 @@ from datastore import constants
 UNKNOWN_DATA_ID = 0xFFFFFF
 UINT32_MAX = 0xFFFFFFFF
 UINT64_MAX = 0xFFFFFFFFFFFFFFFF
+INT32_MAX = 0x7FFFFFFF
+INT32_MIN = -0x80000000
+INT64_MAX = 0x7FFFFFFFFFFFFFFF
+INT64_MIN = -0x8000000000000000
 
 # * The largest object which can be uploaded
 # TODO - Make a constant for this in Go libs
@@ -586,6 +590,60 @@ async def complete_update_object(pid: int, **fields) -> None:
 
 	async with connect(pid) as client:
 		await client.complete_update_object(complete_update_param(**fields))
+
+def rating_slot(slot: int = 0, **fields) -> datastore.DataStoreRatingInitParamWithSlot:
+	"""
+	A rating slot to post an object with. Any field of its settings can be
+	overridden with a keyword argument
+	"""
+
+	return rating_init_param_with_slot(slot=slot, param=rating_init_param(**fields))
+
+async def post_rated(pid: int = nex.FRIEND_A, slots: list | None = None, **fields) -> int:
+	"""
+	Posts an object with rating slots, slot 0 with the default settings
+	unless others are given
+	"""
+
+	return await post_meta_binary(pid, rating_init_param=slots if slots is not None else [rating_slot()], **fields)
+
+def rating_target(data_id: int, slot: int) -> datastore.DataStoreRatingTarget:
+	"""
+	The slot of an object to rate
+	"""
+
+	target = datastore.DataStoreRatingTarget()
+	target.data_id = data_id
+	target.slot = slot
+
+	return target
+
+def rate_object_param(rating_value: int, access_password: int) -> datastore.DataStoreRateObjectParam:
+	"""
+	The rating to give, and the password to give it with
+	"""
+
+	param = datastore.DataStoreRateObjectParam()
+	param.rating_value = rating_value
+	param.access_password = access_password
+
+	return param
+
+def rating_totals(info: datastore.DataStoreRatingInfo) -> tuple[int, int, int]:
+	"""
+	The total, count and initial value of a returned rating
+	"""
+
+	return info.total_value, info.count, info.initial_value
+
+async def rate_object(pid: int, data_id: int, rating_value: int, slot: int = 0) -> datastore.DataStoreRatingInfo:
+	"""
+	Rates one slot of an object as the given user, returning what the
+	slot holds afterwards
+	"""
+
+	async with connect(pid) as client:
+		return await client.rate_object(rating_target(data_id, slot), rate_object_param(rating_value, constants.INVALID_PASSWORD), True)
 
 async def change_meta(pid: int, **fields) -> None:
 	"""
