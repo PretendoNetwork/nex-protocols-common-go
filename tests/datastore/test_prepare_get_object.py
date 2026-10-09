@@ -7,21 +7,6 @@ from datastore import constants, helpers
 
 pytestmark = pytest.mark.anyio
 
-# * Long enough for a timestamp to visibly move
-TIMESTAMP_DELAY = 2
-
-# * Getting an object is gated by its access permission, so each one is
-# * tried against somebody it lets in and somebody it keeps out
-ACCESS_PERMISSIONS = [
-	pytest.param(constants.Permission.PERMISSION_PUBLIC, [], nex.STRANGER, None, id="public"),
-	pytest.param(constants.Permission.PERMISSION_FRIEND, [], nex.FRIEND_B, nex.STRANGER, id="friend"),
-	pytest.param(constants.Permission.PERMISSION_SPECIFIED, [nex.STRANGER], nex.STRANGER, nex.FRIEND_B, id="specified"),
-	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.FRIEND_B], nex.FRIEND_B, nex.STRANGER, id="specified-friend")
-]
-
-SLOT = 0
-EMPTY_SLOT = 15
-
 async def prepare_get(pid: int, **fields) -> datastore.DataStoreReqGetInfo:
 	"""
 	Asks where to download an object from, returning all the info
@@ -191,10 +176,10 @@ async def test_asking_by_persistence_target(unique_data_type):
 	An object in a slot can be fetched through the slot
 	"""
 
-	persistence_init_param = helpers.persistence_init_param(persistence_id=SLOT)
+	persistence_init_param = helpers.persistence_init_param(persistence_id=helpers.PERSISTENCE_SLOT)
 	await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, persistence_init_param=persistence_init_param, size=111)
 
-	target = helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=SLOT)
+	target = helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=helpers.PERSISTENCE_SLOT)
 	info = await prepare_get(nex.FRIEND_A, persistence_target=target)
 
 	assert info.size == 111
@@ -205,11 +190,11 @@ async def test_the_target_is_used_over_the_data_id(unique_data_type):
 	"""
 
 	# * Have to use different sizes as a hack to know which object came back
-	persistence_init_param = helpers.persistence_init_param(persistence_id=SLOT)
+	persistence_init_param = helpers.persistence_init_param(persistence_id=helpers.PERSISTENCE_SLOT)
 	await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, persistence_init_param=persistence_init_param, size=111)
 	other = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=222)
 
-	target = helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=SLOT)
+	target = helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=helpers.PERSISTENCE_SLOT)
 	info = await prepare_get(nex.FRIEND_A, data_id=other, persistence_target=target)
 
 	assert info.size == 111
@@ -233,11 +218,11 @@ async def test_a_target_with_an_owner_of_zero(unique_data_type):
 	and does not fall back to the data ID or the caller PID as the owner
 	"""
 
-	persistence_init_param = helpers.persistence_init_param(persistence_id=SLOT)
+	persistence_init_param = helpers.persistence_init_param(persistence_id=helpers.PERSISTENCE_SLOT)
 	await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, persistence_init_param=persistence_init_param)
 	other = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type)
 
-	target = helpers.persistence_target(owner_id=0, persistence_id=SLOT)
+	target = helpers.persistence_target(owner_id=0, persistence_id=helpers.PERSISTENCE_SLOT)
 
 	assert await prepare_get_error(nex.FRIEND_A, data_id=other, persistence_target=target) == "DataStore::NotFound"
 
@@ -248,7 +233,7 @@ async def test_a_target_naming_an_empty_slot(unique_data_type, post):
 	"""
 
 	other = await post(nex.FRIEND_A, data_type=unique_data_type)
-	target = helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=EMPTY_SLOT)
+	target = helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=helpers.EMPTY_PERSISTENCE_SLOT)
 
 	assert await prepare_get_error(nex.FRIEND_A, data_id=other, persistence_target=target) == "DataStore::NotFound"
 
@@ -257,7 +242,7 @@ async def test_a_target_naming_an_owner_who_has_nothing():
 	A user who has never persisted anything has no slots to read
 	"""
 
-	target = helpers.persistence_target(owner_id=1234, persistence_id=SLOT)
+	target = helpers.persistence_target(owner_id=1234, persistence_id=helpers.PERSISTENCE_SLOT)
 
 	assert await prepare_get_error(nex.FRIEND_A, persistence_target=target) == "DataStore::NotFound"
 
@@ -279,17 +264,17 @@ async def test_neither_a_data_id_nor_a_target():
 
 	assert await prepare_get_error(nex.FRIEND_A) == "DataStore::NotFound"
 
-@pytest.mark.parametrize("permission, recipients, allowed, denied", ACCESS_PERMISSIONS)
+@pytest.mark.parametrize("permission, recipients, allowed, denied", helpers.ACCESS_PERMISSION_VIEWERS_AND_OUTSIDERS)
 async def test_the_access_permission_of_an_object_in_a_slot(unique_data_type, permission, recipients, allowed, denied):
 	"""
 	Reaching an object through a slot is gated the same way reaching by data ID
 	"""
 
 	access = helpers.permission(permission=permission, recipients=recipients)
-	persistence_init_param = helpers.persistence_init_param(persistence_id=SLOT)
+	persistence_init_param = helpers.persistence_init_param(persistence_id=helpers.PERSISTENCE_SLOT)
 	await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, permission=access, persistence_init_param=persistence_init_param)
 
-	target = helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=SLOT)
+	target = helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=helpers.PERSISTENCE_SLOT)
 
 	assert (await prepare_get(allowed, persistence_target=target)).url != ""
 
@@ -360,7 +345,7 @@ async def test_a_wrong_access_password_from_the_owner(unique_data_type, post):
 
 	assert (await prepare_get(nex.FRIEND_A, data_id=data_id, access_password=1234)).url != ""
 
-@pytest.mark.parametrize("permission, recipients, allowed, denied", ACCESS_PERMISSIONS)
+@pytest.mark.parametrize("permission, recipients, allowed, denied", helpers.ACCESS_PERMISSION_VIEWERS_AND_OUTSIDERS)
 @pytest.mark.parametrize("post", helpers.FILE_SERVER_POST_METHODS)
 async def test_a_wrong_access_password_from_somebody_who_has_access(unique_data_type, permission, recipients, allowed, denied, post):
 	"""
@@ -396,7 +381,7 @@ async def test_the_extra_data_is_not_in_the_way(unique_data_type, extra_data, po
 
 # * The access permission of the object
 
-@pytest.mark.parametrize("permission, recipients, allowed, denied", ACCESS_PERMISSIONS)
+@pytest.mark.parametrize("permission, recipients, allowed, denied", helpers.ACCESS_PERMISSION_VIEWERS_AND_OUTSIDERS)
 @pytest.mark.parametrize("post", helpers.FILE_SERVER_POST_METHODS)
 async def test_the_access_permission_of_the_object(unique_data_type, permission, recipients, allowed, denied, post):
 	"""
@@ -481,7 +466,7 @@ async def test_getting_an_object_refers_to_it(unique_data_type, post):
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
 	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
 
-	await anyio.sleep(TIMESTAMP_DELAY)
+	await anyio.sleep(helpers.TIMESTAMP_DELAY)
 	await prepare_get(nex.FRIEND_A, data_id=data_id)
 
 	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
@@ -534,7 +519,7 @@ async def test_getting_an_object_does_not_move_the_expiry(unique_data_type, post
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
 	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
 
-	await anyio.sleep(TIMESTAMP_DELAY)
+	await anyio.sleep(helpers.TIMESTAMP_DELAY)
 	await prepare_get(nex.FRIEND_A, data_id=data_id)
 
 	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
@@ -550,7 +535,7 @@ async def test_getting_an_object_can_push_the_expiry_back(unique_data_type, post
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_PERIOD_FROM_LAST_REFERRED)
 	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
 
-	await anyio.sleep(TIMESTAMP_DELAY)
+	await anyio.sleep(helpers.TIMESTAMP_DELAY)
 	await prepare_get(nex.FRIEND_A, data_id=data_id)
 
 	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)

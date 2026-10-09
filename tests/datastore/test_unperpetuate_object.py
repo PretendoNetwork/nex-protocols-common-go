@@ -7,12 +7,6 @@ from datastore import constants, helpers
 
 pytestmark = pytest.mark.anyio
 
-SLOT_0 = 0
-EMPTY_SLOT = 15
-
-# * Long enough for a timestamp to visibly move
-TIMESTAMP_DELAY = 2
-
 async def unperpetuate(pid: int, slot: int, delete_last_object: bool = False) -> None:
 	"""
 	Empties one of the users persistence slots
@@ -46,10 +40,10 @@ async def test_empties_the_slot(unique_data_type, post):
 	The slot is simply emptied when delete_last_object=False
 	"""
 
-	data_id = await helpers.post_persisted(post, nex.FRIEND_A, SLOT_0, data_type=unique_data_type)
-	await unperpetuate(nex.FRIEND_A, SLOT_0, delete_last_object=False)
+	data_id = await helpers.post_persisted(post, nex.FRIEND_A, helpers.PERSISTENCE_SLOT, data_type=unique_data_type)
+	await unperpetuate(nex.FRIEND_A, helpers.PERSISTENCE_SLOT, delete_last_object=False)
 
-	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, SLOT_0) == "DataStore::NotFound"
+	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, helpers.PERSISTENCE_SLOT) == "DataStore::NotFound"
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).data_id == data_id
 
 # * persistence_slot_id
@@ -65,7 +59,7 @@ async def test_empty_slot(delete_last_object):
 	A slot which has no object in it cannot be emptied
 	"""
 
-	assert await unperpetuate_error(nex.FRIEND_A, EMPTY_SLOT, delete_last_object) == "DataStore::NotFound"
+	assert await unperpetuate_error(nex.FRIEND_A, helpers.EMPTY_PERSISTENCE_SLOT, delete_last_object) == "DataStore::NotFound"
 
 @pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_emptying_a_slot_twice(unique_data_type, post):
@@ -73,10 +67,10 @@ async def test_emptying_a_slot_twice(unique_data_type, post):
 	The slot is already empty the second time
 	"""
 
-	await helpers.post_persisted(post, nex.FRIEND_A, SLOT_0, data_type=unique_data_type)
-	await unperpetuate(nex.FRIEND_A, SLOT_0)
+	await helpers.post_persisted(post, nex.FRIEND_A, helpers.PERSISTENCE_SLOT, data_type=unique_data_type)
+	await unperpetuate(nex.FRIEND_A, helpers.PERSISTENCE_SLOT)
 
-	assert await unperpetuate_error(nex.FRIEND_A, SLOT_0) == "DataStore::NotFound"
+	assert await unperpetuate_error(nex.FRIEND_A, helpers.PERSISTENCE_SLOT) == "DataStore::NotFound"
 
 @pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_a_slot_whose_object_was_deleted(unique_data_type, post):
@@ -84,10 +78,10 @@ async def test_a_slot_whose_object_was_deleted(unique_data_type, post):
 	Deleting the object empties the slot on its own
 	"""
 
-	data_id = await helpers.post_persisted(post, nex.FRIEND_A, SLOT_0, data_type=unique_data_type)
+	data_id = await helpers.post_persisted(post, nex.FRIEND_A, helpers.PERSISTENCE_SLOT, data_type=unique_data_type)
 	await helpers.delete_object(nex.FRIEND_A, data_id=data_id)
 
-	assert await unperpetuate_error(nex.FRIEND_A, SLOT_0) == "DataStore::NotFound"
+	assert await unperpetuate_error(nex.FRIEND_A, helpers.PERSISTENCE_SLOT) == "DataStore::NotFound"
 
 # * persistence_slot_id, which is not a slot at all
 
@@ -108,12 +102,12 @@ async def test_slots_are_per_user(unique_data_type, post):
 	Emptying a slot only affects the callers own slots
 	"""
 
-	mine = await helpers.post_persisted(post, nex.FRIEND_A, SLOT_0, data_type=unique_data_type)
-	await helpers.post_persisted(post, nex.STRANGER, SLOT_0, data_type=unique_data_type)
+	mine = await helpers.post_persisted(post, nex.FRIEND_A, helpers.PERSISTENCE_SLOT, data_type=unique_data_type)
+	await helpers.post_persisted(post, nex.STRANGER, helpers.PERSISTENCE_SLOT, data_type=unique_data_type)
 
-	await unperpetuate(nex.STRANGER, SLOT_0)
+	await unperpetuate(nex.STRANGER, helpers.PERSISTENCE_SLOT)
 
-	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, SLOT_0)).data_id == mine
+	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, helpers.PERSISTENCE_SLOT)).data_id == mine
 
 # * delete_last_object
 
@@ -123,10 +117,10 @@ async def test_can_delete_the_object_too(unique_data_type, post):
 	The object which was in the slot is deleted when delete_last_object=True
 	"""
 
-	data_id = await helpers.post_persisted(post, nex.FRIEND_A, SLOT_0, data_type=unique_data_type)
-	await unperpetuate(nex.FRIEND_A, SLOT_0, delete_last_object=True)
+	data_id = await helpers.post_persisted(post, nex.FRIEND_A, helpers.PERSISTENCE_SLOT, data_type=unique_data_type)
+	await unperpetuate(nex.FRIEND_A, helpers.PERSISTENCE_SLOT, delete_last_object=True)
 
-	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, SLOT_0) == "DataStore::NotFound"
+	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, helpers.PERSISTENCE_SLOT) == "DataStore::NotFound"
 	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
 
 @pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
@@ -136,11 +130,11 @@ async def test_the_object_expires_again(unique_data_type, post):
 	it back on a normal expiry
 	"""
 
-	data_id = await helpers.post_persisted(post, nex.FRIEND_A, SLOT_0, data_type=unique_data_type)
+	data_id = await helpers.post_persisted(post, nex.FRIEND_A, helpers.PERSISTENCE_SLOT, data_type=unique_data_type)
 
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).expire_time.value() == constants.PERMANENT_DATE_TIME
 
-	await unperpetuate(nex.FRIEND_A, SLOT_0, delete_last_object=False)
+	await unperpetuate(nex.FRIEND_A, helpers.PERSISTENCE_SLOT, delete_last_object=False)
 	expire_time = (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).expire_time
 
 	assert expire_time.value() != constants.PERMANENT_DATE_TIME
@@ -153,11 +147,11 @@ async def test_keeping_the_object_moves_its_update_time(unique_data_type, post):
 	what its new expiry is counted from
 	"""
 
-	data_id = await helpers.post_persisted(post, nex.FRIEND_A, SLOT_0, data_type=unique_data_type)
+	data_id = await helpers.post_persisted(post, nex.FRIEND_A, helpers.PERSISTENCE_SLOT, data_type=unique_data_type)
 	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
 
-	await anyio.sleep(TIMESTAMP_DELAY)
-	await unperpetuate(nex.FRIEND_A, SLOT_0, delete_last_object=False)
+	await anyio.sleep(helpers.TIMESTAMP_DELAY)
+	await unperpetuate(nex.FRIEND_A, helpers.PERSISTENCE_SLOT, delete_last_object=False)
 
 	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
 
@@ -170,11 +164,11 @@ async def test_keeping_the_object_does_not_refer_to_it(unique_data_type, post):
 	same as referring to it
 	"""
 
-	data_id = await helpers.post_persisted(post, nex.FRIEND_A, SLOT_0, data_type=unique_data_type)
+	data_id = await helpers.post_persisted(post, nex.FRIEND_A, helpers.PERSISTENCE_SLOT, data_type=unique_data_type)
 	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
 
-	await anyio.sleep(TIMESTAMP_DELAY)
-	await unperpetuate(nex.FRIEND_A, SLOT_0, delete_last_object=False)
+	await anyio.sleep(helpers.TIMESTAMP_DELAY)
+	await unperpetuate(nex.FRIEND_A, helpers.PERSISTENCE_SLOT, delete_last_object=False)
 
 	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
 
@@ -192,11 +186,11 @@ async def test_emptying_a_slot_and_the_notifications(unique_data_type, delete_la
 	"""
 
 	permission = helpers.permission(permission=constants.Permission.PERMISSION_SPECIFIED, recipients=[nex.STRANGER])
-	data_id = await helpers.post_persisted(helpers.post_meta_binary, nex.FRIEND_A, SLOT_0, data_type=unique_data_type, permission=permission, flag=constants.DataFlag.DATA_FLAG_USE_NOTIFICATION_ON_POST)
+	data_id = await helpers.post_persisted(helpers.post_meta_binary, nex.FRIEND_A, helpers.PERSISTENCE_SLOT, data_type=unique_data_type, permission=permission, flag=constants.DataFlag.DATA_FLAG_USE_NOTIFICATION_ON_POST)
 
 	assert await helpers.notified(data_id) == [nex.STRANGER]
 
-	await unperpetuate(nex.FRIEND_A, SLOT_0, delete_last_object=delete_last_object)
+	await unperpetuate(nex.FRIEND_A, helpers.PERSISTENCE_SLOT, delete_last_object=delete_last_object)
 
 	assert await helpers.notified(data_id) == notified
 
@@ -208,8 +202,8 @@ async def test_an_object_under_review(unique_data_type, post):
 	An object waiting to be reviewed can be let out of its slot like any other
 	"""
 
-	data_id = await helpers.post_persisted(post, nex.FRIEND_A, SLOT_0, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
-	await unperpetuate(nex.FRIEND_A, SLOT_0, delete_last_object=False)
+	data_id = await helpers.post_persisted(post, nex.FRIEND_A, helpers.PERSISTENCE_SLOT, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
+	await unperpetuate(nex.FRIEND_A, helpers.PERSISTENCE_SLOT, delete_last_object=False)
 
-	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, SLOT_0) == "DataStore::NotFound"
+	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, helpers.PERSISTENCE_SLOT) == "DataStore::NotFound"
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).data_id == data_id

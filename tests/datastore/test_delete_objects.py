@@ -6,8 +6,6 @@ from datastore import constants, helpers
 
 pytestmark = pytest.mark.anyio
 
-SLOT = 3
-
 async def delete(pid: int, entries: list[dict], transactional: bool) -> list:
 	"""
 	Deletes several objects as the given user, returning the result of
@@ -657,7 +655,7 @@ async def test_deleting_a_persisted_object_empties_the_slot(unique_data_type, po
 	persistence slot empty
 	"""
 
-	persistence_init_param = helpers.persistence_init_param(persistence_id=SLOT)
+	persistence_init_param = helpers.persistence_init_param(persistence_id=helpers.PERSISTENCE_SLOT)
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, persistence_init_param=persistence_init_param)
 
 	entries = [
@@ -668,4 +666,4 @@ async def test_deleting_a_persisted_object_empties_the_slot(unique_data_type, po
 
 	assert helpers.result_names(await delete(nex.FRIEND_A, entries, False)) == [None]
 
-	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, SLOT) == "DataStore::NotFound"
+	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, helpers.PERSISTENCE_SLOT) == "DataStore::NotFound"

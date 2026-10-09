@@ -7,9 +7,6 @@ from datastore import constants, helpers
 
 pytestmark = pytest.mark.anyio
 
-# * Long enough for a timestamp to visibly move
-TIMESTAMP_DELAY = 2
-
 async def get_rating(pid: int, data_id: int, slot: int = 0, access_password: int = constants.INVALID_PASSWORD) -> datastore.DataStoreRatingInfo:
 	"""
 	Gets what one slot of an object holds, as the given user
@@ -365,7 +362,7 @@ async def test_reading_the_ratings_does_not_refer_to_the_object(unique_data_type
 	data_id = await helpers.post_rated(data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_PERIOD_FROM_LAST_REFERRED)
 	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
 
-	await anyio.sleep(TIMESTAMP_DELAY)
+	await anyio.sleep(helpers.TIMESTAMP_DELAY)
 	await get_rating(nex.STRANGER, data_id)
 
 	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)

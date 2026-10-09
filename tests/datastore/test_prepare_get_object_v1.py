@@ -7,18 +7,6 @@ from datastore import constants, helpers
 
 pytestmark = pytest.mark.anyio
 
-# * Long enough for a timestamp to visibly move
-TIMESTAMP_DELAY = 2
-
-# * Getting an object is gated by its access permission, so each one is
-# * tried against somebody it lets in and somebody it keeps out
-ACCESS_PERMISSIONS = [
-	pytest.param(constants.Permission.PERMISSION_PUBLIC, [], nex.STRANGER, None, id="public"),
-	pytest.param(constants.Permission.PERMISSION_FRIEND, [], nex.FRIEND_B, nex.STRANGER, id="friend"),
-	pytest.param(constants.Permission.PERMISSION_SPECIFIED, [nex.STRANGER], nex.STRANGER, nex.FRIEND_B, id="specified"),
-	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.FRIEND_B], nex.FRIEND_B, nex.STRANGER, id="specified-friend")
-]
-
 async def prepare_get(pid: int, **fields) -> datastore.DataStoreReqGetInfoV1:
 	"""
 	Asks where to download an object from, returning all the info
@@ -181,7 +169,7 @@ async def test_a_lock_id_on_an_object_which_has_no_read_lock(unique_data_type, p
 
 # * The access permission of the object
 
-@pytest.mark.parametrize("permission, recipients, allowed, denied", ACCESS_PERMISSIONS)
+@pytest.mark.parametrize("permission, recipients, allowed, denied", helpers.ACCESS_PERMISSION_VIEWERS_AND_OUTSIDERS)
 @pytest.mark.parametrize("post", helpers.FILE_SERVER_POST_METHODS)
 async def test_the_access_permission_of_the_object(unique_data_type, permission, recipients, allowed, denied, post):
 	"""
@@ -266,7 +254,7 @@ async def test_getting_an_object_refers_to_it(unique_data_type, post):
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
 	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
 
-	await anyio.sleep(TIMESTAMP_DELAY)
+	await anyio.sleep(helpers.TIMESTAMP_DELAY)
 	await prepare_get(nex.FRIEND_A, data_id=data_id)
 
 	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
@@ -319,7 +307,7 @@ async def test_getting_an_object_does_not_move_the_expiry(unique_data_type, post
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
 	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
 
-	await anyio.sleep(TIMESTAMP_DELAY)
+	await anyio.sleep(helpers.TIMESTAMP_DELAY)
 	await prepare_get(nex.FRIEND_A, data_id=data_id)
 
 	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
@@ -335,7 +323,7 @@ async def test_getting_an_object_can_push_the_expiry_back(unique_data_type, post
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_PERIOD_FROM_LAST_REFERRED)
 	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
 
-	await anyio.sleep(TIMESTAMP_DELAY)
+	await anyio.sleep(helpers.TIMESTAMP_DELAY)
 	await prepare_get(nex.FRIEND_A, data_id=data_id)
 
 	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)

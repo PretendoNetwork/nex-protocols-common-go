@@ -7,10 +7,6 @@ from datastore import constants, helpers
 
 pytestmark = pytest.mark.anyio
 
-# * Timestamps are only accurate to the second, so the tests which
-# * check them have to wait before touching
-TIMESTAMP_DELAY = 2
-
 async def touch_error(pid: int, **fields) -> str:
 	"""
 	Touches an object and expects an error to be thrown, returning
@@ -136,7 +132,7 @@ async def test_updates_the_reference_time_and_validity_period(unique_data_type, 
 		extends: await helpers.get_meta(nex.FRIEND_A, data_id=extends)
 	}
 
-	await anyio.sleep(TIMESTAMP_DELAY)
+	await anyio.sleep(helpers.TIMESTAMP_DELAY)
 
 	await helpers.touch_object(nex.FRIEND_A, data_id=plain)
 	await helpers.touch_object(nex.FRIEND_A, data_id=extends)

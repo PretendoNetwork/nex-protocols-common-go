@@ -7,16 +7,6 @@ from datastore import constants, helpers
 
 pytestmark = pytest.mark.anyio
 
-# * Long enough for a timestamp to visibly move
-TIMESTAMP_DELAY = 2
-
-ACCESS_PERMISSIONS = [
-	pytest.param(constants.Permission.PERMISSION_PUBLIC, [], nex.STRANGER, id="public"),
-	pytest.param(constants.Permission.PERMISSION_FRIEND, [], nex.FRIEND_B, id="friend"),
-	pytest.param(constants.Permission.PERMISSION_SPECIFIED, [nex.STRANGER], nex.STRANGER, id="specified"),
-	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.FRIEND_B], nex.FRIEND_B, id="specified-friend")
-]
-
 async def get_password_infos(pid: int, data_ids: list[int]):
 	"""
 	Gets the passwords of several objects as the given user
@@ -93,16 +83,6 @@ async def test_every_object_has_its_own_passwords(unique_data_type, post):
 # * is cryptographically secure without triggering false negatives,
 # * but we can at least catch obviously bad passwords
 
-# * How many objects to post when looking at entropy
-PASSWORD_SAMPLES = 16
-
-# * The smallest gap allowed between two sorted passwords. A good
-# * generator leaves huge gaps between passwords. This tries to
-# * catch sequential generators and generators which produce small
-# * gaps, but is intentionally somewhat small as to not trip any
-# * false negatives
-CLOSEST_SENSIBLE_PASSWORDS = 1000000
-
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_the_passwords_are_not_small(unique_data_type, post):
 	"""
@@ -125,7 +105,7 @@ async def test_the_passwords_are_spread_out(unique_data_type, post):
 	Tests that passwords have sufficient gaps/bit usage in their data
 	"""
 
-	data_ids = [await post(nex.FRIEND_A, data_type=unique_data_type) for _ in range(PASSWORD_SAMPLES)]
+	data_ids = [await post(nex.FRIEND_A, data_type=unique_data_type) for _ in range(helpers.PASSWORD_SAMPLES)]
 	response = await get_password_infos(nex.FRIEND_A, data_ids)
 	passwords = []
 
@@ -138,7 +118,7 @@ async def test_the_passwords_are_spread_out(unique_data_type, post):
 
 	# * Make sure passwords, when sorted, have nice big gaps, to try and catch
 	# * sequential generators
-	assert min(b - a for a, b in zip(ordered, ordered[1:])) > CLOSEST_SENSIBLE_PASSWORDS
+	assert min(b - a for a, b in zip(ordered, ordered[1:])) > helpers.CLOSEST_SENSIBLE_PASSWORDS
 
 	# * Ensure an even spread of bits across all password samples. Ideally
 	# * the password generator should be generating passwords with enough
@@ -297,7 +277,7 @@ async def test_too_many_data_ids():
 # * is a separate thing which says who may read the object itself
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
-@pytest.mark.parametrize("permission, recipients, caller", ACCESS_PERMISSIONS)
+@pytest.mark.parametrize("permission, recipients, caller", helpers.ACCESS_PERMISSION_VIEWERS)
 async def test_the_access_permission_does_not_open_the_passwords(unique_data_type, post, permission, recipients, caller):
 	"""
 	Whoever the access permission lets in can read the object itself,
@@ -390,7 +370,7 @@ async def test_reading_the_passwords_does_not_refer_to_the_object(unique_data_ty
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_PERIOD_FROM_LAST_REFERRED)
 	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
 
-	await anyio.sleep(TIMESTAMP_DELAY)
+	await anyio.sleep(helpers.TIMESTAMP_DELAY)
 	await get_password_infos(nex.FRIEND_A, [data_id])
 
 	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)

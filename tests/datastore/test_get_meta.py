@@ -6,17 +6,12 @@ from datastore import constants, helpers
 
 pytestmark = pytest.mark.anyio
 
-PERSISTENCE_SLOT = 0
-
-# * Long enough for a timestamp to visibly move
-TIMESTAMP_DELAY = 2
-
 async def post_persisted(post, pid: int, **fields) -> int:
 	"""
 	Posts an object as the given user, in the users persistence slot
 	"""
 
-	persistence_init_param = helpers.persistence_init_param(persistence_id=PERSISTENCE_SLOT)
+	persistence_init_param = helpers.persistence_init_param(persistence_id=helpers.PERSISTENCE_SLOT)
 
 	return await post(pid, persistence_init_param=persistence_init_param, **fields)
 
@@ -50,7 +45,7 @@ async def test_persistence_target_is_used_over_data_id(unique_data_type, post):
 	persisted = await post_persisted(post, nex.FRIEND_A, data_type=unique_data_type)
 	other = await post(nex.FRIEND_A, data_type=unique_data_type)
 
-	target = helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=PERSISTENCE_SLOT)
+	target = helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=helpers.PERSISTENCE_SLOT)
 	meta_info = await helpers.get_meta(nex.FRIEND_A, data_id=other, persistence_target=target)
 
 	assert meta_info.data_id == persisted
@@ -100,7 +95,7 @@ async def test_persistence_target(unique_data_type, post):
 
 	data_id = await post_persisted(post, nex.FRIEND_A, data_type=unique_data_type)
 
-	target = helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=PERSISTENCE_SLOT)
+	target = helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=helpers.PERSISTENCE_SLOT)
 	meta_info = await helpers.get_meta(nex.FRIEND_A, persistence_target=target)
 
 	assert meta_info.data_id == data_id
@@ -114,7 +109,7 @@ async def test_persistence_target_of_another_user(unique_data_type, post):
 
 	data_id = await post_persisted(post, nex.FRIEND_A, data_type=unique_data_type)
 
-	target = helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=PERSISTENCE_SLOT)
+	target = helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=helpers.PERSISTENCE_SLOT)
 	meta_info = await helpers.get_meta(nex.STRANGER, persistence_target=target)
 
 	assert meta_info.data_id == data_id
@@ -146,7 +141,7 @@ async def test_persistence_target_returns_the_newest_object(unique_data_type, po
 	await post_persisted(post, nex.FRIEND_A, data_type=unique_data_type)
 	newest = await post_persisted(post, nex.FRIEND_A, data_type=unique_data_type)
 
-	target = helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=PERSISTENCE_SLOT)
+	target = helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=helpers.PERSISTENCE_SLOT)
 	meta_info = await helpers.get_meta(nex.FRIEND_A, persistence_target=target)
 
 	assert meta_info.data_id == newest
@@ -161,8 +156,8 @@ async def test_persistence_slots_are_per_user(unique_data_type, post):
 	first = await post_persisted(post, nex.FRIEND_A, data_type=unique_data_type)
 	second = await post_persisted(post, nex.FRIEND_B, data_type=unique_data_type)
 
-	first_target = helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=PERSISTENCE_SLOT)
-	second_target = helpers.persistence_target(owner_id=nex.FRIEND_B, persistence_id=PERSISTENCE_SLOT)
+	first_target = helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=helpers.PERSISTENCE_SLOT)
+	second_target = helpers.persistence_target(owner_id=nex.FRIEND_B, persistence_id=helpers.PERSISTENCE_SLOT)
 
 	assert (await helpers.get_meta(nex.FRIEND_A, persistence_target=first_target)).data_id == first
 	assert (await helpers.get_meta(nex.FRIEND_A, persistence_target=second_target)).data_id == second
@@ -175,7 +170,7 @@ async def test_persistence_target_without_an_owner(unique_data_type, post):
 	"""
 
 	data_id = await post_persisted(post, nex.FRIEND_A, data_type=unique_data_type)
-	target = helpers.persistence_target(owner_id=0, persistence_id=PERSISTENCE_SLOT)
+	target = helpers.persistence_target(owner_id=0, persistence_id=helpers.PERSISTENCE_SLOT)
 
 	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=data_id, persistence_target=target) == "DataStore::NotFound"
 
@@ -372,7 +367,7 @@ async def test_access_permission_of_persisted_objects(unique_data_type, post, pe
 
 	permission = helpers.permission(permission=permission, recipients=recipients)
 	data_id = await post_persisted(post, nex.FRIEND_A, data_type=unique_data_type, permission=permission)
-	target = helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=PERSISTENCE_SLOT)
+	target = helpers.persistence_target(owner_id=nex.FRIEND_A, persistence_id=helpers.PERSISTENCE_SLOT)
 
 	if not visible:
 		assert await helpers.get_meta_error(viewer, persistence_target=target) == "DataStore::PermissionDenied"
@@ -488,7 +483,7 @@ async def test_reading_the_metadata_does_not_refer_to_the_object(unique_data_typ
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_PERIOD_FROM_LAST_REFERRED)
 	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
 
-	await anyio.sleep(TIMESTAMP_DELAY)
+	await anyio.sleep(helpers.TIMESTAMP_DELAY)
 	await helpers.get_meta(nex.STRANGER, data_id=data_id, result_option=constants.ResultFlag.RESULT_FLAG_ALL)
 
 	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)

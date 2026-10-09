@@ -7,11 +7,6 @@ from datastore import constants, helpers
 
 pytestmark = pytest.mark.anyio
 
-# * Long enough for a timestamp to visibly move
-TIMESTAMP_DELAY = 2
-
-POSTED_SIZE = 10
-
 async def get_specific_meta(pid: int, data_ids: list[int]) -> list[datastore.DataStoreSpecificMetaInfoV1]:
 	"""
 	Gets the minimal metadata of several objects as the given user,
@@ -39,12 +34,12 @@ async def test_an_entry_describes_the_object(unique_data_type, post):
 	Basic functionality test
 	"""
 
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, size=POSTED_SIZE)
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, size=helpers.POSTED_SIZE)
 	[info] = await get_specific_meta(nex.FRIEND_A, [data_id])
 
 	assert info.data_id == data_id
 	assert info.owner_id == nex.FRIEND_A
-	assert info.size == POSTED_SIZE
+	assert info.size == helpers.POSTED_SIZE
 	assert info.data_type == unique_data_type
 	assert info.version == 1
 
@@ -73,7 +68,7 @@ async def test_the_entries_are_sorted_by_data_id(unique_data_type):
 	The entries do not come back in the order they were asked for
 	"""
 
-	data_ids = [await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=POSTED_SIZE) for _ in range(3)]
+	data_ids = [await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=helpers.POSTED_SIZE) for _ in range(3)]
 
 	assert await returned_data_ids(nex.FRIEND_A, list(reversed(data_ids))) == sorted(data_ids)
 
@@ -82,7 +77,7 @@ async def test_a_data_id_asked_for_twice_comes_back_once(unique_data_type):
 	Each object has one entry, no matter however many times it is asked for
 	"""
 
-	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=POSTED_SIZE)
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=helpers.POSTED_SIZE)
 
 	assert await returned_data_ids(nex.FRIEND_A, [data_id, data_id]) == [data_id]
 
@@ -107,7 +102,7 @@ async def test_a_data_id_which_names_nothing_is_left_out(unique_data_type, missi
 	simply has no entry, and the rest still come back
 	"""
 
-	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=POSTED_SIZE)
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=helpers.POSTED_SIZE)
 
 	assert await returned_data_ids(nex.FRIEND_A, [data_id, missing]) == [data_id]
 
@@ -136,7 +131,7 @@ async def test_a_deleted_object_still_comes_back(unique_data_type):
 	Deleting an object does not stop its entry from being returned
 	"""
 
-	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=POSTED_SIZE)
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=helpers.POSTED_SIZE)
 	await helpers.delete_object(nex.FRIEND_A, data_id=data_id)
 
 	assert await returned_data_ids(nex.FRIEND_A, [data_id]) == [data_id]
@@ -146,7 +141,7 @@ async def test_an_object_which_was_never_completed_still_comes_back(unique_data_
 	The object does not exist yet anywhere else, but it has an entry here
 	"""
 
-	data_id = await helpers.prepare_post_object(nex.FRIEND_A, data_type=unique_data_type, size=POSTED_SIZE)
+	data_id = await helpers.prepare_post_object(nex.FRIEND_A, data_type=unique_data_type, size=helpers.POSTED_SIZE)
 
 	assert await returned_data_ids(nex.FRIEND_A, [data_id]) == [data_id]
 
@@ -155,7 +150,7 @@ async def test_an_expired_object_still_comes_back(unique_data_type):
 	An object with a period of 0 has expired, but it has an entry here
 	"""
 
-	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=POSTED_SIZE)
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=helpers.POSTED_SIZE)
 	await helpers.change_meta(nex.FRIEND_A, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_PERIOD, period=0)
 
 	assert await returned_data_ids(nex.FRIEND_A, [data_id]) == [data_id]
@@ -171,7 +166,7 @@ async def test_the_access_permission_is_not_checked(unique_data_type, permission
 	"""
 
 	access = helpers.permission(permission=permission, recipients=recipients)
-	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=POSTED_SIZE, permission=access)
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=helpers.POSTED_SIZE, permission=access)
 
 	assert await returned_data_ids(nex.STRANGER, [data_id]) == [data_id]
 
@@ -184,7 +179,7 @@ async def test_the_status_is_not_checked(unique_data_type, status):
 	An object which is under review or rejected has an entry for everyone
 	"""
 
-	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=POSTED_SIZE)
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=helpers.POSTED_SIZE)
 	await helpers.change_meta(nex.FRIEND_A, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_STATUS, status=status)
 
 	assert await returned_data_ids(nex.STRANGER, [data_id]) == [data_id]
@@ -197,10 +192,10 @@ async def test_reading_the_metadata_does_not_refer_to_the_object(unique_data_typ
 	reference count nor the referred time move
 	"""
 
-	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=POSTED_SIZE, flag=constants.DataFlag.DATA_FLAG_PERIOD_FROM_LAST_REFERRED)
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=helpers.POSTED_SIZE, flag=constants.DataFlag.DATA_FLAG_PERIOD_FROM_LAST_REFERRED)
 	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
 
-	await anyio.sleep(TIMESTAMP_DELAY)
+	await anyio.sleep(helpers.TIMESTAMP_DELAY)
 	await get_specific_meta(nex.STRANGER, [data_id])
 
 	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)

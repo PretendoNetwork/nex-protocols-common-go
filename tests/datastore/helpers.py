@@ -99,6 +99,96 @@ NOTIFIED_PERMISSIONS = [
 	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.STRANGER], [], id="specified-friend-to-a-stranger")
 ]
 
+# * The persistence slots tests use. Every test which needs a slot uses these,
+# * and nothing is ever put in EMPTY_PERSISTENCE_SLOT
+PERSISTENCE_SLOT = 0
+SECOND_PERSISTENCE_SLOT = 1
+EMPTY_PERSISTENCE_SLOT = 15
+
+# * Long enough for a timestamp to visibly move
+TIMESTAMP_DELAY = 2
+
+# * The size objects are posted with, when a test needs to see the size change
+POSTED_SIZE = 10
+
+# * The size objects are updated to, different from POSTED_SIZE
+UPDATED_SIZE = 20
+
+# * How many objects to post when looking at entropy
+PASSWORD_SAMPLES = 16
+
+# * The smallest gap allowed between two sorted passwords. A good
+# * generator leaves huge gaps between passwords. This tries to
+# * catch sequential generators and generators which produce small
+# * gaps, but is intentionally somewhat small as to not trip any
+# * false negatives
+CLOSEST_SENSIBLE_PASSWORDS = 1000000
+
+# * Metadata an object is posted with, so that a change to it can be seen
+BEFORE_NAME = "before"
+BEFORE_META_BINARY = b"BEFORE"
+BEFORE_TAGS = ["before"]
+BEFORE_PERIOD = 90
+
+# * The comparison flag for each field of a DataStoreChangeMetaCompareParam
+COMPARISON_FLAGS = {
+	"name": constants.ComparisonFlag.COMPARISON_FLAG_NAME,
+	"permission": constants.ComparisonFlag.COMPARISON_FLAG_ACCESS_PERMISSION,
+	"delete_permission": constants.ComparisonFlag.COMPARISON_FLAG_UPDATE_PERMISSION,
+	"period": constants.ComparisonFlag.COMPARISON_FLAG_PERIOD,
+	"meta_binary": constants.ComparisonFlag.COMPARISON_FLAG_METABINARY,
+	"tags": constants.ComparisonFlag.COMPARISON_FLAG_TAGS,
+	"referred_count": constants.ComparisonFlag.COMPARISON_FLAG_REFERRED_COUNT,
+	"data_type": constants.ComparisonFlag.COMPARISON_FLAG_DATA_TYPE,
+	"status": constants.ComparisonFlag.COMPARISON_FLAG_STATUS
+}
+
+# * For some reason these flags are accepted even though they have no field?
+FLAGS_WITH_NO_FIELD = [
+	pytest.param(constants.ModificationFlag.MODIFICATION_FLAG_REFERRED_COUNT, id="referred-count"),
+	pytest.param(constants.ModificationFlag.MODIFICATION_FLAG_STATUS, id="status")
+]
+
+# * Every rating lock type
+RATING_LOCK_TYPES = [
+	pytest.param(constants.RatingLockType.RATING_LOCK_NONE, id="none"),
+	pytest.param(constants.RatingLockType.RATING_LOCK_INTERVAL, id="interval"),
+	pytest.param(constants.RatingLockType.RATING_LOCK_PERIOD, id="period"),
+	pytest.param(constants.RatingLockType.RATING_LOCK_PERMANENT, id="permanent")
+]
+
+# * Every stock flag, and whether an object on the file server can be posted
+# * with it. Only DATA_FLAG_NOT_USE_FILESERVER cannot be used, as it's set by
+# * the game server in PostMetaBinary
+FILE_SERVER_DATA_FLAGS = [
+	pytest.param(constants.DataFlag.DATA_FLAG_NEED_REVIEW, True, id="need-review"),
+	pytest.param(constants.DataFlag.DATA_FLAG_PERIOD_FROM_LAST_REFERRED, True, id="period-from-last-referred"),
+	pytest.param(constants.DataFlag.DATA_FLAG_USE_READ_LOCK, True, id="use-read-lock"),
+	pytest.param(constants.DataFlag.DATA_FLAG_USE_NOTIFICATION_ON_POST, True, id="use-notification-on-post"),
+	pytest.param(constants.DataFlag.DATA_FLAG_USE_NOTIFICATION_ON_UPDATE, True, id="use-notification-on-update"),
+	pytest.param(constants.DataFlag.DATA_FLAG_NOT_USE_FILESERVER, False, id="not-use-fileserver"),
+	pytest.param(constants.DataFlag.DATA_FLAG_NEED_COMPLETION, True, id="need-completion")
+]
+
+# * Every access permission which lets someone other than the owner in, with
+# * a user it lets in
+ACCESS_PERMISSION_VIEWERS = [
+	pytest.param(constants.Permission.PERMISSION_PUBLIC, [], nex.STRANGER, id="public"),
+	pytest.param(constants.Permission.PERMISSION_FRIEND, [], nex.FRIEND_B, id="friend"),
+	pytest.param(constants.Permission.PERMISSION_SPECIFIED, [nex.STRANGER], nex.STRANGER, id="specified"),
+	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.FRIEND_B], nex.FRIEND_B, id="specified-friend")
+]
+
+# * Every access permission which lets someone other than the owner in, with
+# * a user it lets in and a user it keeps out. A public object keeps nobody
+# * out, so it has no user kept out
+ACCESS_PERMISSION_VIEWERS_AND_OUTSIDERS = [
+	pytest.param(constants.Permission.PERMISSION_PUBLIC, [], nex.STRANGER, None, id="public"),
+	pytest.param(constants.Permission.PERMISSION_FRIEND, [], nex.FRIEND_B, nex.STRANGER, id="friend"),
+	pytest.param(constants.Permission.PERMISSION_SPECIFIED, [nex.STRANGER], nex.STRANGER, nex.FRIEND_B, id="specified"),
+	pytest.param(constants.Permission.PERMISSION_SPECIFIED_FRIEND, [nex.FRIEND_B], nex.FRIEND_B, nex.STRANGER, id="specified-friend")
+]
+
 @contextlib.asynccontextmanager
 async def connect(pid: int):
 	"""
@@ -820,6 +910,38 @@ async def post_rejected(post, pid: int, **fields) -> int:
 	await change_meta(pid, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_STATUS, status=constants.DataStatus.DATA_STATUS_REJECTED)
 
 	return data_id
+
+def rating_slots(count: int, first: int = 0, **fields) -> list:
+	"""
+	A list of rating slot params, starting at the given slot
+	"""
+
+	return [rating_init_param_with_slot(slot=first + i, param=rating_init_param(**fields)) for i in range(count)]
+
+async def post_with_before_metadata(post, pid: int, **fields) -> int:
+	"""
+	Posts an object with predetermined metadata, to detect changes
+	"""
+
+	fields.setdefault("name", BEFORE_NAME)
+	fields.setdefault("meta_binary", BEFORE_META_BINARY)
+	fields.setdefault("tags", BEFORE_TAGS)
+	fields.setdefault("period", BEFORE_PERIOD)
+
+	return await post(pid, **fields)
+
+# * A value for each field which the posted object never holds
+MISMATCHED_VALUES = {
+	"name": "other",
+	"permission": permission(permission=constants.Permission.PERMISSION_FRIEND),
+	"delete_permission": permission(permission=constants.Permission.PERMISSION_PUBLIC),
+	"period": BEFORE_PERIOD + 1,
+	"meta_binary": b"OTHER",
+	"tags": ["other"],
+	"referred_count": 1,
+	"data_type": constants.INVALID_DATA_TYPE - 1, # * Far past any unique_data_type
+	"status": constants.DataStatus.DATA_STATUS_PENDING
+}
 
 # * Every way an object can be created, in general. Used when general object
 # * creation in the database is needed

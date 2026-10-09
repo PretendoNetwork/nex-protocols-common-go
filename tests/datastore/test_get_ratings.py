@@ -7,9 +7,6 @@ from datastore import constants, helpers
 
 pytestmark = pytest.mark.anyio
 
-# * Long enough for a timestamp to visibly move
-TIMESTAMP_DELAY = 2
-
 # * The most data IDs one request can have
 CAPACITY = 512
 
@@ -413,7 +410,7 @@ async def test_reading_the_ratings_does_not_refer_to_the_object(unique_data_type
 	data_id = await helpers.post_rated(data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_PERIOD_FROM_LAST_REFERRED)
 	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
 
-	await anyio.sleep(TIMESTAMP_DELAY)
+	await anyio.sleep(helpers.TIMESTAMP_DELAY)
 	await get_ratings(nex.STRANGER, [data_id])
 
 	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)

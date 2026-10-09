@@ -6,8 +6,6 @@ from datastore import constants, helpers
 
 pytestmark = pytest.mark.anyio
 
-SLOT = 3
-
 async def delete_error(pid: int, **fields) -> str:
 	"""
 	Deletes an object and expects an error to be thrown, returning
@@ -56,12 +54,12 @@ async def test_deleting_a_persisted_object_empties_the_slot(unique_data_type, po
 	persistence slot empty
 	"""
 
-	persistence_init_param = helpers.persistence_init_param(persistence_id=SLOT)
+	persistence_init_param = helpers.persistence_init_param(persistence_id=helpers.PERSISTENCE_SLOT)
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, persistence_init_param=persistence_init_param)
 
 	await helpers.delete_object(nex.FRIEND_A, data_id=data_id)
 
-	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, SLOT) == "DataStore::NotFound"
+	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, helpers.PERSISTENCE_SLOT) == "DataStore::NotFound"
 
 async def test_deleting_removes_the_notifications_for_the_object(unique_data_type):
 	"""

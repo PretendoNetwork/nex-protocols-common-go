@@ -7,9 +7,6 @@ from datastore import constants, helpers
 
 pytestmark = pytest.mark.anyio
 
-# * Long enough for a timestamp to visibly move
-TIMESTAMP_DELAY = 2
-
 async def reset(pid: int, data_id: int, slot: int = 0, update_password: int = constants.INVALID_PASSWORD) -> None:
 	"""
 	Resets one slot of an object as the given user
@@ -461,7 +458,7 @@ async def test_resetting_does_not_refer_to_the_object(unique_data_type):
 	await helpers.rate_object(nex.FRIEND_A, data_id, 1)
 	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
 
-	await anyio.sleep(TIMESTAMP_DELAY)
+	await anyio.sleep(helpers.TIMESTAMP_DELAY)
 	await reset(nex.FRIEND_A, data_id)
 
 	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)

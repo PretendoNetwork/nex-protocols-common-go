@@ -7,18 +7,12 @@ from datastore import constants, helpers
 
 pytestmark = pytest.mark.anyio
 
-# * Long enough for a timestamp to visibly move
-TIMESTAMP_DELAY = 2
-
-POSTED_SIZE = 10
-UPDATED_SIZE = 20
-
 async def prepare(pid: int, **fields) -> datastore.DataStoreReqUpdateInfo:
 	"""
 	Starts updating an object, returning all the info
 	"""
 
-	fields.setdefault("size", UPDATED_SIZE)
+	fields.setdefault("size", helpers.UPDATED_SIZE)
 
 	async with helpers.connect(pid) as client:
 		return await client.prepare_update_object(helpers.prepare_update_param(**fields))
@@ -29,7 +23,7 @@ async def prepare_error(pid: int, **fields) -> str:
 	returning the name of the error
 	"""
 
-	fields.setdefault("size", UPDATED_SIZE)
+	fields.setdefault("size", helpers.UPDATED_SIZE)
 
 	# * The error has to be caught inside the connection. If it leaves the
 	# * connection NintendoClients wraps it in an ExceptionGroup, and so
@@ -49,7 +43,7 @@ async def test_returns_somewhere_to_upload_to(unique_data_type):
 	Basic functionality test
 	"""
 
-	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=POSTED_SIZE)
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=helpers.POSTED_SIZE)
 	info = await prepare(nex.FRIEND_A, data_id=data_id)
 
 	assert info.url != ""
@@ -62,7 +56,7 @@ async def test_the_first_update_is_version_2(unique_data_type, post):
 	after the current one
 	"""
 
-	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, size=POSTED_SIZE)
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, size=helpers.POSTED_SIZE)
 	info = await prepare(nex.FRIEND_A, data_id=data_id)
 
 	assert info.version == 2
@@ -73,16 +67,16 @@ async def test_nothing_changes_until_the_update_is_completed(unique_data_type):
 	version, size, update time and expiry until the update is completed
 	"""
 
-	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=POSTED_SIZE)
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=helpers.POSTED_SIZE)
 	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
 
-	await anyio.sleep(TIMESTAMP_DELAY)
+	await anyio.sleep(helpers.TIMESTAMP_DELAY)
 	await prepare(nex.FRIEND_A, data_id=data_id)
 
 	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
 
 	assert await helpers.version_of(data_id) == 1
-	assert after.size == POSTED_SIZE
+	assert after.size == helpers.POSTED_SIZE
 	assert after.update_time.value() == before.update_time.value()
 	assert after.expire_time.value() == before.expire_time.value()
 
@@ -92,7 +86,7 @@ async def test_preparing_twice_hands_out_a_new_version_each_time(unique_data_typ
 	from being prepared, which gets the version after it
 	"""
 
-	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=POSTED_SIZE)
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=helpers.POSTED_SIZE)
 	first = await prepare(nex.FRIEND_A, data_id=data_id)
 	second = await prepare(nex.FRIEND_A, data_id=data_id)
 
@@ -103,7 +97,7 @@ async def test_versions_carry_on_after_a_completed_update(unique_data_type):
 	Once an update is completed, the next one is for the version after it
 	"""
 
-	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=POSTED_SIZE)
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=helpers.POSTED_SIZE)
 	first = await prepare(nex.FRIEND_A, data_id=data_id)
 
 	await helpers.complete_update_object(nex.FRIEND_A, data_id=data_id, version=first.version)
@@ -117,7 +111,7 @@ async def test_a_failed_upload_still_uses_up_its_version(unique_data_type):
 	out again
 	"""
 
-	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=POSTED_SIZE)
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=helpers.POSTED_SIZE)
 	first = await prepare(nex.FRIEND_A, data_id=data_id)
 
 	await helpers.complete_update_object(nex.FRIEND_A, data_id=data_id, version=first.version, success=False)
@@ -154,7 +148,7 @@ async def test_a_deleted_object(unique_data_type):
 	Deleted objects cannot be updated
 	"""
 
-	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=POSTED_SIZE)
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=helpers.POSTED_SIZE)
 	await helpers.delete_object(nex.FRIEND_A, data_id=data_id)
 
 	assert await prepare_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
@@ -164,7 +158,7 @@ async def test_an_object_which_was_never_completed(unique_data_type):
 	Objects whose upload was never completed do not exist yet
 	"""
 
-	data_id = await helpers.prepare_post_object(nex.FRIEND_A, data_type=unique_data_type, size=POSTED_SIZE)
+	data_id = await helpers.prepare_post_object(nex.FRIEND_A, data_type=unique_data_type, size=helpers.POSTED_SIZE)
 
 	assert await prepare_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
 
@@ -192,7 +186,7 @@ async def test_any_size_is_allowed(unique_data_type, size):
 	was accepted by the file server on Pokemon Bank and downloaded intact
 	"""
 
-	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=POSTED_SIZE)
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=helpers.POSTED_SIZE)
 	info = await prepare(nex.FRIEND_A, data_id=data_id, size=size)
 
 	await helpers.complete_update_object(nex.FRIEND_A, data_id=data_id, version=info.version)
@@ -210,7 +204,7 @@ async def test_update_password_replaces_the_permission(unique_data_type):
 	with its update password
 	"""
 
-	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=POSTED_SIZE)
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=helpers.POSTED_SIZE)
 	password_info = await helpers.get_password_info(nex.FRIEND_A, data_id)
 	info = await prepare(nex.STRANGER, data_id=data_id, update_password=password_info.update_password)
 
@@ -221,7 +215,7 @@ async def test_wrong_update_password(unique_data_type):
 	A password which does not match is refused
 	"""
 
-	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=POSTED_SIZE)
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=helpers.POSTED_SIZE)
 
 	assert await prepare_error(nex.STRANGER, data_id=data_id, update_password=1234) == "DataStore::InvalidPassword"
 
@@ -230,7 +224,7 @@ async def test_the_access_password_is_not_the_update_password(unique_data_type):
 	The access password only gives read access, not update access
 	"""
 
-	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=POSTED_SIZE)
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=helpers.POSTED_SIZE)
 	password_info = await helpers.get_password_info(nex.FRIEND_A, data_id)
 
 	assert await prepare_error(nex.STRANGER, data_id=data_id, update_password=password_info.access_password) == "DataStore::InvalidPassword"
@@ -241,7 +235,7 @@ async def test_wrong_update_password_as_the_owner(unique_data_type):
 	never checked
 	"""
 
-	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=POSTED_SIZE)
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=helpers.POSTED_SIZE)
 	info = await prepare(nex.FRIEND_A, data_id=data_id, update_password=1234)
 
 	assert info.version == 2
@@ -261,7 +255,7 @@ async def test_no_extra_data_at_all(unique_data_type):
 	the same as sending something wrong
 	"""
 
-	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=POSTED_SIZE)
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=helpers.POSTED_SIZE)
 	info = await prepare(nex.FRIEND_A, data_id=data_id, extra_data=[])
 
 	assert info.version == 2
@@ -276,7 +270,7 @@ async def test_extra_data_a_console_would_send(unique_data_type, extra_data):
 	Both platforms are accepted
 	"""
 
-	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=POSTED_SIZE)
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=helpers.POSTED_SIZE)
 	info = await prepare(nex.FRIEND_A, data_id=data_id, extra_data=extra_data)
 
 	assert info.version == 2
@@ -294,7 +288,7 @@ async def test_the_update_permission(unique_data_type, permission, recipients, p
 	"""
 
 	update = helpers.permission(permission=permission, recipients=recipients)
-	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=POSTED_SIZE, delete_permission=update)
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=helpers.POSTED_SIZE, delete_permission=update)
 
 	if not allowed:
 		assert await prepare_error(pid, data_id=data_id) == "DataStore::PermissionDenied"
@@ -311,7 +305,7 @@ async def test_the_access_permission_is_not_used(unique_data_type):
 
 	access = helpers.permission(permission=constants.Permission.PERMISSION_PRIVATE)
 	update = helpers.permission(permission=constants.Permission.PERMISSION_PUBLIC)
-	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=POSTED_SIZE, permission=access, delete_permission=update)
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=helpers.POSTED_SIZE, permission=access, delete_permission=update)
 	info = await prepare(nex.STRANGER, data_id=data_id)
 
 	assert info.version == 2
@@ -323,7 +317,7 @@ async def test_an_object_under_review_can_be_updated_by_its_owner(unique_data_ty
 	The owner can update their object while it is still under review
 	"""
 
-	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=POSTED_SIZE, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=helpers.POSTED_SIZE, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
 	info = await prepare(nex.FRIEND_A, data_id=data_id)
 
 	assert info.version == 2
@@ -335,7 +329,7 @@ async def test_an_object_under_review_is_under_review_for_everyone_else(unique_d
 	"""
 
 	update = helpers.permission(permission=constants.Permission.PERMISSION_PUBLIC)
-	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=POSTED_SIZE, delete_permission=update, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=helpers.POSTED_SIZE, delete_permission=update, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
 
 	assert await prepare_error(nex.STRANGER, data_id=data_id) == "DataStore::UnderReviewing"
 
@@ -347,7 +341,7 @@ async def test_a_rejected_object_can_be_updated_by_its_owner(unique_data_type):
 	Rejecting an object does not stop its owner from updating it
 	"""
 
-	data_id = await helpers.post_rejected(helpers.post_object, nex.FRIEND_A, data_type=unique_data_type, size=POSTED_SIZE)
+	data_id = await helpers.post_rejected(helpers.post_object, nex.FRIEND_A, data_type=unique_data_type, size=helpers.POSTED_SIZE)
 	info = await prepare(nex.FRIEND_A, data_id=data_id)
 
 	assert info.version == 2
@@ -358,7 +352,7 @@ async def test_an_expired_object(unique_data_type):
 	nothing to update
 	"""
 
-	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=POSTED_SIZE)
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=helpers.POSTED_SIZE)
 	await helpers.change_meta(nex.FRIEND_A, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_PERIOD, period=0)
 
 	assert await prepare_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
@@ -369,7 +363,7 @@ async def test_a_read_locked_object(unique_data_type):
 	else can still be updated
 	"""
 
-	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=POSTED_SIZE, flag=constants.DataFlag.DATA_FLAG_USE_READ_LOCK)
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=helpers.POSTED_SIZE, flag=constants.DataFlag.DATA_FLAG_USE_READ_LOCK)
 
 	async with helpers.connect(nex.STRANGER) as client:
 		await client.prepare_get_object(helpers.prepare_get_param(data_id=data_id, lock_id=1234))
@@ -387,7 +381,7 @@ async def test_the_update_notification_waits_for_completion(unique_data_type):
 	"""
 
 	permission = helpers.permission(permission=constants.Permission.PERMISSION_SPECIFIED, recipients=[nex.STRANGER])
-	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=POSTED_SIZE, permission=permission, flag=constants.DataFlag.DATA_FLAG_USE_NOTIFICATION_ON_UPDATE)
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=helpers.POSTED_SIZE, permission=permission, flag=constants.DataFlag.DATA_FLAG_USE_NOTIFICATION_ON_UPDATE)
 	info = await prepare(nex.FRIEND_A, data_id=data_id)
 
 	assert await helpers.notified(data_id) == []
@@ -404,10 +398,10 @@ async def test_preparing_does_not_refer_to_the_object(unique_data_type):
 	reference count nor the referred time move
 	"""
 
-	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=POSTED_SIZE, flag=constants.DataFlag.DATA_FLAG_PERIOD_FROM_LAST_REFERRED)
+	data_id = await helpers.post_object(nex.FRIEND_A, data_type=unique_data_type, size=helpers.POSTED_SIZE, flag=constants.DataFlag.DATA_FLAG_PERIOD_FROM_LAST_REFERRED)
 	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
 
-	await anyio.sleep(TIMESTAMP_DELAY)
+	await anyio.sleep(helpers.TIMESTAMP_DELAY)
 	await prepare(nex.FRIEND_A, data_id=data_id)
 
 	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)

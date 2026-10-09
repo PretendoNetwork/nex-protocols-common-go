@@ -19,13 +19,6 @@ DATA_FLAGS = [
 	pytest.param(constants.DataFlag.DATA_FLAG_NEED_COMPLETION, True, id="need-completion")
 ]
 
-RATING_LOCK_TYPES = [
-	pytest.param(constants.RatingLockType.RATING_LOCK_NONE, id="none"),
-	pytest.param(constants.RatingLockType.RATING_LOCK_INTERVAL, id="interval"),
-	pytest.param(constants.RatingLockType.RATING_LOCK_PERIOD, id="period"),
-	pytest.param(constants.RatingLockType.RATING_LOCK_PERMANENT, id="permanent")
-]
-
 async def post_error(pid: int, **fields) -> str:
 	"""
 	Posts an object which is not on the file server and expects an
@@ -42,13 +35,6 @@ async def post_error(pid: int, **fields) -> str:
 			return error.name()
 
 	pytest.fail("DataStoreProtocol::PostMetaBinary did not throw an error")
-
-def rating_slots(count: int, first: int = 0, **fields) -> list:
-	"""
-	A list of rating slot params, starting at the given slot
-	"""
-
-	return [helpers.rating_init_param_with_slot(slot=first + i, param=helpers.rating_init_param(**fields)) for i in range(count)]
 
 # * What the new object starts out as
 
@@ -726,7 +712,7 @@ async def test_a_rating_slot_is_set_up(unique_data_type):
 	A rating slot should get created when posted
 	"""
 
-	data_id = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=rating_slots(1))
+	data_id = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=helpers.rating_slots(1))
 	ratings = (await helpers.get_meta(nex.FRIEND_A, data_id=data_id, result_option=constants.ResultFlag.RESULT_FLAG_RATINGS)).ratings
 
 	assert [rating.slot for rating in ratings] == [0]
@@ -739,7 +725,7 @@ async def test_a_rating_slot_can_start_at_a_value(unique_data_type):
 	count as somebody having rated
 	"""
 
-	data_id = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=rating_slots(1, initial_value=50))
+	data_id = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=helpers.rating_slots(1, initial_value=50))
 	ratings = (await helpers.get_meta(nex.FRIEND_A, data_id=data_id, result_option=constants.ResultFlag.RESULT_FLAG_RATINGS)).ratings
 
 	assert ratings[0].info.total_value == 50
@@ -750,7 +736,7 @@ async def test_rating_slots_at_the_limit(unique_data_type):
 	An object can set up every rating slot it has
 	"""
 
-	data_id = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=rating_slots(constants.NUM_RATING_SLOT))
+	data_id = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=helpers.rating_slots(constants.NUM_RATING_SLOT))
 
 	assert data_id != constants.INVALID_DATAID
 
@@ -759,14 +745,14 @@ async def test_rating_slots_over_the_limit(unique_data_type):
 	One rating slot more than there are is refused
 	"""
 
-	assert await post_error(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=rating_slots(constants.NUM_RATING_SLOT + 1)) == "DataStore::InvalidArgument"
+	assert await post_error(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=helpers.rating_slots(constants.NUM_RATING_SLOT + 1)) == "DataStore::InvalidArgument"
 
 async def test_a_rating_slot_which_does_not_exist(unique_data_type):
 	"""
 	Only slots 0 to NUM_RATING_SLOT - 1 can be set up
 	"""
 
-	assert await post_error(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=rating_slots(1, first=constants.NUM_RATING_SLOT)) == "DataStore::InvalidArgument"
+	assert await post_error(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=helpers.rating_slots(1, first=constants.NUM_RATING_SLOT)) == "DataStore::InvalidArgument"
 
 async def test_two_rating_params_for_the_same_slot(unique_data_type):
 	"""
@@ -774,17 +760,17 @@ async def test_two_rating_params_for_the_same_slot(unique_data_type):
 	than the second one winning
 	"""
 
-	params = rating_slots(1) + rating_slots(1)
+	params = helpers.rating_slots(1) + helpers.rating_slots(1)
 
 	assert await post_error(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=params) == "DataStore::OperationNotAllowed"
 
-@pytest.mark.parametrize("lock_type", RATING_LOCK_TYPES)
+@pytest.mark.parametrize("lock_type", helpers.RATING_LOCK_TYPES)
 async def test_every_rating_lock_type(unique_data_type, lock_type):
 	"""
 	Every lock type which is defined can be set up
 	"""
 
-	data_id = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=rating_slots(1, lock_type=lock_type))
+	data_id = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=helpers.rating_slots(1, lock_type=lock_type))
 
 	# * Lock types aren't exposed anywhere to the client after being made
 	# * so we have to just trust this worked
@@ -795,7 +781,7 @@ async def test_a_rating_lock_type_which_does_not_exist(unique_data_type):
 	Only the lock types which exist can be used
 	"""
 
-	params = rating_slots(1, lock_type=constants.RatingLockType.RATING_LOCK_PERMANENT + 1)
+	params = helpers.rating_slots(1, lock_type=constants.RatingLockType.RATING_LOCK_PERMANENT + 1)
 
 	assert await post_error(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=params) == "DataStore::InvalidArgument"
 
@@ -814,7 +800,7 @@ async def test_the_rest_of_a_rating_param_is_not_checked(unique_data_type, field
 	hour, the rest is taken however it comes
 	"""
 
-	data_id = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=rating_slots(1, **fields))
+	data_id = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=helpers.rating_slots(1, **fields))
 
 	assert data_id != constants.INVALID_DATAID
 
@@ -829,7 +815,7 @@ async def test_a_range_the_wrong_way_round(unique_data_type, internal_flag, allo
 	ends of it are used
 	"""
 
-	params = rating_slots(1, internal_flag=internal_flag, range_min=10, range_max=1)
+	params = helpers.rating_slots(1, internal_flag=internal_flag, range_min=10, range_max=1)
 
 	if not allowed:
 		assert await post_error(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=params) == "DataStore::InvalidArgument"
@@ -844,7 +830,7 @@ async def test_an_interval_lock_with_a_negative_duration(unique_data_type):
 	An interval lock cannot last for less than no time at all
 	"""
 
-	params = rating_slots(1, lock_type=constants.RatingLockType.RATING_LOCK_INTERVAL, period_duration=-1)
+	params = helpers.rating_slots(1, lock_type=constants.RatingLockType.RATING_LOCK_INTERVAL, period_duration=-1)
 
 	assert await post_error(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=params) == "DataStore::InvalidArgument"
 
@@ -863,7 +849,7 @@ async def test_the_day_a_period_lock_lifts(unique_data_type, period_duration, al
 	A period lock only takes days it knows
 	"""
 
-	params = rating_slots(1, lock_type=constants.RatingLockType.RATING_LOCK_PERIOD, period_duration=period_duration)
+	params = helpers.rating_slots(1, lock_type=constants.RatingLockType.RATING_LOCK_PERIOD, period_duration=period_duration)
 
 	if not allowed:
 		assert await post_error(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=params) == "DataStore::InvalidArgument"
@@ -884,7 +870,7 @@ async def test_a_period_lock_on_the_first_of_the_month_before_nex_3_5(unique_dat
 	rather than refusing it
 	"""
 
-	params = rating_slots(1, lock_type=constants.RatingLockType.RATING_LOCK_PERIOD, period_duration=constants.RatingLockPeriod.RATING_LOCK_PERIOD_DAY1)
+	params = helpers.rating_slots(1, lock_type=constants.RatingLockType.RATING_LOCK_PERIOD, period_duration=constants.RatingLockPeriod.RATING_LOCK_PERIOD_DAY1)
 
 	assert await post_error(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=params) == "PythonCore::Exception"
 
@@ -905,7 +891,7 @@ async def test_a_period_lock_on_the_first_of_the_month(unique_data_type, period_
 	which goes back into the last day of the month before
 	"""
 
-	params = rating_slots(1, lock_type=constants.RatingLockType.RATING_LOCK_PERIOD, period_duration=constants.RatingLockPeriod.RATING_LOCK_PERIOD_DAY1, period_hour=period_hour)
+	params = helpers.rating_slots(1, lock_type=constants.RatingLockType.RATING_LOCK_PERIOD, period_duration=constants.RatingLockPeriod.RATING_LOCK_PERIOD_DAY1, period_hour=period_hour)
 
 	data_id = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=params)
 
@@ -922,7 +908,7 @@ async def test_the_hour_a_period_lock_lifts(unique_data_type, period_hour, allow
 	A period lock only takes hours between -23 and 23
 	"""
 
-	params = rating_slots(1, lock_type=constants.RatingLockType.RATING_LOCK_PERIOD, period_duration=constants.RatingLockPeriod.RATING_LOCK_PERIOD_MON, period_hour=period_hour)
+	params = helpers.rating_slots(1, lock_type=constants.RatingLockType.RATING_LOCK_PERIOD, period_duration=constants.RatingLockPeriod.RATING_LOCK_PERIOD_MON, period_hour=period_hour)
 
 	if not allowed:
 		assert await post_error(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=params) == "DataStore::InvalidArgument"
@@ -942,7 +928,7 @@ async def test_lock_settings_are_only_checked_for_the_lock_which_uses_them(uniqu
 	them
 	"""
 
-	params = rating_slots(1, **fields)
+	params = helpers.rating_slots(1, **fields)
 
 	data_id = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=params)
 

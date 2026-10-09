@@ -7,9 +7,6 @@ from datastore import constants, helpers
 
 pytestmark = pytest.mark.anyio
 
-# * Long enough for a timestamp to visibly move
-TIMESTAMP_DELAY = 2
-
 async def complete(pid: int, data_ids: list[int]) -> None:
 	"""
 	Completes the uploads of several objects as the given user
@@ -76,7 +73,7 @@ async def test_a_completed_object_has_never_been_referred_to(unique_data_type):
 
 	data_id = await helpers.prepare_post_object(nex.FRIEND_A, data_type=unique_data_type)
 
-	await anyio.sleep(TIMESTAMP_DELAY)
+	await anyio.sleep(helpers.TIMESTAMP_DELAY)
 	await complete(nex.FRIEND_A, [data_id])
 
 	meta_info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)

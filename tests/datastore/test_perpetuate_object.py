@@ -7,13 +7,6 @@ from datastore import constants, helpers
 
 pytestmark = pytest.mark.anyio
 
-# * Long enough for a timestamp to visibly move
-TIMESTAMP_DELAY = 2
-
-SLOT_0 = 0
-SLOT_1 = 1
-EMPTY_SLOT = 15
-
 async def perpetuate(pid: int, slot: int, data_id: int, delete_last_object: bool = False) -> None:
 	"""
 	Puts an object into one of the users persistence slots
@@ -60,9 +53,9 @@ async def test_perpetuates_an_object(unique_data_type, post):
 	"""
 
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
-	await perpetuate(nex.FRIEND_A, SLOT_0, data_id)
+	await perpetuate(nex.FRIEND_A, helpers.PERSISTENCE_SLOT, data_id)
 
-	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, SLOT_0)).data_id == data_id
+	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, helpers.PERSISTENCE_SLOT)).data_id == data_id
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_perpetuating_the_same_object_twice(unique_data_type, post):
@@ -73,10 +66,10 @@ async def test_perpetuating_the_same_object_twice(unique_data_type, post):
 
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
 
-	await perpetuate(nex.FRIEND_A, SLOT_0, data_id)
-	await perpetuate(nex.FRIEND_A, SLOT_0, data_id, delete_last_object=True)
+	await perpetuate(nex.FRIEND_A, helpers.PERSISTENCE_SLOT, data_id)
+	await perpetuate(nex.FRIEND_A, helpers.PERSISTENCE_SLOT, data_id, delete_last_object=True)
 
-	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, SLOT_0)).data_id == data_id
+	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, helpers.PERSISTENCE_SLOT)).data_id == data_id
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).data_id == data_id
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
@@ -88,12 +81,12 @@ async def test_an_object_can_only_be_in_one_slot(unique_data_type, post):
 
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
 
-	await empty_slot(nex.FRIEND_A, SLOT_1) # * Make sure the target slot is empty
-	await perpetuate(nex.FRIEND_A, SLOT_0, data_id)
-	await perpetuate(nex.FRIEND_A, SLOT_1, data_id)
+	await empty_slot(nex.FRIEND_A, helpers.SECOND_PERSISTENCE_SLOT) # * Make sure the target slot is empty
+	await perpetuate(nex.FRIEND_A, helpers.PERSISTENCE_SLOT, data_id)
+	await perpetuate(nex.FRIEND_A, helpers.SECOND_PERSISTENCE_SLOT, data_id)
 
-	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, SLOT_0)).data_id == data_id
-	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, SLOT_1) == "DataStore::NotFound"
+	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, helpers.PERSISTENCE_SLOT)).data_id == data_id
+	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, helpers.SECOND_PERSISTENCE_SLOT) == "DataStore::NotFound"
 
 @pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 @pytest.mark.parametrize("delete_last_object", [
@@ -106,14 +99,14 @@ async def test_an_object_in_a_slot_cannot_take_over_another_one(unique_data_type
 	slot which is taken is a failure
 	"""
 
-	mover = await helpers.post_persisted(post, nex.FRIEND_A, SLOT_0, data_type=unique_data_type)
-	sitter = await helpers.post_persisted(post, nex.FRIEND_A, SLOT_1, data_type=unique_data_type)
+	mover = await helpers.post_persisted(post, nex.FRIEND_A, helpers.PERSISTENCE_SLOT, data_type=unique_data_type)
+	sitter = await helpers.post_persisted(post, nex.FRIEND_A, helpers.SECOND_PERSISTENCE_SLOT, data_type=unique_data_type)
 
-	assert await perpetuate_error(nex.FRIEND_A, SLOT_1, mover, delete_last_object) == "DataStore::OperationNotAllowed"
+	assert await perpetuate_error(nex.FRIEND_A, helpers.SECOND_PERSISTENCE_SLOT, mover, delete_last_object) == "DataStore::OperationNotAllowed"
 
 	# * Neither slot moved, and nothing was deleted on the way
-	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, SLOT_0)).data_id == mover
-	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, SLOT_1)).data_id == sitter
+	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, helpers.PERSISTENCE_SLOT)).data_id == mover
+	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, helpers.SECOND_PERSISTENCE_SLOT)).data_id == sitter
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=mover)).data_id == mover
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=sitter)).data_id == sitter
 
@@ -125,13 +118,13 @@ async def test_an_object_with_no_slot_can_take_over_one(unique_data_type, post):
 	object from one slot to another, not about overtaking an occupied slot
 	"""
 
-	await helpers.post_persisted(post, nex.FRIEND_A, SLOT_1, data_type=unique_data_type)
+	await helpers.post_persisted(post, nex.FRIEND_A, helpers.SECOND_PERSISTENCE_SLOT, data_type=unique_data_type)
 
 	loose = await post(nex.FRIEND_A, data_type=unique_data_type)
 
-	await perpetuate(nex.FRIEND_A, SLOT_1, loose)
+	await perpetuate(nex.FRIEND_A, helpers.SECOND_PERSISTENCE_SLOT, loose)
 
-	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, SLOT_1)).data_id == loose
+	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, helpers.SECOND_PERSISTENCE_SLOT)).data_id == loose
 
 # * An object in a slot is exempt from expiry
 
@@ -146,7 +139,7 @@ async def test_perpetuating_stops_the_object_expiring(unique_data_type, post):
 
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).expire_time.value() != constants.PERMANENT_DATE_TIME
 
-	await perpetuate(nex.FRIEND_A, SLOT_0, data_id)
+	await perpetuate(nex.FRIEND_A, helpers.PERSISTENCE_SLOT, data_id)
 
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).expire_time.value() == constants.PERMANENT_DATE_TIME
 
@@ -160,8 +153,8 @@ async def test_perpetuating_leaves_the_reference_count_alone(unique_data_type, p
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
 	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
 
-	await anyio.sleep(TIMESTAMP_DELAY)
-	await perpetuate(nex.FRIEND_A, SLOT_0, data_id)
+	await anyio.sleep(helpers.TIMESTAMP_DELAY)
+	await perpetuate(nex.FRIEND_A, helpers.PERSISTENCE_SLOT, data_id)
 
 	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
 
@@ -178,8 +171,8 @@ async def test_the_object_let_out_of_a_slot_expires_again(unique_data_type, post
 	first = await post(nex.FRIEND_A, data_type=unique_data_type)
 	second = await post(nex.FRIEND_A, data_type=unique_data_type)
 
-	await perpetuate(nex.FRIEND_A, SLOT_0, first)
-	await perpetuate(nex.FRIEND_A, SLOT_0, second, delete_last_object=False)
+	await perpetuate(nex.FRIEND_A, helpers.PERSISTENCE_SLOT, first)
+	await perpetuate(nex.FRIEND_A, helpers.PERSISTENCE_SLOT, second, delete_last_object=False)
 
 	expire_time = (await helpers.get_meta(nex.FRIEND_A, data_id=first)).expire_time
 
@@ -212,11 +205,11 @@ async def test_slots_are_per_user(unique_data_type, post):
 	mine = await post(nex.FRIEND_A, data_type=unique_data_type)
 	theirs = await post(nex.STRANGER, data_type=unique_data_type)
 
-	await perpetuate(nex.FRIEND_A, SLOT_0, mine)
-	await perpetuate(nex.STRANGER, SLOT_0, theirs)
+	await perpetuate(nex.FRIEND_A, helpers.PERSISTENCE_SLOT, mine)
+	await perpetuate(nex.STRANGER, helpers.PERSISTENCE_SLOT, theirs)
 
-	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, SLOT_0)).data_id == mine
-	assert (await helpers.get_persistence_info(nex.STRANGER, nex.STRANGER, SLOT_0)).data_id == theirs
+	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, helpers.PERSISTENCE_SLOT)).data_id == mine
+	assert (await helpers.get_persistence_info(nex.STRANGER, nex.STRANGER, helpers.PERSISTENCE_SLOT)).data_id == theirs
 
 # * data_id
 # *
@@ -227,7 +220,7 @@ async def test_unknown_data_id():
 	Objects which do not exist cannot be persisted
 	"""
 
-	assert await perpetuate_error(nex.FRIEND_A, SLOT_0, helpers.UNKNOWN_DATA_ID) == "DataStore::NotFound"
+	assert await perpetuate_error(nex.FRIEND_A, helpers.PERSISTENCE_SLOT, helpers.UNKNOWN_DATA_ID) == "DataStore::NotFound"
 
 async def test_an_object_which_was_never_completed(unique_data_type):
 	"""
@@ -237,7 +230,7 @@ async def test_an_object_which_was_never_completed(unique_data_type):
 
 	data_id = await helpers.prepare_post_object(nex.FRIEND_A, data_type=unique_data_type)
 
-	assert await perpetuate_error(nex.FRIEND_A, SLOT_0, data_id) == "DataStore::NotFound"
+	assert await perpetuate_error(nex.FRIEND_A, helpers.PERSISTENCE_SLOT, data_id) == "DataStore::NotFound"
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_a_deleted_object(unique_data_type, post):
@@ -248,7 +241,7 @@ async def test_a_deleted_object(unique_data_type, post):
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
 	await helpers.delete_object(nex.FRIEND_A, data_id=data_id)
 
-	assert await perpetuate_error(nex.FRIEND_A, SLOT_0, data_id) == "DataStore::NotFound"
+	assert await perpetuate_error(nex.FRIEND_A, helpers.PERSISTENCE_SLOT, data_id) == "DataStore::NotFound"
 
 # * data_id, of 0
 # *
@@ -259,9 +252,9 @@ async def test_a_data_id_of_zero_into_an_empty_slot():
 	The slot is left empty rather than the request being refused
 	"""
 
-	await perpetuate(nex.FRIEND_A, EMPTY_SLOT, constants.INVALID_DATAID)
+	await perpetuate(nex.FRIEND_A, helpers.EMPTY_PERSISTENCE_SLOT, constants.INVALID_DATAID)
 
-	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, EMPTY_SLOT) == "DataStore::NotFound"
+	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, helpers.EMPTY_PERSISTENCE_SLOT) == "DataStore::NotFound"
 
 @pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
 async def test_a_data_id_of_zero_into_a_filled_slot(unique_data_type, post):
@@ -269,10 +262,10 @@ async def test_a_data_id_of_zero_into_a_filled_slot(unique_data_type, post):
 	The slot keeps what it had
 	"""
 
-	data_id = await helpers.post_persisted(post, nex.FRIEND_A, SLOT_0, data_type=unique_data_type)
+	data_id = await helpers.post_persisted(post, nex.FRIEND_A, helpers.PERSISTENCE_SLOT, data_type=unique_data_type)
 
-	assert await perpetuate_error(nex.FRIEND_A, SLOT_0, constants.INVALID_DATAID) == "DataStore::NotFound"
-	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, SLOT_0)).data_id == data_id
+	assert await perpetuate_error(nex.FRIEND_A, helpers.PERSISTENCE_SLOT, constants.INVALID_DATAID) == "DataStore::NotFound"
+	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, helpers.PERSISTENCE_SLOT)).data_id == data_id
 
 # * delete_last_object
 # *
@@ -287,10 +280,10 @@ async def test_replacing_an_object_deletes_the_old_one(unique_data_type, post):
 	first = await post(nex.FRIEND_A, data_type=unique_data_type)
 	second = await post(nex.FRIEND_A, data_type=unique_data_type)
 
-	await perpetuate(nex.FRIEND_A, SLOT_0, first)
-	await perpetuate(nex.FRIEND_A, SLOT_0, second, delete_last_object=True)
+	await perpetuate(nex.FRIEND_A, helpers.PERSISTENCE_SLOT, first)
+	await perpetuate(nex.FRIEND_A, helpers.PERSISTENCE_SLOT, second, delete_last_object=True)
 
-	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, SLOT_0)).data_id == second
+	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, helpers.PERSISTENCE_SLOT)).data_id == second
 	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=first) == "DataStore::NotFound"
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
@@ -302,10 +295,10 @@ async def test_replacing_an_object_can_keep_the_old_one(unique_data_type, post):
 	first = await post(nex.FRIEND_A, data_type=unique_data_type)
 	second = await post(nex.FRIEND_A, data_type=unique_data_type)
 
-	await perpetuate(nex.FRIEND_A, SLOT_0, first)
-	await perpetuate(nex.FRIEND_A, SLOT_0, second, delete_last_object=False)
+	await perpetuate(nex.FRIEND_A, helpers.PERSISTENCE_SLOT, first)
+	await perpetuate(nex.FRIEND_A, helpers.PERSISTENCE_SLOT, second, delete_last_object=False)
 
-	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, SLOT_0)).data_id == second
+	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, helpers.PERSISTENCE_SLOT)).data_id == second
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=first)).data_id == first
 
 @pytest.mark.parametrize("delete_last_object, notified", [
@@ -322,11 +315,11 @@ async def test_replacing_an_object_and_its_notifications(unique_data_type, delet
 	old = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, permission=permission, flag=constants.DataFlag.DATA_FLAG_USE_NOTIFICATION_ON_POST)
 	new = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type)
 
-	await perpetuate(nex.FRIEND_A, SLOT_0, old)
+	await perpetuate(nex.FRIEND_A, helpers.PERSISTENCE_SLOT, old)
 
 	assert await helpers.notified(old) == [nex.STRANGER]
 
-	await perpetuate(nex.FRIEND_A, SLOT_0, new, delete_last_object=delete_last_object)
+	await perpetuate(nex.FRIEND_A, helpers.PERSISTENCE_SLOT, new, delete_last_object=delete_last_object)
 
 	assert await helpers.notified(old) == notified
 
@@ -340,8 +333,8 @@ async def test_only_the_owner_can_perpetuate(unique_data_type, post):
 
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
 
-	assert await perpetuate_error(nex.STRANGER, SLOT_0, data_id) == "DataStore::PermissionDenied"
-	assert await perpetuate_error(nex.FRIEND_B, SLOT_0, data_id) == "DataStore::PermissionDenied"
+	assert await perpetuate_error(nex.STRANGER, helpers.PERSISTENCE_SLOT, data_id) == "DataStore::PermissionDenied"
+	assert await perpetuate_error(nex.FRIEND_B, helpers.PERSISTENCE_SLOT, data_id) == "DataStore::PermissionDenied"
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
 async def test_an_object_under_review(unique_data_type, post):
@@ -350,6 +343,6 @@ async def test_an_object_under_review(unique_data_type, post):
 	"""
 
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
-	await perpetuate(nex.FRIEND_A, SLOT_0, data_id)
+	await perpetuate(nex.FRIEND_A, helpers.PERSISTENCE_SLOT, data_id)
 
-	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, SLOT_0)).data_id == data_id
+	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, helpers.PERSISTENCE_SLOT)).data_id == data_id
