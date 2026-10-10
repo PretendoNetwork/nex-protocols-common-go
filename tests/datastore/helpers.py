@@ -598,15 +598,15 @@ def empty_meta_info() -> datastore.DataStoreMetaInfo:
 	meta_info.meta_binary = b""
 	meta_info.permission = permission(permission=0)
 	meta_info.delete_permission = permission(permission=0)
-	meta_info.create_time = common.DateTime(0)
-	meta_info.update_time = common.DateTime(0)
+	meta_info.create_time = common.DateTime(constants.NEVER)
+	meta_info.update_time = common.DateTime(constants.NEVER)
 	meta_info.period = 0
 	meta_info.status = 0
 	meta_info.referred_count = 0
 	meta_info.refer_data_id = 0
 	meta_info.flag = 0
-	meta_info.referred_time = common.DateTime(0)
-	meta_info.expire_time = common.DateTime(0)
+	meta_info.referred_time = common.DateTime(constants.NEVER)
+	meta_info.expire_time = common.DateTime(constants.NEVER)
 	meta_info.tags = []
 	meta_info.ratings = []
 

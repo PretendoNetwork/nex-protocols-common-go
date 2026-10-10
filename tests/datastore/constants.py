@@ -59,6 +59,18 @@ MAX_TAG_LENGTH = 24
 DEFAULT_PERIOD = 90
 """The default object validity period, in days"""
 
+NEVER = 0
+"""
+The DateTime `Never`, a true 0 value. Usually used to leave a date unset.
+See https://nintendo.wiki/wiki/Nintendo_Network/NEX/Types#DateTime_Constants
+"""
+
+INVALID_DATE_TIME = 671076024059
+"""
+The DateTime 9999-12-31 23:59:59, used to leave a date unset.
+See https://nintendo.wiki/wiki/Nintendo_Network/NEX/Types#DateTime_Constants
+"""
+
 PERMANENT_DATE_TIME = 671075926016
 """
 The DateTime an object is given when it will never expire.
@@ -285,6 +297,9 @@ class SearchSortColumn(IntEnum):
 
 	SEARCH_SORT_COLUMN_UPDATED_TIME = 6
 	"""Sort by object modified time"""
+
+	SEARCH_SORT_COLUMN_OWNER_ID = 7
+	"""Sort by object owner PID. The real name of this column is not known"""
 
 	SEARCH_SORT_COLUMN_RATING0 = 64
 	"""Sort by the total combined ratings in rating slot 0"""
