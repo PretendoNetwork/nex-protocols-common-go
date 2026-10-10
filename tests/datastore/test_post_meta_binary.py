@@ -1,3 +1,4 @@
+import anyio
 import pytest
 from nintendo.nex import common
 
@@ -584,6 +585,23 @@ async def test_a_refer_data_id_which_is_a_real_object(unique_data_type):
 	data_id = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, refer_data_id=referred)
 
 	assert (await helpers.get_meta(nex.FRIEND_A, data_id=data_id)).refer_data_id == referred
+
+async def test_referring_to_an_object_is_not_a_reference(unique_data_type):
+	"""
+	The object referred to keeps its reference count and referred time
+	"""
+
+	referred = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_PERIOD_FROM_LAST_REFERRED)
+	before = await helpers.get_meta(nex.FRIEND_A, data_id=referred)
+
+	await anyio.sleep(helpers.TIMESTAMP_DELAY)
+	await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, refer_data_id=referred)
+
+	after = await helpers.get_meta(nex.FRIEND_A, data_id=referred)
+
+	assert after.referred_count == before.referred_count
+	assert after.referred_time == before.referred_time
+	assert after.expire_time == before.expire_time
 
 # * tags
 
