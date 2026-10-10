@@ -918,6 +918,16 @@ async def test_the_hour_a_period_lock_lifts(unique_data_type, period_hour, allow
 
 	assert data_id != constants.INVALID_DATAID
 
+async def test_a_negative_hour_with_a_number_of_days(unique_data_type):
+	"""
+	A negative hour counts back from midnight of a day of the week, so it
+	is refused when period_duration is a number of days instead
+	"""
+
+	params = helpers.rating_slots(1, lock_type=constants.RatingLockType.RATING_LOCK_PERIOD, period_duration=1, period_hour=-1)
+
+	assert await post_error(nex.FRIEND_A, data_type=unique_data_type, rating_init_param=params) == "DataStore::InvalidArgument"
+
 @pytest.mark.parametrize("fields", [
 	pytest.param({"lock_type": constants.RatingLockType.RATING_LOCK_INTERVAL, "period_duration": 5, "period_hour": 25}, id="an-interval-lock-with-an-hour-which-is-not-an-hour"),
 	pytest.param({"lock_type": constants.RatingLockType.RATING_LOCK_PERMANENT, "period_duration": -1, "period_hour": 25}, id="a-permanent-lock-with-a-negative-duration-and-an-hour-which-is-not-an-hour")
