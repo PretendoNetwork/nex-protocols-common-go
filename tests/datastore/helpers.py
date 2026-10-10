@@ -858,6 +858,39 @@ async def version_of(data_id: int) -> int:
 
 		return (await client.get_specific_meta(param))[0].version
 
+def new_arrived_notifications_param(**fields) -> datastore.DataStoreGetNewArrivedNotificationsParam:
+	"""
+	Creates a DataStoreGetNewArrivedNotificationsParam with default
+	parameters, which reads nothing. Any field can be overridden with a
+	keyword argument
+	"""
+
+	param = datastore.DataStoreGetNewArrivedNotificationsParam()
+	param.last_notification_id = 0
+	param.limit = 0
+
+	return override(param, fields)
+
+async def read_every_notification(pid: int) -> None:
+	"""
+	Reads every notification the user has, which removes them, so a test
+	starts with none
+	"""
+
+	async with connect(pid) as client:
+		await client.get_new_arrived_notifications(new_arrived_notifications_param(last_notification_id=UINT64_MAX))
+
+async def notify(pid: int, count: int, data_type: int) -> list[int]:
+	"""
+	Posts objects which each notify the given user as soon as they are
+	posted, returning their data IDs in the order they were posted
+	"""
+
+	permission_param = permission(permission=constants.Permission.PERMISSION_SPECIFIED, recipients=[pid])
+
+	async with connect(nex.FRIEND_A) as client:
+		return [await client.post_meta_binary(post_param(data_type=data_type, permission=permission_param, flag=constants.DataFlag.DATA_FLAG_USE_NOTIFICATION_ON_POST)) for _ in range(count)]
+
 async def notified(data_id: int) -> list[int]:
 	"""
 	Every test user with an unread notification for the object
