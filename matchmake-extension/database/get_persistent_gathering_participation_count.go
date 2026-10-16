@@ -11,7 +11,8 @@ func GetPersistentGatheringParticipationCount(manager *common_globals.Matchmakin
 	var count int
 	err := manager.Database.QueryRow(`SELECT COUNT(*)
 			FROM matchmaking.gatherings
-			WHERE $1 = ANY(participants)`, uint64(sourcePID)).Scan(&count)
+			WHERE registered=true AND type='PersistentGathering' AND $1 =
+			ANY(participants)`, uint64(sourcePID)).Scan(&count)
 	if err != nil {
 		return 0, nex.NewError(nex.ResultCodes.Core.Unknown, err.Error())
 	}

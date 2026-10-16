@@ -4,7 +4,6 @@ import (
 	"github.com/PretendoNetwork/nex-go/v2"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	match_making_database "github.com/PretendoNetwork/nex-protocols-common-go/v2/match-making/database"
-	"github.com/PretendoNetwork/nex-protocols-common-go/v2/matchmake-extension/tracking"
 	match_making_types "github.com/PretendoNetwork/nex-protocols-go/v2/match-making/types"
 )
 
@@ -13,12 +12,6 @@ func JoinPersistentGathering(manager *common_globals.MatchmakingManager, persist
 	newParticipants, nexError := match_making_database.JoinGathering(manager, uint32(persistentGathering.ID), connection, vacantParticipants, joinMessage)
 	if nexError != nil {
 		return 0, nexError
-	}
-
-	nexError = tracking.LogParticipateCommunity(manager.Database, connection.PID(), uint32(persistentGathering.ID), uint32(persistentGathering.ID))
-	if nexError != nil {
-		common_globals.Logger.Error(nexError.Error())
-		return newParticipants, nil
 	}
 
 	return newParticipants, nil
