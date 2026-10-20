@@ -36,7 +36,7 @@ func GetObjectPasswords(database common_globals.Database, caller types.PID, data
 	`,
 		nex.ResultCodes.DataStore.NotFound,
 		caller,
-		nex.ResultCodes.DataStore.OperationNotAllowed,
+		nex.ResultCodes.DataStore.PermissionDenied,
 		nex.ResultCodes.DataStore.Unknown, // * Used here to indicate a success
 		pq.Array(dataIDs),
 	)

@@ -31,7 +31,7 @@ func (commonProtocol *CommonProtocol) getPasswordInfo(err error, packet nex.Pack
 	result := results[0]
 
 	if result.IsError() {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "change_error")
+		return nil, nex.NewError(uint32(result), "change_error")
 	}
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
