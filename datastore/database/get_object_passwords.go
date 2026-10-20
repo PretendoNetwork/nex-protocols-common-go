@@ -58,16 +58,17 @@ func GetObjectPasswords(database common_globals.Database, caller types.PID, data
 		}
 
 		passwordInfo := datastore_types.NewDataStorePasswordInfo()
-		passwordInfo.DataID = dataID
 
 		var result types.QResult
 
 		if resultCode == int(nex.ResultCodes.DataStore.Unknown) {
 			result = types.NewQResultSuccess(nex.ResultCodes.DataStore.Unknown)
+			passwordInfo.DataID = dataID
 			passwordInfo.AccessPassword = accessPassword
 			passwordInfo.UpdatePassword = updatePassword
 		} else {
 			result = types.NewQResultError(uint32(resultCode))
+			passwordInfo.DataID = 0
 			passwordInfo.AccessPassword = 0
 			passwordInfo.UpdatePassword = 0
 		}
