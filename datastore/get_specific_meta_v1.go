@@ -22,10 +22,6 @@ func (commonProtocol *CommonProtocol) getSpecificMetaV1(err error, packet nex.Pa
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
-	if len(param.DataIDs) > datastore_constants.BatchProcessingCapacity {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
-	}
-
 	pMetaInfos := types.NewList[datastore_types.DataStoreSpecificMetaInfoV1]()
 
 	// * Check this before hitting the DB
