@@ -51,7 +51,7 @@ func UpdateObjectByPrepareUpdateParam(database common_globals.Database, updatePa
 			upload_completed = $7
 		WHERE data_id = $8
 		RETURNING version
-	`, updateParam.Size, pq.Array(updateParam.ExtraData), status, now, now, expirationDate, uploadCompleted).Scan(&version)
+	`, updateParam.Size, pq.Array(updateParam.ExtraData), status, now, now, expirationDate, uploadCompleted, currentData.DataID).Scan(&version)
 
 	if err != nil {
 		// TODO - Send more specific errors?
