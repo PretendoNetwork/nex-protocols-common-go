@@ -130,6 +130,20 @@ async def test_an_object_under_review(unique_data_type, post):
 	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, helpers.PERSISTENCE_SLOT)).data_id == data_id
 	assert await helpers.get_persistence_info_error(nex.STRANGER, nex.FRIEND_A, helpers.PERSISTENCE_SLOT) == "DataStore::UnderReviewing"
 
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
+async def test_a_rejected_object(unique_data_type, post):
+	"""
+	A rejected object is viewable to its owner like normal, and appears as
+	under review still to other users
+	"""
+
+	data_id = await helpers.post_persisted(post, nex.FRIEND_A, helpers.PERSISTENCE_SLOT, data_type=unique_data_type)
+
+	await helpers.change_meta(nex.FRIEND_A, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_STATUS, status=constants.DataStatus.DATA_STATUS_REJECTED)
+
+	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, helpers.PERSISTENCE_SLOT)).data_id == data_id
+	assert await helpers.get_persistence_info_error(nex.STRANGER, nex.FRIEND_A, helpers.PERSISTENCE_SLOT) == "DataStore::UnderReviewing"
+
 # * Reading a slot does not count as referring to the object in it
 
 @pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)

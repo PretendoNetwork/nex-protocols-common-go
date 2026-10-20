@@ -376,3 +376,33 @@ async def test_pending_object_can_be_touched_by_its_owner(unique_data_type, post
 	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
 
 	await helpers.touch_object(nex.FRIEND_A, data_id=data_id)
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_pending_object_is_under_review_for_everyone_else(unique_data_type, post):
+	"""
+	Everyone but the owner is told it is under review
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
+
+	assert await touch_error(nex.STRANGER, data_id=data_id) == "DataStore::UnderReviewing"
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_rejected_object_can_be_touched_by_its_owner(unique_data_type, post):
+	"""
+	Rejected objects can still be referenced by their owner
+	"""
+
+	data_id = await helpers.post_rejected(post, nex.FRIEND_A, data_type=unique_data_type)
+
+	await helpers.touch_object(nex.FRIEND_A, data_id=data_id)
+
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_rejected_object_is_under_review_for_everyone_else(unique_data_type, post):
+	"""
+	Rejected objects appear as under review still to other users
+	"""
+
+	data_id = await helpers.post_rejected(post, nex.FRIEND_A, data_type=unique_data_type)
+
+	assert await touch_error(nex.STRANGER, data_id=data_id) == "DataStore::UnderReviewing"
