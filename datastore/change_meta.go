@@ -54,7 +54,7 @@ func (commonProtocol *CommonProtocol) changeMeta(err error, packet nex.PacketInt
 
 	// * If the object is pending or rejected, only the owner can interact with it
 	if metaInfo.OwnerID != connection.PID() && (metaInfo.Status == datastore_constants.DataStatusPending || metaInfo.Status == datastore_constants.DataStatusRejected) {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
+		return nil, nex.NewError(nex.ResultCodes.DataStore.UnderReviewing, "change_error")
 	}
 
 	compareName := param.CompareParam.ComparisonFlag.HasFlag(datastore_constants.ComparisonFlagName)

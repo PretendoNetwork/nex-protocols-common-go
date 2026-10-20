@@ -57,7 +57,7 @@ func (commonProtocol *CommonProtocol) getObjectInfos(err error, packet nex.Packe
 		// * The owner of an object can always view their objects, but normal users cannot
 		if metaInfo.Status != datastore_constants.DataStatusNone && metaInfo.OwnerID != connection.PID() {
 			pInfos = append(pInfos, invalidReqGetInfo)
-			pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.NotFound))
+			pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.UnderReviewing))
 			continue
 		}
 

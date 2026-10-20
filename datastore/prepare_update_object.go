@@ -56,7 +56,7 @@ func (commonProtocol *CommonProtocol) prepareUpdateObject(err error, packet nex.
 
 	// * If the object is pending or rejected, only the owner can interact with it
 	if metaInfo.OwnerID != connection.PID() && (metaInfo.Status == datastore_constants.DataStatusPending || metaInfo.Status == datastore_constants.DataStatusRejected) {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
+		return nil, nex.NewError(nex.ResultCodes.DataStore.UnderReviewing, "change_error")
 	}
 
 	if metaInfo.Flag.HasFlag(datastore_constants.DataFlagNotUseFileServer) {
