@@ -30,9 +30,9 @@ func GetObjectPasswords(database common_globals.Database, caller types.PID, data
 				WHEN o.owner != $2 THEN $3 -- caller does not own the object
 				ELSE $4 -- all is well
 			END AS result_code
-		FROM unnest($5::bigint[]) AS input(data_id)
+		FROM unnest($5::bigint[]) WITH ORDINALITY AS input(data_id, position)
 		LEFT JOIN datastore.objects o ON input.data_id = o.data_id
-		ORDER BY input.data_id
+		ORDER BY input.position
 	`,
 		nex.ResultCodes.DataStore.NotFound,
 		caller,
