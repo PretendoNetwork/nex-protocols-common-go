@@ -24,11 +24,11 @@ func (commonProtocol *CommonProtocol) rateObjects(err error, packet nex.PacketIn
 
 	// * Reusing this constant. Name doesn't make sense but it's the same value so w/e
 	if len(targets) > datastore_constants.BatchProcessingCapacityPostObject {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
+		return nil, nex.NewError(nex.ResultCodes.DataStore.OverCapacity, "change_error")
 	}
 
 	if len(params) > datastore_constants.BatchProcessingCapacityPostObject {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
+		return nil, nex.NewError(nex.ResultCodes.DataStore.OverCapacity, "change_error")
 	}
 
 	// * Sending 1 param is supported, all targets will get the same value applied to them.

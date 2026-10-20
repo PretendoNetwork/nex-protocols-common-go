@@ -21,7 +21,7 @@ func (commonProtocol *CommonProtocol) deleteObjects(err error, packet nex.Packet
 	endpoint := connection.Endpoint()
 
 	if len(params) > datastore_constants.BatchProcessingCapacity {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
+		return nil, nex.NewError(nex.ResultCodes.DataStore.OverCapacity, "change_error")
 	}
 
 	pResults := types.NewList[types.QResult]()

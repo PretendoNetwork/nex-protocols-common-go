@@ -21,7 +21,7 @@ func (commonProtocol *CommonProtocol) resetRatings(err error, packet nex.PacketI
 
 	// * This IS BatchProcessingCapacity, unlike other rating methods
 	if len(dataIDs) > datastore_constants.BatchProcessingCapacity {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
+		return nil, nex.NewError(nex.ResultCodes.DataStore.OverCapacity, "change_error")
 	}
 
 	// TODO - Add rollback

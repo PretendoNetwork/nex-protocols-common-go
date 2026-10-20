@@ -20,11 +20,11 @@ func (commonProtocol *CommonProtocol) changeMetasV1(err error, packet nex.Packet
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
-	if len(dataIDs) != len(params) {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
+	if len(dataIDs) > datastore_constants.BatchProcessingCapacity || len(params) > datastore_constants.BatchProcessingCapacity {
+		return nil, nex.NewError(nex.ResultCodes.DataStore.OverCapacity, "change_error")
 	}
 
-	if len(params) > datastore_constants.BatchProcessingCapacity {
+	if len(dataIDs) != len(params) {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 	}
 

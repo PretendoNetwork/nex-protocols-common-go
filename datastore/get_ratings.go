@@ -25,7 +25,7 @@ func (commonProtocol *CommonProtocol) getRatings(err error, packet nex.PacketInt
 	// * to match RateObjects/RateObjectsWithPosting.
 	// TODO - If we see a real client use more than 16, update this
 	if len(dataIDs) > datastore_constants.BatchProcessingCapacityPostObject {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
+		return nil, nex.NewError(nex.ResultCodes.DataStore.OverCapacity, "change_error")
 	}
 
 	pRatings := types.NewList[types.List[datastore_types.DataStoreRatingInfoWithSlot]]()

@@ -17,7 +17,7 @@ func (commonProtocol *CommonProtocol) getMetas(err error, packet nex.PacketInter
 	}
 
 	if len(dataIDs) > datastore_constants.BatchProcessingCapacity {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
+		return nil, nex.NewError(nex.ResultCodes.DataStore.OverCapacity, "change_error")
 	}
 
 	manager := commonProtocol.manager
