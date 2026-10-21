@@ -34,7 +34,7 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithGatheringIDPostpone(err e
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	if !common_globals.CheckValidMatchmakeSession(matchmakeSession) {
+	if !commonProtocol.manager.CheckValidMatchmakeSession(matchmakeSession) {
 		commonProtocol.manager.Mutex.Unlock()
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
