@@ -27,10 +27,8 @@ func (commonProtocol *CommonProtocol) getSpecificMeta(err error, packet nex.Pack
 	slices.Sort(dataIDs)
 
 	// * Check this before hitting the DB
-	for _, dataID := range dataIDs {
-		if dataID == types.UInt64(datastore_constants.InvalidDataID) {
-			return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
-		}
+	if slices.Contains(dataIDs, types.UInt64(datastore_constants.InvalidDataID)) {
+		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 	}
 
 	for _, dataID := range dataIDs {
