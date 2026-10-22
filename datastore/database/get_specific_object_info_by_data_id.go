@@ -22,6 +22,8 @@ func GetSpecificObjectInfoByDataID(database common_globals.Database, dataID type
 			owner,
 			size,
 			data_type,
+			meta_binary,
+			raw_flags,
 			version
 		FROM datastore.objects
 		WHERE data_id=$1`, dataID).Scan(
@@ -29,6 +31,8 @@ func GetSpecificObjectInfoByDataID(database common_globals.Database, dataID type
 		&metaInfo.OwnerID,
 		&metaInfo.Size,
 		&metaInfo.DataType,
+		&metaInfo.MetaBinary,
+		&metaInfo.Flag,
 		&version,
 	)
 

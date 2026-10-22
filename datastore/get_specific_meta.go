@@ -1,6 +1,7 @@
 package datastore
 
 import (
+	"math"
 	"slices"
 
 	"github.com/PretendoNetwork/nex-go/v2"
@@ -8,6 +9,7 @@ import (
 	"github.com/PretendoNetwork/nex-protocols-common-go/v2/datastore/database"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	datastore "github.com/PretendoNetwork/nex-protocols-go/v2/datastore"
+	datastore_constants "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/constants"
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
@@ -38,10 +40,23 @@ func (commonProtocol *CommonProtocol) getSpecificMeta(err error, packet nex.Pack
 			return nil, errCode
 		}
 
+		size := metaInfo.Size
+
+		// * Objects that don't use the file server only exist in the database and use
+		// * the MetaBinary size instead. Or 0xFFFFFFFF if the size is 0, for some reason.
+		// * Don't ask, this is what the real servers do
+		if metaInfo.Flag.HasFlag(datastore_constants.DataFlagNotUseFileServer) {
+			if len(metaInfo.MetaBinary) == 0 {
+				size = math.MaxUint32
+			} else {
+				size = types.UInt32(len(metaInfo.MetaBinary))
+			}
+		}
+
 		specificMetaInfo := datastore_types.NewDataStoreSpecificMetaInfo()
 		specificMetaInfo.DataID = metaInfo.DataID
 		specificMetaInfo.OwnerID = metaInfo.OwnerID
-		specificMetaInfo.Size = metaInfo.Size
+		specificMetaInfo.Size = size
 		specificMetaInfo.DataType = metaInfo.DataType
 		specificMetaInfo.Version = types.UInt32(version)
 
