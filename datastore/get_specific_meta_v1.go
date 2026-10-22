@@ -37,10 +37,11 @@ func (commonProtocol *CommonProtocol) getSpecificMetaV1(err error, packet nex.Pa
 			return nil, errCode
 		}
 
-		if version > math.MaxUint16 {
-			// * OverCapacity is definitely not the correct error here, but it sounds nice
-			return nil, nex.NewError(nex.ResultCodes.DataStore.OverCapacity, "change_error")
-		}
+		// * Object versions are allowed to go above 0xFFFF, but this method wraps the version number
+		// * back to 0 after 0xFFFF is hit. This intentionally does not have a test case in the test
+		// * runner because trying to issue 0xFFFF object updates takes around 2 hours on the live
+		// * servers due to the number of RMCs that need to be made
+		version = version % (math.MaxUint16 + 1)
 
 		specificMetaInfo := datastore_types.NewDataStoreSpecificMetaInfoV1()
 		specificMetaInfo.DataID = types.UInt32(metaInfo.DataID)
