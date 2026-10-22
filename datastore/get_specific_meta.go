@@ -8,7 +8,6 @@ import (
 	"github.com/PretendoNetwork/nex-protocols-common-go/v2/datastore/database"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	datastore "github.com/PretendoNetwork/nex-protocols-go/v2/datastore"
-	datastore_constants "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/constants"
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
@@ -26,14 +25,14 @@ func (commonProtocol *CommonProtocol) getSpecificMeta(err error, packet nex.Pack
 	dataIDs := param.DataIDs.Copy().(types.List[types.UInt64])
 	slices.Sort(dataIDs)
 
-	// * Check this before hitting the DB
-	if slices.Contains(dataIDs, types.UInt64(datastore_constants.InvalidDataID)) {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
-	}
-
 	for _, dataID := range dataIDs {
 		metaInfo, _, errCode := database.GetAccessObjectInfoByDataID(manager.Database, dataID)
 		if errCode != nil {
+			// * Unknown objects of any kind are just not sent back
+			if errCode.Equals(nex.ResultCodes.DataStore.NotFound) {
+				continue
+			}
+
 			return nil, errCode
 		}
 

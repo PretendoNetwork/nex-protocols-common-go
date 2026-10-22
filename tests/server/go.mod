@@ -6,7 +6,7 @@ go 1.25.0
 replace github.com/PretendoNetwork/nex-protocols-common-go/v2 => ../../
 
 require (
-	github.com/PretendoNetwork/nex-go/v2 v2.3.2
+	github.com/PretendoNetwork/nex-go/v2 v2.3.3
 	github.com/PretendoNetwork/nex-protocols-common-go/v2 v2.6.1
 	// TODO - Use a tagged release once the ComparisonFlag size fix is released
 	github.com/PretendoNetwork/nex-protocols-go/v2 v2.3.8-0.20260916230930-75ef35cf2e37

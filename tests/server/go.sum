@@ -1,5 +1,7 @@
 github.com/PretendoNetwork/nex-go/v2 v2.3.2 h1:aK1f+I7BjXvmbP4mZD7YbkLD1zA/4meu5/gJdhRCsZ8=
 github.com/PretendoNetwork/nex-go/v2 v2.3.2/go.mod h1:tkKnTlvAZqAcplb3xnzvSPv7hv/FXtPPj7nEbTNFIIc=
+github.com/PretendoNetwork/nex-go/v2 v2.3.3 h1:RMB/AYoukIIDlzDgAJX70m1s4Vj440fSOBSPQXzYCKk=
+github.com/PretendoNetwork/nex-go/v2 v2.3.3/go.mod h1:tkKnTlvAZqAcplb3xnzvSPv7hv/FXtPPj7nEbTNFIIc=
 github.com/PretendoNetwork/nex-protocols-go/v2 v2.3.8-0.20260916230930-75ef35cf2e37 h1:sYbCIt4I1XykF5/KhxaRLg8FnEjEUoaOJ+hm+UzJcT4=
 github.com/PretendoNetwork/nex-protocols-go/v2 v2.3.8-0.20260916230930-75ef35cf2e37/go.mod h1:4+quxpxWcm1bV5LMAEjOKknuFii/CSqxLg3hAewJ0DI=
 github.com/PretendoNetwork/plogger-go v1.1.0 h1:x2XgyeeM8zDFGy+NcIZd3SYC2fNrVWpBBbkqTejOfiM=
