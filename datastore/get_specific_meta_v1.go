@@ -26,6 +26,8 @@ func (commonProtocol *CommonProtocol) getSpecificMetaV1(err error, packet nex.Pa
 	dataIDs := param.DataIDs.Copy().(types.List[types.UInt32])
 	slices.Sort(dataIDs)
 
+	dataIDs = slices.Compact(dataIDs)
+
 	for _, dataID := range dataIDs {
 		metaInfo, version, errCode := database.GetSpecificObjectInfoByDataID(manager.Database, types.UInt64(dataID))
 		if errCode != nil {

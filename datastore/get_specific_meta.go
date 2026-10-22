@@ -25,6 +25,8 @@ func (commonProtocol *CommonProtocol) getSpecificMeta(err error, packet nex.Pack
 	dataIDs := param.DataIDs.Copy().(types.List[types.UInt64])
 	slices.Sort(dataIDs)
 
+	dataIDs = slices.Compact(dataIDs)
+
 	for _, dataID := range dataIDs {
 		metaInfo, version, errCode := database.GetSpecificObjectInfoByDataID(manager.Database, dataID)
 		if errCode != nil {
