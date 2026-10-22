@@ -2,6 +2,7 @@ package datastore
 
 import (
 	"math"
+	"slices"
 
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
@@ -23,15 +24,17 @@ func (commonProtocol *CommonProtocol) getSpecificMetaV1(err error, packet nex.Pa
 	endpoint := connection.Endpoint()
 
 	pMetaInfos := types.NewList[datastore_types.DataStoreSpecificMetaInfoV1]()
+	dataIDs := param.DataIDs.Copy().(types.List[types.UInt32])
+	slices.Sort(dataIDs)
 
 	// * Check this before hitting the DB
-	for _, dataID := range param.DataIDs {
+	for _, dataID := range dataIDs {
 		if dataID == types.UInt32(datastore_constants.InvalidDataID) {
 			return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 		}
 	}
 
-	for _, dataID := range param.DataIDs {
+	for _, dataID := range dataIDs {
 		metaInfo, _, errCode := database.GetAccessObjectInfoByDataID(manager.Database, types.UInt64(dataID))
 		if errCode != nil {
 			return nil, errCode
