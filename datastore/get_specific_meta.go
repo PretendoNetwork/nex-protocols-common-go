@@ -26,18 +26,13 @@ func (commonProtocol *CommonProtocol) getSpecificMeta(err error, packet nex.Pack
 	slices.Sort(dataIDs)
 
 	for _, dataID := range dataIDs {
-		metaInfo, _, errCode := database.GetAccessObjectInfoByDataID(manager.Database, dataID)
+		metaInfo, version, errCode := database.GetSpecificObjectInfoByDataID(manager.Database, dataID)
 		if errCode != nil {
 			// * Unknown objects of any kind are just not sent back
 			if errCode.Equals(nex.ResultCodes.DataStore.NotFound) {
 				continue
 			}
 
-			return nil, errCode
-		}
-
-		version, errCode := database.GetObjectLatestVersionNumber(manager.Database, metaInfo.DataID)
-		if errCode != nil {
 			return nil, errCode
 		}
 
