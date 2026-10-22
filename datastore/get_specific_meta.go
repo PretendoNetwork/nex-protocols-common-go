@@ -30,23 +30,9 @@ func (commonProtocol *CommonProtocol) getSpecificMeta(err error, packet nex.Pack
 	}
 
 	for _, dataID := range param.DataIDs {
-		metaInfo, accessPassword, errCode := database.GetAccessObjectInfoByDataID(manager.Database, dataID)
+		metaInfo, _, errCode := database.GetAccessObjectInfoByDataID(manager.Database, dataID)
 		if errCode != nil {
 			return nil, errCode
-		}
-
-		errCode = manager.VerifyObjectAccessPermission(connection.PID(), metaInfo, accessPassword, 0)
-		if errCode != nil {
-			return nil, errCode
-		}
-
-		// * The owner of an object can always view their objects, but normal users cannot
-		if metaInfo.Status != datastore_constants.DataStatusNone && metaInfo.OwnerID != connection.PID() {
-			if metaInfo.Status == datastore_constants.DataStatusPending {
-				return nil, nex.NewError(nex.ResultCodes.DataStore.UnderReviewing, "change_error")
-			}
-
-			return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
 		}
 
 		version, errCode := database.GetObjectLatestVersionNumber(manager.Database, metaInfo.DataID)
