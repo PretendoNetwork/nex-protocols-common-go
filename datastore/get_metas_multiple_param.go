@@ -28,13 +28,13 @@ func (commonProtocol *CommonProtocol) getMetasMultipleParam(err error, packet ne
 	pResults := types.NewList[types.QResult]()
 	invalidMetaInfo := datastore_types.NewDataStoreMetaInfo() // * Quick hack to get a zeroed struct
 
-	// * param.DataID and param.PersistenceTarget are ignored here
 	for _, param := range params {
 		var metaInfo datastore_types.DataStoreMetaInfo
 		var accessPassword types.UInt64
 		var errCode *nex.Error
 
-		if param.PersistenceTarget.OwnerID != 0 {
+		// * The persistence target is used whenever it has a slot, even if it has no ownerId
+		if param.PersistenceTarget.PersistenceSlotID != types.UInt16(datastore_constants.InvalidPersistenceSlotID) {
 			metaInfo, accessPassword, errCode = database.GetAccessObjectInfoByPersistenceTarget(manager.Database, param.PersistenceTarget)
 		} else if param.DataID != types.UInt64(datastore_constants.InvalidDataID) {
 			metaInfo, accessPassword, errCode = database.GetAccessObjectInfoByDataID(manager.Database, param.DataID)
