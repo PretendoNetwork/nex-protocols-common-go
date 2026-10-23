@@ -64,6 +64,39 @@ async def test_an_object_posted_with_an_empty_meta_binary(unique_data_type):
 
 	assert info.size == helpers.UINT32_MAX
 
+async def test_the_size_follows_a_changed_meta_binary(unique_data_type):
+	"""
+	The size is the length of the meta binary current value
+	"""
+
+	data_id = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, meta_binary=b"meta")
+	await helpers.change_meta(nex.FRIEND_A, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_METABINARY, meta_binary=b"abc")
+	[info] = await get_specific_meta(nex.FRIEND_A, [data_id])
+
+	assert info.size == 3
+
+async def test_a_meta_binary_posted_empty_and_then_changed(unique_data_type):
+	"""
+	A meta binary that was posted as empty will use the new size when changed
+	"""
+
+	data_id = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, meta_binary=b"")
+	await helpers.change_meta(nex.FRIEND_A, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_METABINARY, meta_binary=b"abc")
+	[info] = await get_specific_meta(nex.FRIEND_A, [data_id])
+
+	assert info.size == 3
+
+async def test_changing_another_field_keeps_the_size_of_an_empty_meta_binary(unique_data_type):
+	"""
+	Changing other fields does not affect things
+	"""
+
+	data_id = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, meta_binary=b"")
+	await helpers.change_meta(nex.FRIEND_A, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_NAME, name="renamed")
+	[info] = await get_specific_meta(nex.FRIEND_A, [data_id])
+
+	assert info.size == helpers.UINT32_MAX
+
 # * data_ids
 
 async def test_no_data_ids():
@@ -143,6 +176,17 @@ async def test_a_meta_binary_changed_to_empty_is_left_out(unique_data_type):
 	"""
 
 	data_id = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, meta_binary=b"meta")
+	await helpers.change_meta(nex.FRIEND_A, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_METABINARY, meta_binary=b"")
+
+	assert await get_specific_meta(nex.FRIEND_A, [data_id]) == []
+
+async def test_a_meta_binary_posted_empty_and_changed_to_empty_is_left_out(unique_data_type):
+	"""
+	Changing a meta binary which was empty from the start to empty again
+	still counts as emptying it, even though its contents did not change
+	"""
+
+	data_id = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, meta_binary=b"")
 	await helpers.change_meta(nex.FRIEND_A, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_METABINARY, meta_binary=b"")
 
 	assert await get_specific_meta(nex.FRIEND_A, [data_id]) == []

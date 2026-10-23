@@ -12,9 +12,10 @@ import (
 // * GetSpecificObjectInfoByDataID is only used by GetSpecificMeta(V1).
 // * Has a dedicated function because those methods ignore things like
 // * deletion state, access permissions, expiration, etc.
-func GetSpecificObjectInfoByDataID(database common_globals.Database, dataID types.UInt64) (datastore_types.DataStoreMetaInfo, uint32, *nex.Error) {
+func GetSpecificObjectInfoByDataID(database common_globals.Database, dataID types.UInt64) (datastore_types.DataStoreMetaInfo, uint32, bool, *nex.Error) {
 	var metaInfo datastore_types.DataStoreMetaInfo
 	var version uint32
+	var metaBinaryIsNull bool // * Currently the only way to check if the MetaBinary is empty when posted or not
 
 	err := database.QueryRow(`
 		SELECT
@@ -23,6 +24,7 @@ func GetSpecificObjectInfoByDataID(database common_globals.Database, dataID type
 			size,
 			data_type,
 			meta_binary,
+			meta_binary IS NULL,
 			raw_flags,
 			version
 		FROM datastore.objects
@@ -32,18 +34,19 @@ func GetSpecificObjectInfoByDataID(database common_globals.Database, dataID type
 		&metaInfo.Size,
 		&metaInfo.DataType,
 		&metaInfo.MetaBinary,
+		&metaBinaryIsNull,
 		&metaInfo.Flag,
 		&version,
 	)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return metaInfo, version, nex.NewError(nex.ResultCodes.DataStore.NotFound, err.Error())
+			return metaInfo, version, metaBinaryIsNull, nex.NewError(nex.ResultCodes.DataStore.NotFound, err.Error())
 		}
 
 		// TODO - Send more specific errors?
-		return metaInfo, version, nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
+		return metaInfo, version, metaBinaryIsNull, nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
 	}
 
-	return metaInfo, version, nil
+	return metaInfo, version, metaBinaryIsNull, nil
 }

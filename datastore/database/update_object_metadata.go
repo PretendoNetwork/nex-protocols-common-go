@@ -82,7 +82,10 @@ func UpdateObjectMetadata(database common_globals.Database, currentData datastor
 			return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with a MetaBinary which is too long")
 		}
 
-		updateData["meta_binary"] = newData.MetaBinary
+		// * Objects created with an empty MetaBinary have the field set to NULL for GetSpecificMeta
+		// * but when the object is updated, even if the MetaBinary is also empty, it gets treated
+		// * differently. So undo the NULL here even if the value is still "empty"
+		updateData["meta_binary"] = append([]byte{}, newData.MetaBinary...)
 	}
 
 	if modifyTags {

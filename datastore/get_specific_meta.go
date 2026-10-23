@@ -30,7 +30,7 @@ func (commonProtocol *CommonProtocol) getSpecificMeta(err error, packet nex.Pack
 	dataIDs = slices.Compact(dataIDs)
 
 	for _, dataID := range dataIDs {
-		metaInfo, version, errCode := database.GetSpecificObjectInfoByDataID(manager.Database, dataID)
+		metaInfo, version, metaBinaryIsNull, errCode := database.GetSpecificObjectInfoByDataID(manager.Database, dataID)
 		if errCode != nil {
 			// * Unknown objects of any kind are just not sent back
 			if errCode.Equals(nex.ResultCodes.DataStore.NotFound) {
@@ -43,14 +43,19 @@ func (commonProtocol *CommonProtocol) getSpecificMeta(err error, packet nex.Pack
 		size := metaInfo.Size
 
 		// * Objects that don't use the file server only exist in the database and use
-		// * the MetaBinary size instead. Or 0xFFFFFFFF if the size is 0, for some reason.
-		// * Don't ask, this is what the real servers do
+		// * the MetaBinary size instead. Or 0xFFFFFFFF if the MetaBinary was empty when
+		// * created, for some reason. Don't ask, this is what the real servers do
 		if metaInfo.Flag.HasFlag(datastore_constants.DataFlagNotUseFileServer) {
-			if len(metaInfo.MetaBinary) == 0 {
+			if metaBinaryIsNull {
 				size = math.MaxUint32
 			} else {
 				size = types.UInt32(len(metaInfo.MetaBinary))
 			}
+		}
+
+		// * Don't return objects which are empty
+		if size == 0 {
+			continue
 		}
 
 		specificMetaInfo := datastore_types.NewDataStoreSpecificMetaInfo()

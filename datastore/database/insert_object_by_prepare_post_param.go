@@ -212,6 +212,9 @@ func InsertObjectByPreparePostParam(database common_globals.Database, manager *c
 
 	var dataID uint64
 
+	// * An empty MetaBinary is stored as NULL so that GetSpecificMeta can tell
+	// * it apart from a MetaBinary that was later updated to have a size of 0
+	// TODO - Ugly ass hacks man, we need to change the DB schema
 	err := database.QueryRow(`INSERT INTO datastore.objects (
 		owner,
 		size,
@@ -245,7 +248,7 @@ func InsertObjectByPreparePostParam(database common_globals.Database, manager *c
 		$2,
 		$3,
 		$4,
-		$5,
+		NULLIF($5, ''::bytea),
 		$6,
 		$7,
 		$8,

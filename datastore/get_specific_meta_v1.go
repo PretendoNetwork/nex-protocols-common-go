@@ -29,7 +29,7 @@ func (commonProtocol *CommonProtocol) getSpecificMetaV1(err error, packet nex.Pa
 	dataIDs = slices.Compact(dataIDs)
 
 	for _, dataID := range dataIDs {
-		metaInfo, version, errCode := database.GetSpecificObjectInfoByDataID(manager.Database, types.UInt64(dataID))
+		metaInfo, version, _, errCode := database.GetSpecificObjectInfoByDataID(manager.Database, types.UInt64(dataID))
 		if errCode != nil {
 			// * Unknown objects of any kind are just not sent back
 			if errCode.Equals(nex.ResultCodes.DataStore.NotFound) {
