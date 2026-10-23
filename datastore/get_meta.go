@@ -31,7 +31,7 @@ func (commonProtocol *CommonProtocol) getMeta(err error, packet nex.PacketInterf
 		metaInfo, accessPassword, errCode = database.GetAccessObjectInfoByDataID(manager.Database, param.DataID)
 	} else {
 		// * If both the PersistenceTarget and DataID are not set, bail
-		errCode = nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
+		errCode = nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
 	}
 
 	if errCode != nil {
