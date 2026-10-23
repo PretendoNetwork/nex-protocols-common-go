@@ -550,6 +550,28 @@ async def test_a_period_of_zero_expires_the_object_at_once(unique_data_type):
 
 	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
 
+async def test_a_period_of_zero_on_a_persisted_object(unique_data_type):
+	"""
+	A persisted object never expires even with a period of 0
+	"""
+
+	persistence_init_param = helpers.persistence_init_param(persistence_id=0)
+	data_id = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, period=0, persistence_init_param=persistence_init_param)
+	info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	assert info.period == 0
+	assert info.expire_time.value() == constants.PERMANENT_DATE_TIME
+
+async def test_a_period_of_zero_expires_the_object_once_it_leaves_its_slot(unique_data_type):
+	"""
+	An object with a period of 0 is immediately expired once removed from the slot
+	"""
+
+	old = await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, period=0, persistence_init_param=helpers.persistence_init_param(persistence_id=0))
+	await helpers.post_meta_binary(nex.FRIEND_A, data_type=unique_data_type, persistence_init_param=helpers.persistence_init_param(persistence_id=0, delete_last_object=False))
+
+	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=old) == "DataStore::NotFound"
+
 async def test_the_period_is_kept_on_the_object(unique_data_type):
 	"""
 	The period is stored as it was sent, and the expiry is worked out

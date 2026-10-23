@@ -82,6 +82,17 @@ async def test_no_data_id_or_persistence_target():
 
 	assert await helpers.get_meta_error(nex.FRIEND_A) == "DataStore::NotFound"
 
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_an_expired_object(unique_data_type, post):
+	"""
+	An object with a period of 0 is immediatelt expired
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
+	await helpers.change_meta(nex.FRIEND_A, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_PERIOD, period=0)
+
+	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
+
 # * persistence_target
 # *
 # * Somewhat redundant due to the access permission

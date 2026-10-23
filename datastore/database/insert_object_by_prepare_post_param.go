@@ -66,7 +66,8 @@ func InsertObjectByPreparePostParam(database common_globals.Database, manager *c
 	}
 
 	// * Does not seem to be a constant in DataStore, so just inline it for now?
-	if param.Period == 0 || param.Period > 365 {
+	// * A period of 0 is valid and just immediately expires the object
+	if param.Period > 365 {
 		return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with invalid expiration days")
 	}
 
@@ -207,7 +208,7 @@ func InsertObjectByPreparePostParam(database common_globals.Database, manager *c
 	// * Persistent objects are set to never expire
 	expirationDate := time.Now().UTC().Add(time.Duration(param.Period) * 24 * time.Hour)
 	if param.PersistenceInitParam.PersistenceSlotID != types.UInt16(datastore_constants.InvalidPersistenceSlotID) {
-		expirationDate = time.Date(9999, time.December, 31, 0, 0, 0, 0, time.UTC)
+		expirationDate = types.NewPermanentDateTime().Standard()
 	}
 
 	var dataID uint64

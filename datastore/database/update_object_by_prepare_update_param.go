@@ -47,11 +47,11 @@ func UpdateObjectByPrepareUpdateParam(database common_globals.Database, updatePa
 			status = $3,
 			update_date = $4,
 			true_update_date = $5,
-			expiration_date = $6,
+			expiration_date = CASE WHEN expiration_date = $9 THEN expiration_date ELSE $6 END,
 			upload_completed = $7
 		WHERE data_id = $8
 		RETURNING version
-	`, updateParam.Size, pq.Array(updateParam.ExtraData), status, now, now, expirationDate, uploadCompleted, currentData.DataID).Scan(&version)
+	`, updateParam.Size, pq.Array(updateParam.ExtraData), status, now, now, expirationDate, uploadCompleted, currentData.DataID, types.NewPermanentDateTime()).Scan(&version)
 
 	if err != nil {
 		// TODO - Send more specific errors?

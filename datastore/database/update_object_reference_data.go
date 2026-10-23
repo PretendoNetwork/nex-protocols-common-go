@@ -13,11 +13,11 @@ func UpdateObjectReferenceData(database common_globals.Database, dataID types.UI
 			reference_count = reference_count + 1,
 			last_reference_date = (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
 			expiration_date = CASE
-				WHEN update_expiration_on_reference = true THEN (CURRENT_TIMESTAMP AT TIME ZONE 'UTC') + (expiration_days * INTERVAL '1 day')
+				WHEN update_expiration_on_reference = true AND expiration_date != $2 THEN (CURRENT_TIMESTAMP AT TIME ZONE 'UTC') + (expiration_days * INTERVAL '1 day')
 				ELSE expiration_date
 			END
 		WHERE data_id = $1;
-	`, dataID)
+	`, dataID, types.NewPermanentDateTime())
 	if err != nil {
 		// TODO - Send more specific errors?
 		return nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())

@@ -46,6 +46,11 @@ func (commonProtocol *CommonProtocol) preparePostObjectV1(err error, packet nex.
 	newParam.Tags = param.Tags
 	newParam.RatingInitParams = param.RatingInitParams
 
+	// * V1 doesn't send a persistence slot and nex-protocols-go defaults this to 0
+	// * which is a valid slot, so we have to account for that here
+	// TODO - Change nex-protocols-go?
+	newParam.PersistenceInitParam.PersistenceSlotID = types.UInt16(datastore_constants.InvalidPersistenceSlotID)
+
 	if newParam.Flag.HasFlag(datastore_constants.DataFlagNotUseFileServer) {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "PreparePostObjectV1 cannot be used with DataFlagNotUseFileServer")
 	}

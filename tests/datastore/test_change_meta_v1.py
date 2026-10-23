@@ -65,6 +65,17 @@ async def test_a_deleted_object(unique_data_type, post):
 
 	assert await change_error(nex.FRIEND_A, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_NAME, name="after") == "DataStore::NotFound"
 
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_an_expired_object(unique_data_type, post):
+	"""
+	An object with a period of 0 is immediatelt expired
+	"""
+
+	data_id = await helpers.post_with_before_metadata(post, nex.FRIEND_A, data_type=unique_data_type)
+	await helpers.change_meta(nex.FRIEND_A, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_PERIOD, period=0)
+
+	assert await change_error(nex.FRIEND_A, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_PERIOD, period=constants.MAX_PERIOD) == "DataStore::NotFound"
+
 # * modifies_flag
 
 @pytest.mark.parametrize("post", helpers.POST_METHODS)
@@ -449,6 +460,25 @@ async def test_a_period_of_zero_expires_the_object(unique_data_type, post):
 	await change(nex.FRIEND_A, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_PERIOD, period=0)
 
 	assert await helpers.get_meta_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
+
+@pytest.mark.parametrize("modifies_flag", [
+	pytest.param(constants.ModificationFlag.MODIFICATION_FLAG_PERIOD, id="period"),
+	pytest.param(constants.ModificationFlag.MODIFICATION_FLAG_PERIOD | constants.ModificationFlag.MODIFICATION_FLAG_UPDATED_TIME, id="period-and-updated-time")
+])
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
+async def test_a_period_of_zero_on_a_persisted_object(unique_data_type, modifies_flag, post):
+	"""
+	A persisted object never expires even with a period of 0
+	"""
+
+	init_param = helpers.persistence_init_param(persistence_id=helpers.PERSISTENCE_SLOT)
+	data_id = await helpers.post_with_before_metadata(post, nex.FRIEND_A, data_type=unique_data_type, persistence_init_param=init_param)
+
+	await change(nex.FRIEND_A, data_id=data_id, modifies_flag=modifies_flag, period=0)
+	info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	assert info.period == 0
+	assert info.expire_time.value() == constants.PERMANENT_DATE_TIME
 
 # * meta_binary
 

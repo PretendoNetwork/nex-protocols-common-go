@@ -161,6 +161,17 @@ async def test_a_deleted_object(unique_data_type, post):
 
 	assert await get_password_info_error(nex.FRIEND_A, data_id) == "DataStore::NotFound"
 
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_an_expired_object(unique_data_type, post):
+	"""
+	An object with a period of 0 is immediatelt expired
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
+	await helpers.change_meta(nex.FRIEND_A, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_PERIOD, period=0)
+
+	assert await get_password_info_error(nex.FRIEND_A, data_id) == "DataStore::NotFound"
+
 async def test_an_object_which_was_never_completed(unique_data_type):
 	"""
 	An object whose upload was never completed does not exist yet

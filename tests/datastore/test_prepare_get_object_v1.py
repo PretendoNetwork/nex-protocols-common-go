@@ -90,6 +90,17 @@ async def test_a_deleted_object(unique_data_type, post):
 
 	assert await prepare_get_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
 
+@pytest.mark.parametrize("post", helpers.FILE_SERVER_POST_METHODS)
+async def test_an_expired_object(unique_data_type, post):
+	"""
+	An object with a period of 0 is immediatelt expired
+	"""
+
+	data_id = await post(nex.FRIEND_A, data_type=unique_data_type)
+	await helpers.change_meta(nex.FRIEND_A, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_PERIOD, period=0)
+
+	assert await prepare_get_error(nex.FRIEND_A, data_id=data_id) == "DataStore::NotFound"
+
 async def test_an_object_with_no_file_to_download(unique_data_type):
 	"""
 	An object posted with PostMetaBinary has no file on the file

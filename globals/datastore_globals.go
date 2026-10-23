@@ -463,8 +463,8 @@ func (dsm *DataStoreManager) calculateRatingExpirationTime(settings datastore_ty
 	}
 
 	// * RATING_LOCK_PERMANENT logically locks the user out forever
-	// * by just setting the expiration time to an impossible date
-	return time.Date(9999, time.December, 31, 0, 0, 0, 0, time.UTC)
+	// * by setting the expiration time to PERMANENT_DATE_TIME
+	return types.NewPermanentDateTime().Standard()
 }
 
 // getNotificationRecipients is the default implementation that returns

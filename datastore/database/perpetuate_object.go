@@ -1,8 +1,6 @@
 package database
 
 import (
-	"time"
-
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
@@ -31,10 +29,7 @@ func PerpetuateObject(database common_globals.Database, ownerPID types.PID, slot
 		return nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
 	}
 
-	// TODO - Replace this with PERMANENT_DATE_TIME https://nintendo.wiki/wiki/Nintendo_Network/NEX/Types#DateTime_Constants
-	expirationDate := time.Date(9999, time.December, 31, 0, 0, 0, 0, time.UTC)
-
-	_, err = database.Exec(`UPDATE datastore.objects SET expiration_date = $1 WHERE data_id=$2`, expirationDate, dataID)
+	_, err = database.Exec(`UPDATE datastore.objects SET expiration_date = $1 WHERE data_id=$2`, types.NewPermanentDateTime(), dataID)
 	if err != nil {
 		// TODO - Send more specific errors?
 		return nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())

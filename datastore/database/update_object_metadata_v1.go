@@ -67,7 +67,8 @@ func UpdateObjectMetadataV1(database common_globals.Database, currentData datast
 
 	if modifyPeriod {
 		// * Does not seem to be a constant in DataStore, so just inline it for now?
-		if newData.Period == 0 || newData.Period > 365 {
+		// * A period of 0 is valid and just immediately expires the object
+		if newData.Period > 365 {
 			return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with invalid expiration days")
 		}
 
@@ -122,12 +123,16 @@ func UpdateObjectMetadataV1(database common_globals.Database, currentData datast
 	// * is set or not. DATA_FLAG_PERIOD_FROM_LAST_REFERRED seems to only
 	// * apply to PrepareGetObject (and related) and TouchObject
 	day := 24 * time.Hour
-	if modifyUpdatedTime && modifyPeriod {
-		updateData["expiration_date"] = now.Add(time.Duration(newData.Period) * day)
-	} else if modifyUpdatedTime {
-		updateData["expiration_date"] = now.Add(time.Duration(currentData.Period) * day)
-	} else if modifyPeriod {
-		updateData["expiration_date"] = currentData.UpdatedTime.Standard().UTC().Add(time.Duration(newData.Period) * day)
+
+	// * Persisted objects don't get their expiration updated
+	if !currentData.ExpireTime.IsPermanentDateTime() {
+		if modifyUpdatedTime && modifyPeriod {
+			updateData["expiration_date"] = now.Add(time.Duration(newData.Period) * day)
+		} else if modifyUpdatedTime {
+			updateData["expiration_date"] = now.Add(time.Duration(currentData.Period) * day)
+		} else if modifyPeriod {
+			updateData["expiration_date"] = currentData.UpdatedTime.Standard().UTC().Add(time.Duration(newData.Period) * day)
+		}
 	}
 
 	query, params, err := Update("datastore.objects").Set(updateData).Where("data_id").Is(currentData.DataID).Build()
