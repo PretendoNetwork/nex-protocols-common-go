@@ -14,7 +14,7 @@ func UnperpetuateObjectByDataID(database common_globals.Database, dataID uint64,
 	if deleteObject {
 		_, err = database.Exec(`UPDATE datastore.objects SET deleted = TRUE WHERE data_id=$1`, dataID)
 	} else {
-		var expirationDays uint8
+		var expirationDays uint16
 		err = database.QueryRow(`SELECT expiration_days FROM datastore.objects WHERE data_id=$1`, dataID).Scan(&expirationDays)
 		if err != nil {
 			// TODO - Send more specific errors?
