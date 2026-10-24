@@ -3,7 +3,9 @@ package database
 import (
 	"slices"
 	"sort"
+	"strings"
 	"time"
+	"unicode"
 
 	"github.com/PretendoNetwork/nex-go/v2"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
@@ -95,6 +97,10 @@ func UpdateObjectMetadataV1(database common_globals.Database, currentData datast
 		for _, tag := range newData.Tags {
 			if len(tag) > datastore_constants.MaxTagLength {
 				return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with a tag which is too long")
+			}
+
+			if strings.ContainsFunc(string(tag), unicode.IsControl) {
+				return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with a tag containing control characters")
 			}
 
 			if slices.Contains(seenTags, string(tag)) {

@@ -3,7 +3,9 @@ package database
 import (
 	"math/rand/v2"
 	"slices"
+	"strings"
 	"time"
+	"unicode"
 
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
@@ -56,6 +58,10 @@ func InsertObjectByPreparePostParam(database common_globals.Database, manager *c
 	for _, tag := range param.Tags {
 		if len(tag) > datastore_constants.MaxTagLength {
 			return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with a tag which is too long")
+		}
+
+		if strings.ContainsFunc(string(tag), unicode.IsControl) {
+			return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with a tag containing control characters")
 		}
 
 		if slices.Contains(seenTags, string(tag)) {
