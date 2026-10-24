@@ -2,6 +2,7 @@ package datastore
 
 import (
 	"database/sql"
+	"slices"
 
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
@@ -162,9 +163,14 @@ func (commonProtocol *CommonProtocol) changeMetas(err error, packet nex.PacketIn
 			continue
 		}
 
-		if compareTags && !metaInfo.Tags.Equals(param.CompareParam.Tags) {
-			pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.ValueNotEqual))
-			continue
+		if compareTags {
+			currentTags := slices.Sorted(slices.Values(metaInfo.Tags))
+			compareTags := slices.Sorted(slices.Values(param.CompareParam.Tags))
+
+			if !slices.Equal(currentTags, compareTags) {
+				pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.ValueNotEqual))
+				continue
+			}
 		}
 
 		if compareDataType && !metaInfo.DataType.Equals(param.CompareParam.DataType) {
