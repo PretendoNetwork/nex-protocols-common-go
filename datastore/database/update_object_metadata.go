@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
@@ -38,7 +39,7 @@ func UpdateObjectMetadata(database common_globals.Database, currentData datastor
 	}
 
 	if modifyName {
-		if len(newData.Name) > datastore_constants.MaxNameLength {
+		if utf8.RuneCountInString(string(newData.Name)) > datastore_constants.MaxNameLength {
 			return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with a name which is too long")
 		}
 
@@ -99,7 +100,7 @@ func UpdateObjectMetadata(database common_globals.Database, currentData datastor
 
 		seenTags := make([]string, 0)
 		for _, tag := range newData.Tags {
-			if len(tag) > datastore_constants.MaxTagLength {
+			if utf8.RuneCountInString(string(tag)) > datastore_constants.MaxTagLength {
 				return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with a tag which is too long")
 			}
 

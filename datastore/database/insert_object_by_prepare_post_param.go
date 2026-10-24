@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
@@ -22,7 +23,7 @@ func InsertObjectByPreparePostParam(database common_globals.Database, manager *c
 		return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object larger than 10MiB")
 	}
 
-	if len(param.Name) > datastore_constants.MaxNameLength {
+	if utf8.RuneCountInString(string(param.Name)) > datastore_constants.MaxNameLength {
 		return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with a name which is too long")
 	}
 
@@ -56,7 +57,7 @@ func InsertObjectByPreparePostParam(database common_globals.Database, manager *c
 
 	seenTags := make([]string, 0)
 	for _, tag := range param.Tags {
-		if len(tag) > datastore_constants.MaxTagLength {
+		if utf8.RuneCountInString(string(tag)) > datastore_constants.MaxTagLength {
 			return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with a tag which is too long")
 		}
 
