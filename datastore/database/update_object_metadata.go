@@ -27,6 +27,7 @@ func UpdateObjectMetadata(database common_globals.Database, currentData datastor
 	modifyTags := newData.ModifiesFlag.HasFlag(datastore_constants.ModificationFlagTags)
 	modifyUpdatedTime := newData.ModifiesFlag.HasFlag(datastore_constants.ModificationFlagUpdatedTime)
 	modifyDataType := newData.ModifiesFlag.HasFlag(datastore_constants.ModificationFlagDataType)
+	modifyReferredCount := newData.ModifiesFlag.HasFlag(datastore_constants.ModificationFlagReferredCount)
 	modifyStatus := newData.ModifiesFlag.HasFlag(datastore_constants.ModificationFlagStatus)
 
 	now := time.Now().UTC()
@@ -128,6 +129,10 @@ func UpdateObjectMetadata(database common_globals.Database, currentData datastor
 		}
 
 		updateData["data_type"] = newData.DataType
+	}
+
+	if modifyReferredCount {
+		updateData["reference_count"] = newData.ReferredCnt
 	}
 
 	if modifyStatus {

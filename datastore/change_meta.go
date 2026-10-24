@@ -64,6 +64,7 @@ func (commonProtocol *CommonProtocol) changeMeta(err error, packet nex.PacketInt
 	compareMetaBinary := param.CompareParam.ComparisonFlag.HasFlag(datastore_constants.ComparisonFlagMetaBinary)
 	compareTags := param.CompareParam.ComparisonFlag.HasFlag(datastore_constants.ComparisonFlagTags)
 	compareDataType := param.CompareParam.ComparisonFlag.HasFlag(datastore_constants.ComparisonFlagDataType)
+	compareReferredCount := param.CompareParam.ComparisonFlag.HasFlag(datastore_constants.ComparisonFlagReferredCount)
 	compareStatus := param.CompareParam.ComparisonFlag.HasFlag(datastore_constants.ComparisonFlagStatus)
 
 	if param.CompareParam.ComparisonFlag == datastore_constants.ComparisonFlagAll {
@@ -74,6 +75,7 @@ func (commonProtocol *CommonProtocol) changeMeta(err error, packet nex.PacketInt
 		compareMetaBinary = true
 		compareTags = true
 		compareDataType = true
+		compareReferredCount = true
 		compareStatus = true
 	}
 
@@ -102,6 +104,10 @@ func (commonProtocol *CommonProtocol) changeMeta(err error, packet nex.PacketInt
 	}
 
 	if compareDataType && !metaInfo.DataType.Equals(param.CompareParam.DataType) {
+		return nil, nex.NewError(nex.ResultCodes.DataStore.ValueNotEqual, "change_error")
+	}
+
+	if compareReferredCount && !metaInfo.ReferredCnt.Equals(param.CompareParam.ReferredCnt) {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.ValueNotEqual, "change_error")
 	}
 
