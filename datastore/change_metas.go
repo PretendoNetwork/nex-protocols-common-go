@@ -24,34 +24,38 @@ func (commonProtocol *CommonProtocol) changeMetas(err error, packet nex.PacketIn
 		return nil, nex.NewError(nex.ResultCodes.DataStore.OverCapacity, "change_error")
 	}
 
-	if len(dataIDs) != len(params) {
+	// * A request is only valid if it's either many DataIDs with one param,
+	// * or no DataIDs with many params
+	useDataIDList := len(dataIDs) != 0
+	if (useDataIDList && len(params) != 1) || (!useDataIDList && len(params) == 0) {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
+	}
+
+	targets := len(params)
+	if useDataIDList {
+		targets = len(dataIDs)
 	}
 
 	pResults := types.NewList[types.QResult]()
 
 	// TODO - Support transactional. If transactional=true, changes are all-or-nothing
 	// TODO - Refactor this, this can make hundreds of database calls in one go
-	for i := 0; i < len(dataIDs); i++ {
-		dataID := dataIDs[i]
-		param := params[i]
-
+	for i := 0; i < targets; i++ {
 		var metaInfo datastore_types.DataStoreMetaInfo
 		var updatePassword types.UInt64
 		var errCode *nex.Error
 
-		// * If using a PersistenceTarget, ignore the DataID
-		if param.PersistenceTarget.OwnerID != 0 {
+		param := params[0]
+		if !useDataIDList {
+			param = params[i]
+		}
+
+		if useDataIDList {
+			metaInfo, updatePassword, errCode = database.GetUpdateObjectInfoByDataID(manager.Database, dataIDs[i])
+		} else if param.PersistenceTarget.PersistenceSlotID != types.UInt16(datastore_constants.InvalidPersistenceSlotID) {
 			metaInfo, updatePassword, errCode = database.GetUpdateObjectInfoByPersistenceTarget(manager.Database, param.PersistenceTarget)
-		} else if dataID != types.UInt64(datastore_constants.InvalidDataID) {
-			metaInfo, updatePassword, errCode = database.GetUpdateObjectInfoByDataID(manager.Database, dataID)
-		} else if param.DataID != types.UInt64(datastore_constants.InvalidDataID) {
-			// * Unsure if this is accurate actually, but why not check it. Who cares?
-			// * Normally this should be 0, but if we hit this point might as well try
-			metaInfo, updatePassword, errCode = database.GetUpdateObjectInfoByDataID(manager.Database, param.DataID)
 		} else {
-			// * If both the PersistenceTarget and DataID are not set, bail
-			errCode = nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
+			metaInfo, updatePassword, errCode = database.GetUpdateObjectInfoByDataID(manager.Database, param.DataID)
 		}
 
 		if errCode != nil {

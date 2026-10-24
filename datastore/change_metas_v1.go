@@ -24,24 +24,34 @@ func (commonProtocol *CommonProtocol) changeMetasV1(err error, packet nex.Packet
 		return nil, nex.NewError(nex.ResultCodes.DataStore.OverCapacity, "change_error")
 	}
 
-	if len(dataIDs) != len(params) {
+	// * A request is only valid if it's either many DataIDs with one param,
+	// * or no DataIDs with many params
+	useDataIDList := len(dataIDs) != 0
+	if (useDataIDList && len(params) != 1) || (!useDataIDList && len(params) == 0) {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
+	}
+
+	targets := len(params)
+	if useDataIDList {
+		targets = len(dataIDs)
 	}
 
 	pResults := types.NewList[types.QResult]()
 
 	// TODO - Support transactional. If transactional=true, changes are all-or-nothing
 	// TODO - Refactor this, this can make hundreds of database calls in one go
-	for i := 0; i < len(dataIDs); i++ {
-		dataID := dataIDs[i]
-		param := params[i]
-
-		if dataID == types.UInt64(datastore_constants.InvalidDataID) {
-			pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.InvalidArgument))
-			continue
-		}
+	for i := 0; i < targets; i++ {
+		var dataID types.UInt64
+		param := params[0]
 
 		// * V1 has no persistence target
+		if useDataIDList {
+			dataID = dataIDs[i]
+		} else {
+			param = params[i]
+			dataID = param.DataID
+		}
+
 		metaInfo, updatePassword, errCode := database.GetUpdateObjectInfoByDataID(manager.Database, dataID)
 		if errCode != nil {
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
