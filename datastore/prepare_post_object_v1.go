@@ -20,6 +20,10 @@ func (commonProtocol *CommonProtocol) preparePostObjectV1(err error, packet nex.
 		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
 	}
 
+	if common_globals.HasSurrogatePair(param.Name) || common_globals.HasSurrogatePair(param.Tags...) {
+		return nil, nex.NewError(nex.ResultCodes.PythonCore.ConversionError, "change_error")
+	}
+
 	manager := commonProtocol.manager
 
 	if manager.S3 == nil {

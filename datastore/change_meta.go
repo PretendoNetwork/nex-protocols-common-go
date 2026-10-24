@@ -16,6 +16,10 @@ func (commonProtocol *CommonProtocol) changeMeta(err error, packet nex.PacketInt
 		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
 	}
 
+	if common_globals.HasSurrogatePair(param.Name) || common_globals.HasSurrogatePair(param.Tags...) {
+		return nil, nex.NewError(nex.ResultCodes.PythonCore.ConversionError, "change_error")
+	}
+
 	manager := commonProtocol.manager
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
