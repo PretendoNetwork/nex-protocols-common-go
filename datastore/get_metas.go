@@ -28,40 +28,48 @@ func (commonProtocol *CommonProtocol) getMetas(err error, packet nex.PacketInter
 	pResults := types.NewList[types.QResult]()
 	invalidMetaInfo := datastore_types.NewDataStoreMetaInfo() // * Quick hack to get a zeroed struct
 
-	// * param.DataID and param.PersistenceTarget are ignored here
-	for _, dataID := range dataIDs {
-		metaInfo, accessPassword, errCode := database.GetAccessObjectInfoByDataID(manager.Database, dataID)
+	// TODO - I really hate this pattern, defining functions this way inside a function SUCKS. Change
+	getEntry := func(metaInfo datastore_types.DataStoreMetaInfo, accessPassword types.UInt64, errCode *nex.Error) (datastore_types.DataStoreMetaInfo, types.QResult) {
 		if errCode != nil {
-			pMetaInfo = append(pMetaInfo, invalidMetaInfo)
-			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
-			continue
+			return invalidMetaInfo, types.NewQResult(errCode.ResultCode)
 		}
 
 		// * NOTE: IF THE PASSWORD IS SET, THIS WILL NOT WORK FOR MULTIPLE OBJECTS!
 		// * THIS SHOULD REALLY ONLY BE CALLED WITHOUT A PASSWORD SET
 		errCode = manager.VerifyObjectAccessPermission(connection.PID(), metaInfo, accessPassword, param.AccessPassword)
 		if errCode != nil {
-			pMetaInfo = append(pMetaInfo, invalidMetaInfo)
-			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
-			continue
+			return invalidMetaInfo, types.NewQResult(errCode.ResultCode)
 		}
 
-		metaInfo, errCode = database.GetObjectMetaInfoByDataIDWithResultOption(manager.Database, dataID, param.ResultOption)
+		metaInfo, errCode = database.GetObjectMetaInfoByDataIDWithResultOption(manager.Database, metaInfo.DataID, param.ResultOption)
 		if errCode != nil {
-			pMetaInfo = append(pMetaInfo, invalidMetaInfo)
-			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
-			continue
+			return invalidMetaInfo, types.NewQResult(errCode.ResultCode)
 		}
 
 		// * The owner of an object can always view their objects, but normal users cannot
 		if metaInfo.Status != datastore_constants.DataStatusNone && metaInfo.OwnerID != connection.PID() {
-			pMetaInfo = append(pMetaInfo, invalidMetaInfo)
-			pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.UnderReviewing))
-			continue
+			return invalidMetaInfo, types.NewQResultError(nex.ResultCodes.DataStore.UnderReviewing)
 		}
 
-		pMetaInfo = append(pMetaInfo, metaInfo)
-		pResults = append(pResults, types.NewQResultSuccess(nex.ResultCodes.DataStore.Unknown))
+		return metaInfo, types.NewQResultSuccess(nex.ResultCodes.DataStore.Unknown)
+	}
+
+	// * If param.PersistenceTarget is used then it's shared for all objects. This saves
+	// * up to 300 lookups by just doing it once in that case
+	if param.PersistenceTarget.PersistenceSlotID != types.UInt16(datastore_constants.InvalidPersistenceSlotID) {
+		metaInfo, result := getEntry(database.GetAccessObjectInfoByPersistenceTarget(manager.Database, param.PersistenceTarget))
+
+		for range dataIDs {
+			pMetaInfo = append(pMetaInfo, metaInfo)
+			pResults = append(pResults, result)
+		}
+	} else {
+		for _, dataID := range dataIDs {
+			metaInfo, result := getEntry(database.GetAccessObjectInfoByDataID(manager.Database, dataID))
+
+			pMetaInfo = append(pMetaInfo, metaInfo)
+			pResults = append(pResults, result)
+		}
 	}
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
