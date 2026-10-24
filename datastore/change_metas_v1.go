@@ -1,6 +1,8 @@
 package datastore
 
 import (
+	"database/sql"
+
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	"github.com/PretendoNetwork/nex-protocols-common-go/v2/datastore/database"
@@ -38,9 +40,31 @@ func (commonProtocol *CommonProtocol) changeMetasV1(err error, packet nex.Packet
 
 	pResults := types.NewList[types.QResult]()
 
-	// TODO - Support transactional. If transactional=true, changes are all-or-nothing
+	var db common_globals.Database = manager.Database
+	var transaction *sql.Tx
+
+	if transactional {
+		var err error
+		transaction, err = manager.BeginTransaction()
+		if err != nil {
+			// TODO - Send more specific errors?
+			return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
+		}
+
+		// * Does nothing once the transaction has been committed successfully
+		defer transaction.Rollback()
+
+		db = transaction
+	}
+
 	// TODO - Refactor this, this can make hundreds of database calls in one go
 	for i := 0; i < targets; i++ {
+		// * Checking the previous object for errors was just a simpler refactor.
+		// * The final object error is checked after the loop because lazy
+		if bool(transactional) && i > 0 && pResults[i-1].IsError() {
+			break
+		}
+
 		var dataID types.UInt64
 		param := params[0]
 
@@ -52,7 +76,7 @@ func (commonProtocol *CommonProtocol) changeMetasV1(err error, packet nex.Packet
 			dataID = param.DataID
 		}
 
-		metaInfo, updatePassword, errCode := database.GetUpdateObjectInfoByDataID(manager.Database, dataID)
+		metaInfo, updatePassword, errCode := database.GetUpdateObjectInfoByDataID(db, dataID)
 		if errCode != nil {
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
 			continue
@@ -80,7 +104,7 @@ func (commonProtocol *CommonProtocol) changeMetasV1(err error, packet nex.Packet
 			continue
 		}
 
-		errCode = database.UpdateObjectMetadataV1(manager.Database, metaInfo, param)
+		errCode = database.UpdateObjectMetadataV1(db, metaInfo, param)
 		if errCode != nil {
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
 			continue
@@ -89,7 +113,28 @@ func (commonProtocol *CommonProtocol) changeMetasV1(err error, packet nex.Packet
 		pResults = append(pResults, types.NewQResultSuccess(nex.ResultCodes.DataStore.Unknown))
 	}
 
-	rmcResponse := nex.NewRMCSuccess(endpoint, nil)
+	if transactional {
+		// * NOW we check the latest objects error
+		if len(pResults) != 0 && pResults[len(pResults)-1].IsError() {
+			return nil, nex.NewError(uint32(pResults[len(pResults)-1]), "change_error")
+		}
+
+		if err := transaction.Commit(); err != nil {
+			// TODO - Send more specific errors?
+			return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
+		}
+
+		// * Results list is empty when transactions are used
+		pResults = types.NewList[types.QResult]()
+	}
+
+	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
+
+	pResults.WriteTo(rmcResponseStream)
+
+	rmcResponseBody := rmcResponseStream.Bytes()
+
+	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
 	rmcResponse.ProtocolID = datastore.ProtocolID
 	rmcResponse.MethodID = datastore.MethodChangeMetasV1
 	rmcResponse.CallID = callID
