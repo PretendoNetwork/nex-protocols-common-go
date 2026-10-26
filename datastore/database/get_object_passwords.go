@@ -31,7 +31,7 @@ func GetObjectPasswords(database common_globals.Database, caller types.PID, data
 				ELSE $4 -- all is well
 			END AS result_code
 		FROM unnest($5::bigint[]) WITH ORDINALITY AS input(data_id, position)
-		LEFT JOIN datastore.objects o ON input.data_id = o.data_id AND o.deleted = false AND o.upload_completed = true AND o.expiration_date > (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')
+		LEFT JOIN datastore.objects o ON input.data_id = o.data_id AND o.deleted = false AND o.upload_completed = true AND o.expiration_date > (CURRENT_TIMESTAMP AT TIME ZONE 'UTC') AND o.status NOT IN (1, 3, 4)
 		ORDER BY input.position
 	`,
 		nex.ResultCodes.DataStore.NotFound,

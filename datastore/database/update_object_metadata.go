@@ -151,9 +151,10 @@ func UpdateObjectMetadata(database common_globals.Database, currentData datastor
 	}
 
 	if modifyStatus {
-		if newData.Status != datastore_constants.DataStatusNone &&
-			newData.Status != datastore_constants.DataStatusPending &&
-			newData.Status != datastore_constants.DataStatusRejected {
+		// * Statuses 1, 3 and 4 seem to exist but have no known names.
+		// * Servers accept them, but no client (not even the owner) can
+		// * ever interact with the objects again when set
+		if newData.Status > datastore_constants.DataStatusRejected {
 			return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 		}
 

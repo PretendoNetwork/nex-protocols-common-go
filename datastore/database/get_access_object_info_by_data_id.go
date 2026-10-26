@@ -37,7 +37,7 @@ func GetAccessObjectInfoByDataID(database common_globals.Database, dataID types.
 			tags,
 			access_password
 		FROM datastore.objects
-		WHERE data_id=$1 AND deleted=false AND upload_completed=true AND expiration_date > (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')`, dataID).Scan(
+		WHERE data_id=$1 AND deleted=false AND upload_completed=true AND expiration_date > (CURRENT_TIMESTAMP AT TIME ZONE 'UTC') AND status NOT IN (1, 3, 4)`, dataID).Scan(
 		&metaInfo.DataID,
 		&metaInfo.OwnerID,
 		&metaInfo.Size,
