@@ -1,8 +1,6 @@
 package datastore
 
 import (
-	"slices"
-
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	"github.com/PretendoNetwork/nex-protocols-common-go/v2/datastore/database"
@@ -61,69 +59,6 @@ func (commonProtocol *CommonProtocol) changeMeta(err error, packet nex.PacketInt
 	// * If the object is pending or rejected, only the owner can interact with it
 	if metaInfo.OwnerID != connection.PID() && (metaInfo.Status == datastore_constants.DataStatusPending || metaInfo.Status == datastore_constants.DataStatusRejected) {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.UnderReviewing, "change_error")
-	}
-
-	compareName := param.CompareParam.ComparisonFlag.HasFlag(datastore_constants.ComparisonFlagName)
-	compareAccessPermission := param.CompareParam.ComparisonFlag.HasFlag(datastore_constants.ComparisonFlagAccessPermission)
-	compareUpdatePermission := param.CompareParam.ComparisonFlag.HasFlag(datastore_constants.ComparisonFlagUpdatePermission)
-	comparePeriod := param.CompareParam.ComparisonFlag.HasFlag(datastore_constants.ComparisonFlagPeriod)
-	compareMetaBinary := param.CompareParam.ComparisonFlag.HasFlag(datastore_constants.ComparisonFlagMetaBinary)
-	compareTags := param.CompareParam.ComparisonFlag.HasFlag(datastore_constants.ComparisonFlagTags)
-	compareDataType := param.CompareParam.ComparisonFlag.HasFlag(datastore_constants.ComparisonFlagDataType)
-	compareReferredCount := param.CompareParam.ComparisonFlag.HasFlag(datastore_constants.ComparisonFlagReferredCount)
-	compareStatus := param.CompareParam.ComparisonFlag.HasFlag(datastore_constants.ComparisonFlagStatus)
-
-	if param.CompareParam.ComparisonFlag == datastore_constants.ComparisonFlagAll {
-		compareName = true
-		compareAccessPermission = true
-		compareUpdatePermission = true
-		comparePeriod = true
-		compareMetaBinary = true
-		compareTags = true
-		compareDataType = true
-		compareReferredCount = true
-		compareStatus = true
-	}
-
-	if compareName && !metaInfo.Name.Equals(param.CompareParam.Name) {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.ValueNotEqual, "change_error")
-	}
-
-	if compareAccessPermission && !metaInfo.Permission.Equals(param.CompareParam.Permission) {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.ValueNotEqual, "change_error")
-	}
-
-	if compareUpdatePermission && !metaInfo.DelPermission.Equals(param.CompareParam.DelPermission) {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.ValueNotEqual, "change_error")
-	}
-
-	if comparePeriod && !metaInfo.Period.Equals(param.CompareParam.Period) {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.ValueNotEqual, "change_error")
-	}
-
-	if compareMetaBinary && !metaInfo.MetaBinary.Equals(param.CompareParam.MetaBinary) {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.ValueNotEqual, "change_error")
-	}
-
-	if compareTags {
-		currentTags := slices.Sorted(slices.Values(metaInfo.Tags))
-		compareTags := slices.Sorted(slices.Values(param.CompareParam.Tags))
-
-		if !slices.Equal(currentTags, compareTags) {
-			return nil, nex.NewError(nex.ResultCodes.DataStore.ValueNotEqual, "change_error")
-		}
-	}
-
-	if compareDataType && !metaInfo.DataType.Equals(param.CompareParam.DataType) {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.ValueNotEqual, "change_error")
-	}
-
-	if compareReferredCount && !metaInfo.ReferredCnt.Equals(param.CompareParam.ReferredCnt) {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.ValueNotEqual, "change_error")
-	}
-
-	if compareStatus && metaInfo.Status != param.CompareParam.Status {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.ValueNotEqual, "change_error")
 	}
 
 	errCode = database.UpdateObjectMetadata(manager.Database, metaInfo, param)
