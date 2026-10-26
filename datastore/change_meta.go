@@ -28,8 +28,8 @@ func (commonProtocol *CommonProtocol) changeMeta(err error, packet nex.PacketInt
 	var updatePassword types.UInt64
 	var errCode *nex.Error
 
-	// * If using a PersistenceTarget, ignore the DataID
-	if param.PersistenceTarget.OwnerID != 0 {
+	// * The persistence target is used whenever it has a slot, even if it has no ownerId
+	if param.PersistenceTarget.PersistenceSlotID != types.UInt16(datastore_constants.InvalidPersistenceSlotID) {
 		metaInfo, updatePassword, errCode = database.GetUpdateObjectInfoByPersistenceTarget(manager.Database, param.PersistenceTarget)
 	} else if param.DataID != types.UInt64(datastore_constants.InvalidDataID) {
 		metaInfo, updatePassword, errCode = database.GetUpdateObjectInfoByDataID(manager.Database, param.DataID)
