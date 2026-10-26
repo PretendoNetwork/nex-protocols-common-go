@@ -23,7 +23,7 @@ func (commonProtocol *CommonProtocol) completeUpdateObject(err error, packet nex
 	endpoint := connection.Endpoint()
 
 	if param.DataID == types.UInt64(datastore_constants.InvalidDataID) {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
+		return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
 	}
 
 	creationDate, errCode := database.ObjectCreationDate(manager.Database, param.DataID)
