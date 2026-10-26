@@ -190,10 +190,14 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.DataSto
 		return
 	}
 
+	_, err = manager.Database.Exec(`CREATE SEQUENCE IF NOT EXISTS datastore.notification_id_seq`)
+	if err != nil {
+		common_globals.Logger.Error(err.Error())
+		return
+	}
+
 	_, err = manager.Database.Exec(`CREATE TABLE datastore.notifications (
-		-- Postgres sequences of type numeric are not supported, so use bigserial instead
-		-- See: https://www.postgresql.org/docs/current/sql-createsequence.html
-		id bigserial PRIMARY KEY,
+		id numeric(20) NOT NULL DEFAULT nextval('datastore.notification_id_seq') PRIMARY KEY,
 		read boolean NOT NULL DEFAULT FALSE,
 		recipient_id numeric(20),
 		data_id numeric(20), -- can be 0 so we don't add a reference
