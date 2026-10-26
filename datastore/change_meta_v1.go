@@ -25,7 +25,7 @@ func (commonProtocol *CommonProtocol) changeMetaV1(err error, packet nex.PacketI
 	endpoint := connection.Endpoint()
 
 	if param.DataID == types.UInt64(datastore_constants.InvalidDataID) {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
+		return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
 	}
 
 	// * V1 has no persistence target
