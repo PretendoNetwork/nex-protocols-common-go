@@ -21,6 +21,12 @@ func UpdateObjectMetadataV1(database common_globals.Database, currentData datast
 		return nil
 	}
 
+	// * Normally V1 just ignores flags for fields it doesn't support, but for
+	// * some reason the real servers explictly rejects this one
+	if newData.ModifiesFlag.HasFlag(datastore_constants.ModificationFlagDataType) {
+		return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update an object using MODIFICATION_FLAG_DATA_TYPE with V1")
+	}
+
 	modifyName := newData.ModifiesFlag.HasFlag(datastore_constants.ModificationFlagName)
 	modifyAccessPermission := newData.ModifiesFlag.HasFlag(datastore_constants.ModificationFlagAccessPermission)
 	modifyUpdatePermission := newData.ModifiesFlag.HasFlag(datastore_constants.ModificationFlagUpdatePermission)
