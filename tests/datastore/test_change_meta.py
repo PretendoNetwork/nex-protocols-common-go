@@ -776,8 +776,21 @@ async def test_the_status_can_be_changed_back(unique_data_type, status, post):
 	data_id = await helpers.post_with_before_metadata(post, nex.FRIEND_A, data_type=unique_data_type)
 
 	await change(nex.FRIEND_A, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_STATUS, status=status)
-	await change(nex.FRIEND_A, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_STATUS, status=constants.DataStatus.DATA_STATUS_NONE)
 
+	error = None
+	async with helpers.connect(nex.FRIEND_A) as client:
+		try:
+			await client.change_meta(helpers.change_meta_param(data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_STATUS, status=constants.DataStatus.DATA_STATUS_NONE))
+		except common.RMCError as caught:
+			error = caught.name()
+
+	# * Unofficial behaviour, our implementation rejects this because it would let an
+	# * object owner bypass the review state which seems wrong. Normally the server
+	# * allows for this to happen, but we won't implement it unless we see a need
+	if error == "DataStore::Unknown":
+		return
+
+	assert error is None
 	assert (await helpers.get_meta(nex.STRANGER, data_id=data_id)).status == constants.DataStatus.DATA_STATUS_NONE
 
 @pytest.mark.parametrize("status", [1, 3, 4])
