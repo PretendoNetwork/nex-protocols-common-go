@@ -55,6 +55,10 @@ func UpdateObjectMetadata(database common_globals.Database, currentData datastor
 			return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with too many access recipient IDs")
 		}
 
+		if newData.Permission.Permission != datastore_constants.PermissionSpecified && newData.Permission.Permission != datastore_constants.PermissionSpecifiedFriend && len(newData.Permission.RecipientIDs) != 0 {
+			return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with access recipient IDs on a permission which does not use them")
+		}
+
 		updateData["access_permission"] = newData.Permission.Permission
 		updateData["access_permission_recipients"] = pq.Array(newData.Permission.RecipientIDs)
 	}
@@ -66,6 +70,10 @@ func UpdateObjectMetadata(database common_globals.Database, currentData datastor
 
 		if len(newData.DelPermission.RecipientIDs) > datastore_constants.DatastorePermissionRecipientIDsMax {
 			return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with too many update recipient IDs")
+		}
+
+		if newData.DelPermission.Permission != datastore_constants.PermissionSpecified && newData.DelPermission.Permission != datastore_constants.PermissionSpecifiedFriend && len(newData.DelPermission.RecipientIDs) != 0 {
+			return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with update recipient IDs on a permission which does not use them")
 		}
 
 		updateData["update_permission"] = newData.DelPermission.Permission

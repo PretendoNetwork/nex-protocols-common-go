@@ -43,12 +43,20 @@ func InsertObjectByPreparePostParam(database common_globals.Database, manager *c
 		return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with too many access recipient IDs")
 	}
 
+	if param.Permission.Permission != datastore_constants.PermissionSpecified && param.Permission.Permission != datastore_constants.PermissionSpecifiedFriend && len(param.Permission.RecipientIDs) != 0 {
+		return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with access recipient IDs on a permission which does not use them")
+	}
+
 	if param.DelPermission.Permission > datastore_constants.PermissionSpecifiedFriend {
 		return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with invalid update permission")
 	}
 
 	if len(param.DelPermission.RecipientIDs) > datastore_constants.DatastorePermissionRecipientIDsMax {
 		return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with too many update recipient IDs")
+	}
+
+	if param.DelPermission.Permission != datastore_constants.PermissionSpecified && param.DelPermission.Permission != datastore_constants.PermissionSpecifiedFriend && len(param.DelPermission.RecipientIDs) != 0 {
+		return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with update recipient IDs on a permission which does not use them")
 	}
 
 	if len(param.Tags) > int(datastore_constants.NumTagSlot) {
