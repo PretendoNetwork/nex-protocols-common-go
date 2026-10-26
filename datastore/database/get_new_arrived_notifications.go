@@ -18,8 +18,13 @@ func GetNewArrivedNotifications(database common_globals.Database, recipientID ty
 	var pResult types.List[datastore_types.DataStoreNotification]
 	var pHasNext types.Bool = false
 
+	limit := param.Limit
+	if limit == 0 || limit >= 100 {
+		limit = 20
+	}
+
 	// * Add 1 to the limit to check for more notifications remaining
-	rows, err := database.Query(`SELECT id, data_id FROM datastore.notifications WHERE recipient_id = $1 AND read IS NOT TRUE LIMIT $2+1`, recipientID, param.Limit)
+	rows, err := database.Query(`SELECT id, data_id FROM datastore.notifications WHERE recipient_id = $1 AND read IS NOT TRUE LIMIT $2+1`, recipientID, limit)
 	if err != nil {
 		// TODO - Send more specific errors?
 		return nil, false, nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
@@ -28,7 +33,7 @@ func GetNewArrivedNotifications(database common_globals.Database, recipientID ty
 	defer rows.Close()
 
 	for rows.Next() {
-		if len(pResult) == int(param.Limit) {
+		if len(pResult) == int(limit) {
 			pHasNext = true
 			break
 		}
