@@ -64,6 +64,10 @@ func (commonProtocol *CommonProtocol) completePostObjectV1(err error, packet nex
 		if errCode := database.MarkObjectUploaded(manager.Database, dataID); errCode != nil {
 			return nil, errCode
 		}
+
+		if errCode := database.SendPostNotifications(manager.Database, manager, dataID, connection.PID()); errCode != nil {
+			return nil, errCode
+		}
 	}
 
 	rmcResponse := nex.NewRMCSuccess(endpoint, nil)

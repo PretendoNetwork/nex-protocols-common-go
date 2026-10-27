@@ -79,23 +79,6 @@ func (commonProtocol *CommonProtocol) preparePostObjectV1(err error, packet nex.
 		return nil, errCode
 	}
 
-	// TODO - Should this be moved inside InsertObjectByPreparePostParam?
-	if param.Flag.HasFlag(datastore_constants.DataFlagUseNotificationOnPost) {
-		recipientIDs, errCode := manager.GetNotificationRecipients(connection.PID(), param.Permission)
-		if errCode != nil {
-			common_globals.Logger.Errorf("Error on getting notification recipients: %s", errCode.Error())
-			return nil, errCode
-		}
-
-		for _, recipientID := range recipientIDs {
-			errCode = database.SendNotification(manager.Database, manager, dataID, recipientID, connection.PID())
-			if errCode != nil {
-				common_globals.Logger.Errorf("Error on sending notification: %s", errCode.Error())
-				return nil, errCode
-			}
-		}
-	}
-
 	// * Format "DataID_Version", where "Version" always starts at 1
 	key := fmt.Sprintf("objects/%020d_%010d.bin", dataID, 1)
 	postData, err := manager.S3.PresignPost(key, time.Minute*15)

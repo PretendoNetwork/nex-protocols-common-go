@@ -75,20 +75,11 @@ func (commonProtocol *CommonProtocol) postMetaBinary(err error, packet nex.Packe
 	}
 
 	// TODO - Should this be moved inside InsertObjectByPreparePostParam?
-	notifyAccessRecipientsOnCreation := param.Flag.HasFlag(datastore_constants.DataFlagUseNotificationOnPost)
-	if notifyAccessRecipientsOnCreation {
-		recipientIDs, errCode := manager.GetNotificationRecipients(connection.PID(), param.Permission)
-		if errCode != nil {
-			common_globals.Logger.Errorf("Error on getting notification recipients: %s", errCode.Error())
+	// * If DataFlagNeedCompletion is not set then the object is immediately "completed", so send
+	// * its notifications now. Otherwise they get sent when the object is completed
+	if !param.Flag.HasFlag(datastore_constants.DataFlagNeedCompletion) {
+		if errCode := database.SendPostNotifications(manager.Database, manager, types.UInt64(dataID), connection.PID()); errCode != nil {
 			return nil, errCode
-		}
-
-		for _, recipientID := range recipientIDs {
-			errCode = database.SendNotification(manager.Database, manager, dataID, recipientID, connection.PID())
-			if errCode != nil {
-				common_globals.Logger.Errorf("Error on sending notification: %s", errCode.Error())
-				return nil, errCode
-			}
 		}
 	}
 

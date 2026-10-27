@@ -73,6 +73,10 @@ func (commonProtocol *CommonProtocol) completePostObjects(err error, packet nex.
 		if errCode := database.MarkObjectUploaded(transaction, dataID); errCode != nil {
 			return nil, errCode
 		}
+
+		if errCode := database.SendPostNotifications(transaction, manager, dataID, connection.PID()); errCode != nil {
+			return nil, errCode
+		}
 	}
 
 	if err := transaction.Commit(); err != nil {
