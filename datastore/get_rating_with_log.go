@@ -54,7 +54,7 @@ func (commonProtocol *CommonProtocol) getRatingWithLog(err error, packet nex.Pac
 	// * to rate
 	// TODO - Move these unknown flags to nex-protocols-go
 	flags := ratingSettings.Flag
-	if !flags.HasFlag(0x01) || flags.HasFlag(0x02) || flags.HasFlag(datastore_constants.RatingFlagModifiable) || ratingSettings.LockType != datastore_constants.RatingLockNone {
+	if !(flags.HasFlag(0x01) || flags.HasFlag(0x02) || flags.HasFlag(datastore_constants.RatingFlagModifiable) || ratingSettings.LockType != datastore_constants.RatingLockNone) {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "change_error")
 	}
 
