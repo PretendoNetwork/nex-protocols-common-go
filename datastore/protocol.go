@@ -66,15 +66,12 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.DataSto
 	// * have opted to track them internally anyway, regardless of NEX version. We
 	// * may add a flag in the future for disabling the *sending* of these results
 	// * by just setting them all to 0 at response time, for accuracy sake
-	// TODO - Store every object version as it's own row, or keep a single row?
 	_, err = manager.Database.Exec(`CREATE TABLE IF NOT EXISTS datastore.objects (
 		data_id numeric(20) NOT NULL DEFAULT nextval('datastore.object_data_id_seq') PRIMARY KEY,
-		version numeric(10) NOT NULL DEFAULT 1,
 		deleted boolean NOT NULL DEFAULT FALSE,
 		owner numeric(20), -- Wii U/3DS clients only need a uint32, but the Switch uses uint64 PIDs
 
 		-- Data set in DataStorePreparePostParam/DataStorePreparePostParamV1
-		size numeric(10),
 		name text,
 		data_type int,
 		meta_binary bytea,
@@ -87,7 +84,6 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.DataSto
 		refer_data_id numeric(10), -- this is another data_id, but it can ONLY use the uint32 space
 		tags text[],
 		persistence_slot_id int,
-		extra_data text[],
 
 		-- Decoded raw_flags
 		-- Only supports stock flags, custom flags must be handled separately
@@ -109,8 +105,27 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.DataSto
 		update_date timestamp DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
 		true_update_date timestamp DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
 		last_reference_date timestamp DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
-		expiration_date timestamp,
-		upload_completed boolean
+		expiration_date timestamp
+	)`)
+	if err != nil {
+		common_globals.Logger.Error(err.Error())
+		return
+	}
+
+	// * Versions as created through PrepareUpdateObject, including version 1 which is
+	// * the initial version of the object when it got posted. Objects can have more than
+	// * one "pending" versions (updates) by calling PrepareUpdateObject more than once
+	// * without completing them. Each of these pending versions is valid, and can be
+	// * completed independently, so each needs to be tracked separately
+	_, err = manager.Database.Exec(`CREATE TABLE IF NOT EXISTS datastore.object_versions (
+		data_id numeric(20) REFERENCES datastore.objects(data_id),
+		version numeric(10),
+		size numeric(10),
+		extra_data text[],
+		preparer numeric(20),
+		completed boolean NOT NULL DEFAULT FALSE,
+		creation_date timestamp DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
+		PRIMARY KEY (data_id, version)
 	)`)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())

@@ -1,8 +1,6 @@
 package datastore
 
 import (
-	"time"
-
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	"github.com/PretendoNetwork/nex-protocols-common-go/v2/datastore/database"
@@ -26,49 +24,14 @@ func (commonProtocol *CommonProtocol) completeUpdateObject(err error, packet nex
 		return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
 	}
 
-	creationDate, errCode := database.ObjectCreationDate(manager.Database, param.DataID)
+	// * Only the user who initiated the update can actually complete it
+	preparer, errCode := database.GetObjectUpdatePreparer(manager.Database, param.DataID, param.Version)
 	if errCode != nil {
 		return nil, errCode
 	}
 
-	// * If 3 hours pass and the upload was not completed, object
-	// * is removed. Simulating this removal by just bailing
-	if time.Now().UTC().Sub(creationDate) >= 3*time.Hour {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
-	}
-
-	// * Users besides the owner are allowed to call PrepareUpdateObject
-	// * if they have update permissions, but it's unclear if this is
-	// * allowed to be called as well since CompletePostObject can
-	// * only be called by owners and there is no update password sent
-	// * to this method
-	// *
-	// * Treating the same as PrepareUpdateObject until we see otherwise
-	objectOwner, errCode := database.ObjectOwner(manager.Database, param.DataID)
-	if errCode != nil {
-		return nil, errCode
-	}
-
-	if objectOwner != connection.PID() {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "change_error")
-	}
-
-	objectUploaded, errCode := database.ObjectUploaded(manager.Database, param.DataID)
-	if errCode != nil {
-		return nil, errCode
-	}
-
-	if objectUploaded {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "change_error")
-	}
-
-	version, errCode := database.GetObjectLatestVersionNumber(manager.Database, param.DataID)
-	if errCode != nil {
-		return nil, errCode
-	}
-
-	if version != uint32(param.Version) {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "change_error")
+	if preparer != connection.PID() {
+		return nil, nex.NewError(nex.ResultCodes.DataStore.PermissionDenied, "change_error")
 	}
 
 	// * Note: The official servers do not seem to validate this against S3.
@@ -76,7 +39,12 @@ func (commonProtocol *CommonProtocol) completeUpdateObject(err error, packet nex
 	// *       to add later if it becomes a problem
 
 	if param.IsSuccess {
-		if errCode := database.MarkObjectUploaded(manager.Database, param.DataID); errCode != nil {
+		if errCode := database.CompleteObjectUpdate(manager.Database, param.DataID, param.Version); errCode != nil {
+			return nil, errCode
+		}
+
+		// * Always notify the recipients even if it's not the latest version
+		if errCode := database.SendUpdateNotifications(manager.Database, manager, param.DataID, connection.PID()); errCode != nil {
 			return nil, errCode
 		}
 	}

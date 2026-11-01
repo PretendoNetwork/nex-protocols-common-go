@@ -16,8 +16,9 @@ func UpdateObjectLock(database common_globals.Database, dataID types.UInt64, loc
 		SELECT
 			use_read_lock,
 			COALESCE(lock_id, 0)
-		FROM datastore.objects
-		WHERE data_id=$1 AND deleted=false AND upload_completed=true
+		FROM datastore.objects o
+		JOIN datastore.object_versions v ON v.data_id = o.data_id AND v.version = 1
+		WHERE o.data_id=$1 AND o.deleted=false AND v.completed=true
 	`, dataID).Scan(&useReadLock, &currentLockID)
 
 	if err != nil {

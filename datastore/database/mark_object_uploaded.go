@@ -7,7 +7,7 @@ import (
 )
 
 func MarkObjectUploaded(database common_globals.Database, dataID types.UInt64) *nex.Error {
-	result, err := database.Exec(`UPDATE datastore.objects SET upload_completed = TRUE WHERE data_id=$1`, dataID)
+	result, err := database.Exec(`UPDATE datastore.object_versions SET completed = true WHERE data_id=$1 AND version = 1`, dataID)
 	if err != nil {
 		// TODO - Send more specific errors?
 		return nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())

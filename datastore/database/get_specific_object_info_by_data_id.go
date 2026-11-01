@@ -19,16 +19,17 @@ func GetSpecificObjectInfoByDataID(database common_globals.Database, dataID type
 
 	err := database.QueryRow(`
 		SELECT
-			data_id,
+			o.data_id,
 			owner,
-			size,
+			v.size,
 			data_type,
 			meta_binary,
 			meta_binary IS NULL,
 			raw_flags,
-			version
-		FROM datastore.objects
-		WHERE data_id=$1`, dataID).Scan(
+			v.version
+		FROM datastore.objects o
+		JOIN datastore.object_versions v ON v.data_id = o.data_id AND v.version = COALESCE((SELECT MAX(version) FROM datastore.object_versions WHERE data_id = o.data_id AND completed = true), 1)
+		WHERE o.data_id=$1`, dataID).Scan(
 		&metaInfo.DataID,
 		&metaInfo.OwnerID,
 		&metaInfo.Size,

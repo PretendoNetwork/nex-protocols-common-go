@@ -12,7 +12,12 @@ import (
 func ObjectUploaded(database common_globals.Database, dataID types.UInt64) (bool, *nex.Error) {
 	var uploaded bool
 
-	err := database.QueryRow(`SELECT upload_completed FROM datastore.objects WHERE data_id=$1 AND deleted=false`, dataID).Scan(&uploaded)
+	err := database.QueryRow(`
+		SELECT v.completed
+		FROM datastore.objects o
+		JOIN datastore.object_versions v ON v.data_id = o.data_id AND v.version = 1
+		WHERE o.data_id=$1 AND o.deleted=false
+	`, dataID).Scan(&uploaded)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return false, nex.NewError(nex.ResultCodes.DataStore.NotFound, err.Error())

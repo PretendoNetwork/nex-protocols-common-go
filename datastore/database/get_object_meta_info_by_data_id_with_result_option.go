@@ -18,14 +18,14 @@ func GetObjectMetaInfoByDataIDWithResultOption(database common_globals.Database,
 	// * permission recipient IDs are only
 	// * populated if resultOption says to
 	columns := []string{
-		"data_id",
+		"o.data_id",
 		"owner",
-		"size",
+		"v.size",
 		"name",
 		"data_type",
 		"access_permission",
 		"update_permission",
-		"creation_date",
+		"o.creation_date",
 		"update_date",
 		"expiration_days",
 		"status",
@@ -77,7 +77,7 @@ func GetObjectMetaInfoByDataIDWithResultOption(database common_globals.Database,
 		outs = append(outs, &metaInfo.DelPermission.RecipientIDs)
 	}
 
-	query, params, err := Select(columns...).From("datastore.objects").Where("data_id").Is(dataID).Build()
+	query, params, err := Select(columns...).From("datastore.objects o JOIN datastore.object_versions v ON v.data_id = o.data_id AND v.version = (SELECT MAX(version) FROM datastore.object_versions WHERE data_id = o.data_id AND completed = true)").Where("o.data_id").Is(dataID).Build()
 	if err != nil {
 		// TODO - Send more specific errors?
 		return metaInfo, nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())

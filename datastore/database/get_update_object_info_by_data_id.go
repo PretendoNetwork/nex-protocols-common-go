@@ -15,9 +15,9 @@ func GetUpdateObjectInfoByDataID(database common_globals.Database, dataID types.
 
 	err := database.QueryRow(`
 		SELECT
-			data_id,
+			o.data_id,
 			owner,
-			size,
+			v.size,
 			name,
 			data_type,
 			meta_binary,
@@ -25,7 +25,7 @@ func GetUpdateObjectInfoByDataID(database common_globals.Database, dataID types.
 			access_permission_recipients,
 			update_permission,
 			update_permission_recipients,
-			creation_date,
+			o.creation_date,
 			update_date,
 			expiration_days,
 			status,
@@ -36,8 +36,9 @@ func GetUpdateObjectInfoByDataID(database common_globals.Database, dataID types.
 			expiration_date,
 			tags,
 			update_password
-		FROM datastore.objects
-		WHERE data_id=$1 AND deleted=false AND upload_completed=true AND expiration_date > (CURRENT_TIMESTAMP AT TIME ZONE 'UTC') AND status NOT IN (1, 3, 4)`, dataID).Scan(
+		FROM datastore.objects o
+		JOIN datastore.object_versions v ON v.data_id = o.data_id AND v.version = (SELECT MAX(version) FROM datastore.object_versions WHERE data_id = o.data_id AND completed = true)
+		WHERE o.data_id=$1 AND deleted=false AND expiration_date > (CURRENT_TIMESTAMP AT TIME ZONE 'UTC') AND status NOT IN (1, 3, 4)`, dataID).Scan(
 		&metaInfo.DataID,
 		&metaInfo.OwnerID,
 		&metaInfo.Size,

@@ -63,14 +63,22 @@ func (commonProtocol *CommonProtocol) prepareUpdateObject(err error, packet nex.
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "PrepareUpdateObject cannot be used with DataFlagNotUseFileServer")
 	}
 
-	newVersion, errCode := database.UpdateObjectByPrepareUpdateParam(manager.Database, param, metaInfo)
+	transaction, err := manager.BeginTransaction()
+	if err != nil {
+		// TODO - Send more specific errors?
+		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
+	}
+
+	// * Does nothing once the transaction has been committed successfully
+	defer transaction.Rollback()
+
+	newVersion, errCode := database.InsertObjectUpdateByPrepareUpdateParam(transaction, connection.PID(), param, metaInfo)
 	if errCode != nil {
 		return nil, errCode
 	}
 
 	// * NEX 3.0.0 bumped versions from uint16 to uint32.
 	// * Older clients can't handle larger numbers
-	// TODO - Check this before inserting into the database
 	if endpoint.LibraryVersions().DataStore.Major < 3 {
 		if newVersion > math.MaxUint16 {
 			// * OverCapacity is definitely not the correct error here, but it sounds nice
@@ -78,20 +86,9 @@ func (commonProtocol *CommonProtocol) prepareUpdateObject(err error, packet nex.
 		}
 	}
 
-	if metaInfo.Flag.HasFlag(datastore_constants.DataFlagUseNotificationOnUpdate) {
-		recipientIDs, errCode := manager.GetNotificationRecipients(metaInfo.OwnerID, metaInfo.Permission)
-		if errCode != nil {
-			common_globals.Logger.Errorf("Error on getting notification recipients: %s", errCode.Error())
-			return nil, errCode
-		}
-
-		for _, recipientID := range recipientIDs {
-			errCode := database.SendNotification(manager.Database, manager, uint64(metaInfo.DataID), recipientID, connection.PID())
-			if errCode != nil {
-				common_globals.Logger.Errorf("Error on sending notification: %s", errCode.Error())
-				return nil, errCode
-			}
-		}
+	if err := transaction.Commit(); err != nil {
+		// TODO - Send more specific errors?
+		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
 	}
 
 	// * Format "DataID_Version"
