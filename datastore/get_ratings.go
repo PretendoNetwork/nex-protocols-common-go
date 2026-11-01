@@ -22,11 +22,8 @@ func (commonProtocol *CommonProtocol) getRatings(err error, packet nex.PacketInt
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
-	// * This might actually be BatchProcessingCapacity.
-	// * Using BatchProcessingCapacityPostObject for now
-	// * to match RateObjects/RateObjectsWithPosting.
-	// TODO - If we see a real client use more than 16, update this
-	if len(dataIDs) > datastore_constants.BatchProcessingCapacityPostObject {
+	// * Does not seem to be a constant in DataStore, so just inline it for now?
+	if len(dataIDs) > 512 {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.OverCapacity, "change_error")
 	}
 
