@@ -1,6 +1,8 @@
 package datastore
 
 import (
+	"slices"
+
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	"github.com/PretendoNetwork/nex-protocols-common-go/v2/datastore/database"
@@ -26,6 +28,11 @@ func (commonProtocol *CommonProtocol) getRatings(err error, packet nex.PacketInt
 	// TODO - If we see a real client use more than 16, update this
 	if len(dataIDs) > datastore_constants.BatchProcessingCapacityPostObject {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.OverCapacity, "change_error")
+	}
+
+	// * Unlike GetRating, INVALID_DATAID anywhere in the input kills the whole request
+	if slices.Contains(dataIDs, types.UInt64(datastore_constants.InvalidDataID)) {
+		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 	}
 
 	pRatings := types.NewList[types.List[datastore_types.DataStoreRatingInfoWithSlot]]()

@@ -56,7 +56,7 @@ func (commonProtocol *CommonProtocol) rateObjects(err error, packet nex.PacketIn
 
 		if target.DataID == types.UInt64(datastore_constants.InvalidDataID) {
 			pRatings = append(pRatings, invalidRatingInfo)
-			pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.InvalidArgument))
+			pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.NotFound))
 			continue
 		}
 

@@ -21,7 +21,7 @@ func (commonProtocol *CommonProtocol) getRatingWithLog(err error, packet nex.Pac
 	endpoint := connection.Endpoint()
 
 	if target.DataID == types.UInt64(datastore_constants.InvalidDataID) {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
+		return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
 	}
 
 	if target.Slot >= types.UInt8(datastore_constants.NumRatingSlot) {

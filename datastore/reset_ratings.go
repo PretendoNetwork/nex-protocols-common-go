@@ -30,7 +30,7 @@ func (commonProtocol *CommonProtocol) resetRatings(err error, packet nex.PacketI
 
 	for _, dataID := range dataIDs {
 		if dataID == types.UInt64(datastore_constants.InvalidDataID) {
-			pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.InvalidArgument))
+			pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.NotFound))
 			continue
 		}
 
