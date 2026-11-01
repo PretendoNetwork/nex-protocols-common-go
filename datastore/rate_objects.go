@@ -1,6 +1,7 @@
 package datastore
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/PretendoNetwork/nex-go/v2"
@@ -37,14 +38,35 @@ func (commonProtocol *CommonProtocol) rateObjects(err error, packet nex.PacketIn
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 	}
 
-	// TODO - Add rollback for when error occurs
-
 	pRatings := types.NewList[datastore_types.DataStoreRatingInfo]()
 	pResults := types.NewList[types.QResult]()
 	invalidRatingInfo := datastore_types.NewDataStoreRatingInfo() // * Quick hack to get a zeroed struct
 
+	var db common_globals.Database = manager.Database
+	var transaction *sql.Tx
+
+	if transactional {
+		var err error
+		transaction, err = manager.BeginTransaction()
+		if err != nil {
+			// TODO - Send more specific errors?
+			return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
+		}
+
+		// * Does nothing once the transaction has been committed successfully
+		defer transaction.Rollback()
+
+		db = transaction
+	}
+
 	// TODO - Optimize this, this can make dozens of database calls for a single RMC request
 	for i := 0; i < len(targets); i++ {
+		// * Checking the previous target for errors was just a simpler refactor.
+		// * The final target error is checked after the loop because lazy
+		if bool(transactional) && i > 0 && pResults[i-1].IsError() {
+			break
+		}
+
 		var param datastore_types.DataStoreRateObjectParam
 		if len(params) == 1 {
 			param = params[0]
@@ -66,7 +88,7 @@ func (commonProtocol *CommonProtocol) rateObjects(err error, packet nex.PacketIn
 			continue
 		}
 
-		metaInfo, accessPassword, errCode := database.GetAccessObjectInfoByDataID(manager.Database, target.DataID)
+		metaInfo, accessPassword, errCode := database.GetAccessObjectInfoByDataID(db, target.DataID)
 		if errCode != nil {
 			pRatings = append(pRatings, invalidRatingInfo)
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
@@ -88,7 +110,7 @@ func (commonProtocol *CommonProtocol) rateObjects(err error, packet nex.PacketIn
 		}
 
 		// TODO - Refactor out this hack. We store decoded flags in Postgres, stop manually parsing them again here
-		ratingSettings, errCode := database.GetObjectRatingSlotSettings(manager.Database, target.DataID, target.Slot)
+		ratingSettings, errCode := database.GetObjectRatingSlotSettings(db, target.DataID, target.Slot)
 		if errCode != nil {
 			pRatings = append(pRatings, invalidRatingInfo)
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
@@ -136,7 +158,7 @@ func (commonProtocol *CommonProtocol) rateObjects(err error, packet nex.PacketIn
 		}
 
 		if ratingSettings.LockType != datastore_constants.RatingLockNone {
-			ratingLog, errCode := database.GetUserRatingLog(manager.Database, target.DataID, target.Slot, connection.PID())
+			ratingLog, errCode := database.GetUserRatingLog(db, target.DataID, target.Slot, connection.PID())
 			if errCode != nil {
 				pRatings = append(pRatings, invalidRatingInfo)
 				pResults = append(pResults, types.NewQResult(errCode.ResultCode))
@@ -150,15 +172,20 @@ func (commonProtocol *CommonProtocol) rateObjects(err error, packet nex.PacketIn
 			}
 		}
 
-		errCode = database.RateObjectSlot(manager.Database, target.DataID, target.Slot, connection.PID(), value)
+		errCode = database.RateObjectSlot(db, target.DataID, target.Slot, connection.PID(), value)
 		if errCode != nil {
+			// * This means the rating was about to go above max int64, which kills the whole request
+			if errCode.Equals(nex.ResultCodes.PythonCore.Exception) {
+				return nil, errCode
+			}
+
 			pRatings = append(pRatings, invalidRatingInfo)
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
 			continue
 		}
 
 		if ratingSettings.LockType != datastore_constants.RatingLockNone {
-			errCode := database.LockUserRatings(manager.Database, manager, target.DataID, target.Slot, connection.PID(), ratingSettings)
+			errCode := database.LockUserRatings(db, manager, target.DataID, target.Slot, connection.PID(), ratingSettings)
 			if errCode != nil {
 				pRatings = append(pRatings, invalidRatingInfo)
 				pResults = append(pResults, types.NewQResult(errCode.ResultCode))
@@ -167,7 +194,7 @@ func (commonProtocol *CommonProtocol) rateObjects(err error, packet nex.PacketIn
 		}
 
 		if fetchRatings {
-			pRating, errCode := database.GetObjectRatingByDataIDAndSlot(manager.Database, target.DataID, target.Slot)
+			pRating, errCode := database.GetObjectRatingByDataIDAndSlot(db, target.DataID, target.Slot)
 			if errCode != nil {
 				pRatings = append(pRatings, invalidRatingInfo)
 				pResults = append(pResults, types.NewQResult(errCode.ResultCode))
@@ -180,6 +207,21 @@ func (commonProtocol *CommonProtocol) rateObjects(err error, packet nex.PacketIn
 		pResults = append(pResults, types.NewQResultSuccess(nex.ResultCodes.DataStore.Unknown))
 
 		// TODO - Create a log here manually, or continue to manually create logs at runtime?
+	}
+
+	if transactional {
+		// * NOW we check the latest targets error
+		if len(pResults) != 0 && pResults[len(pResults)-1].IsError() {
+			return nil, nex.NewError(uint32(pResults[len(pResults)-1]), "change_error")
+		}
+
+		if err := transaction.Commit(); err != nil {
+			// TODO - Send more specific errors?
+			return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
+		}
+
+		// * Results list is empty when transactions are used
+		pResults = types.NewList[types.QResult]()
 	}
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())

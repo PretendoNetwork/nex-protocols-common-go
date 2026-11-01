@@ -1,6 +1,8 @@
 package datastore
 
 import (
+	"database/sql"
+
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	"github.com/PretendoNetwork/nex-protocols-common-go/v2/datastore/database"
@@ -24,17 +26,38 @@ func (commonProtocol *CommonProtocol) resetRatings(err error, packet nex.PacketI
 		return nil, nex.NewError(nex.ResultCodes.DataStore.OverCapacity, "change_error")
 	}
 
-	// TODO - Add rollback
-
 	pResults := types.NewList[types.QResult]()
 
-	for _, dataID := range dataIDs {
+	var db common_globals.Database = manager.Database
+	var transaction *sql.Tx
+
+	if transactional {
+		var err error
+		transaction, err = manager.BeginTransaction()
+		if err != nil {
+			// TODO - Send more specific errors?
+			return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
+		}
+
+		// * Does nothing once the transaction has been committed successfully
+		defer transaction.Rollback()
+
+		db = transaction
+	}
+
+	for i, dataID := range dataIDs {
+		// * Checking the previous object for errors was just a simpler refactor.
+		// * The final object error is checked after the loop because lazy
+		if bool(transactional) && i > 0 && pResults[i-1].IsError() {
+			break
+		}
+
 		if dataID == types.UInt64(datastore_constants.InvalidDataID) {
 			pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.NotFound))
 			continue
 		}
 
-		metaInfo, objectUpdatePassword, errCode := database.GetUpdateObjectInfoByDataID(manager.Database, dataID)
+		metaInfo, objectUpdatePassword, errCode := database.GetUpdateObjectInfoByDataID(db, dataID)
 		if errCode != nil {
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
 			continue
@@ -57,13 +80,28 @@ func (commonProtocol *CommonProtocol) resetRatings(err error, packet nex.PacketI
 			continue
 		}
 
-		errCode = database.DeleteObjectRatings(manager.Database, dataID)
+		errCode = database.DeleteObjectRatings(db, dataID)
 		if errCode != nil {
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
 			continue
 		}
 
 		pResults = append(pResults, types.NewQResultSuccess(nex.ResultCodes.DataStore.Unknown))
+	}
+
+	if transactional {
+		// * NOW we check the latest objects error
+		if len(pResults) != 0 && pResults[len(pResults)-1].IsError() {
+			return nil, nex.NewError(uint32(pResults[len(pResults)-1]), "change_error")
+		}
+
+		if err := transaction.Commit(); err != nil {
+			// TODO - Send more specific errors?
+			return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
+		}
+
+		// * Results list is empty when transactions are used
+		pResults = types.NewList[types.QResult]()
 	}
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
