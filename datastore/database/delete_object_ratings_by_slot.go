@@ -7,8 +7,14 @@ import (
 )
 
 func DeleteObjectRatingsBySlot(database common_globals.Database, dataID types.UInt64, slot types.UInt8) *nex.Error {
-	// TODO - Should we just LOGICALLY delete these, like we do everything else, or continue to HARD delete them?
-	_, err := database.Exec(`DELETE FROM datastore.ratings WHERE data_id=$1 AND slot=$2`, dataID, slot)
+	_, err := database.Exec(`
+		WITH logs AS (
+			DELETE FROM datastore.rating_logs WHERE data_id=$1 AND slot=$2
+		)
+		UPDATE datastore.rating_slots
+		SET total_value = initial_value, rating_count = 0
+		WHERE data_id=$1 AND slot=$2
+	`, dataID, slot)
 	if err != nil {
 		// TODO - Send more specific errors?
 		return nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())

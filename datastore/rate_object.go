@@ -53,8 +53,6 @@ func (commonProtocol *CommonProtocol) rateObject(err error, packet nex.PacketInt
 		return nil, errCode
 	}
 
-	allowMultipleRatings := ratingSettings.Flag.HasFlag(datastore_constants.RatingFlagModifiable)
-	roundNegatives := ratingSettings.Flag.HasFlag(datastore_constants.RatingFlagRoundMinus)
 	disableSelfRating := ratingSettings.Flag.HasFlag(datastore_constants.RatingFlagDisableSelfRating)
 
 	useMinimum := ratingSettings.InternalFlag.HasFlag(datastore_constants.RatingInternalFlagUseRangeMin)
@@ -62,17 +60,12 @@ func (commonProtocol *CommonProtocol) rateObject(err error, packet nex.PacketInt
 
 	value := param.RatingValue
 
-	// TODO - The priority of rounding negatives MIGHT be higher than checking the range. Need to verify this
 	if useMinimum && value < ratingSettings.RangeMin {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 	}
 
 	if useMaximum && value > ratingSettings.RangeMax {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
-	}
-
-	if roundNegatives && value < 0 {
-		value = 0
 	}
 
 	if disableSelfRating && metaInfo.OwnerID == connection.PID() {
@@ -90,12 +83,7 @@ func (commonProtocol *CommonProtocol) rateObject(err error, packet nex.PacketInt
 		}
 	}
 
-	if !allowMultipleRatings {
-		errCode = database.UpdateUserRating(manager.Database, target.DataID, target.Slot, connection.PID(), param.RatingValue)
-	} else {
-		errCode = database.AddUserRating(manager.Database, target.DataID, target.Slot, connection.PID(), param.RatingValue)
-	}
-
+	errCode = database.RateObjectSlot(manager.Database, target.DataID, target.Slot, connection.PID(), value)
 	if errCode != nil {
 		return nil, errCode
 	}

@@ -10,23 +10,15 @@ import (
 func GetObjectRatingsByDataID(database common_globals.Database, dataID types.UInt64) (types.List[datastore_types.DataStoreRatingInfoWithSlot], *nex.Error) {
 	ratings := types.NewList[datastore_types.DataStoreRatingInfoWithSlot]()
 
-	// TODO - If the total value goes above or below int64 min/max, it needs to be rounded to either the min/max
 	rows, err := database.Query(`
 		SELECT
-			rs.slot,
-			COALESCE(SUM(r.value), 0) + rs.initial_value AS total_value,
-			COUNT(r.id) AS rating_count,
-			rs.initial_value
-		FROM
-			datastore.rating_settings AS rs
-		LEFT JOIN
-			datastore.ratings r ON rs.data_id = r.data_id AND rs.slot = r.slot
-		WHERE
-			rs.data_id=$1
-		GROUP BY
-			rs.slot, rs.initial_value
-		ORDER BY
-			rs.slot
+			slot,
+			total_value,
+			rating_count,
+			initial_value
+		FROM datastore.rating_slots
+		WHERE data_id=$1
+		ORDER BY slot
 		`, dataID)
 	if err != nil {
 		// TODO - Send more specific errors?

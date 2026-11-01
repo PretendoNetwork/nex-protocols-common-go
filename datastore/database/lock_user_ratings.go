@@ -12,20 +12,9 @@ func LockUserRatings(database common_globals.Database, manager *common_globals.D
 
 	// TODO - Check rows affected?
 	_, err := database.Exec(`
-		INSERT INTO datastore.rating_locks (
-			pid,
-			data_id,
-			slot,
-			locked_until
-		) VALUES (
-			$1,
-			$2,
-			$3,
-			$4
-		)
-		ON CONFLICT (pid, data_id, slot)
-			DO UPDATE
-				SET locked_until = $4
+		UPDATE datastore.rating_logs
+		SET locked_until = $4
+		WHERE pid = $1 AND data_id = $2 AND slot = $3
 	`, pid, dataID, slot, expirationDate)
 	if err != nil {
 		// TODO - Send more specific errors?

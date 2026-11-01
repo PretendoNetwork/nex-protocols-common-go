@@ -19,20 +19,10 @@ func GetUserRatingLog(database common_globals.Database, dataID types.UInt64, slo
 
 	err := database.QueryRow(`
 		SELECT
-			r.value,
-			l.locked_until
-		FROM
-			(
-				SELECT
-					value,
-					updated_at
-				FROM datastore.ratings
-				WHERE data_id = $1 AND slot = $2 AND pid = $3
-				ORDER BY updated_at DESC
-				LIMIT 1
-			) r
-		LEFT JOIN datastore.rating_locks l ON
-			l.data_id = $1 AND l.slot = $2 AND l.pid = $3
+			value,
+			locked_until
+		FROM datastore.rating_logs
+		WHERE data_id = $1 AND slot = $2 AND pid = $3
 	`, dataID, slot, pid).Scan(&ratingValue, &lockedUntil)
 	if err != nil {
 		if err == sql.ErrNoRows {

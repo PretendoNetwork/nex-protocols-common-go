@@ -145,8 +145,10 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.DataSto
 		return
 	}
 
-	_, err = manager.Database.Exec(`CREATE TABLE IF NOT EXISTS datastore.rating_settings (
+	_, err = manager.Database.Exec(`CREATE TABLE IF NOT EXISTS datastore.rating_slots (
 		data_id numeric(20) NOT NULL REFERENCES datastore.objects(data_id),
+		total_value numeric(20) NOT NULL CHECK (total_value BETWEEN -9223372036854775808 AND 9223372036854775807),
+		rating_count numeric(10) NOT NULL DEFAULT 0,
 
 		-- Data set in DataStoreRatingInitParamWithSlot
 		slot smallint, -- can technically only be 0-15, but allocate enough space anyway
@@ -177,28 +179,18 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.DataSto
 		return
 	}
 
-	_, err = manager.Database.Exec(`CREATE TABLE IF NOT EXISTS datastore.ratings (
-		id serial PRIMARY KEY,
+	// * When RATING_FLAG_MODIFIABLE is used this also acts as the users single rating value so
+	// * that it can be removed from the total later
+	_, err = manager.Database.Exec(`CREATE TABLE IF NOT EXISTS datastore.rating_logs (
 		data_id numeric(20),
 		slot smallint,
 		pid numeric(20),
-		value numeric(20),
+		value int,
+		locked_until timestamp,
 		created_at timestamp DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
 		updated_at timestamp DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
-		FOREIGN KEY (data_id, slot) REFERENCES datastore.rating_settings(data_id, slot)
-	)`)
-	if err != nil {
-		common_globals.Logger.Error(err.Error())
-		return
-	}
-
-	_, err = manager.Database.Exec(`CREATE TABLE IF NOT EXISTS datastore.rating_locks (
-		pid numeric(20),
-		data_id numeric(20),
-		slot smallint,
-		locked_until timestamp,
-		PRIMARY KEY (pid, data_id, slot),
-		FOREIGN KEY (data_id, slot) REFERENCES datastore.rating_settings(data_id, slot)
+		PRIMARY KEY (data_id, slot, pid),
+		FOREIGN KEY (data_id, slot) REFERENCES datastore.rating_slots(data_id, slot)
 	)`)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())

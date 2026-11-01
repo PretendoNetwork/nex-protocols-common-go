@@ -21,7 +21,7 @@ func GetObjectRatingSlotSettings(database common_globals.Database, dataID types.
 			maximum_value,
 			lock_period_hour,
 			lock_period_duration
-		FROM datastore.rating_settings
+		FROM datastore.rating_slots
 		WHERE data_id=$1 AND slot=$2
 	`,
 		dataID,

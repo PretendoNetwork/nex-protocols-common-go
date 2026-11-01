@@ -66,7 +66,7 @@ func InsertObjectRatingSettings(database common_globals.Database, dataID uint64,
 		useMinimum := ratingInitParam.Param.InternalFlag.HasFlag(datastore_constants.RatingInternalFlagUseRangeMin)
 		useMaximum := ratingInitParam.Param.InternalFlag.HasFlag(datastore_constants.RatingInternalFlagUseRangeMax)
 
-		_, err := database.Exec(`INSERT INTO datastore.rating_settings (
+		_, err := database.Exec(`INSERT INTO datastore.rating_slots (
 			data_id,
 			slot,
 			raw_flags,
@@ -74,6 +74,7 @@ func InsertObjectRatingSettings(database common_globals.Database, dataID uint64,
 			minimum_value,
 			maximum_value,
 			initial_value,
+			total_value,
 			lock_type,
 			lock_period_duration,
 			lock_period_hour,
@@ -89,6 +90,7 @@ func InsertObjectRatingSettings(database common_globals.Database, dataID uint64,
 			$4,
 			$5,
 			$6,
+			$7,
 			$7,
 			$8,
 			$9,
