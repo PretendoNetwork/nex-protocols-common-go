@@ -9,12 +9,7 @@ import (
 )
 
 func InsertObjectUpdateByPrepareUpdateParam(transaction common_globals.Database, preparer types.PID, updateParam datastore_types.DataStorePrepareUpdateParam, currentData datastore_types.DataStoreMetaInfo) (types.UInt32, *nex.Error) {
-	// * Max size is 10MiB.
-	// * Does not seem to be a constant in DataStore, so just inline it for now?
-	if updateParam.Size > 0xA00000 {
-		return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object larger than 10MiB")
-	}
-
+	// * Unlike when creating an object, updating it has no size limit for some reason
 	_, err := transaction.Exec(`SELECT 1 FROM datastore.objects WHERE data_id = $1 FOR UPDATE`, currentData.DataID)
 	if err != nil {
 		// TODO - Send more specific errors?
