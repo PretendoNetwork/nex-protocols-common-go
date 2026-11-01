@@ -41,12 +41,6 @@ func (commonProtocol *CommonProtocol) getRatings(err error, packet nex.PacketInt
 
 	// TODO - Optimize this, this can make dozens of database calls
 	for _, dataID := range dataIDs {
-		if dataID == types.UInt64(datastore_constants.InvalidDataID) {
-			pRatings = append(pRatings, invalidRatingInfoWithSlot)
-			pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.InvalidArgument))
-			continue
-		}
-
 		metaInfo, objectAccessPassword, errCode := database.GetAccessObjectInfoByDataID(manager.Database, dataID)
 		if errCode != nil {
 			pRatings = append(pRatings, invalidRatingInfoWithSlot)

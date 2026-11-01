@@ -7,7 +7,7 @@ import (
 )
 
 func DeleteObjectRatingsBySlot(database common_globals.Database, dataID types.UInt64, slot types.UInt8) *nex.Error {
-	_, err := database.Exec(`
+	result, err := database.Exec(`
 		WITH logs AS (
 			DELETE FROM datastore.rating_logs WHERE data_id=$1 AND slot=$2
 		)
@@ -20,7 +20,15 @@ func DeleteObjectRatingsBySlot(database common_globals.Database, dataID types.UI
 		return nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
 	}
 
-	// TODO - Do we care about result.RowsAffected() here?
+	affected, err := result.RowsAffected()
+	if err != nil {
+		// TODO - Send more specific errors?
+		return nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
+	}
+
+	if affected == 0 {
+		return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Rating slot not found")
+	}
 
 	return nil
 }

@@ -20,7 +20,7 @@ func GetObjectRatingByDataIDAndSlot(database common_globals.Database, dataID typ
 		`, dataID, slot).Scan(&ratingInfo.TotalValue, &ratingInfo.Count, &ratingInfo.InitialValue)
 	if err != nil {
 		if err.Error() == "sql: no rows in result set" {
-			return ratingInfo, nex.NewError(nex.ResultCodes.DataStore.NotFound, "Rating slot not found")
+			return ratingInfo, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Rating slot not found")
 		}
 
 		// TODO - Send more specific errors?
