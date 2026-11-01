@@ -46,9 +46,14 @@ func (commonProtocol *CommonProtocol) resetRatings(err error, packet nex.PacketI
 			continue
 		}
 
-		// * The owner of an object can always view their objects, but normal users cannot
-		if metaInfo.Status != datastore_constants.DataStatusNone && metaInfo.OwnerID != connection.PID() {
-			pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.UnderReviewing))
+		// * Unlike most methods, not even the owner can interact with objects in this case
+		if metaInfo.Status != datastore_constants.DataStatusNone {
+			if metaInfo.OwnerID == connection.PID() {
+				pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.NotFound))
+			} else {
+				pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.UnderReviewing))
+			}
+
 			continue
 		}
 
