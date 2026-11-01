@@ -95,6 +95,21 @@ func (commonProtocol *CommonProtocol) rateObjects(err error, packet nex.PacketIn
 			continue
 		}
 
+		// * The unknown flags 0x01, 0x02 and 0x20 make the slot impossible to rate.
+		// * 0x01 crashes on official servers, failing the whole request, while 0x02
+		// * and 0x20 are just refused
+		// TODO - Move these unknown flags to nex-protocols-go
+
+		if ratingSettings.Flag.HasFlag(0x01) {
+			return nil, nex.NewError(nex.ResultCodes.PythonCore.Exception, "change_error")
+		}
+
+		if ratingSettings.Flag.HasFlag(0x02) || ratingSettings.Flag.HasFlag(0x20) {
+			pRatings = append(pRatings, invalidRatingInfo)
+			pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.InvalidArgument))
+			continue
+		}
+
 		disableSelfRating := ratingSettings.Flag.HasFlag(datastore_constants.RatingFlagDisableSelfRating)
 
 		useMinimum := ratingSettings.InternalFlag.HasFlag(datastore_constants.RatingInternalFlagUseRangeMin)
