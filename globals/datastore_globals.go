@@ -402,18 +402,20 @@ func (dsm *DataStoreManager) calculateRatingExpirationTime(settings datastore_ty
 
 	if settings.LockType == datastore_constants.RatingLockPeriod {
 		// * RATING_LOCK_PERIOD treats PeriodDuration as the day of the week/month
-		// * the lock should expire, and PeriodHour as the time of that day.
+		// * the lock should expire, or as a number of days, and PeriodHour as the
+		// * time of that day.
 		// *
 		// * If period is RATING_LOCK_PERIOD_DAY1, expire on the 1st of the
 		// * following month.
 		// *
-		// * If period is anything else, period denotes the day of the week
-		// * the period expires, where the week is ALWAYS the following week.
-		// * Meaning, if period is RATING_LOCK_PERIOD_WED and a rating is made
-		// * on Tuesday, the rating would NOT expire the following day, it would
-		// * expire in 8 days. Weeks are Monday-Sunday, so if period is
-		// * RATING_LOCK_PERIOD_MON and a rating is made on Sunday, the lock WILL
-		// * expire the following day (as that is a new week)
+		// * If period is a number of days, expire that many days after the next
+		// * time it is PeriodHour.
+		// *
+		// * If period is a day of the week, expire the next time it is that day
+		// * at PeriodHour. Meaning, if period is RATING_LOCK_PERIOD_FRI and a
+		// * rating is made at 22:30 on a Friday, a PeriodHour of 23 expires at
+		// * 23:00 that same day, while a PeriodHour of 0 expires at midnight the
+		// * following Friday. A negative PeriodHour counts into the previous day
 		period := datastore_constants.RatingLockPeriodDay(settings.PeriodDuration)
 		hour := time.Duration(settings.PeriodHour) * time.Hour
 		year := now.Year()
@@ -431,7 +433,20 @@ func (dsm *DataStoreManager) calculateRatingExpirationTime(settings datastore_ty
 			return time.Date(year, month, 1, 0, 0, 0, 0, time.UTC).Add(hour)
 		}
 
-		// * Period is a day of the week of the following week
+		midnight := time.Date(year, month, now.Day(), 0, 0, 0, 0, time.UTC)
+
+		// * Period is a number of days
+		if period >= 0 {
+			expires := midnight.Add(hour)
+
+			if !expires.After(now) {
+				expires = expires.AddDate(0, 0, 1)
+			}
+
+			return expires.AddDate(0, 0, int(period))
+		}
+
+		// * Period is a day of the week
 		var expiresWeekday time.Weekday
 		switch period {
 		case datastore_constants.RatingLockPeriodMon:
@@ -450,16 +465,14 @@ func (dsm *DataStoreManager) calculateRatingExpirationTime(settings datastore_ty
 			expiresWeekday = time.Sunday
 		}
 
-		// * Go starts weeks with Sunday, but in NEX a week
-		// * starts with Monday. Remap the values to reflect
-		// * this, and then calculate the number of days into
-		// * the following week we need to offset the expiration
-		// * time by
-		createdRemapped := (int(now.Weekday()) + 6) % 7
-		expiresRemapped := (int(expiresWeekday) + 6) % 7
-		daysUntil := (7 - createdRemapped) + expiresRemapped
+		daysUntil := (int(expiresWeekday) - int(now.Weekday()) + 7) % 7
+		expires := midnight.AddDate(0, 0, daysUntil).Add(hour)
 
-		return time.Date(year, month, now.Day(), 0, 0, 0, 0, time.UTC).AddDate(0, 0, daysUntil).Add(hour)
+		if !expires.After(now) {
+			expires = expires.AddDate(0, 0, 7)
+		}
+
+		return expires
 	}
 
 	// * RATING_LOCK_PERMANENT logically locks the user out forever

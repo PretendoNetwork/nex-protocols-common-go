@@ -111,25 +111,24 @@ func InsertObjectByPreparePostParam(database common_globals.Database, manager *c
 			}
 		}
 
-		// * "Period" locks treat PeriodDuration as the day of the week/month and
-		// * PeriodHour as the hour of that day. "Day1" is the first of the following
-		// * month
+		// * "Period" locks treat PeriodDuration as either a day of the week/month, or
+		// * a number of days from 0 to 365, and PeriodHour as the hour of that day,
+		// * with a negative PeriodHour going into the previous day. "Day1" is the first
+		// * of the following month
 		if ratingInitParam.Param.LockType == datastore_constants.RatingLockPeriod {
-			if ratingInitParam.Param.PeriodDuration != datastore_constants.RatingLockPeriodMon &&
-				ratingInitParam.Param.PeriodDuration != datastore_constants.RatingLockPeriodTue &&
-				ratingInitParam.Param.PeriodDuration != datastore_constants.RatingLockPeriodWed &&
-				ratingInitParam.Param.PeriodDuration != datastore_constants.RatingLockPeriodThu &&
-				ratingInitParam.Param.PeriodDuration != datastore_constants.RatingLockPeriodFri &&
-				ratingInitParam.Param.PeriodDuration != datastore_constants.RatingLockPeriodSat &&
-				ratingInitParam.Param.PeriodDuration != datastore_constants.RatingLockPeriodSun &&
-				ratingInitParam.Param.PeriodDuration != datastore_constants.RatingLockPeriodDay1 {
+			periodDuration := ratingInitParam.Param.PeriodDuration
+			isWeekday := periodDuration >= datastore_constants.RatingLockPeriodSun && periodDuration <= datastore_constants.RatingLockPeriodMon
+			isNumberOfDays := periodDuration >= 0 && periodDuration <= 365
+
+			if !isWeekday && !isNumberOfDays && periodDuration != datastore_constants.RatingLockPeriodDay1 {
 				return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with an invalid PeriodDuration")
 			}
 
-			// * Sent as an SInt8, I wonder if "negative" time is possible?
-			// * Like for referencing days in the past? This would allow the
-			// * client to target the LAST day of the month as well as the first?
-			if ratingInitParam.Param.PeriodHour < 0 || ratingInitParam.Param.PeriodHour > 23 {
+			if ratingInitParam.Param.PeriodHour < -23 || ratingInitParam.Param.PeriodHour > 23 {
+				return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with an invalid PeriodHour")
+			}
+
+			if isNumberOfDays && ratingInitParam.Param.PeriodHour < 0 {
 				return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with an invalid PeriodHour")
 			}
 		}
