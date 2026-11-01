@@ -128,7 +128,7 @@ func (commonProtocol *CommonProtocol) rateObjects(err error, packet nex.PacketIn
 				continue
 			}
 
-			if ratingLog.LockExpirationTime != 0 && time.Now().UTC().After(ratingLog.LockExpirationTime.Standard()) {
+			if !ratingLog.LockExpirationTime.IsNever() && time.Now().UTC().Before(ratingLog.LockExpirationTime.Standard()) {
 				pRatings = append(pRatings, invalidRatingInfo)
 				pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.OperationNotAllowed))
 				continue

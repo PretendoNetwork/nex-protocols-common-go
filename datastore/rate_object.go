@@ -78,7 +78,7 @@ func (commonProtocol *CommonProtocol) rateObject(err error, packet nex.PacketInt
 			return nil, errCode
 		}
 
-		if ratingLog.LockExpirationTime != 0 && time.Now().UTC().After(ratingLog.LockExpirationTime.Standard()) {
+		if !ratingLog.LockExpirationTime.IsNever() && time.Now().UTC().Before(ratingLog.LockExpirationTime.Standard()) {
 			return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "change_error")
 		}
 	}
