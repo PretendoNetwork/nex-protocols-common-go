@@ -19,7 +19,14 @@ func SendNotification(database common_globals.Database, manager *common_globals.
 		$1,
 		$2,
 		$3
-	) RETURNING id`, dataID, recipientID, senderPID).Scan(&notificationID)
+	)
+	ON CONFLICT (recipient_id, data_id) DO UPDATE SET
+		id = nextval('datastore.notification_id_seq'),
+		read = false,
+		sender_pid = EXCLUDED.sender_pid,
+		creation_date = (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
+		read_date = NULL
+	RETURNING id`, dataID, recipientID, senderPID).Scan(&notificationID)
 
 	if err != nil {
 		// TODO - Send more specific errors?

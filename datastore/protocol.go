@@ -220,7 +220,10 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.DataSto
 		-- The following fields are used for tracking purposes
 		sender_pid numeric(20),
 		creation_date timestamp DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
-		read_date timestamp
+		read_date timestamp,
+
+		-- A user only ever has one notification for each object
+		UNIQUE (recipient_id, data_id)
 	)`)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
