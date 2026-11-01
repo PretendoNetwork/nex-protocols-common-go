@@ -60,7 +60,7 @@ func (commonProtocol *CommonProtocol) prepareUpdateObject(err error, packet nex.
 	}
 
 	if metaInfo.Flag.HasFlag(datastore_constants.DataFlagNotUseFileServer) {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "PrepareUpdateObject cannot be used with DataFlagNotUseFileServer")
+		return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "PrepareUpdateObject cannot be used with DataFlagNotUseFileServer")
 	}
 
 	transaction, err := manager.BeginTransaction()
