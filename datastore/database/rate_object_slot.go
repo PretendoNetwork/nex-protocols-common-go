@@ -11,10 +11,12 @@ func RateObjectSlot(database common_globals.Database, dataID types.UInt64, slot 
 	_, err := database.Exec(`
 		WITH
 			previous AS (
-				SELECT l.value
-				FROM datastore.rating_logs l
-				JOIN datastore.rating_slots rs ON rs.data_id = l.data_id AND rs.slot = l.slot
-				WHERE l.data_id = $1 AND l.slot = $2 AND l.pid = $3 AND rs.allow_multiple_ratings
+				SELECT h.value
+				FROM datastore.rating_history h
+				JOIN datastore.rating_slots rs ON rs.data_id = h.data_id AND rs.slot = h.slot
+				WHERE h.data_id = $1 AND h.slot = $2 AND h.pid = $3 AND NOT h.removed AND rs.allow_multiple_ratings
+				ORDER BY h.id DESC
+				LIMIT 1
 			),
 			rated_slot AS (
 				UPDATE datastore.rating_slots rs
@@ -26,6 +28,15 @@ func RateObjectSlot(database common_globals.Database, dataID types.UInt64, slot 
 					rating_count = rs.rating_count + CASE WHEN EXISTS (SELECT 1 FROM previous) THEN 0 ELSE 1 END
 				WHERE rs.data_id = $1 AND rs.slot = $2
 				RETURNING rs.data_id, rs.slot
+			),
+			history AS (
+				INSERT INTO datastore.rating_history (
+					data_id,
+					slot,
+					pid,
+					value
+				)
+				SELECT data_id, slot, $3, $4 FROM rated_slot
 			)
 		INSERT INTO datastore.rating_logs (
 			data_id,

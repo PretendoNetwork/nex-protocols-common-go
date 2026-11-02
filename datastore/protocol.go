@@ -179,8 +179,7 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.DataSto
 		return
 	}
 
-	// * When RATING_FLAG_MODIFIABLE is used this also acts as the users single rating value so
-	// * that it can be removed from the total later
+	// * The rating log as used by NEX. For actual logs, see rating_history
 	_, err = manager.Database.Exec(`CREATE TABLE IF NOT EXISTS datastore.rating_logs (
 		data_id numeric(20),
 		slot smallint,
@@ -192,6 +191,38 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.DataSto
 		PRIMARY KEY (data_id, slot, pid),
 		FOREIGN KEY (data_id, slot) REFERENCES datastore.rating_slots(data_id, slot)
 	)`)
+	if err != nil {
+		common_globals.Logger.Error(err.Error())
+		return
+	}
+
+	// * Every rating created for every slot in the order the ratings were created. This is used
+	// * as an internal history/log, not used by the games, so we can audit hacked ratings and
+	// * remove them if need be. If a rating needs to be removed, then the total_value and rating_count
+	// * values need to be recomputed
+	// TODO - Use this log to compute total_value and rating_count on the fly? Modifiable ratings with rounded totals make this special. From the wiki: "For example, if a user rates -10 (the total is rounded to 0), another user rates 3 (the total is 3), and the first user changes their rating to 1, the total becomes <code>3 - (-10) + 1 = 14</code>"
+	_, err = manager.Database.Exec(`CREATE TABLE IF NOT EXISTS datastore.rating_history (
+		id bigserial PRIMARY KEY,
+		data_id numeric(20) NOT NULL,
+		slot smallint NOT NULL,
+		pid numeric(20) NOT NULL,
+		value int NOT NULL,
+		removed boolean NOT NULL DEFAULT FALSE,
+		created_at timestamp NOT NULL DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
+		FOREIGN KEY (data_id, slot) REFERENCES datastore.rating_slots(data_id, slot)
+	)`)
+	if err != nil {
+		common_globals.Logger.Error(err.Error())
+		return
+	}
+
+	_, err = manager.Database.Exec(`CREATE INDEX IF NOT EXISTS rating_history_slot_pid_idx ON datastore.rating_history (data_id, slot, pid)`)
+	if err != nil {
+		common_globals.Logger.Error(err.Error())
+		return
+	}
+
+	_, err = manager.Database.Exec(`CREATE INDEX IF NOT EXISTS rating_history_pid_idx ON datastore.rating_history (pid)`)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return

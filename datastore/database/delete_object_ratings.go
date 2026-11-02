@@ -8,9 +8,13 @@ import (
 
 func DeleteObjectRatings(database common_globals.Database, dataID types.UInt64) *nex.Error {
 	_, err := database.Exec(`
-		WITH logs AS (
-			DELETE FROM datastore.rating_logs WHERE data_id=$1
-		)
+		WITH
+			logs AS (
+				DELETE FROM datastore.rating_logs WHERE data_id=$1
+			),
+			history AS (
+				UPDATE datastore.rating_history SET removed = true WHERE data_id=$1 AND NOT removed
+			)
 		UPDATE datastore.rating_slots
 		SET total_value = initial_value, rating_count = 0
 		WHERE data_id=$1
