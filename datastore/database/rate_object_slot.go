@@ -1,14 +1,74 @@
 package database
 
 import (
+	"database/sql"
+	"time"
+
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	datastore_constants "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/constants"
+	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 	"github.com/lib/pq"
 )
 
-func RateObjectSlot(database common_globals.Database, dataID types.UInt64, slot types.UInt8, pid types.PID, value types.Int32) *nex.Error {
+func RateObjectSlot(database common_globals.Database, manager *common_globals.DataStoreManager, dataID types.UInt64, slot types.UInt8, pid types.PID, value types.Int32, settings datastore_types.DataStoreRatingInitParam) *nex.Error {
+	// * The lock created by rateObjectSlot only exists until the end of the
+	// * transaction, so if this isn't a transaction then we need to start one
+	db, ok := database.(*sql.DB)
+	if !ok {
+		return rateObjectSlot(database, manager, dataID, slot, pid, value, settings)
+	}
+
+	transaction, err := db.Begin()
+	if err != nil {
+		// TODO - Send more specific errors?
+		return nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
+	}
+
+	// * Does nothing once the transaction has been committed successfully
+	defer transaction.Rollback()
+
+	errCode := rateObjectSlot(transaction, manager, dataID, slot, pid, value, settings)
+	if errCode != nil {
+		return errCode
+	}
+
+	if err := transaction.Commit(); err != nil {
+		// TODO - Send more specific errors?
+		return nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
+	}
+
+	return nil
+}
+
+func rateObjectSlot(database common_globals.Database, manager *common_globals.DataStoreManager, dataID types.UInt64, slot types.UInt8, pid types.PID, value types.Int32, settings datastore_types.DataStoreRatingInitParam) *nex.Error {
+	// * Lock until the transaction ends
 	_, err := database.Exec(`
+		SELECT 1
+		FROM datastore.rating_slots
+		WHERE data_id = $1 AND slot = $2
+		FOR UPDATE
+	`, dataID, slot)
+	if err != nil {
+		// TODO - Send more specific errors?
+		return nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
+	}
+
+	// * Check this after the slot is locked otherwise multiple ratings from
+	// * the same user at one time could both get past the lock
+	if settings.LockType != datastore_constants.RatingLockNone {
+		ratingLog, errCode := GetUserRatingLog(database, dataID, slot, pid)
+		if errCode != nil {
+			return errCode
+		}
+
+		if !ratingLog.LockExpirationTime.IsNever() && time.Now().UTC().Before(ratingLog.LockExpirationTime.Standard()) {
+			return nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "change_error")
+		}
+	}
+
+	_, err = database.Exec(`
 		WITH
 			previous AS (
 				SELECT h.value
@@ -57,6 +117,10 @@ func RateObjectSlot(database common_globals.Database, dataID types.UInt64, slot 
 
 		// TODO - Send more specific errors?
 		return nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
+	}
+
+	if settings.LockType != datastore_constants.RatingLockNone {
+		return LockUserRatings(database, manager, dataID, slot, pid, settings)
 	}
 
 	return nil

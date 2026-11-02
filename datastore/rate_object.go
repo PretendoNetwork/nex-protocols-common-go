@@ -1,8 +1,6 @@
 package datastore
 
 import (
-	"time"
-
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
 	"github.com/PretendoNetwork/nex-protocols-common-go/v2/datastore/database"
@@ -84,27 +82,9 @@ func (commonProtocol *CommonProtocol) rateObject(err error, packet nex.PacketInt
 		return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "change_error")
 	}
 
-	if ratingSettings.LockType != datastore_constants.RatingLockNone {
-		ratingLog, errCode := database.GetUserRatingLog(manager.Database, target.DataID, target.Slot, connection.PID())
-		if errCode != nil {
-			return nil, errCode
-		}
-
-		if !ratingLog.LockExpirationTime.IsNever() && time.Now().UTC().Before(ratingLog.LockExpirationTime.Standard()) {
-			return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "change_error")
-		}
-	}
-
-	errCode = database.RateObjectSlot(manager.Database, target.DataID, target.Slot, connection.PID(), value)
+	errCode = database.RateObjectSlot(manager.Database, manager, target.DataID, target.Slot, connection.PID(), value, ratingSettings)
 	if errCode != nil {
 		return nil, errCode
-	}
-
-	if ratingSettings.LockType != datastore_constants.RatingLockNone {
-		errCode := database.LockUserRatings(manager.Database, manager, target.DataID, target.Slot, connection.PID(), ratingSettings)
-		if errCode != nil {
-			return nil, errCode
-		}
 	}
 
 	// TODO - Create a log here manually, or continue to manually create logs at runtime?

@@ -2,7 +2,6 @@ package datastore
 
 import (
 	"database/sql"
-	"time"
 
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
@@ -157,22 +156,7 @@ func (commonProtocol *CommonProtocol) rateObjects(err error, packet nex.PacketIn
 			continue
 		}
 
-		if ratingSettings.LockType != datastore_constants.RatingLockNone {
-			ratingLog, errCode := database.GetUserRatingLog(db, target.DataID, target.Slot, connection.PID())
-			if errCode != nil {
-				pRatings = append(pRatings, invalidRatingInfo)
-				pResults = append(pResults, types.NewQResult(errCode.ResultCode))
-				continue
-			}
-
-			if !ratingLog.LockExpirationTime.IsNever() && time.Now().UTC().Before(ratingLog.LockExpirationTime.Standard()) {
-				pRatings = append(pRatings, invalidRatingInfo)
-				pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.OperationNotAllowed))
-				continue
-			}
-		}
-
-		errCode = database.RateObjectSlot(db, target.DataID, target.Slot, connection.PID(), value)
+		errCode = database.RateObjectSlot(db, manager, target.DataID, target.Slot, connection.PID(), value, ratingSettings)
 		if errCode != nil {
 			// * This means the rating was about to go above max int64, which kills the whole request
 			if errCode.Equals(nex.ResultCodes.PythonCore.Exception) {
@@ -182,15 +166,6 @@ func (commonProtocol *CommonProtocol) rateObjects(err error, packet nex.PacketIn
 			pRatings = append(pRatings, invalidRatingInfo)
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
 			continue
-		}
-
-		if ratingSettings.LockType != datastore_constants.RatingLockNone {
-			errCode := database.LockUserRatings(db, manager, target.DataID, target.Slot, connection.PID(), ratingSettings)
-			if errCode != nil {
-				pRatings = append(pRatings, invalidRatingInfo)
-				pResults = append(pResults, types.NewQResult(errCode.ResultCode))
-				continue
-			}
 		}
 
 		if fetchRatings {
