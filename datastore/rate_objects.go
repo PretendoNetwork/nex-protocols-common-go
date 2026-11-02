@@ -56,6 +56,11 @@ func (commonProtocol *CommonProtocol) rateObjects(err error, packet nex.PacketIn
 		defer transaction.Rollback()
 
 		db = transaction
+
+		errCode := database.LockRatingSlotsByDataStoreRatingTargets(db, targets)
+		if errCode != nil {
+			return nil, errCode
+		}
 	}
 
 	// TODO - Optimize this, this can make dozens of database calls for a single RMC request

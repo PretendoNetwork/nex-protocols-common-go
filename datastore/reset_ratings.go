@@ -43,6 +43,11 @@ func (commonProtocol *CommonProtocol) resetRatings(err error, packet nex.PacketI
 		defer transaction.Rollback()
 
 		db = transaction
+
+		errCode := database.LockRatingSlotsByDataIDs(db, dataIDs)
+		if errCode != nil {
+			return nil, errCode
+		}
 	}
 
 	for i, dataID := range dataIDs {
