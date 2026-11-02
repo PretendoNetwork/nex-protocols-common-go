@@ -295,14 +295,14 @@ func NewCommonProtocol(protocol datastore.Interface) *CommonProtocol {
 	protocol.SetHandlerPerpetuateObject(commonProtocol.perpetuateObject)
 	protocol.SetHandlerUnperpetuateObject(commonProtocol.unperpetuateObject)
 	protocol.SetHandlerPrepareGetObjectOrMetaBinary(commonProtocol.prepareGetObjectOrMetaBinary)
-	protocol.SetHandlerGetObjectInfos(commonProtocol.getObjectInfos) // TODO - Fix this methods type in protocols lib
+	protocol.SetHandlerGetObjectInfos(commonProtocol.getObjectInfos)
 	protocol.SetHandlerRateObject(commonProtocol.rateObject)
 	protocol.SetHandlerRateObjects(commonProtocol.rateObjects)
 	protocol.SetHandlerGetRating(commonProtocol.getRating)
 	protocol.SetHandlerGetRatings(commonProtocol.getRatings)
 	protocol.SetHandlerGetRatingWithLog(commonProtocol.getRatingWithLog)
 	protocol.SetHandlerResetRating(commonProtocol.resetRating)
-	protocol.SetHandlerResetRatings(commonProtocol.resetRatings) // TODO - Fix this methods type in protocols lib
+	protocol.SetHandlerResetRatings(commonProtocol.resetRatings)
 	protocol.SetHandlerGetNotificationURL(commonProtocol.getNotificationURL)
 	protocol.SetHandlerGetNewArrivedNotifications(commonProtocol.getNewArrivedNotfications)
 	protocol.SetHandlerGetNewArrivedNotificationsV1(commonProtocol.getNewArrivedNotficationsV1)
