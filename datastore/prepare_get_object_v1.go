@@ -31,7 +31,7 @@ func (commonProtocol *CommonProtocol) prepareGetObjectV1(err error, packet nex.P
 	// TODO - Add rollback for when error occurs
 
 	if param.DataID == types.UInt32(datastore_constants.InvalidDataID) {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
+		return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
 	}
 
 	// * V1 has no persistence target
