@@ -104,7 +104,7 @@ func InsertObjectByPreparePostParam(database common_globals.Database, manager *c
 		}
 
 		if slices.Contains(seenRatingSlots, int8(ratingInitParam.Slot)) {
-			return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with duplicate rating slot")
+			return 0, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "Tried to upload object with duplicate rating slot")
 		}
 
 		seenRatingSlots = append(seenRatingSlots, int8(ratingInitParam.Slot))
