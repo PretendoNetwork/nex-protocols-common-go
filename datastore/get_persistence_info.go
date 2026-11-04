@@ -24,6 +24,10 @@ func (commonProtocol *CommonProtocol) getPersistenceInfo(err error, packet nex.P
 		ownerID = connection.PID()
 	}
 
+	if persistenceSlotID >= types.UInt16(datastore_constants.NumPersistenceSlot) {
+		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
+	}
+
 	// * Why Nintendo didn't just use this directly, we may never know
 	persistenceTarget := datastore_types.NewDataStorePersistenceTarget()
 	persistenceTarget.OwnerID = ownerID
