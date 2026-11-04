@@ -23,8 +23,18 @@ func GetNewArrivedNotifications(database common_globals.Database, recipientID ty
 		limit = 20
 	}
 
-	// * Add 1 to the limit to check for more notifications remaining
-	rows, err := database.Query(`SELECT id, data_id FROM datastore.notifications WHERE recipient_id = $1 AND read IS NOT TRUE LIMIT $2+1`, recipientID, limit)
+	// * Add 1 to the limit to check for more notifications remaining.
+	// * Notifications for deleted objects are skipped
+	// TODO - Hard delete notifications when the object is deleted rather than skipping?
+	rows, err := database.Query(`
+		SELECT n.id, n.data_id
+		FROM datastore.notifications n
+		WHERE n.recipient_id = $1 AND n.read IS NOT TRUE AND NOT EXISTS (
+			SELECT 1 FROM datastore.objects o WHERE o.data_id = n.data_id AND o.deleted = true
+		)
+		ORDER BY n.id
+		LIMIT $2+1
+	`, recipientID, limit)
 	if err != nil {
 		// TODO - Send more specific errors?
 		return nil, false, nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
