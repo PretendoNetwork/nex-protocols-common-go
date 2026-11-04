@@ -32,7 +32,7 @@ func (commonProtocol *CommonProtocol) perpetuateObject(err error, packet nex.Pac
 
 	// * Only an object owner can perpetuate it
 	if metaInfo.OwnerID != connection.PID() {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "change_error")
+		return nil, nex.NewError(nex.ResultCodes.DataStore.PermissionDenied, "change_error")
 	}
 
 	// TODO - All of this can probably be done in a single SQL query
