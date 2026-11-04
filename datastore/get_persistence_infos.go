@@ -24,6 +24,12 @@ func (commonProtocol *CommonProtocol) getPersistenceInfos(err error, packet nex.
 		ownerID = connection.PID()
 	}
 
+	for _, persistenceSlotID := range persistenceSlotIDs {
+		if persistenceSlotID >= types.UInt16(datastore_constants.NumPersistenceSlot) {
+			return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
+		}
+	}
+
 	pPersistenceInfo := types.NewList[datastore_types.DataStorePersistenceInfo]()
 	pResults := types.NewList[types.QResult]()
 	invalidPersistenceInfo := datastore_types.NewDataStorePersistenceInfo() // * Quick hack to get a zeroed struct
