@@ -58,17 +58,17 @@ func (commonProtocol *CommonProtocol) prepareGetObjectOrMetaBinary(err error, pa
 		return nil, nex.NewError(nex.ResultCodes.DataStore.UnderReviewing, "change_error")
 	}
 
+	errCode = database.UpdateObjectLock(manager.Database, metaInfo.DataID, param.LockID)
+	if errCode != nil {
+		return nil, errCode
+	}
+
 	errCode = database.UpdateObjectReferenceData(manager.Database, metaInfo.DataID)
 	if errCode != nil {
 		return nil, errCode
 	}
 
 	version, errCode := database.GetObjectLatestVersionNumber(manager.Database, metaInfo.DataID)
-	if errCode != nil {
-		return nil, errCode
-	}
-
-	errCode = database.UpdateObjectLock(manager.Database, metaInfo.DataID, param.LockID)
 	if errCode != nil {
 		return nil, errCode
 	}
