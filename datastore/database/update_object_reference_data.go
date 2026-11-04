@@ -10,7 +10,7 @@ func UpdateObjectReferenceData(database common_globals.Database, dataID types.UI
 	result, err := database.Exec(`
 		UPDATE datastore.objects
 		SET
-			reference_count = reference_count + 1,
+			reference_count = LEAST(reference_count + 1, 4294967295),
 			last_reference_date = (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
 			expiration_date = CASE
 				WHEN update_expiration_on_reference = true AND expiration_date != $2 THEN (CURRENT_TIMESTAMP AT TIME ZONE 'UTC') + (expiration_days * INTERVAL '1 day')
