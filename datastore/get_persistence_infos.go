@@ -20,6 +20,10 @@ func (commonProtocol *CommonProtocol) getPersistenceInfos(err error, packet nex.
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
+	if ownerID == 0 {
+		ownerID = connection.PID()
+	}
+
 	pPersistenceInfo := types.NewList[datastore_types.DataStorePersistenceInfo]()
 	pResults := types.NewList[types.QResult]()
 	invalidPersistenceInfo := datastore_types.NewDataStorePersistenceInfo() // * Quick hack to get a zeroed struct
