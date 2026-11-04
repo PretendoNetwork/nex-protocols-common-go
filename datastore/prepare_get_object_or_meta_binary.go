@@ -73,24 +73,24 @@ func (commonProtocol *CommonProtocol) prepareGetObjectOrMetaBinary(err error, pa
 		return nil, errCode
 	}
 
+	if version > math.MaxUint16 {
+		// * OverCapacity is definitely not the correct error here, but it sounds nice
+		return nil, nex.NewError(nex.ResultCodes.DataStore.OverCapacity, "change_error")
+	}
+
 	pReqGetInfo := datastore_types.NewDataStoreReqGetInfo()
 	pReqGetAdditionalMeta := datastore_types.NewDataStoreReqGetAdditionalMeta()
 
+	pReqGetAdditionalMeta.OwnerID = metaInfo.OwnerID
+	pReqGetAdditionalMeta.DataType = metaInfo.DataType
+	pReqGetAdditionalMeta.Version = types.UInt16(version)
+
 	// * If the object uses the file server, populate pReqGetInfo.
-	// * If the object does not use the file server, populate pReqGetAdditionalMeta.
+	// * If the object does not use the file server, populate MetaBinary.
 	// * Functions as a way to ge the information needed to download an object in
 	// * a single RMC call
-	// TODO - Populate pReqGetAdditionalMeta anyway? Not sure what harm it would do, if any
 
 	if metaInfo.Flag.HasFlag(datastore_constants.DataFlagNotUseFileServer) {
-		if version > math.MaxUint16 {
-			// * OverCapacity is definitely not the correct error here, but it sounds nice
-			return nil, nex.NewError(nex.ResultCodes.DataStore.OverCapacity, "change_error")
-		}
-
-		pReqGetAdditionalMeta.OwnerID = metaInfo.OwnerID
-		pReqGetAdditionalMeta.DataType = metaInfo.DataType
-		pReqGetAdditionalMeta.Version = types.UInt16(version)
 		pReqGetAdditionalMeta.MetaBinary = metaInfo.MetaBinary
 	} else {
 		key := fmt.Sprintf("objects/%020d_%010d.bin", metaInfo.DataID, version)
