@@ -63,7 +63,9 @@ func (commonProtocol *CommonProtocol) perpetuateObject(err error, packet nex.Pac
 		return nil, errCode
 	}
 
-	if oldDataID != datastore_constants.InvalidDataID {
+	// * If the same object is being put into the same slot, it has no "last object"
+	// * to delete
+	if oldDataID != datastore_constants.InvalidDataID && oldDataID != uint64(dataID) {
 		errCode := database.UnperpetuateObjectByDataID(manager.Database, oldDataID, deleteLastObject)
 		if errCode != nil {
 			common_globals.Logger.Errorf("Error on unperpetuating object: %s", errCode.Error())
