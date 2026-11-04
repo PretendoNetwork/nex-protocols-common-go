@@ -20,6 +20,10 @@ func (commonProtocol *CommonProtocol) getPersistenceInfo(err error, packet nex.P
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
+	if ownerID == 0 {
+		ownerID = connection.PID()
+	}
+
 	// * Why Nintendo didn't just use this directly, we may never know
 	persistenceTarget := datastore_types.NewDataStorePersistenceTarget()
 	persistenceTarget.OwnerID = ownerID

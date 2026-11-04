@@ -56,6 +56,16 @@ async def test_an_owner_of_zero_means_the_caller(unique_data_type, post):
 
 	assert info.data_id == data_id
 
+async def test_an_owner_of_zero_comes_back_as_the_caller(unique_data_type):
+	"""
+	The slot is returned as the callers
+	"""
+
+	await helpers.post_persisted(helpers.post_meta_binary, nex.FRIEND_A, helpers.PERSISTENCE_SLOT, data_type=unique_data_type)
+	info = await helpers.get_persistence_info(nex.FRIEND_A, 0, helpers.PERSISTENCE_SLOT)
+
+	assert info.owner_id == nex.FRIEND_A
+
 async def test_unknown_owner():
 	"""
 	A user who has never persisted anything has no slots to read
