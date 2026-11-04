@@ -9,7 +9,11 @@ import (
 )
 
 func UnperpetuateObjectByDataID(database common_globals.Database, dataID uint64, deleteObject types.Bool) *nex.Error {
-	var err error
+	_, err := database.Exec(`DELETE FROM datastore.persistence_slots WHERE data_id=$1`, dataID)
+	if err != nil {
+		// TODO - Send more specific errors?
+		return nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
+	}
 
 	if deleteObject {
 		_, err = database.Exec(`UPDATE datastore.objects SET deleted = TRUE WHERE data_id=$1`, dataID)
