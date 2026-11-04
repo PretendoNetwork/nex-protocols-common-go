@@ -49,5 +49,12 @@ func validateRatingInitParam(ratingInitParam datastore_types.DataStoreRatingInit
 		}
 	}
 
+	useRangeMin := ratingInitParam.Param.InternalFlag.HasFlag(datastore_constants.RatingInternalFlagUseRangeMin)
+	useRangeMax := ratingInitParam.Param.InternalFlag.HasFlag(datastore_constants.RatingInternalFlagUseRangeMax)
+
+	if useRangeMin && useRangeMax && ratingInitParam.Param.RangeMin > ratingInitParam.Param.RangeMax {
+		return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with a rating slot whose min is above its max")
+	}
+
 	return nil
 }
