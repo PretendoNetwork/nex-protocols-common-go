@@ -121,6 +121,13 @@ func InsertObjectByPreparePostParam(database common_globals.Database, manager *c
 		return 0, err
 	}
 
+	knownFlags := datastore_constants.DataFlagNeedReview | datastore_constants.DataFlagPeriodFromLastReferred | datastore_constants.DataFlagUseReadLock | datastore_constants.DataFlagUseNotificationOnPost | datastore_constants.DataFlagUseNotificationOnUpdate | datastore_constants.DataFlagNotUseFileServer | datastore_constants.DataFlagNeedCompletion
+
+	// TODO - It IS possible this is wrong. This was checked on Pokemon Bank, which customizes DataStore, so "unknown flags" COULD be valid flags we don't understand in Bank. Need to check on a stock server
+	if !manager.AllowUnknownObjectFlags && param.Flag&^knownFlags != 0 {
+		return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with unknown flags")
+	}
+
 	needsReview := param.Flag.HasFlag(datastore_constants.DataFlagNeedReview)
 	updateExpirationOnReference := param.Flag.HasFlag(datastore_constants.DataFlagPeriodFromLastReferred)
 	useReadLock := param.Flag.HasFlag(datastore_constants.DataFlagUseReadLock)

@@ -164,6 +164,12 @@ type DataStoreManager struct {
 	ValidateExtraData             func(extraData types.List[types.String]) *nex.Error
 	CalculateRatingExpirationTime func(settings datastore_types.DataStoreRatingInitParam) time.Time
 	GetNotificationRecipients     func(ownerPID types.PID, permission datastore_types.DataStorePermission) (types.List[types.PID], *nex.Error)
+
+	// * Feature flags for servers which change the default behavior
+
+	// AllowUnknownObjectFlags disables the failure check for unknown object data
+	// flags. Enable this on servers which use custom flags, like Super Mario Maker
+	AllowUnknownObjectFlags bool
 }
 
 // SetS3Config sets the S3 config for the DataStoreManager.
