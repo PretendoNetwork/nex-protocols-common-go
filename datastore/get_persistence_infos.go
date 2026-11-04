@@ -20,11 +20,6 @@ func (commonProtocol *CommonProtocol) getPersistenceInfos(err error, packet nex.
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
-	// * Every user can only have 16 objects
-	if len(persistenceSlotIDs) > int(datastore_constants.NumPersistenceSlot) {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
-	}
-
 	pPersistenceInfo := types.NewList[datastore_types.DataStorePersistenceInfo]()
 	pResults := types.NewList[types.QResult]()
 	invalidPersistenceInfo := datastore_types.NewDataStorePersistenceInfo() // * Quick hack to get a zeroed struct
