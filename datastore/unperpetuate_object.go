@@ -31,12 +31,14 @@ func (commonProtocol *CommonProtocol) unperpetuateObject(err error, packet nex.P
 		return nil, errCode
 	}
 
-	if oldDataID != datastore_constants.InvalidDataID {
-		errCode := database.UnperpetuateObjectByDataID(manager.Database, oldDataID, deleteLastObject)
-		if errCode != nil {
-			common_globals.Logger.Errorf("Error on unperpetuating object: %s", errCode.Error())
-			return nil, errCode
-		}
+	if oldDataID == datastore_constants.InvalidDataID {
+		return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
+	}
+
+	errCode = database.UnperpetuateObjectByDataID(manager.Database, oldDataID, deleteLastObject)
+	if errCode != nil {
+		common_globals.Logger.Errorf("Error on unperpetuating object: %s", errCode.Error())
+		return nil, errCode
 	}
 
 	rmcResponse := nex.NewRMCSuccess(endpoint, nil)

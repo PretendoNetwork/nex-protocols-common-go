@@ -12,7 +12,12 @@ import (
 func GetPerpetuatedObjectID(database common_globals.Database, ownerPID types.PID, slot types.UInt16) (uint64, *nex.Error) {
 	var dataID uint64
 
-	err := database.QueryRow(`SELECT data_id FROM datastore.persistence_slots WHERE pid=$1 AND slot=$2`, ownerPID, slot).Scan(&dataID)
+	err := database.QueryRow(`
+		SELECT s.data_id
+		FROM datastore.persistence_slots s
+		JOIN datastore.objects o ON o.data_id = s.data_id
+		WHERE s.pid=$1 AND s.slot=$2 AND o.deleted=false
+	`, ownerPID, slot).Scan(&dataID)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
