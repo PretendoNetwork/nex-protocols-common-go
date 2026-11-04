@@ -38,9 +38,13 @@ func (commonProtocol *CommonProtocol) getPersistenceInfos(err error, packet nex.
 
 	pPersistenceInfo := types.NewList[datastore_types.DataStorePersistenceInfo]()
 	pResults := types.NewList[types.QResult]()
-	invalidPersistenceInfo := datastore_types.NewDataStorePersistenceInfo() // * Quick hack to get a zeroed struct
 
 	for _, persistenceSlotID := range persistenceSlotIDs {
+		// * Failures still return the owner/slot requested
+		persistenceInfo := datastore_types.NewDataStorePersistenceInfo()
+		persistenceInfo.OwnerID = ownerID
+		persistenceInfo.PersistenceSlotID = persistenceSlotID
+
 		// * Why Nintendo didn't just use this directly, we may never know
 		persistenceTarget := datastore_types.NewDataStorePersistenceTarget()
 		persistenceTarget.OwnerID = ownerID
@@ -48,7 +52,7 @@ func (commonProtocol *CommonProtocol) getPersistenceInfos(err error, packet nex.
 
 		metaInfo, accessPassword, errCode := database.GetAccessObjectInfoByPersistenceTarget(manager.Database, persistenceTarget)
 		if errCode != nil {
-			pPersistenceInfo = append(pPersistenceInfo, invalidPersistenceInfo)
+			pPersistenceInfo = append(pPersistenceInfo, persistenceInfo)
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
 			continue
 		}
@@ -56,21 +60,18 @@ func (commonProtocol *CommonProtocol) getPersistenceInfos(err error, packet nex.
 		// * Anyone with access permissions can view this, but they don't allow a password to be sent
 		errCode = manager.VerifyObjectAccessPermission(connection.PID(), metaInfo, accessPassword, 0)
 		if errCode != nil {
-			pPersistenceInfo = append(pPersistenceInfo, invalidPersistenceInfo)
+			pPersistenceInfo = append(pPersistenceInfo, persistenceInfo)
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
 			continue
 		}
 
 		// * The owner of an object can always view their objects, but normal users cannot
 		if metaInfo.Status != datastore_constants.DataStatusNone && metaInfo.OwnerID != connection.PID() {
-			pPersistenceInfo = append(pPersistenceInfo, invalidPersistenceInfo)
+			pPersistenceInfo = append(pPersistenceInfo, persistenceInfo)
 			pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.UnderReviewing))
 			continue
 		}
 
-		persistenceInfo := datastore_types.NewDataStorePersistenceInfo()
-		persistenceInfo.OwnerID = ownerID
-		persistenceInfo.PersistenceSlotID = persistenceSlotID
 		persistenceInfo.DataID = metaInfo.DataID
 
 		pPersistenceInfo = append(pPersistenceInfo, persistenceInfo)
