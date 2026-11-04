@@ -32,6 +32,12 @@ func (commonProtocol *CommonProtocol) postMetaBinary(err error, packet nex.Packe
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 	}
 
+	// * Objects which do not use the file server cant be updated, so no
+	// * update notifications can be generated for them
+	if param.Flag.HasFlag(datastore_constants.DataFlagUseNotificationOnUpdate) {
+		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
+	}
+
 	// * Server sets this if not set already
 	if !param.Flag.HasFlag(datastore_constants.DataFlagNotUseFileServer) {
 		param.Flag |= datastore_constants.DataFlagNotUseFileServer
