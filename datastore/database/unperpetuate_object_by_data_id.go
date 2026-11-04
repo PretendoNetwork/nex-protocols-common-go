@@ -25,9 +25,11 @@ func UnperpetuateObjectByDataID(database common_globals.Database, dataID uint64,
 			return nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
 		}
 
-		expirationDate := time.Now().UTC().Add(time.Duration(expirationDays) * 24 * time.Hour)
+		// * When an object leaves a persistence slot its expire time is reset
+		now := time.Now().UTC()
+		expirationDate := now.Add(time.Duration(expirationDays) * 24 * time.Hour)
 
-		_, err = database.Exec(`UPDATE datastore.objects SET expiration_date = $1 WHERE data_id=$2`, expirationDate, dataID)
+		_, err = database.Exec(`UPDATE datastore.objects SET expiration_date = $1, update_date = $2, true_update_date = $2 WHERE data_id=$3`, expirationDate, now, dataID)
 	}
 
 	if err != nil {
