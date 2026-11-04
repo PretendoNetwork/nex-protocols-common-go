@@ -65,7 +65,7 @@ func (commonProtocol *CommonProtocol) getObjectInfos(err error, packet nex.Packe
 
 		if metaInfo.Flag.HasFlag(datastore_constants.DataFlagNotUseFileServer) {
 			pInfos = append(pInfos, invalidReqGetInfo)
-			pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.InvalidArgument))
+			pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.OperationNotAllowed))
 			continue
 		}
 

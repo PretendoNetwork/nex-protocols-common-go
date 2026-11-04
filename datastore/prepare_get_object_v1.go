@@ -57,7 +57,7 @@ func (commonProtocol *CommonProtocol) prepareGetObjectV1(err error, packet nex.P
 	}
 
 	if metaInfo.Flag.HasFlag(datastore_constants.DataFlagNotUseFileServer) {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "PrepareGetObjectV1 cannot be used with DataFlagNotUseFileServer")
+		return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "PrepareGetObjectV1 cannot be used with DataFlagNotUseFileServer")
 	}
 
 	errCode = database.UpdateObjectReferenceData(manager.Database, metaInfo.DataID)
