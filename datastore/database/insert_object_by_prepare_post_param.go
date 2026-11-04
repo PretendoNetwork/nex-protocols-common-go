@@ -245,7 +245,7 @@ func InsertObjectByPreparePostParam(database common_globals.Database, manager *c
 			$9,
 			$10,
 			$11,
-			$12,
+			ARRAY(SELECT tag FROM unnest($12::text[]) AS tag ORDER BY tag COLLATE "C"),
 			$13,
 			$14,
 			$15,
