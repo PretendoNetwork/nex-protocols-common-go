@@ -24,6 +24,12 @@ func (commonProtocol *CommonProtocol) getPersistenceInfos(err error, packet nex.
 		ownerID = connection.PID()
 	}
 
+	if len(persistenceSlotIDs) == 0 {
+		for slot := 0; slot < int(datastore_constants.NumPersistenceSlot); slot++ {
+			persistenceSlotIDs = append(persistenceSlotIDs, types.UInt16(slot))
+		}
+	}
+
 	for _, persistenceSlotID := range persistenceSlotIDs {
 		if persistenceSlotID >= types.UInt16(datastore_constants.NumPersistenceSlot) {
 			return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
