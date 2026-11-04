@@ -61,7 +61,7 @@ func (commonProtocol *CommonProtocol) changeMeta(err error, packet nex.PacketInt
 		return nil, nex.NewError(nex.ResultCodes.DataStore.UnderReviewing, "change_error")
 	}
 
-	errCode = database.UpdateObjectMetadata(manager.Database, metaInfo, param)
+	errCode = database.UpdateObjectMetadata(manager.Database, manager, metaInfo, param)
 	if errCode != nil {
 		return nil, errCode
 	}

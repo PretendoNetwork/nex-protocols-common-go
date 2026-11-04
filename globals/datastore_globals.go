@@ -170,6 +170,14 @@ type DataStoreManager struct {
 	// AllowUnknownObjectFlags disables the failure check for unknown object data
 	// flags. Enable this on servers which use custom flags, like Super Mario Maker
 	AllowUnknownObjectFlags bool
+
+	// AllowUnsafeObjectStatusUpdates allows a caller to change an objects stats to
+	// DataStatusNone. Disabled by default, as this would allow owners of objects
+	// under review to mark their objects as out of review
+	//
+	// The official server behavior is to ALLOW this. We have opted to disallow this
+	// by default, sacrificing some accuracy for safety
+	AllowUnsafeObjectStatusUpdates bool
 }
 
 // SetS3Config sets the S3 config for the DataStoreManager.

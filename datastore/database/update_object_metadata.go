@@ -16,7 +16,7 @@ import (
 	"github.com/lib/pq"
 )
 
-func UpdateObjectMetadata(database common_globals.Database, currentData datastore_types.DataStoreMetaInfo, newData datastore_types.DataStoreChangeMetaParam) *nex.Error {
+func UpdateObjectMetadata(database common_globals.Database, manager *common_globals.DataStoreManager, currentData datastore_types.DataStoreMetaInfo, newData datastore_types.DataStoreChangeMetaParam) *nex.Error {
 	// * Do nothing if nothing to update, besides the comparison
 	if newData.ModifiesFlag == datastore_constants.ModificationFlagNone {
 		return compareObjectMetas(currentData, newData.CompareParam)
@@ -168,7 +168,7 @@ func UpdateObjectMetadata(database common_globals.Database, currentData datastor
 		// * unless we know a client needs it. Allowing the status
 		// * to be updated would mean owners could bypass review checks
 		// * by setting the status to DataStatusNone
-		if currentData.Status != datastore_constants.DataStatusNone {
+		if !manager.AllowUnsafeObjectStatusUpdates && currentData.Status != datastore_constants.DataStatusNone {
 			return nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
 		}
 

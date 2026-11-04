@@ -96,6 +96,7 @@ func setupDataStoreCommonProtocol(endpoint *nex.PRUDPEndPoint) {
 	datastoreManager := common_globals.NewDataStoreManager(endpoint, database)
 	datastoreManager.GetUserFriendPIDs = getUserFriendPIDs
 	datastoreManager.SetS3Config(s3Bucket, s3KeyBase, stubS3Manager{})
+	datastoreManager.AllowUnsafeObjectStatusUpdates = true
 
 	commonDataStoreProtocol.SetManager(datastoreManager)
 }

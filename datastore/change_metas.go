@@ -115,7 +115,7 @@ func (commonProtocol *CommonProtocol) changeMetas(err error, packet nex.PacketIn
 			continue
 		}
 
-		errCode = database.UpdateObjectMetadata(db, metaInfo, param)
+		errCode = database.UpdateObjectMetadata(db, manager, metaInfo, param)
 		if errCode != nil {
 			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
 			continue
