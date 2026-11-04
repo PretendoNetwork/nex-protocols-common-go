@@ -98,45 +98,9 @@ func InsertObjectByPreparePostParam(database common_globals.Database, manager *c
 
 	seenRatingSlots := make([]int8, 0)
 	for _, ratingInitParam := range param.RatingInitParams {
-		// * Sent as an SInt8, but only values 0-15 are allowed? Why Nintendo?
-		if ratingInitParam.Slot < 0 || ratingInitParam.Slot > types.Int8(datastore_constants.RatingSlotMax) {
-			return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with an invalid rating slot")
-		}
-
-		if ratingInitParam.Param.LockType > datastore_constants.RatingLockPermanent {
-			return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with an invalid rating lock type")
-		}
-
-		// * Different lock types interpret the lock values differently
-
-		// * "Interval" locks treat PeriodDuration as a non-negative value representing
-		// * the number of seconds until the lock expires
-		if ratingInitParam.Param.LockType == datastore_constants.RatingLockInterval {
-			if ratingInitParam.Param.PeriodDuration < 0 {
-				return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with an invalid PeriodDuration")
-			}
-		}
-
-		// * "Period" locks treat PeriodDuration as either a day of the week/month, or
-		// * a number of days from 0 to 365, and PeriodHour as the hour of that day,
-		// * with a negative PeriodHour going into the previous day. "Day1" is the first
-		// * of the following month
-		if ratingInitParam.Param.LockType == datastore_constants.RatingLockPeriod {
-			periodDuration := ratingInitParam.Param.PeriodDuration
-			isWeekday := periodDuration >= datastore_constants.RatingLockPeriodSun && periodDuration <= datastore_constants.RatingLockPeriodMon
-			isNumberOfDays := periodDuration >= 0 && periodDuration <= 365
-
-			if !isWeekday && !isNumberOfDays && periodDuration != datastore_constants.RatingLockPeriodDay1 {
-				return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with an invalid PeriodDuration")
-			}
-
-			if ratingInitParam.Param.PeriodHour < -23 || ratingInitParam.Param.PeriodHour > 23 {
-				return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with an invalid PeriodHour")
-			}
-
-			if isNumberOfDays && ratingInitParam.Param.PeriodHour < 0 {
-				return 0, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to upload object with an invalid PeriodHour")
-			}
+		errCode := validateRatingInitParam(ratingInitParam)
+		if errCode != nil {
+			return 0, errCode
 		}
 
 		if slices.Contains(seenRatingSlots, int8(ratingInitParam.Slot)) {
