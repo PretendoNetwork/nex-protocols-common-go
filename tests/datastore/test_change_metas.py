@@ -409,6 +409,29 @@ async def test_recipients_on_a_permission_which_does_not_use_them(unique_data_ty
 
 	assert await change_error(nex.FRIEND_A, data_id=data_id, modifies_flag=flag, **{field: bad}) == "DataStore::InvalidArgument"
 
+@pytest.mark.parametrize("count", [
+	pytest.param(constants.DATASTOREPERMISSION_RECIPIENTIDS_MAX, id="at-the-limit"),
+	pytest.param(constants.DATASTOREPERMISSION_RECIPIENTIDS_MAX + 1, id="one-over-the-limit")
+])
+@pytest.mark.parametrize("flag, field", [
+	pytest.param(constants.ModificationFlag.MODIFICATION_FLAG_ACCESS_PERMISSION, "permission", id="access"),
+	pytest.param(constants.ModificationFlag.MODIFICATION_FLAG_UPDATE_PERMISSION, "delete_permission", id="update")
+])
+@pytest.mark.parametrize("post", helpers.POST_METHODS)
+async def test_how_many_recipients_are_allowed(unique_data_type, flag, field, count, post):
+	"""
+	DATASTOREPERMISSION_RECIPIENTIDS_MAX seems to not be enforced on Nintendo Network.
+	Possibly only added on the Switch/NEX 4?
+	"""
+
+	data_id = await helpers.post_with_before_metadata(post, nex.FRIEND_A, data_type=unique_data_type)
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_SPECIFIED, recipients=list(range(1, count + 1)))
+
+	await change(nex.FRIEND_A, data_id=data_id, modifies_flag=flag, **{field: permission})
+	info = await helpers.get_meta(nex.FRIEND_A, data_id=data_id, result_option=constants.ResultFlag.RESULT_FLAG_PERMITTED_IDS)
+
+	assert getattr(info, field) == permission
+
 async def test_changing_the_access_permission_keeps_the_notifications(unique_data_type):
 	"""
 	A notification is not taken back from a recipient who loses access,

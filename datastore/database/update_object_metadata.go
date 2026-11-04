@@ -51,9 +51,12 @@ func UpdateObjectMetadata(database common_globals.Database, currentData datastor
 			return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with invalid access permission")
 		}
 
-		if len(newData.Permission.RecipientIDs) > datastore_constants.DatastorePermissionRecipientIDsMax {
-			return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with too many access recipient IDs")
-		}
+		// TODO - Pokemon Bank does not validate this, was this added in a later NEX version? Keeping this around just in case, makes no sense to have this constant and not use it?
+		/*
+			if len(newData.Permission.RecipientIDs) > datastore_constants.DatastorePermissionRecipientIDsMax {
+				return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with too many access recipient IDs")
+			}
+		*/
 
 		if newData.Permission.Permission != datastore_constants.PermissionSpecified && newData.Permission.Permission != datastore_constants.PermissionSpecifiedFriend && len(newData.Permission.RecipientIDs) != 0 {
 			return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with access recipient IDs on a permission which does not use them")
@@ -68,9 +71,12 @@ func UpdateObjectMetadata(database common_globals.Database, currentData datastor
 			return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with invalid update permission")
 		}
 
-		if len(newData.DelPermission.RecipientIDs) > datastore_constants.DatastorePermissionRecipientIDsMax {
-			return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with too many update recipient IDs")
-		}
+		// TODO - Pokemon Bank does not validate this, was this added in a later NEX version? Keeping this around just in case, makes no sense to have this constant and not use it?
+		/*
+			if len(newData.DelPermission.RecipientIDs) > datastore_constants.DatastorePermissionRecipientIDsMax {
+				return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with too many update recipient IDs")
+			}
+		*/
 
 		if newData.DelPermission.Permission != datastore_constants.PermissionSpecified && newData.DelPermission.Permission != datastore_constants.PermissionSpecifiedFriend && len(newData.DelPermission.RecipientIDs) != 0 {
 			return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with update recipient IDs on a permission which does not use them")
