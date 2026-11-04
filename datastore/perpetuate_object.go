@@ -19,6 +19,14 @@ func (commonProtocol *CommonProtocol) perpetuateObject(err error, packet nex.Pac
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
+	// * Defined up here unlike the other RMC handlers because theres
+	// * so many early bails here. I dont super love this pattern, try
+	// * to find a way around it
+	rmcResponse := nex.NewRMCSuccess(endpoint, nil)
+	rmcResponse.ProtocolID = datastore.ProtocolID
+	rmcResponse.MethodID = datastore.MethodPerpetuateObject
+	rmcResponse.CallID = callID
+
 	// TODO - Add rollback for when error occurs
 
 	if persistenceSlotID >= types.UInt16(datastore_constants.NumPersistenceSlot) {
@@ -36,11 +44,6 @@ func (commonProtocol *CommonProtocol) perpetuateObject(err error, packet nex.Pac
 		if oldDataID != datastore_constants.InvalidDataID {
 			return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
 		}
-
-		rmcResponse := nex.NewRMCSuccess(endpoint, nil)
-		rmcResponse.ProtocolID = datastore.ProtocolID
-		rmcResponse.MethodID = datastore.MethodPerpetuateObject
-		rmcResponse.CallID = callID
 
 		return rmcResponse, nil
 	}
@@ -63,6 +66,21 @@ func (commonProtocol *CommonProtocol) perpetuateObject(err error, packet nex.Pac
 		return nil, errCode
 	}
 
+	currentSlotID, errCode := database.GetPersistenceSlotIDByDataID(manager.Database, dataID)
+	if errCode != nil {
+		return nil, errCode
+	}
+
+	// * Trying to move an existing persisted object into an empty slot does nothing
+	if currentSlotID != datastore_constants.InvalidPersistenceSlotID && currentSlotID != uint16(persistenceSlotID) && oldDataID == datastore_constants.InvalidDataID {
+		return rmcResponse, nil
+	}
+
+	// * Trying to move an existing persisted object into an occupied slot is not allowed
+	if currentSlotID != datastore_constants.InvalidPersistenceSlotID && currentSlotID != uint16(persistenceSlotID) && oldDataID != datastore_constants.InvalidDataID {
+		return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "change_error")
+	}
+
 	// * If the same object is being put into the same slot, it has no "last object"
 	// * to delete
 	if oldDataID != datastore_constants.InvalidDataID && oldDataID != uint64(dataID) {
@@ -78,11 +96,6 @@ func (commonProtocol *CommonProtocol) perpetuateObject(err error, packet nex.Pac
 		common_globals.Logger.Errorf("Error on perpetuating object: %s", errCode.Error())
 		return nil, errCode
 	}
-
-	rmcResponse := nex.NewRMCSuccess(endpoint, nil)
-	rmcResponse.ProtocolID = datastore.ProtocolID
-	rmcResponse.MethodID = datastore.MethodPerpetuateObject
-	rmcResponse.CallID = callID
 
 	return rmcResponse, nil
 }
