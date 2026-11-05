@@ -17,6 +17,7 @@ type CommonProtocol struct {
 	OnAfterGetMeta               func(packet nex.PacketInterface, param datastore_types.DataStoreGetMetaParam)
 	OnAfterGetMetas              func(packet nex.PacketInterface, dataIDs types.List[types.UInt64], param datastore_types.DataStoreGetMetaParam)
 	OnAfterSearchObject          func(packet nex.PacketInterface, param datastore_types.DataStoreSearchParam)
+	OnAfterSearchObjectLight     func(packet nex.PacketInterface, param datastore_types.DataStoreSearchParam)
 	OnAfterRateObject            func(packet nex.PacketInterface, target datastore_types.DataStoreRatingTarget, param datastore_types.DataStoreRateObjectParam, fetchRatings types.Bool)
 	OnAfterPostMetaBinary        func(packet nex.PacketInterface, param datastore_types.DataStorePreparePostParam)
 	OnAfterPreparePostObject     func(packet nex.PacketInterface, param datastore_types.DataStorePreparePostParam)
@@ -250,6 +251,33 @@ func (commonProtocol *CommonProtocol) SetManager(manager *common_globals.DataSto
 		common_globals.Logger.Error(err.Error())
 		return
 	}
+
+	// * Sorting by name in SearchObject(Light) ignores case and accents
+	// * (for example "e", "E" and "é" sort the same)
+	_, err = manager.Database.Exec(`CREATE COLLATION IF NOT EXISTS datastore.search_name (
+		provider = icu,
+		locale = 'und-u-ks-level1',
+		deterministic = false
+	)`)
+	if err != nil {
+		common_globals.Logger.Error(err.Error())
+		return
+	}
+
+	// * Caches SearchObject(Light) results per-user if the cache is enabled. Unsure if
+	// * doing this per-user is correct, but given how much SearchObject(Light) relies
+	// * on knowing who the caller is (for "own objects", friends, etc.) this FEELS right
+	_, err = manager.Database.Exec(`CREATE TABLE IF NOT EXISTS datastore.search_cache (
+		pid numeric(20) NOT NULL CHECK (pid BETWEEN 0 AND 18446744073709551615),
+		param bytea NOT NULL, -- Lazy way to detect the same parameters
+		response bytea NOT NULL, -- Lazy way to store the results
+		expiration_date timestamp NOT NULL,
+		PRIMARY KEY (pid, param)
+	)`)
+	if err != nil {
+		common_globals.Logger.Error(err.Error())
+		return
+	}
 }
 
 // NewCommonProtocol returns a new CommonProtocol
@@ -265,6 +293,8 @@ func NewCommonProtocol(protocol datastore.Interface) *CommonProtocol {
 	protocol.SetHandlerGetMeta(commonProtocol.getMeta)
 	protocol.SetHandlerGetMetas(commonProtocol.getMetas)
 	protocol.SetHandlerGetMetasMultipleParam(commonProtocol.getMetasMultipleParam)
+	protocol.SetHandlerSearchObject(commonProtocol.searchObject)
+	protocol.SetHandlerSearchObjectLight(commonProtocol.searchObjectLight)
 	protocol.SetHandlerPreparePostObject(commonProtocol.preparePostObject)
 	protocol.SetHandlerPrepareGetObject(commonProtocol.prepareGetObject)
 	protocol.SetHandlerCompletePostObject(commonProtocol.completePostObject)

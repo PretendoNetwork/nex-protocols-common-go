@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
@@ -97,6 +98,7 @@ func setupDataStoreCommonProtocol(endpoint *nex.PRUDPEndPoint) {
 	datastoreManager.GetUserFriendPIDs = getUserFriendPIDs
 	datastoreManager.SetS3Config(s3Bucket, s3KeyBase, stubS3Manager{})
 	datastoreManager.AllowUnsafeObjectStatusUpdates = true
+	datastoreManager.SearchCacheLifetime = 5 * time.Second // * Must match SEARCH_CACHE_LIFETIME in the SearchObject tests
 
 	commonDataStoreProtocol.SetManager(datastoreManager)
 }

@@ -9,7 +9,7 @@ require (
 	github.com/PretendoNetwork/nex-go/v2 v2.3.5
 	github.com/PretendoNetwork/nex-protocols-common-go/v2 v2.6.1
 	// TODO - Use a tagged release once the ComparisonFlag size fix is released
-	github.com/PretendoNetwork/nex-protocols-go/v2 v2.3.8-0.20260916230930-75ef35cf2e37
+	github.com/PretendoNetwork/nex-protocols-go/v2 v2.3.8
 	github.com/fergusstrange/embedded-postgres v1.34.0
 	github.com/lib/pq v1.12.3
 )

@@ -149,11 +149,12 @@ type Database interface {
 
 // DataStoreManager manages a DataStore instance
 type DataStoreManager struct {
-	Database          Database
-	Endpoint          *nex.PRUDPEndPoint
-	S3                *S3
-	GetUserFriendPIDs func(pid uint32) []uint32
-	NotifyTimestamp   uint64
+	Database            Database
+	Endpoint            *nex.PRUDPEndPoint
+	S3                  *S3
+	GetUserFriendPIDs   func(pid uint32) []uint32
+	NotifyTimestamp     uint64
+	SearchCacheLifetime time.Duration
 
 	// * Some games may need to customize this behavior.
 	// * Set as fields so they can be modified by the caller
