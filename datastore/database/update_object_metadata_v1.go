@@ -2,7 +2,6 @@ package database
 
 import (
 	"slices"
-	"sort"
 	"strings"
 	"time"
 	"unicode"
@@ -35,17 +34,10 @@ func UpdateObjectMetadataV1(database common_globals.Database, currentData datast
 	modifyTags := newData.ModifiesFlag.HasFlag(datastore_constants.ModificationFlagTags)
 	modifyUpdatedTime := newData.ModifiesFlag.HasFlag(datastore_constants.ModificationFlagUpdatedTime)
 
-	now := time.Now().UTC()
-	updateData := map[string]any{
-		"true_update_date": now, // * Always update this, since NEX only wants to update the "update time" in SOME instances
-	}
-
 	if modifyName {
 		if utf8.RuneCountInString(string(newData.Name)) > datastore_constants.MaxNameLength {
 			return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with a name which is too long")
 		}
-
-		updateData["name"] = newData.Name
 	}
 
 	if modifyAccessPermission {
@@ -63,9 +55,6 @@ func UpdateObjectMetadataV1(database common_globals.Database, currentData datast
 		if newData.Permission.Permission != datastore_constants.PermissionSpecified && newData.Permission.Permission != datastore_constants.PermissionSpecifiedFriend && len(newData.Permission.RecipientIDs) != 0 {
 			return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with access recipient IDs on a permission which does not use them")
 		}
-
-		updateData["access_permission"] = newData.Permission.Permission
-		updateData["access_permission_recipients"] = pq.Array(newData.Permission.RecipientIDs)
 	}
 
 	if modifyUpdatePermission {
@@ -83,9 +72,6 @@ func UpdateObjectMetadataV1(database common_globals.Database, currentData datast
 		if newData.DelPermission.Permission != datastore_constants.PermissionSpecified && newData.DelPermission.Permission != datastore_constants.PermissionSpecifiedFriend && len(newData.DelPermission.RecipientIDs) != 0 {
 			return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with update recipient IDs on a permission which does not use them")
 		}
-
-		updateData["update_permission"] = newData.DelPermission.Permission
-		updateData["update_permission_recipients"] = pq.Array(newData.DelPermission.RecipientIDs)
 	}
 
 	if modifyPeriod {
@@ -94,19 +80,12 @@ func UpdateObjectMetadataV1(database common_globals.Database, currentData datast
 		if newData.Period > 365 {
 			return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with invalid expiration days")
 		}
-
-		updateData["expiration_days"] = newData.Period
 	}
 
 	if modifyMetaBinary {
 		if len(newData.MetaBinary) > datastore_constants.MaxMetaBinSize {
 			return nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "Tried to update object with a MetaBinary which is too long")
 		}
-
-		// * Objects created with an empty MetaBinary have the field set to NULL for GetSpecificMeta
-		// * but when the object is updated, even if the MetaBinary is also empty, it gets treated
-		// * differently. So undo the NULL here even if the value is still "empty"
-		updateData["meta_binary"] = append([]byte{}, newData.MetaBinary...)
 	}
 
 	if modifyTags {
@@ -130,44 +109,66 @@ func UpdateObjectMetadataV1(database common_globals.Database, currentData datast
 
 			seenTags = append(seenTags, string(tag))
 		}
-
-		sortedTags := make([]string, 0, len(newData.Tags))
-		for i := range newData.Tags {
-			sortedTags = append(sortedTags, string(newData.Tags[i]))
-		}
-
-		// * Tags get re-ordered in alphabetical order
-		sort.Strings(sortedTags)
-
-		updateData["tags"] = pq.Array(sortedTags)
-	}
-
-	if modifyUpdatedTime {
-		updateData["update_date"] = now
 	}
 
 	// * This happens regardless of if DATA_FLAG_PERIOD_FROM_LAST_REFERRED
 	// * is set or not. DATA_FLAG_PERIOD_FROM_LAST_REFERRED seems to only
 	// * apply to PrepareGetObject (and related) and TouchObject
 	day := 24 * time.Hour
+	now := time.Now().UTC()
 
 	// * Persisted objects don't get their expiration updated
+	modifyExpirationDate := false
+	var expirationDate time.Time
+
 	if !currentData.ExpireTime.IsPermanentDateTime() {
 		if modifyUpdatedTime && modifyPeriod {
-			updateData["expiration_date"] = now.Add(time.Duration(newData.Period) * day)
+			modifyExpirationDate = true
+			expirationDate = now.Add(time.Duration(newData.Period) * day)
 		} else if modifyUpdatedTime {
-			updateData["expiration_date"] = now.Add(time.Duration(currentData.Period) * day)
+			modifyExpirationDate = true
+			expirationDate = now.Add(time.Duration(currentData.Period) * day)
 		} else if modifyPeriod {
-			updateData["expiration_date"] = currentData.UpdatedTime.Standard().UTC().Add(time.Duration(newData.Period) * day)
+			modifyExpirationDate = true
+			expirationDate = currentData.UpdatedTime.Standard().UTC().Add(time.Duration(newData.Period) * day)
 		}
 	}
 
-	query, params, err := Update("datastore.objects").Set(updateData).Where("data_id").Is(currentData.DataID).Build()
-	if err != nil {
-		return nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
-	}
-
-	_, err = database.Exec(query, params...)
+	_, err := database.Exec(`
+		UPDATE datastore.objects SET
+			true_update_date = $2,
+			name = CASE WHEN $3 THEN $4 ELSE name END,
+			access_permission = CASE WHEN $5 THEN $6 ELSE access_permission END,
+			access_permission_recipients = CASE WHEN $5 THEN $7 ELSE access_permission_recipients END,
+			update_permission = CASE WHEN $8 THEN $9 ELSE update_permission END,
+			update_permission_recipients = CASE WHEN $8 THEN $10 ELSE update_permission_recipients END,
+			expiration_days = CASE WHEN $11 THEN $12 ELSE expiration_days END,
+			meta_binary = CASE WHEN $13 THEN $14 ELSE meta_binary END,
+			tags = CASE WHEN $15 THEN ARRAY(SELECT tag FROM unnest($16::text[]) AS tag ORDER BY tag COLLATE "C") ELSE tags END,
+			update_date = CASE WHEN $17 THEN $2 ELSE update_date END,
+			expiration_date = CASE WHEN $18 THEN $19 ELSE expiration_date END
+		WHERE data_id = $1
+	`,
+		currentData.DataID,
+		now,
+		modifyName,
+		newData.Name,
+		modifyAccessPermission,
+		newData.Permission.Permission,
+		pq.Array(newData.Permission.RecipientIDs),
+		modifyUpdatePermission,
+		newData.DelPermission.Permission,
+		pq.Array(newData.DelPermission.RecipientIDs),
+		modifyPeriod,
+		newData.Period,
+		modifyMetaBinary,
+		newData.MetaBinary,
+		modifyTags,
+		pq.Array(newData.Tags),
+		modifyUpdatedTime,
+		modifyExpirationDate,
+		expirationDate,
+	)
 	if err != nil {
 		return nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
 	}

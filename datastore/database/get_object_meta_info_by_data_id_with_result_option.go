@@ -13,30 +13,37 @@ import (
 func GetObjectMetaInfoByDataIDWithResultOption(database common_globals.Database, dataID types.UInt64, resultOption datastore_constants.ResultFlag) (datastore_types.DataStoreMetaInfo, *nex.Error) {
 	metaInfo := datastore_types.NewDataStoreMetaInfo()
 
-	// * These fields are always populated.
-	// * Tags, ratings, meta binary, and
-	// * permission recipient IDs are only
-	// * populated if resultOption says to
-	columns := []string{
-		"o.data_id",
-		"owner",
-		"v.size",
-		"name",
-		"data_type",
-		"access_permission",
-		"update_permission",
-		"o.creation_date",
-		"update_date",
-		"expiration_days",
-		"status",
-		"reference_count",
-		"refer_data_id",
-		"raw_flags",
-		"last_reference_date",
-		"expiration_date",
-	}
+	populateTags := resultOption.HasFlag(datastore_constants.ResultFlagTags)
+	populateRatings := resultOption.HasFlag(datastore_constants.ResultFlagRatings)
+	populateMetaBinary := resultOption.HasFlag(datastore_constants.ResultFlagMetaBinary)
+	populateRecipientIDs := resultOption.HasFlag(datastore_constants.ResultFlagPermittedIDs)
 
-	outs := []any{
+	err := database.QueryRow(`
+		SELECT
+			o.data_id,
+			owner,
+			v.size,
+			name,
+			data_type,
+			access_permission,
+			update_permission,
+			o.creation_date,
+			update_date,
+			expiration_days,
+			status,
+			reference_count,
+			refer_data_id,
+			raw_flags,
+			last_reference_date,
+			expiration_date,
+			CASE WHEN $2 THEN tags END,
+			CASE WHEN $3 THEN meta_binary END,
+			CASE WHEN $4 THEN access_permission_recipients END,
+			CASE WHEN $4 THEN update_permission_recipients END
+		FROM datastore.objects o
+		JOIN datastore.object_versions v ON v.data_id = o.data_id AND v.version = (SELECT MAX(version) FROM datastore.object_versions WHERE data_id = o.data_id AND completed = true)
+		WHERE o.data_id = $1
+	`, dataID, populateTags, populateMetaBinary, populateRecipientIDs).Scan(
 		&metaInfo.DataID,
 		&metaInfo.OwnerID,
 		&metaInfo.Size,
@@ -53,37 +60,11 @@ func GetObjectMetaInfoByDataIDWithResultOption(database common_globals.Database,
 		&metaInfo.Flag,
 		&metaInfo.ReferredTime,
 		&metaInfo.ExpireTime,
-	}
-
-	populateTags := resultOption.HasFlag(datastore_constants.ResultFlagTags)
-	populateRatings := resultOption.HasFlag(datastore_constants.ResultFlagRatings)
-	populateMetaBinary := resultOption.HasFlag(datastore_constants.ResultFlagMetaBinary)
-	populateRecipientIDs := resultOption.HasFlag(datastore_constants.ResultFlagPermittedIDs)
-
-	if populateTags {
-		columns = append(columns, "tags")
-		outs = append(outs, &metaInfo.Tags)
-	}
-
-	if populateMetaBinary {
-		columns = append(columns, "meta_binary")
-		outs = append(outs, &metaInfo.MetaBinary)
-	}
-
-	if populateRecipientIDs {
-		columns = append(columns, "access_permission_recipients")
-		columns = append(columns, "update_permission_recipients")
-		outs = append(outs, &metaInfo.Permission.RecipientIDs)
-		outs = append(outs, &metaInfo.DelPermission.RecipientIDs)
-	}
-
-	query, params, err := Select(columns...).From("datastore.objects o JOIN datastore.object_versions v ON v.data_id = o.data_id AND v.version = (SELECT MAX(version) FROM datastore.object_versions WHERE data_id = o.data_id AND completed = true)").Where("o.data_id").Is(dataID).Build()
-	if err != nil {
-		// TODO - Send more specific errors?
-		return metaInfo, nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
-	}
-
-	err = database.QueryRow(query, params...).Scan(outs...)
+		&metaInfo.Tags,
+		&metaInfo.MetaBinary,
+		&metaInfo.Permission.RecipientIDs,
+		&metaInfo.DelPermission.RecipientIDs,
+	)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return metaInfo, nex.NewError(nex.ResultCodes.DataStore.NotFound, err.Error())
