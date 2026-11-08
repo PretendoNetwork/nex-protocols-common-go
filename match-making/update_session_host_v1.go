@@ -9,7 +9,8 @@ import (
 	"github.com/PretendoNetwork/nex-protocols-common-go/v2/match-making/database"
 	"github.com/PretendoNetwork/nex-protocols-common-go/v2/match-making/tracking"
 	match_making "github.com/PretendoNetwork/nex-protocols-go/v2/match-making"
-	notifications "github.com/PretendoNetwork/nex-protocols-go/v2/notifications"
+	match_making_constants "github.com/PretendoNetwork/nex-protocols-go/v2/match-making/constants"
+	notifications_constants "github.com/PretendoNetwork/nex-protocols-go/v2/notifications/constants"
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/v2/notifications/types"
 )
 
@@ -35,7 +36,7 @@ func (commonProtocol *CommonProtocol) updateSessionHostV1(err error, packet nex.
 		return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
 	}
 
-	if uint32(gathering.Flags) & match_making.GatheringFlags.ParticipantsChangeOwner == 0 {
+	if !gathering.Flags.HasFlag(match_making_constants.GatheringFlagChangeOwnerByOtherHost) {
 		nexError = database.UpdateSessionHost(commonProtocol.manager, uint32(gid), gathering.OwnerPID, connection.PID())
 		if nexError != nil {
 			commonProtocol.manager.Mutex.Unlock()
@@ -66,14 +67,11 @@ func (commonProtocol *CommonProtocol) updateSessionHostV1(err error, packet nex.
 			return nil, nexError
 		}
 
-		category := notifications.NotificationCategories.OwnershipChanged
-		subtype := notifications.NotificationSubTypes.OwnershipChanged.None
-
 		oEvent := notifications_types.NewNotificationEvent()
 		oEvent.PIDSource = connection.PID()
-		oEvent.Type = types.NewUInt32(notifications.BuildNotificationType(category, subtype))
-		oEvent.Param1 = gid
-		oEvent.Param2 = types.NewUInt32(uint32(connection.PID())) // TODO - This assumes a legacy client. Will not work on the Switch
+		oEvent.Type = notifications_constants.NotificationCategoryOwnershipChangeEvent.Build()
+		oEvent.Param1 = types.UInt64(gid)
+		oEvent.Param2 = types.UInt64(connection.PID())
 
 		// TODO - StrParam doesn't have this value on some servers
 		// * https://github.com/kinnay/NintendoClients/issues/101

@@ -12,7 +12,7 @@ import (
 func (commonProtocol *CommonProtocol) browseMatchmakeSession(err error, packet nex.PacketInterface, callID uint32, searchCriteria match_making_types.MatchmakeSessionSearchCriteria, resultRange types.ResultRange) (*nex.RMCMessage, *nex.Error) {
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, err.Error())
 	}
 
 	connection := packet.Sender().(*nex.PRUDPConnection)
@@ -29,7 +29,7 @@ func (commonProtocol *CommonProtocol) browseMatchmakeSession(err error, packet n
 		commonProtocol.CleanupMatchmakeSessionSearchCriterias(lstSearchCriteria)
 	}
 
-	sessions, nexError := database.FindMatchmakeSessionBySearchCriteria(commonProtocol.manager, connection, searchCriterias, resultRange, nil)
+	sessions, nexError := database.FindMatchmakeSessionBySearchCriteria(commonProtocol.manager, connection, searchCriterias, resultRange, nil, false)
 	if nexError != nil {
 		commonProtocol.manager.Mutex.RUnlock()
 		return nil, nexError

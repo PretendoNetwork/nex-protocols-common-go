@@ -40,15 +40,14 @@ func (commonProtocol *CommonProtocol) joinMatchmakeSessionWithParam(err error, p
 		return nil, nexError
 	}
 
-	// TODO - Are these the correct error codes?
 	if bool(joinedMatchmakeSession.UserPasswordEnabled) && !joinMatchmakeSessionParam.StrUserPassword.Equals(joinedMatchmakeSession.UserPassword) {
 		commonProtocol.manager.Mutex.Unlock()
-		return nil, nex.NewError(nex.ResultCodes.RendezVous.InvalidPassword, "change_error")
+		return nil, nex.NewError(nex.ResultCodes.RendezVous.MatchmakeSessionUserPasswordUnmatch, "Matchmake session user password does not match")
 	}
 
 	if bool(joinedMatchmakeSession.SystemPasswordEnabled) && string(joinMatchmakeSessionParam.StrSystemPassword) != systemPassword {
 		commonProtocol.manager.Mutex.Unlock()
-		return nil, nex.NewError(nex.ResultCodes.RendezVous.InvalidPassword, "change_error")
+		return nil, nex.NewError(nex.ResultCodes.RendezVous.MatchmakeSessionSystemPasswordUnmatch, "Matchmake session system password does not match")
 	}
 
 	// * Allow game servers to do their own permissions checks

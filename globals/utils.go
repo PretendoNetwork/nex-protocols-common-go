@@ -6,8 +6,10 @@ import (
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/constants"
 	"github.com/PretendoNetwork/nex-go/v2/types"
-	match_making_constants "github.com/PretendoNetwork/nex-protocols-go/v2/match-making/constants"
 	match_making_types "github.com/PretendoNetwork/nex-protocols-go/v2/match-making/types"
+	message_delivery "github.com/PretendoNetwork/nex-protocols-go/v2/message-delivery"
+	messaging_constants "github.com/PretendoNetwork/nex-protocols-go/v2/messaging/constants"
+	messaging_types "github.com/PretendoNetwork/nex-protocols-go/v2/messaging/types"
 	notifications "github.com/PretendoNetwork/nex-protocols-go/v2/notifications"
 	notifications_types "github.com/PretendoNetwork/nex-protocols-go/v2/notifications/types"
 )
@@ -133,6 +135,11 @@ func CheckValidPersistentGathering(persistentGathering match_making_types.Persis
 	return true
 }
 
+// ResizeString resizes the string with the specified length in characters (runes)
+func ResizeString(str string, length int) string {
+	return string([]rune(str)[:length])
+}
+
 // CanJoinMatchmakeSession checks if a PID is allowed to join a matchmake session
 func CanJoinMatchmakeSession(manager *MatchmakingManager, pid types.PID, matchmakeSession match_making_types.MatchmakeSession) *nex.Error {
 	// TODO - Is this the right error?
@@ -157,6 +164,61 @@ func CanJoinMatchmakeSession(manager *MatchmakingManager, pid types.PID, matchma
 	return nil
 }
 
+// GetUserMessageRecipientData returns the recipient ID and the recipient type of a message
+func GetUserMessageRecipientData(libraryVersion *nex.LibraryVersion, userMessage messaging_types.UserMessage) (types.UInt64, messaging_constants.RecipientType) {
+	if libraryVersion.GreaterOrEqual("4.0.0") {
+		switch userMessage.MessageRecipient.UIRecipientType {
+		case 1:
+			return types.UInt64(userMessage.MessageRecipient.PrincipalID), userMessage.MessageRecipient.UIRecipientType
+		case 2:
+			return types.UInt64(userMessage.MessageRecipient.GatheringID), userMessage.MessageRecipient.UIRecipientType
+		default:
+			Logger.Errorf("Invalid recipient type %d", userMessage.MessageRecipient.UIRecipientType)
+			return 0, userMessage.MessageRecipient.UIRecipientType // * Unknown
+		}
+	}
+
+	return types.UInt64(userMessage.IDRecipient), userMessage.UIRecipientType
+}
+
+// SetUserMessageRecipientData sets the recipient ID and the recipient type of a message
+func SetUserMessageRecipientData(libraryVersion *nex.LibraryVersion, userMessage messaging_types.UserMessage, recipientID types.UInt64, recipientType messaging_constants.RecipientType) messaging_types.UserMessage {
+	if libraryVersion.GreaterOrEqual("4.0.0") {
+		switch recipientType {
+		case 1:
+			userMessage.MessageRecipient.UIRecipientType = recipientType
+			userMessage.MessageRecipient.PrincipalID = types.PID(recipientID)
+		case 2:
+			userMessage.MessageRecipient.UIRecipientType = recipientType
+			userMessage.MessageRecipient.GatheringID = types.UInt32(recipientID)
+		default:
+			Logger.Errorf("Invalid recipient type %d", recipientType)
+		}
+	} else {
+		userMessage.IDRecipient = types.UInt32(recipientID)
+		userMessage.UIRecipientType = recipientType
+	}
+
+	return userMessage
+}
+
+// GetMessageRecipientData returns the recipient ID and the recipient type of a message recipient
+func GetMessageRecipientData(libraryVersion *nex.LibraryVersion, recipient messaging_types.MessageRecipient) (types.UInt64, messaging_constants.RecipientType) {
+	if libraryVersion.GreaterOrEqual("4.0.0") {
+		switch recipient.UIRecipientType {
+		case 1:
+			return types.UInt64(recipient.PrincipalID), recipient.UIRecipientType
+		case 2:
+			return types.UInt64(recipient.GatheringID), recipient.UIRecipientType
+		default:
+			Logger.Errorf("Invalid recipient type %d", recipient.UIRecipientType)
+			return 0, recipient.UIRecipientType // * Unknown
+		}
+	}
+
+	return types.UInt64(recipient.IDRecipient), recipient.UIRecipientType
+}
+
 // SendNotificationEvent sends a notification event to the specified targets
 func SendNotificationEvent(endpoint *nex.PRUDPEndPoint, event notifications_types.NotificationEvent, targets []uint64) {
 	server := endpoint.Server
@@ -179,6 +241,48 @@ func SendNotificationEvent(endpoint *nex.PRUDPEndPoint, event notifications_type
 			continue
 		}
 
+		var messagePacket nex.PRUDPPacketInterface
+
+		switch target.DefaultPRUDPVersion {
+		case 0:
+			messagePacket, _ = nex.NewPRUDPPacketV0(server, target, nil)
+		case 1:
+			messagePacket, _ = nex.NewPRUDPPacketV1(server, target, nil)
+		case 2:
+			messagePacket, _ = nex.NewPRUDPPacketLite(server, target, nil)
+		default:
+			Logger.Errorf("PRUDP version %d is not supported", target.DefaultPRUDPVersion)
+		}
+
+		messagePacket.SetType(constants.DataPacket)
+		messagePacket.AddFlag(constants.PacketFlagNeedsAck)
+		messagePacket.AddFlag(constants.PacketFlagReliable)
+		messagePacket.SetSourceVirtualPortStreamType(target.StreamType)
+		messagePacket.SetSourceVirtualPortStreamID(endpoint.StreamID)
+		messagePacket.SetDestinationVirtualPortStreamType(target.StreamType)
+		messagePacket.SetDestinationVirtualPortStreamID(target.StreamID)
+		messagePacket.SetPayload(rmcRequestBytes)
+
+		server.Send(messagePacket)
+	}
+}
+
+// SendMessage sends a message to the specified targets
+func SendMessage(endpoint *nex.PRUDPEndPoint, message types.DataHolder, targets []*nex.PRUDPConnection) {
+	server := endpoint.Server
+	stream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
+
+	message.WriteTo(stream)
+
+	rmcRequest := nex.NewRMCRequest(endpoint)
+	rmcRequest.ProtocolID = message_delivery.ProtocolID
+	rmcRequest.CallID = OutgoingCallID.Next()
+	rmcRequest.MethodID = message_delivery.MethodDeliverMessage
+	rmcRequest.Parameters = stream.Bytes()
+
+	rmcRequestBytes := rmcRequest.Bytes()
+
+	for _, target := range targets {
 		var messagePacket nex.PRUDPPacketInterface
 
 		if target.DefaultPRUDPVersion == 0 {

@@ -10,14 +10,9 @@ import (
 )
 
 func (commonProtocol *CommonProtocol) autoMatchmakeWithSearchCriteriaPostpone(err error, packet nex.PacketInterface, callID uint32, lstSearchCriteria types.List[match_making_types.MatchmakeSessionSearchCriteria], anyGathering match_making_types.GatheringHolder, strMessage types.String) (*nex.RMCMessage, *nex.Error) {
-	if commonProtocol.CleanupMatchmakeSessionSearchCriterias == nil {
-		common_globals.Logger.Warning("MatchmakeExtension::AutoMatchmakeWithSearchCriteria_Postpone missing CleanupMatchmakeSessionSearchCriterias!")
-		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
-	}
-
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
+		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, err.Error())
 	}
 
 	if len(strMessage) > 256 {
@@ -47,16 +42,18 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithSearchCriteriaPostpone(er
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	if !common_globals.CheckValidMatchmakeSession(matchmakeSession) {
+	if !commonProtocol.manager.CheckValidMatchmakeSession(matchmakeSession) {
 		commonProtocol.manager.Mutex.Unlock()
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	commonProtocol.CleanupMatchmakeSessionSearchCriterias(lstSearchCriteria)
+	if commonProtocol.CleanupMatchmakeSessionSearchCriterias != nil {
+		commonProtocol.CleanupMatchmakeSessionSearchCriterias(lstSearchCriteria)
+	}
 
 	resultRange := types.NewResultRange()
 	resultRange.Length = 1
-	resultSessions, nexError := database.FindMatchmakeSessionBySearchCriteria(commonProtocol.manager, connection, lstSearchCriteria, resultRange, &matchmakeSession)
+	resultSessions, nexError := database.FindMatchmakeSessionBySearchCriteria(commonProtocol.manager, connection, lstSearchCriteria, resultRange, &matchmakeSession, true)
 	if nexError != nil {
 		commonProtocol.manager.Mutex.Unlock()
 		return nil, nexError
@@ -73,12 +70,6 @@ func (commonProtocol *CommonProtocol) autoMatchmakeWithSearchCriteriaPostpone(er
 		}
 	} else {
 		resultSession = resultSessions[0]
-
-		// TODO - What should really happen here?
-		if resultSession.UserPasswordEnabled || resultSession.SystemPasswordEnabled {
-			commonProtocol.manager.Mutex.Unlock()
-			return nil, nex.NewError(nex.ResultCodes.RendezVous.PermissionDenied, "change_error")
-		}
 	}
 
 	var vacantParticipants uint16 = 1

@@ -16,7 +16,7 @@ func (commonProtocol *CommonProtocol) createCommunity(err error, packet nex.Pack
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	if !common_globals.CheckValidPersistentGathering(community) {
+	if !commonProtocol.manager.CheckValidPersistentGathering(community) {
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 

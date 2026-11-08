@@ -2,7 +2,6 @@ package utility
 
 import (
 	"github.com/PretendoNetwork/nex-go/v2"
-	"github.com/PretendoNetwork/nex-go/v2/types"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	utility "github.com/PretendoNetwork/nex-protocols-go/v2/utility"
 )
@@ -13,19 +12,18 @@ func (commonProtocol *CommonProtocol) acquireNexUniqueID(err error, packet nex.P
 		return nil, nex.NewError(nex.ResultCodes.Core.InvalidArgument, "change_error")
 	}
 
-	if commonProtocol.GenerateNEXUniqueID == nil {
-		common_globals.Logger.Warning("Utility::AcquireNexUniqueID missing GenerateNEXUniqueID!")
-		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
-	}
-
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
-	pNexUniqueID := types.NewUInt64(commonProtocol.GenerateNEXUniqueID())
+	pNexUniqueIDInfo, nexError := commonProtocol.manager.GenerateNEXUniqueIDWithPassword(commonProtocol.manager, packet.Sender().PID(), false)
+	if nexError != nil {
+		common_globals.Logger.Error(nexError.Error())
+		return nil, nexError
+	}
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
-	pNexUniqueID.WriteTo(rmcResponseStream)
+	pNexUniqueIDInfo.NEXUniqueID.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
@@ -33,10 +31,6 @@ func (commonProtocol *CommonProtocol) acquireNexUniqueID(err error, packet nex.P
 	rmcResponse.ProtocolID = utility.ProtocolID
 	rmcResponse.MethodID = utility.MethodAcquireNexUniqueID
 	rmcResponse.CallID = callID
-
-	if commonProtocol.OnAfterAcquireNexUniqueID != nil {
-		go commonProtocol.OnAfterAcquireNexUniqueID(packet)
-	}
 
 	return rmcResponse, nil
 }
