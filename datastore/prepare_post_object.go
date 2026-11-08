@@ -6,79 +6,100 @@ import (
 
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
+	"github.com/PretendoNetwork/nex-protocols-common-go/v2/datastore/database"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	datastore "github.com/PretendoNetwork/nex-protocols-go/v2/datastore"
+	datastore_constants "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/constants"
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
 func (commonProtocol *CommonProtocol) preparePostObject(err error, packet nex.PacketInterface, callID uint32, param datastore_types.DataStorePreparePostParam) (*nex.RMCMessage, *nex.Error) {
-	if commonProtocol.InitializeObjectByPreparePostParam == nil {
-		common_globals.Logger.Warning("InitializeObjectByPreparePostParam not defined")
-		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
-	}
-
-	if commonProtocol.InitializeObjectRatingWithSlot == nil {
-		common_globals.Logger.Warning("InitializeObjectRatingWithSlot not defined")
-		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
-	}
-
-	if commonProtocol.S3Presigner == nil {
-		common_globals.Logger.Warning("S3Presigner not defined")
-		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
-	}
-
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
 	}
 
+	if common_globals.HasSurrogatePair(param.Name) || common_globals.HasSurrogatePair(param.Tags...) {
+		return nil, nex.NewError(nex.ResultCodes.PythonCore.ConversionError, "change_error")
+	}
+
+	manager := commonProtocol.manager
+
+	if manager.S3 == nil {
+		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "S3 config not set")
+	}
+
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
-	// TODO - Need to verify what param.PersistenceInitParam.DeleteLastObject really means. It's often set to true even when it wouldn't make sense
-	dataID, errCode := commonProtocol.InitializeObjectByPreparePostParam(connection.PID(), param)
+	// TODO - Add rollback for when error occurs
+
+	if param.Flag.HasFlag(datastore_constants.DataFlagNotUseFileServer) {
+		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "PreparePostObject cannot be used with DataFlagNotUseFileServer")
+	}
+
+	dataID, errCode := database.InsertObjectByPreparePostParam(manager.Database, manager, connection.PID(), param)
 	if errCode != nil {
 		common_globals.Logger.Errorf("Error on object init: %s", errCode.Error())
 		return nil, errCode
 	}
 
-	// TODO - Should this be moved to InitializeObjectByPreparePostParam?
-	for _ , ratingInitParamWithSlot := range param.RatingInitParams {
-		errCode = commonProtocol.InitializeObjectRatingWithSlot(dataID, ratingInitParamWithSlot)
-		if errCode != nil {
-			common_globals.Logger.Errorf("Error on rating init: %s", errCode.Error())
-			break
+	// TODO - Should this be moved inside InsertObjectByPreparePostParam?
+	errCode = database.InsertObjectRatingSettings(manager.Database, dataID, param.RatingInitParams)
+	if errCode != nil {
+		common_globals.Logger.Errorf("Error on rating init: %s", errCode.Error())
+		return nil, errCode
+	}
+
+	// TODO - Should this be moved inside InsertObjectByPreparePostParam?
+	if param.PersistenceInitParam.PersistenceSlotID != types.UInt16(datastore_constants.InvalidPersistenceSlotID) {
+		slot := param.PersistenceInitParam.PersistenceSlotID
+		oldDataID, err := database.GetPerpetuatedObjectID(manager.Database, connection.PID(), slot)
+		if err != nil {
+			common_globals.Logger.Errorf("Error on persisting object: %s", err.Error())
+			return nil, err
+		}
+
+		if oldDataID != datastore_constants.InvalidDataID {
+			err := database.UnperpetuateObjectByDataID(manager.Database, oldDataID, param.PersistenceInitParam.DeleteLastObject)
+			if err != nil {
+				common_globals.Logger.Errorf("Error on unperpetuating object: %s", err.Error())
+				return nil, err
+			}
+		}
+
+		err = database.PerpetuateObject(manager.Database, connection.PID(), param.PersistenceInitParam.PersistenceSlotID, dataID)
+		if err != nil {
+			common_globals.Logger.Errorf("Error on perpetuating object: %s", err.Error())
+			return nil, err
 		}
 	}
 
-	if errCode != nil {
-		return nil, errCode
-	}
-
-	bucket := commonProtocol.S3Bucket
-	key := fmt.Sprintf("%s/%d.bin", commonProtocol.s3DataKeyBase, dataID)
-
-	URL, formData, err := commonProtocol.S3Presigner.PostObject(bucket, key, time.Minute*15)
+	// * Format "DataID_Version", where "Version" always starts at 1
+	key := fmt.Sprintf("objects/%020d_%010d.bin", dataID, 1)
+	postData, err := manager.S3.PresignPost(key, time.Minute*15)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "change_error")
-	}
-
-	requestHeaders, errCode := commonProtocol.S3PostRequestHeaders()
-	if errCode != nil {
-		return nil, errCode
+		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "Failed to sign post request")
 	}
 
 	pReqPostInfo := datastore_types.NewDataStoreReqPostInfo()
 
 	pReqPostInfo.DataID = types.NewUInt64(dataID)
-	pReqPostInfo.URL = types.NewString(URL.String())
+	pReqPostInfo.URL = types.NewString(postData.URL.String())
 	pReqPostInfo.RequestHeaders = types.NewList[datastore_types.DataStoreKeyValue]()
 	pReqPostInfo.FormFields = types.NewList[datastore_types.DataStoreKeyValue]()
-	pReqPostInfo.RootCACert = types.NewBuffer(commonProtocol.RootCACert)
-	pReqPostInfo.RequestHeaders = requestHeaders
+	pReqPostInfo.RootCACert = types.NewBuffer(postData.RootCACert)
 
-	for key, value := range formData {
+	for key, value := range postData.RequestHeaders {
+		header := datastore_types.NewDataStoreKeyValue()
+		header.Key = types.NewString(key)
+		header.Value = types.NewString(value)
+
+		pReqPostInfo.RequestHeaders = append(pReqPostInfo.RequestHeaders, header)
+	}
+
+	for key, value := range postData.FormData {
 		field := datastore_types.NewDataStoreKeyValue()
 		field.Key = types.NewString(key)
 		field.Value = types.NewString(value)

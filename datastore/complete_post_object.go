@@ -1,99 +1,67 @@
 package datastore
 
 import (
-	"fmt"
+	"time"
 
 	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-protocols-common-go/v2/datastore/database"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	datastore "github.com/PretendoNetwork/nex-protocols-go/v2/datastore"
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
 func (commonProtocol *CommonProtocol) completePostObject(err error, packet nex.PacketInterface, callID uint32, param datastore_types.DataStoreCompletePostParam) (*nex.RMCMessage, *nex.Error) {
-	if commonProtocol.minIOClient == nil {
-		common_globals.Logger.Warning("MinIOClient not defined")
-		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
-	}
-
-	if commonProtocol.GetObjectInfoByDataID == nil {
-		common_globals.Logger.Warning("GetObjectInfoByDataID not defined")
-		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
-	}
-
-	if commonProtocol.GetObjectOwnerByDataID == nil {
-		common_globals.Logger.Warning("GetObjectOwnerByDataID not defined")
-		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
-	}
-
-	if commonProtocol.GetObjectSizeByDataID == nil {
-		common_globals.Logger.Warning("GetObjectSizeByDataID not defined")
-		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
-	}
-
-	if commonProtocol.UpdateObjectUploadCompletedByDataID == nil {
-		common_globals.Logger.Warning("UpdateObjectUploadCompletedByDataID not defined")
-		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
-	}
-
-	if commonProtocol.DeleteObjectByDataID == nil {
-		common_globals.Logger.Warning("DeleteObjectByDataID not defined")
-		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
-	}
-
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
 	}
 
+	manager := commonProtocol.manager
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
-	// * If GetObjectInfoByDataID returns data then that means
-	// * the object has already been marked as uploaded. So do
-	// * nothing
-	_, errCode := commonProtocol.GetObjectInfoByDataID(param.DataID)
-	if errCode == nil {
-		return nil, nex.NewError(nex.ResultCodes.DataStore.PermissionDenied, "change_error")
+	creationDate, errCode := database.ObjectCreationDate(manager.Database, param.DataID)
+	if errCode != nil {
+		// * Unlike CompletePostObjects, this method uses DataStore::Unknown
+		// * for objects which do not exist, rather than DataStore::NotFound
+		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, errCode.Message)
 	}
 
-	// * Only allow an objects owner to make this request
-	ownerPID, errCode := commonProtocol.GetObjectOwnerByDataID(param.DataID)
+	// * If 3 hours pass and the upload was not completed, object
+	// * is removed. Simulating this removal by just bailing
+	if time.Now().UTC().Sub(creationDate) >= 3*time.Hour {
+		return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
+	}
+
+	objectOwner, errCode := database.ObjectOwner(manager.Database, param.DataID)
 	if errCode != nil {
 		return nil, errCode
 	}
 
-	if ownerPID != uint32(connection.PID()) {
+	if objectOwner != connection.PID() {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.PermissionDenied, "change_error")
 	}
 
-	bucket := commonProtocol.S3Bucket
-	key := fmt.Sprintf("%s/%d.bin", commonProtocol.s3DataKeyBase, param.DataID)
+	objectUploaded, errCode := database.ObjectUploaded(manager.Database, param.DataID)
+	if errCode != nil {
+		return nil, errCode
+	}
+
+	// * Cannot successfully complete an object more than once
+	if objectUploaded && bool(param.IsSuccess) {
+		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
+	}
+
+	// * Note: The official servers do not seem to validate this against S3.
+	// *       Because of this, we do not either. But it might be something
+	// *       to add later if it becomes a problem
 
 	if param.IsSuccess {
-		objectSizeS3, err := commonProtocol.S3ObjectSize(bucket, key)
-		if err != nil {
-			common_globals.Logger.Error(err.Error())
-			return nil, nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
-		}
-
-		objectSizeDB, errCode := commonProtocol.GetObjectSizeByDataID(param.DataID)
-		if errCode != nil {
+		if errCode := database.MarkObjectUploaded(manager.Database, param.DataID); errCode != nil {
 			return nil, errCode
 		}
 
-		if objectSizeS3 != uint64(objectSizeDB) {
-			common_globals.Logger.Errorf("Object with DataID %d did not upload correctly! Mismatched sizes", param.DataID)
-			// TODO - Is this a good error?
-			return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
-		}
-
-		errCode = commonProtocol.UpdateObjectUploadCompletedByDataID(param.DataID, true)
-		if errCode != nil {
-			return nil, errCode
-		}
-	} else {
-		errCode := commonProtocol.DeleteObjectByDataID(param.DataID)
-		if errCode != nil {
+		if errCode := database.SendPostNotifications(manager.Database, manager, param.DataID, connection.PID()); errCode != nil {
 			return nil, errCode
 		}
 	}

@@ -1,0 +1,135 @@
+package datastore
+
+import (
+	"fmt"
+	"math"
+	"time"
+
+	nex "github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/types"
+	"github.com/PretendoNetwork/nex-protocols-common-go/v2/datastore/database"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	datastore "github.com/PretendoNetwork/nex-protocols-go/v2/datastore"
+	datastore_constants "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/constants"
+	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
+)
+
+func (commonProtocol *CommonProtocol) prepareGetObjectOrMetaBinary(err error, packet nex.PacketInterface, callID uint32, param datastore_types.DataStorePrepareGetParam) (*nex.RMCMessage, *nex.Error) {
+	if err != nil {
+		common_globals.Logger.Error(err.Error())
+		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
+	}
+
+	manager := commonProtocol.manager
+
+	if manager.S3 == nil {
+		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "S3 config not set")
+	}
+
+	connection := packet.Sender()
+	endpoint := connection.Endpoint()
+
+	// TODO - Add rollback for when error occurs
+
+	var metaInfo datastore_types.DataStoreMetaInfo
+	var accessPassword types.UInt64
+	var errCode *nex.Error
+
+	if param.PersistenceTarget.PersistenceSlotID != types.UInt16(datastore_constants.InvalidPersistenceSlotID) {
+		metaInfo, accessPassword, errCode = database.GetAccessObjectInfoByPersistenceTarget(manager.Database, param.PersistenceTarget)
+	} else if param.DataID != types.UInt64(datastore_constants.InvalidDataID) {
+		metaInfo, accessPassword, errCode = database.GetAccessObjectInfoByDataID(manager.Database, param.DataID)
+	} else {
+		// * If both the PersistenceTarget and DataID are not set, bail
+		errCode = nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
+	}
+
+	if errCode != nil {
+		return nil, errCode
+	}
+
+	errCode = manager.VerifyObjectAccessPermission(connection.PID(), metaInfo, accessPassword, param.AccessPassword)
+	if errCode != nil {
+		return nil, errCode
+	}
+
+	// * The owner of an object can always view their objects, but normal users cannot
+	if metaInfo.Status != datastore_constants.DataStatusNone && metaInfo.OwnerID != connection.PID() {
+		return nil, nex.NewError(nex.ResultCodes.DataStore.UnderReviewing, "change_error")
+	}
+
+	errCode = database.UpdateObjectLock(manager.Database, metaInfo.DataID, param.LockID)
+	if errCode != nil {
+		return nil, errCode
+	}
+
+	errCode = database.UpdateObjectReferenceData(manager.Database, metaInfo.DataID)
+	if errCode != nil {
+		return nil, errCode
+	}
+
+	version, errCode := database.GetObjectLatestVersionNumber(manager.Database, metaInfo.DataID)
+	if errCode != nil {
+		return nil, errCode
+	}
+
+	if version > math.MaxUint16 {
+		// * OverCapacity is definitely not the correct error here, but it sounds nice
+		return nil, nex.NewError(nex.ResultCodes.DataStore.OverCapacity, "change_error")
+	}
+
+	pReqGetInfo := datastore_types.NewDataStoreReqGetInfo()
+	pReqGetAdditionalMeta := datastore_types.NewDataStoreReqGetAdditionalMeta()
+
+	pReqGetAdditionalMeta.OwnerID = metaInfo.OwnerID
+	pReqGetAdditionalMeta.DataType = metaInfo.DataType
+	pReqGetAdditionalMeta.Version = types.UInt16(version)
+
+	// * If the object uses the file server, populate pReqGetInfo.
+	// * If the object does not use the file server, populate MetaBinary.
+	// * Functions as a way to ge the information needed to download an object in
+	// * a single RMC call
+
+	if metaInfo.Flag.HasFlag(datastore_constants.DataFlagNotUseFileServer) {
+		pReqGetAdditionalMeta.MetaBinary = metaInfo.MetaBinary
+	} else {
+		key := fmt.Sprintf("objects/%020d_%010d.bin", metaInfo.DataID, version)
+		getData, err := manager.S3.PresignGet(key, time.Minute*15)
+		if err != nil {
+			common_globals.Logger.Error(err.Error())
+			return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "Failed to sign post request")
+		}
+
+		pReqGetInfo.URL = types.NewString(getData.URL.String())
+		pReqGetInfo.RequestHeaders = types.NewList[datastore_types.DataStoreKeyValue]()
+		pReqGetInfo.Size = metaInfo.Size
+		pReqGetInfo.RootCACert = types.NewBuffer(getData.RootCACert)
+		pReqGetInfo.DataID = metaInfo.DataID
+
+		for key, value := range getData.RequestHeaders {
+			header := datastore_types.NewDataStoreKeyValue()
+			header.Key = types.NewString(key)
+			header.Value = types.NewString(value)
+
+			pReqGetInfo.RequestHeaders = append(pReqGetInfo.RequestHeaders, header)
+		}
+	}
+
+	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
+
+	pReqGetInfo.WriteTo(rmcResponseStream)
+	pReqGetAdditionalMeta.WriteTo(rmcResponseStream)
+
+	rmcResponseBody := rmcResponseStream.Bytes()
+
+	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
+	rmcResponse.ProtocolID = datastore.ProtocolID
+	rmcResponse.MethodID = datastore.MethodPrepareGetObjectOrMetaBinary
+	rmcResponse.CallID = callID
+
+	if commonProtocol.OnAfterPrepareGetObject != nil {
+		go commonProtocol.OnAfterPrepareGetObject(packet, param)
+	}
+
+	return rmcResponse, nil
+}

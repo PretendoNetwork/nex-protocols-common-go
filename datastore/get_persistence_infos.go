@@ -1,0 +1,94 @@
+package datastore
+
+import (
+	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/types"
+	"github.com/PretendoNetwork/nex-protocols-common-go/v2/datastore/database"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	datastore "github.com/PretendoNetwork/nex-protocols-go/v2/datastore"
+	datastore_constants "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/constants"
+	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
+)
+
+func (commonProtocol *CommonProtocol) getPersistenceInfos(err error, packet nex.PacketInterface, callID uint32, ownerID types.PID, persistenceSlotIDs types.List[types.UInt16]) (*nex.RMCMessage, *nex.Error) {
+	if err != nil {
+		common_globals.Logger.Error(err.Error())
+		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
+	}
+
+	manager := commonProtocol.manager
+	connection := packet.Sender()
+	endpoint := connection.Endpoint()
+
+	if ownerID == 0 {
+		ownerID = connection.PID()
+	}
+
+	if len(persistenceSlotIDs) == 0 {
+		for slot := 0; slot < int(datastore_constants.NumPersistenceSlot); slot++ {
+			persistenceSlotIDs = append(persistenceSlotIDs, types.UInt16(slot))
+		}
+	}
+
+	for _, persistenceSlotID := range persistenceSlotIDs {
+		if persistenceSlotID >= types.UInt16(datastore_constants.NumPersistenceSlot) {
+			return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
+		}
+	}
+
+	pPersistenceInfo := types.NewList[datastore_types.DataStorePersistenceInfo]()
+	pResults := types.NewList[types.QResult]()
+
+	for _, persistenceSlotID := range persistenceSlotIDs {
+		// * Failures still return the owner/slot requested
+		persistenceInfo := datastore_types.NewDataStorePersistenceInfo()
+		persistenceInfo.OwnerID = ownerID
+		persistenceInfo.PersistenceSlotID = persistenceSlotID
+
+		// * Why Nintendo didn't just use this directly, we may never know
+		persistenceTarget := datastore_types.NewDataStorePersistenceTarget()
+		persistenceTarget.OwnerID = ownerID
+		persistenceTarget.PersistenceSlotID = persistenceSlotID
+
+		metaInfo, accessPassword, errCode := database.GetAccessObjectInfoByPersistenceTarget(manager.Database, persistenceTarget)
+		if errCode != nil {
+			pPersistenceInfo = append(pPersistenceInfo, persistenceInfo)
+			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
+			continue
+		}
+
+		// * Anyone with access permissions can view this, but they don't allow a password to be sent
+		errCode = manager.VerifyObjectAccessPermission(connection.PID(), metaInfo, accessPassword, 0)
+		if errCode != nil {
+			pPersistenceInfo = append(pPersistenceInfo, persistenceInfo)
+			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
+			continue
+		}
+
+		// * The owner of an object can always view their objects, but normal users cannot
+		if metaInfo.Status != datastore_constants.DataStatusNone && metaInfo.OwnerID != connection.PID() {
+			pPersistenceInfo = append(pPersistenceInfo, persistenceInfo)
+			pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.UnderReviewing))
+			continue
+		}
+
+		persistenceInfo.DataID = metaInfo.DataID
+
+		pPersistenceInfo = append(pPersistenceInfo, persistenceInfo)
+		pResults = append(pResults, types.NewQResultSuccess(nex.ResultCodes.DataStore.Unknown))
+	}
+
+	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
+
+	pPersistenceInfo.WriteTo(rmcResponseStream)
+	pResults.WriteTo(rmcResponseStream)
+
+	rmcResponseBody := rmcResponseStream.Bytes()
+
+	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
+	rmcResponse.ProtocolID = datastore.ProtocolID
+	rmcResponse.MethodID = datastore.MethodGetPersistenceInfos
+	rmcResponse.CallID = callID
+
+	return rmcResponse, nil
+}

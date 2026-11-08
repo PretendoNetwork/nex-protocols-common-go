@@ -1,0 +1,86 @@
+package datastore
+
+import (
+	"slices"
+
+	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/types"
+	"github.com/PretendoNetwork/nex-protocols-common-go/v2/datastore/database"
+	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
+	datastore "github.com/PretendoNetwork/nex-protocols-go/v2/datastore"
+	datastore_constants "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/constants"
+	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
+)
+
+func (commonProtocol *CommonProtocol) getRatings(err error, packet nex.PacketInterface, callID uint32, dataIDs types.List[types.UInt64], accessPassword types.UInt64) (*nex.RMCMessage, *nex.Error) {
+	if err != nil {
+		common_globals.Logger.Error(err.Error())
+		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
+	}
+
+	manager := commonProtocol.manager
+	connection := packet.Sender()
+	endpoint := connection.Endpoint()
+
+	// * Does not seem to be a constant in DataStore, so just inline it for now?
+	if len(dataIDs) > 512 {
+		return nil, nex.NewError(nex.ResultCodes.DataStore.OverCapacity, "change_error")
+	}
+
+	// * Unlike GetRating, INVALID_DATAID anywhere in the input kills the whole request
+	if slices.Contains(dataIDs, types.UInt64(datastore_constants.InvalidDataID)) {
+		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
+	}
+
+	pRatings := types.NewList[types.List[datastore_types.DataStoreRatingInfoWithSlot]]()
+	pResults := types.NewList[types.QResult]()
+	invalidRatingInfoWithSlot := types.NewList[datastore_types.DataStoreRatingInfoWithSlot]() // * Quick hack to get a zeroed struct
+
+	// TODO - Optimize this, this can make dozens of database calls
+	for _, dataID := range dataIDs {
+		metaInfo, objectAccessPassword, errCode := database.GetAccessObjectInfoByDataID(manager.Database, dataID)
+		if errCode != nil {
+			pRatings = append(pRatings, invalidRatingInfoWithSlot)
+			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
+			continue
+		}
+
+		errCode = manager.VerifyObjectAccessPermission(connection.PID(), metaInfo, objectAccessPassword, accessPassword)
+		if errCode != nil {
+			pRatings = append(pRatings, invalidRatingInfoWithSlot)
+			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
+			continue
+		}
+
+		// * The owner of an object can always view their objects, but normal users cannot
+		if metaInfo.Status != datastore_constants.DataStatusNone && metaInfo.OwnerID != connection.PID() {
+			pRatings = append(pRatings, invalidRatingInfoWithSlot)
+			pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.UnderReviewing))
+			continue
+		}
+
+		ratings, errCode := database.GetObjectRatingsByDataID(manager.Database, dataID)
+		if errCode != nil {
+			pRatings = append(pRatings, invalidRatingInfoWithSlot)
+			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
+			continue
+		}
+
+		pRatings = append(pRatings, ratings)
+		pResults = append(pResults, types.NewQResultSuccess(nex.ResultCodes.DataStore.Unknown))
+	}
+
+	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
+
+	pRatings.WriteTo(rmcResponseStream)
+	pResults.WriteTo(rmcResponseStream)
+
+	rmcResponseBody := rmcResponseStream.Bytes()
+
+	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
+	rmcResponse.ProtocolID = datastore.ProtocolID
+	rmcResponse.MethodID = datastore.MethodGetRatings
+	rmcResponse.CallID = callID
+
+	return rmcResponse, nil
+}

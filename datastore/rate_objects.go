@@ -1,80 +1,213 @@
 package datastore
 
 import (
+	"database/sql"
+
 	"github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
+	"github.com/PretendoNetwork/nex-protocols-common-go/v2/datastore/database"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	datastore "github.com/PretendoNetwork/nex-protocols-go/v2/datastore"
+	datastore_constants "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/constants"
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
 func (commonProtocol *CommonProtocol) rateObjects(err error, packet nex.PacketInterface, callID uint32, targets types.List[datastore_types.DataStoreRatingTarget], params types.List[datastore_types.DataStoreRateObjectParam], transactional types.Bool, fetchRatings types.Bool) (*nex.RMCMessage, *nex.Error) {
-	if commonProtocol.GetObjectInfoByDataIDWithPassword == nil {
-		common_globals.Logger.Warning("GetObjectInfoByDataIDWithPassword not defined")
-		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
-	}
-
-	if commonProtocol.RateObjectWithPassword == nil {
-		common_globals.Logger.Warning("RateObjectWithPassword not defined")
-		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
-	}
-
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
 	}
 
+	manager := commonProtocol.manager
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
-	pRatings := types.NewList[datastore_types.DataStoreRatingInfo]()
-	pResults := types.NewList[types.QResult]()
+	// * Reusing this constant. Name doesn't make sense but it's the same value so w/e
+	if len(targets) > datastore_constants.BatchProcessingCapacityPostObject {
+		return nil, nex.NewError(nex.ResultCodes.DataStore.OverCapacity, "change_error")
+	}
 
-	// * Real DataStore does not actually check this.
-	// * I just didn't feel like working out the
-	// * logic for differing sized lists. So force
-	// * them to always be the same
-	if len(targets) != len(params) {
+	if len(params) > datastore_constants.BatchProcessingCapacityPostObject {
+		return nil, nex.NewError(nex.ResultCodes.DataStore.OverCapacity, "change_error")
+	}
+
+	// * Sending 1 param is supported, all targets will get the same value applied to them.
+	// * Otherwise, params and targets need to have the same number of elements
+	if len(params) != 1 && len(params) != len(targets) {
 		return nil, nex.NewError(nex.ResultCodes.DataStore.InvalidArgument, "change_error")
 	}
 
-	var errorCode *nex.Error
+	pRatings := types.NewList[datastore_types.DataStoreRatingInfo]()
+	pResults := types.NewList[types.QResult]()
+	invalidRatingInfo := datastore_types.NewDataStoreRatingInfo() // * Quick hack to get a zeroed struct
 
-	for i, target := range targets {
-		// * We already checked that targets and params will have the same length
-		param := params[i]
+	var db common_globals.Database = manager.Database
+	var transaction *sql.Tx
 
-		objectInfo, errCode := commonProtocol.GetObjectInfoByDataIDWithPassword(target.DataID, param.AccessPassword)
-		if errCode != nil {
-			errorCode = errCode
-			break
+	if transactional {
+		var err error
+		transaction, err = manager.BeginTransaction()
+		if err != nil {
+			// TODO - Send more specific errors?
+			return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
 		}
 
-		errCode = commonProtocol.VerifyObjectPermission(objectInfo.OwnerID, connection.PID(), objectInfo.Permission)
-		if errCode != nil {
-			errorCode = errCode
-			break
-		}
+		// * Does nothing once the transaction has been committed successfully
+		defer transaction.Rollback()
 
-		rating, errCode := commonProtocol.RateObjectWithPassword(target.DataID, target.Slot, param.RatingValue, param.AccessPassword)
-		if errCode != nil {
-			errorCode = errCode
-			break
-		}
+		db = transaction
 
-		if fetchRatings {
-			pRatings = append(pRatings, rating)
+		errCode := database.LockRatingSlotsByDataStoreRatingTargets(db, targets)
+		if errCode != nil {
+			return nil, errCode
 		}
 	}
 
-	if errorCode != nil {
-		return nil, errorCode
+	// TODO - Optimize this, this can make dozens of database calls for a single RMC request
+	for i := 0; i < len(targets); i++ {
+		// * Checking the previous target for errors was just a simpler refactor.
+		// * The final target error is checked after the loop because lazy
+		if bool(transactional) && i > 0 && pResults[i-1].IsError() {
+			break
+		}
+
+		var param datastore_types.DataStoreRateObjectParam
+		if len(params) == 1 {
+			param = params[0]
+		} else {
+			param = params[i]
+		}
+
+		target := targets[i]
+
+		if target.DataID == types.UInt64(datastore_constants.InvalidDataID) {
+			pRatings = append(pRatings, invalidRatingInfo)
+			pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.NotFound))
+			continue
+		}
+
+		if target.Slot >= types.UInt8(datastore_constants.NumRatingSlot) {
+			pRatings = append(pRatings, invalidRatingInfo)
+			pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.InvalidArgument))
+			continue
+		}
+
+		metaInfo, accessPassword, errCode := database.GetAccessObjectInfoByDataID(db, target.DataID)
+		if errCode != nil {
+			pRatings = append(pRatings, invalidRatingInfo)
+			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
+			continue
+		}
+
+		errCode = manager.VerifyObjectAccessPermission(connection.PID(), metaInfo, accessPassword, param.AccessPassword)
+		if errCode != nil {
+			pRatings = append(pRatings, invalidRatingInfo)
+			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
+			continue
+		}
+
+		// * The owner of an object can always view their objects, but normal users cannot
+		if metaInfo.Status != datastore_constants.DataStatusNone && metaInfo.OwnerID != connection.PID() {
+			pRatings = append(pRatings, invalidRatingInfo)
+			pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.UnderReviewing))
+			continue
+		}
+
+		// TODO - Refactor out this hack. We store decoded flags in Postgres, stop manually parsing them again here
+		ratingSettings, errCode := database.GetObjectRatingSlotSettings(db, target.DataID, target.Slot)
+		if errCode != nil {
+			pRatings = append(pRatings, invalidRatingInfo)
+			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
+			continue
+		}
+
+		// * The unknown flags 0x01, 0x02 and 0x20 make the slot impossible to rate.
+		// * 0x01 crashes on official servers, failing the whole request, while 0x02
+		// * and 0x20 are just refused
+		// TODO - Move these unknown flags to nex-protocols-go
+
+		if ratingSettings.Flag.HasFlag(0x01) {
+			return nil, nex.NewError(nex.ResultCodes.PythonCore.Exception, "change_error")
+		}
+
+		if ratingSettings.Flag.HasFlag(0x02) || ratingSettings.Flag.HasFlag(0x20) {
+			pRatings = append(pRatings, invalidRatingInfo)
+			pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.InvalidArgument))
+			continue
+		}
+
+		disableSelfRating := ratingSettings.Flag.HasFlag(datastore_constants.RatingFlagDisableSelfRating)
+
+		useMinimum := ratingSettings.InternalFlag.HasFlag(datastore_constants.RatingInternalFlagUseRangeMin)
+		useMaximum := ratingSettings.InternalFlag.HasFlag(datastore_constants.RatingInternalFlagUseRangeMax)
+
+		value := param.RatingValue
+
+		if useMinimum && value < ratingSettings.RangeMin {
+			pRatings = append(pRatings, invalidRatingInfo)
+			pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.InvalidArgument))
+			continue
+		}
+
+		if useMaximum && value > ratingSettings.RangeMax {
+			pRatings = append(pRatings, invalidRatingInfo)
+			pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.InvalidArgument))
+			continue
+		}
+
+		if disableSelfRating && metaInfo.OwnerID == connection.PID() {
+			pRatings = append(pRatings, invalidRatingInfo)
+			pResults = append(pResults, types.NewQResultError(nex.ResultCodes.DataStore.OperationNotAllowed))
+			continue
+		}
+
+		errCode = database.RateObjectSlot(db, manager, target.DataID, target.Slot, connection.PID(), value, ratingSettings)
+		if errCode != nil {
+			// * This means the rating was about to go above max int64, which kills the whole request
+			if errCode.Equals(nex.ResultCodes.PythonCore.Exception) {
+				return nil, errCode
+			}
+
+			pRatings = append(pRatings, invalidRatingInfo)
+			pResults = append(pResults, types.NewQResult(errCode.ResultCode))
+			continue
+		}
+
+		if fetchRatings {
+			pRating, errCode := database.GetObjectRatingByDataIDAndSlot(db, target.DataID, target.Slot)
+			if errCode != nil {
+				pRatings = append(pRatings, invalidRatingInfo)
+				pResults = append(pResults, types.NewQResult(errCode.ResultCode))
+				continue
+			}
+
+			pRatings = append(pRatings, pRating)
+		}
+
+		pResults = append(pResults, types.NewQResultSuccess(nex.ResultCodes.DataStore.Unknown))
+
+		// TODO - Create a log here manually, or continue to manually create logs at runtime?
+	}
+
+	if transactional {
+		// * NOW we check the latest targets error
+		if len(pResults) != 0 && pResults[len(pResults)-1].IsError() {
+			return nil, nex.NewError(uint32(pResults[len(pResults)-1]), "change_error")
+		}
+
+		if err := transaction.Commit(); err != nil {
+			// TODO - Send more specific errors?
+			return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, err.Error())
+		}
+
+		// * Results list is empty when transactions are used
+		pResults = types.NewList[types.QResult]()
 	}
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
 	pRatings.WriteTo(rmcResponseStream)
-	pResults.WriteTo(rmcResponseStream) // * pResults is ALWAYS empty in SMM?
+	pResults.WriteTo(rmcResponseStream)
 
 	rmcResponseBody := rmcResponseStream.Bytes()
 
@@ -82,10 +215,6 @@ func (commonProtocol *CommonProtocol) rateObjects(err error, packet nex.PacketIn
 	rmcResponse.ProtocolID = datastore.ProtocolID
 	rmcResponse.MethodID = datastore.MethodRateObjects
 	rmcResponse.CallID = callID
-
-	if commonProtocol.OnAfterRateObjects != nil {
-		go commonProtocol.OnAfterRateObjects(packet, targets, params, transactional, fetchRatings)
-	}
 
 	return rmcResponse, nil
 }

@@ -6,70 +6,98 @@ import (
 
 	nex "github.com/PretendoNetwork/nex-go/v2"
 	"github.com/PretendoNetwork/nex-go/v2/types"
+	"github.com/PretendoNetwork/nex-protocols-common-go/v2/datastore/database"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	datastore "github.com/PretendoNetwork/nex-protocols-go/v2/datastore"
+	datastore_constants "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/constants"
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
 func (commonProtocol *CommonProtocol) prepareGetObject(err error, packet nex.PacketInterface, callID uint32, param datastore_types.DataStorePrepareGetParam) (*nex.RMCMessage, *nex.Error) {
-	if commonProtocol.GetObjectInfoByDataID == nil {
-		common_globals.Logger.Warning("GetObjectInfoByDataID not defined")
-		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
-	}
-
-	if commonProtocol.S3Presigner == nil {
-		common_globals.Logger.Warning("S3Presigner not defined")
-		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
-	}
-
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.NewError(nex.ResultCodes.Core.Unknown, "change_error")
+		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
+	}
+
+	manager := commonProtocol.manager
+
+	if manager.S3 == nil {
+		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "S3 config not set")
 	}
 
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
-	var objectInfo datastore_types.DataStoreMetaInfo
+	// TODO - Add rollback for when error occurs
+
+	var metaInfo datastore_types.DataStoreMetaInfo
+	var accessPassword types.UInt64
 	var errCode *nex.Error
 
-	// * Real server ignores PersistenceTarget if DataID is set
-	if param.DataID == 0 {
-		objectInfo, errCode = commonProtocol.GetObjectInfoByPersistenceTargetWithPassword(param.PersistenceTarget, param.AccessPassword)
+	if param.PersistenceTarget.PersistenceSlotID != types.UInt16(datastore_constants.InvalidPersistenceSlotID) {
+		metaInfo, accessPassword, errCode = database.GetAccessObjectInfoByPersistenceTarget(manager.Database, param.PersistenceTarget)
+	} else if param.DataID != types.UInt64(datastore_constants.InvalidDataID) {
+		metaInfo, accessPassword, errCode = database.GetAccessObjectInfoByDataID(manager.Database, param.DataID)
 	} else {
-		objectInfo, errCode = commonProtocol.GetObjectInfoByDataIDWithPassword(param.DataID, param.AccessPassword)
+		// * If both the PersistenceTarget and DataID are not set, bail
+		errCode = nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
 	}
+
 	if errCode != nil {
 		return nil, errCode
 	}
 
-	errCode = commonProtocol.VerifyObjectPermission(objectInfo.OwnerID, connection.PID(), objectInfo.Permission)
+	errCode = manager.VerifyObjectAccessPermission(connection.PID(), metaInfo, accessPassword, param.AccessPassword)
 	if errCode != nil {
 		return nil, errCode
 	}
 
-	bucket := commonProtocol.S3Bucket
-	key := fmt.Sprintf("%s/%d.bin", commonProtocol.s3DataKeyBase, objectInfo.DataID)
+	// * The owner of an object can always view their objects, but normal users cannot
+	if metaInfo.Status != datastore_constants.DataStatusNone && metaInfo.OwnerID != connection.PID() {
+		return nil, nex.NewError(nex.ResultCodes.DataStore.UnderReviewing, "change_error")
+	}
 
-	url, err := commonProtocol.S3Presigner.GetObject(bucket, key, time.Minute*15)
+	errCode = database.UpdateObjectLock(manager.Database, metaInfo.DataID, param.LockID)
+	if errCode != nil {
+		return nil, errCode
+	}
+
+	if metaInfo.Flag.HasFlag(datastore_constants.DataFlagNotUseFileServer) {
+		return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "PrepareGetObject cannot be used with DataFlagNotUseFileServer")
+	}
+
+	errCode = database.UpdateObjectReferenceData(manager.Database, metaInfo.DataID)
+	if errCode != nil {
+		return nil, errCode
+	}
+
+	version, errCode := database.GetObjectLatestVersionNumber(manager.Database, metaInfo.DataID)
+	if errCode != nil {
+		return nil, errCode
+	}
+
+	key := fmt.Sprintf("objects/%020d_%010d.bin", metaInfo.DataID, version)
+	getData, err := manager.S3.PresignGet(key, time.Minute*15)
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
-		return nil, nex.NewError(nex.ResultCodes.DataStore.OperationNotAllowed, "change_error")
-	}
-
-	requestHeaders, errCode := commonProtocol.S3GetRequestHeaders()
-	if errCode != nil {
-		return nil, errCode
+		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "Failed to sign post request")
 	}
 
 	pReqGetInfo := datastore_types.NewDataStoreReqGetInfo()
 
-	pReqGetInfo.URL = types.NewString(url.String())
+	pReqGetInfo.URL = types.NewString(getData.URL.String())
 	pReqGetInfo.RequestHeaders = types.NewList[datastore_types.DataStoreKeyValue]()
-	pReqGetInfo.Size = objectInfo.Size.Copy().(types.UInt32)
-	pReqGetInfo.RootCACert = types.NewBuffer(commonProtocol.RootCACert)
-	pReqGetInfo.DataID = param.DataID
-	pReqGetInfo.RequestHeaders = requestHeaders
+	pReqGetInfo.Size = metaInfo.Size
+	pReqGetInfo.RootCACert = types.NewBuffer(getData.RootCACert)
+	pReqGetInfo.DataID = metaInfo.DataID
+
+	for key, value := range getData.RequestHeaders {
+		header := datastore_types.NewDataStoreKeyValue()
+		header.Key = types.NewString(key)
+		header.Value = types.NewString(value)
+
+		pReqGetInfo.RequestHeaders = append(pReqGetInfo.RequestHeaders, header)
+	}
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 

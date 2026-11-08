@@ -2,50 +2,57 @@ package datastore
 
 import (
 	"github.com/PretendoNetwork/nex-go/v2"
+	"github.com/PretendoNetwork/nex-go/v2/types"
+	"github.com/PretendoNetwork/nex-protocols-common-go/v2/datastore/database"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	datastore "github.com/PretendoNetwork/nex-protocols-go/v2/datastore"
+	datastore_constants "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/constants"
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
 func (commonProtocol *CommonProtocol) getMeta(err error, packet nex.PacketInterface, callID uint32, param datastore_types.DataStoreGetMetaParam) (*nex.RMCMessage, *nex.Error) {
-	if commonProtocol.GetObjectInfoByPersistenceTargetWithPassword == nil {
-		common_globals.Logger.Warning("GetObjectInfoByPersistenceTargetWithPassword not defined")
-		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
-	}
-
-	if commonProtocol.GetObjectInfoByDataIDWithPassword == nil {
-		common_globals.Logger.Warning("GetObjectInfoByDataIDWithPassword not defined")
-		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
-	}
-
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
 	}
 
+	manager := commonProtocol.manager
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
-	var pMetaInfo datastore_types.DataStoreMetaInfo
+	var metaInfo datastore_types.DataStoreMetaInfo
+	var accessPassword types.UInt64
 	var errCode *nex.Error
 
-	// * Real server ignores PersistenceTarget if DataID is set
-	if param.DataID == 0 {
-		pMetaInfo, errCode = commonProtocol.GetObjectInfoByPersistenceTargetWithPassword(param.PersistenceTarget, param.AccessPassword)
+	// * The persistence target is used whenever it has a slot, even if it has no ownerId
+	if param.PersistenceTarget.PersistenceSlotID != types.UInt16(datastore_constants.InvalidPersistenceSlotID) {
+		metaInfo, accessPassword, errCode = database.GetAccessObjectInfoByPersistenceTarget(manager.Database, param.PersistenceTarget)
+	} else if param.DataID != types.UInt64(datastore_constants.InvalidDataID) {
+		metaInfo, accessPassword, errCode = database.GetAccessObjectInfoByDataID(manager.Database, param.DataID)
 	} else {
-		pMetaInfo, errCode = commonProtocol.GetObjectInfoByDataIDWithPassword(param.DataID, param.AccessPassword)
+		// * If both the PersistenceTarget and DataID are not set, bail
+		errCode = nex.NewError(nex.ResultCodes.DataStore.NotFound, "change_error")
 	}
 
 	if errCode != nil {
 		return nil, errCode
 	}
 
-	errCode = commonProtocol.VerifyObjectPermission(pMetaInfo.OwnerID, connection.PID(), pMetaInfo.Permission)
+	errCode = manager.VerifyObjectAccessPermission(connection.PID(), metaInfo, accessPassword, param.AccessPassword)
 	if errCode != nil {
 		return nil, errCode
 	}
 
-	pMetaInfo.FilterPropertiesByResultOption(param.ResultOption)
+	pMetaInfo, errCode := database.GetObjectMetaInfoByDataIDWithResultOption(manager.Database, metaInfo.DataID, param.ResultOption)
+	if errCode != nil {
+		return nil, errCode
+	}
+
+	// TODO - Move this to VerifyObjectAccessPermission?
+	// * The owner of an object can always view their objects, but normal users cannot
+	if pMetaInfo.Status != datastore_constants.DataStatusNone && pMetaInfo.OwnerID != connection.PID() {
+		return nil, nex.NewError(nex.ResultCodes.DataStore.UnderReviewing, "change_error")
+	}
 
 	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 

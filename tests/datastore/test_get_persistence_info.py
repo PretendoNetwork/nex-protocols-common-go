@@ -1,0 +1,176 @@
+import anyio
+import pytest
+
+import nex
+from datastore import constants, helpers
+
+pytestmark = pytest.mark.anyio
+
+# * What the slot holds
+
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
+async def test_returns_the_object_in_the_slot(unique_data_type, post):
+	"""
+	The slot holds the data ID of the object which is in it
+	"""
+
+	data_id = await helpers.post_persisted(post, nex.FRIEND_A, helpers.PERSISTENCE_SLOT, data_type=unique_data_type)
+	info = await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, helpers.PERSISTENCE_SLOT)
+
+	assert info.owner_id == nex.FRIEND_A
+	assert info.slot_id == helpers.PERSISTENCE_SLOT
+	assert info.data_id == data_id
+
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
+async def test_the_newest_object_wins(unique_data_type, post):
+	"""
+	Putting another object in a slot replaces the one which was there
+	"""
+
+	await helpers.post_persisted(post, nex.FRIEND_A, helpers.PERSISTENCE_SLOT, data_type=unique_data_type)
+	second = await helpers.post_persisted(post, nex.FRIEND_A, helpers.PERSISTENCE_SLOT, data_type=unique_data_type)
+
+	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, helpers.PERSISTENCE_SLOT)).data_id == second
+
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
+async def test_deleting_the_object_empties_the_slot(unique_data_type, post):
+	"""
+	Deleting a persisted object leaves the slot with nothing in it
+	"""
+
+	data_id = await helpers.post_persisted(post, nex.FRIEND_A, helpers.PERSISTENCE_SLOT, data_type=unique_data_type)
+	await helpers.delete_object(nex.FRIEND_A, data_id=data_id)
+
+	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, helpers.PERSISTENCE_SLOT) == "DataStore::NotFound"
+
+# * owner_id
+
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
+async def test_an_owner_of_zero_means_the_caller(unique_data_type, post):
+	"""
+	Asking about nobody in particular reads the callers own slots
+	"""
+
+	data_id = await helpers.post_persisted(post, nex.FRIEND_A, helpers.PERSISTENCE_SLOT, data_type=unique_data_type)
+	info = await helpers.get_persistence_info(nex.FRIEND_A, 0, helpers.PERSISTENCE_SLOT)
+
+	assert info.data_id == data_id
+
+async def test_an_owner_of_zero_comes_back_as_the_caller(unique_data_type):
+	"""
+	The slot is returned as the callers
+	"""
+
+	await helpers.post_persisted(helpers.post_meta_binary, nex.FRIEND_A, helpers.PERSISTENCE_SLOT, data_type=unique_data_type)
+	info = await helpers.get_persistence_info(nex.FRIEND_A, 0, helpers.PERSISTENCE_SLOT)
+
+	assert info.owner_id == nex.FRIEND_A
+
+async def test_unknown_owner():
+	"""
+	A user who has never persisted anything has no slots to read
+	"""
+
+	assert await helpers.get_persistence_info_error(nex.FRIEND_A, 1234, helpers.PERSISTENCE_SLOT) == "DataStore::NotFound"
+
+# * slot_id
+# *
+# * Slots which hold nothing, or are not slots at all
+
+async def test_empty_slot():
+	"""
+	A slot with no object in it has nothing to return
+	"""
+
+	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, helpers.EMPTY_PERSISTENCE_SLOT) == "DataStore::NotFound"
+
+@pytest.mark.parametrize("slot", [
+	pytest.param(constants.NUM_PERSISTENCE_SLOT, id="out-of-range-slot"),
+	pytest.param(constants.INVALID_PERSISTENCE_SLOT_ID, id="invalid-slot")
+])
+async def test_invalid_slot(slot):
+	"""
+	Only slots 0 to NUM_PERSISTENCE_SLOT - 1 can be used
+	"""
+
+	assert await helpers.get_persistence_info_error(nex.FRIEND_A, nex.FRIEND_A, slot) == "DataStore::InvalidArgument"
+
+# * Who may read somebody elses slot
+
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
+@pytest.mark.parametrize("permission, recipients, allowed, denied", helpers.ACCESS_PERMISSION_VIEWERS_AND_OUTSIDERS)
+async def test_the_access_permission_of_the_object(unique_data_type, post, permission, recipients, allowed, denied):
+	"""
+	Reading a slot is gated by the access permission of the object in it
+	"""
+
+	access = helpers.permission(permission=permission, recipients=recipients)
+	data_id = await helpers.post_persisted(post, nex.FRIEND_A, helpers.PERSISTENCE_SLOT, data_type=unique_data_type, permission=access)
+
+	assert (await helpers.get_persistence_info(allowed, nex.FRIEND_A, helpers.PERSISTENCE_SLOT)).data_id == data_id
+
+	if denied is not None:
+		assert await helpers.get_persistence_info_error(denied, nex.FRIEND_A, helpers.PERSISTENCE_SLOT) == "DataStore::PermissionDenied"
+
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
+@pytest.mark.parametrize("caller", [
+	pytest.param(nex.FRIEND_B, id="a-friend"),
+	pytest.param(nex.STRANGER, id="a-stranger")
+])
+async def test_a_private_object_is_closed_to_everybody(unique_data_type, post, caller):
+	"""
+	A private object lets nobody in at all
+	"""
+
+	permission = helpers.permission(permission=constants.Permission.PERMISSION_PRIVATE)
+	data_id = await helpers.post_persisted(post, nex.FRIEND_A, helpers.PERSISTENCE_SLOT, data_type=unique_data_type, permission=permission)
+
+	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, helpers.PERSISTENCE_SLOT)).data_id == data_id
+	assert await helpers.get_persistence_info_error(caller, nex.FRIEND_A, helpers.PERSISTENCE_SLOT) == "DataStore::PermissionDenied"
+
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
+async def test_an_object_under_review(unique_data_type, post):
+	"""
+	An object waiting to be reviewed reports as such, but is viewable to
+	its owner like normal
+	"""
+
+	data_id = await helpers.post_persisted(post, nex.FRIEND_A, helpers.PERSISTENCE_SLOT, data_type=unique_data_type, flag=constants.DataFlag.DATA_FLAG_NEED_REVIEW)
+
+	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, helpers.PERSISTENCE_SLOT)).data_id == data_id
+	assert await helpers.get_persistence_info_error(nex.STRANGER, nex.FRIEND_A, helpers.PERSISTENCE_SLOT) == "DataStore::UnderReviewing"
+
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
+async def test_a_rejected_object(unique_data_type, post):
+	"""
+	A rejected object is viewable to its owner like normal, and appears as
+	under review still to other users
+	"""
+
+	data_id = await helpers.post_persisted(post, nex.FRIEND_A, helpers.PERSISTENCE_SLOT, data_type=unique_data_type)
+
+	await helpers.change_meta(nex.FRIEND_A, data_id=data_id, modifies_flag=constants.ModificationFlag.MODIFICATION_FLAG_STATUS, status=constants.DataStatus.DATA_STATUS_REJECTED)
+
+	assert (await helpers.get_persistence_info(nex.FRIEND_A, nex.FRIEND_A, helpers.PERSISTENCE_SLOT)).data_id == data_id
+	assert await helpers.get_persistence_info_error(nex.STRANGER, nex.FRIEND_A, helpers.PERSISTENCE_SLOT) == "DataStore::UnderReviewing"
+
+# * Reading a slot does not count as referring to the object in it
+
+@pytest.mark.parametrize("post", helpers.PERSISTENCE_POST_METHODS)
+async def test_reading_a_slot_does_not_refer_to_the_object_in_it(unique_data_type, post):
+	"""
+	Only downloading or touching an object refers to it, so neither the
+	reference count nor the referred time move, even for somebody other
+	than the owner
+	"""
+
+	data_id = await helpers.post_persisted(post, nex.FRIEND_A, helpers.PERSISTENCE_SLOT, data_type=unique_data_type)
+	before = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	await anyio.sleep(helpers.TIMESTAMP_DELAY)
+	await helpers.get_persistence_info(nex.STRANGER, nex.FRIEND_A, helpers.PERSISTENCE_SLOT)
+
+	after = await helpers.get_meta(nex.FRIEND_A, data_id=data_id)
+
+	assert after.referred_count == before.referred_count
+	assert after.referred_time.value() == before.referred_time.value()

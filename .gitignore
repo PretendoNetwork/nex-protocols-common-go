@@ -29,3 +29,6 @@ build
 log
 *.pem
 *.key
+
+# Apple
+.DS_Store

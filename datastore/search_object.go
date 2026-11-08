@@ -2,88 +2,67 @@ package datastore
 
 import (
 	"github.com/PretendoNetwork/nex-go/v2"
-	"github.com/PretendoNetwork/nex-go/v2/types"
+	"github.com/PretendoNetwork/nex-protocols-common-go/v2/datastore/database"
 	common_globals "github.com/PretendoNetwork/nex-protocols-common-go/v2/globals"
 	datastore "github.com/PretendoNetwork/nex-protocols-go/v2/datastore"
-	"github.com/PretendoNetwork/nex-protocols-go/v2/datastore/constants"
 	datastore_types "github.com/PretendoNetwork/nex-protocols-go/v2/datastore/types"
 )
 
 func (commonProtocol *CommonProtocol) searchObject(err error, packet nex.PacketInterface, callID uint32, param datastore_types.DataStoreSearchParam) (*nex.RMCMessage, *nex.Error) {
-	if commonProtocol.GetObjectInfosByDataStoreSearchParam == nil {
-		common_globals.Logger.Warning("GetObjectInfosByDataStoreSearchParam not defined")
-		return nil, nex.NewError(nex.ResultCodes.Core.NotImplemented, "change_error")
-	}
-
 	if err != nil {
 		common_globals.Logger.Error(err.Error())
 		return nil, nex.NewError(nex.ResultCodes.DataStore.Unknown, "change_error")
 	}
 
+	manager := commonProtocol.manager
 	connection := packet.Sender()
 	endpoint := connection.Endpoint()
 
-	// * This is likely game-specific. Also developer note:
-	// * Please keep in mind that no results is allowed. errCode
-	// * should NEVER be DataStore::NotFound!
-	// *
-	// * DataStoreSearchParam contains a ResultRange to limit the
-	// * returned results. TotalCount is the total matching objects
-	// * in the database, whereas objects is the limited results
-	objects, totalCount, errCode := commonProtocol.GetObjectInfosByDataStoreSearchParam(param, connection.PID())
-	if errCode != nil {
-		return nil, errCode
-	}
-
-	pSearchResult := datastore_types.NewDataStoreSearchResult()
-
-	pSearchResult.Result = types.NewList[datastore_types.DataStoreMetaInfo]()
-
-	for _, object := range objects {
-		errCode = commonProtocol.VerifyObjectPermission(object.OwnerID, connection.PID(), object.Permission)
-		if errCode != nil {
-			// * Since we don't error here, should we also
-			// * "hide" these results by also decrementing
-			// * totalCount?
-			continue
-		}
-
-		object.FilterPropertiesByResultOption(param.ResultOption)
-
-		pSearchResult.Result = append(pSearchResult.Result, object)
-	}
-
-	var totalCountType constants.SearchResultTotalCountType
-
-	// * Doing this here since the object
-	// * the permissions checks in the
-	// * previous loop will mutate the data
-	// * returned from the database
-	if totalCount == uint32(len(pSearchResult.Result)) {
-		totalCountType = constants.SearchResultTotalExact // * Has no more data. All possible results were returned
-	} else {
-		totalCountType = constants.SearchResultTotalMinimum // * Has more data. Not all possible results were returned
-	}
-
-	// * Disables the TotalCount
-	// *
-	// * Only seen in struct revision 3 or
-	// * NEX 4.0+
+	// * prior to revision 3 the total count was always enabled.
+	// * NEX 4 resets the revision count back to 0 so we have to
+	// * account for that too
+	totalCountEnabled := true
 	if param.StructureVersion >= 3 || endpoint.LibraryVersions().DataStore.GreaterOrEqual("4.0.0") {
-		if !param.TotalCountEnabled {
-			totalCount = 0
-			totalCountType = constants.SearchResultTotalDisabled
+		totalCountEnabled = bool(param.TotalCountEnabled)
+	}
+
+	// * Using the whole encoded param as the cache key.
+	// * Unsure if this is correct but works for me
+	paramStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
+
+	param.WriteTo(paramStream)
+
+	cacheKey := paramStream.Bytes()
+
+	var rmcResponseBody []byte
+	var errCode *nex.Error
+
+	if param.UseCache {
+		rmcResponseBody, errCode = database.GetCachedSearchObjectResponse(manager.Database, connection.PID(), cacheKey)
+		if errCode != nil {
+			return nil, errCode
 		}
 	}
 
-	pSearchResult.TotalCount = types.NewUInt32(totalCount)
-	pSearchResult.TotalCountType = totalCountType
+	if rmcResponseBody == nil {
+		pSearchResult, errCode := database.SearchObjectsByDataStoreSearchParam(manager.Database, manager, connection.PID(), param, totalCountEnabled)
+		if errCode != nil {
+			return nil, errCode
+		}
 
-	rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
+		rmcResponseStream := nex.NewByteStreamOut(endpoint.LibraryVersions(), endpoint.ByteStreamSettings())
 
-	pSearchResult.WriteTo(rmcResponseStream)
+		pSearchResult.WriteTo(rmcResponseStream)
 
-	rmcResponseBody := rmcResponseStream.Bytes()
+		rmcResponseBody = rmcResponseStream.Bytes()
+
+		if param.UseCache {
+			errCode = database.InsertCachedSearchObjectResponse(manager.Database, manager, connection.PID(), cacheKey, rmcResponseBody)
+			if errCode != nil {
+				return nil, errCode
+			}
+		}
+	}
 
 	rmcResponse := nex.NewRMCSuccess(endpoint, rmcResponseBody)
 	rmcResponse.ProtocolID = datastore.ProtocolID

@@ -36,6 +36,20 @@ func RemoveDuplicates[T comparable](sliceList []T) []T {
 	return list
 }
 
+// HasSurrogatePair checks if any of the strings contain a UTF surrogate pair
+// such as emojis, which cannot be handled correctly
+func HasSurrogatePair(values ...types.String) bool {
+	for _, value := range values {
+		for _, character := range string(value) {
+			if character > 0xFFFF {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
 // ResizeString resizes the string with the specified length in characters (runes)
 func ResizeString(str string, length int) string {
 	return string([]rune(str)[:length])
