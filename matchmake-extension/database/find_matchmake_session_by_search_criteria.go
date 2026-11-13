@@ -232,25 +232,63 @@ func FindMatchmakeSessionBySearchCriteria(manager *common_globals.MatchmakingMan
 			// * Random global
 			searchStatement += ` ORDER BY RANDOM()`
 		case constants.MatchmakeSelectionMethodNearestNeighbor:
-			// * Closest attribute
-			attribute1, err := strconv.ParseUint(string(searchCriteria.Attribs[1]), 10, 32)
-			if err != nil {
-				common_globals.Logger.Error(err.Error())
-				continue
+			attr := ""
+			if len(searchCriteria.Attribs) > 1 {
+				attr = strings.TrimSpace(string(searchCriteria.Attribs[1]))
 			}
-
-			searchStatement += fmt.Sprintf(` ORDER BY abs(%d - ms.attribs[2])`, attribute1)
+			// TODO - should we make this a function instead of doing this logic for both "MatchmakeSelectionMethodNearestNeighbor" and "MatchmakeSelectionMethodBroadenRange"?
+			if minStr, maxStr, isRange := strings.Cut(attr, ","); isRange {
+				minVal, errMin := strconv.ParseUint(strings.TrimSpace(minStr), 10, 32)
+				maxVal, errMax := strconv.ParseUint(strings.TrimSpace(maxStr), 10, 32)
+				if errMin != nil {
+					common_globals.Logger.Error(errMin.Error())
+					continue
+				}
+				if errMax != nil {
+					common_globals.Logger.Error(errMax.Error())
+					continue
+				}
+				searchStatement += fmt.Sprintf(` AND ms.attribs[2] BETWEEN %d AND %d ORDER BY abs(%d - ms.attribs[2]), g.id DESC`, minVal, maxVal, minVal)
+			} else {
+				value, err := strconv.ParseUint(attr, 10, 32)
+				if err != nil {
+					common_globals.Logger.Error(err.Error())
+					continue
+				}
+		
+				searchStatement += fmt.Sprintf(` ORDER BY abs(%d - ms.attribs[2]), g.id DESC`, value)
+			}
 		case constants.MatchmakeSelectionMethodBroadenRange:
 			// * Ranked
-
+		
 			// TODO - Actually implement ranked matchmaking, using closest attribute at the moment
-			attribute1, err := strconv.ParseUint(string(searchCriteria.Attribs[1]), 10, 32)
-			if err != nil {
-				common_globals.Logger.Error(err.Error())
-				continue
+			attr := ""
+			if len(searchCriteria.Attribs) > 1 {
+				attr = strings.TrimSpace(string(searchCriteria.Attribs[1]))
 			}
-
-			searchStatement += fmt.Sprintf(` ORDER BY abs(%d - ms.attribs[2])`, attribute1)
+			// TODO - should we make this a function instead of doing this logic for both "MatchmakeSelectionMethodNearestNeighbor" and "MatchmakeSelectionMethodBroadenRange"?
+			if minStr, maxStr, isRange := strings.Cut(attr, ","); isRange {
+				minVal, errMin := strconv.ParseUint(strings.TrimSpace(minStr), 10, 32)
+				maxVal, errMax := strconv.ParseUint(strings.TrimSpace(maxStr), 10, 32)
+				if errMin != nil {
+					common_globals.Logger.Error(errMin.Error())
+					continue
+				}
+				if errMax != nil {
+					common_globals.Logger.Error(errMax.Error())
+					continue
+				}
+		
+				searchStatement += fmt.Sprintf(` AND ms.attribs[2] BETWEEN %d AND %d ORDER BY abs(%d - ms.attribs[2]), g.id DESC`, minVal, maxVal, minVal)
+			} else {
+				value, err := strconv.ParseUint(attr, 10, 32)
+				if err != nil {
+					common_globals.Logger.Error(err.Error())
+					continue
+				}
+		
+				searchStatement += fmt.Sprintf(` ORDER BY abs(%d - ms.attribs[2]), g.id DESC`, value)
+			}
 		case constants.MatchmakeSelectionMethodProgressScore:
 			// * Progress Score
 
